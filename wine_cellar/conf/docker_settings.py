@@ -4,24 +4,14 @@ import sentry_sdk
 from celery.schedules import crontab
 
 from wine_cellar.__init__ import __version__
-from wine_cellar.conf.prod import (
+from wine_cellar.conf.prod import (  # noqa: F401
     ACCOUNT_ADAPTER,
-)
-from wine_cellar.conf.prod import ALLOWED_HOSTS as _ALLOWED_HOSTS  # noqa: F401
-from wine_cellar.conf.prod import (
     AUTH_PASSWORD_VALIDATORS,
     AUTHENTICATION_BACKENDS,
     BASE_DIR,
     CURRENCIES,
     CURRENCY_SYMBOLS,
-)
-from wine_cellar.conf.prod import DATABASES as _DATABASES
-from wine_cellar.conf.prod import DEBUG as _DEBUG
-from wine_cellar.conf.prod import (
     DEFAULT_AUTO_FIELD,
-)
-from wine_cellar.conf.prod import EMAIL_BACKEND as _EMAIL_BACKEND
-from wine_cellar.conf.prod import (
     INSTALLED_APPS,
     LANGUAGE_CODE,
     LANGUAGES,
@@ -33,11 +23,6 @@ from wine_cellar.conf.prod import (
     MIDDLEWARE,
     ROOT_DIR,
     ROOT_URLCONF,
-)
-from wine_cellar.conf.prod import SECRET_KEY as _SECRET_KEY
-from wine_cellar.conf.prod import SITE_URL as _SITE_URL
-from wine_cellar.conf.prod import STATIC_ROOT as _STATIC_ROOT
-from wine_cellar.conf.prod import (
     STATIC_URL,
     STATICFILES_DIRS,
     STORAGES,
