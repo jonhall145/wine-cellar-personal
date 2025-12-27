@@ -1,4 +1,5 @@
-from wine_cellar.conf.settings import (
+from wine_cellar.conf.settings import (  # noqa: F401
+    ACCOUNT_ADAPTER,
     ALLOWED_HOSTS,
     AUTH_PASSWORD_VALIDATORS,
     AUTHENTICATION_BACKENDS,
@@ -32,7 +33,6 @@ from wine_cellar.conf.settings import (
     USE_TZ,
     VERSION,
     WSGI_APPLICATION,
-    ACCOUNT_ADAPTER,
 )
 
 STORAGES = {

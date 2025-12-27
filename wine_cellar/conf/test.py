@@ -1,4 +1,4 @@
-from wine_cellar.conf.settings import (
+from wine_cellar.conf.settings import (  # noqa: F401
     ACCOUNT_ADAPTER,
     ALLOWED_HOSTS,
     AUTH_PASSWORD_VALIDATORS,
