@@ -41,6 +41,9 @@ fixtures:
 pytest:
 	$(VIRTUAL_ENV)/bin/py.test --reuse-db
 
+.PHONY: test
+test: pytest
+
 .PHONY: pytest-lastfailed
 pytest-lastfailed:
 	$(VIRTUAL_ENV)/bin/py.test --reuse-db --last-failed
