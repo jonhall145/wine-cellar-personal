@@ -1,5 +1,5 @@
-from .settings import *  # noqa: F403
+from .settings import BASE_DIR  # noqa: F401
 
-MEDIA_ROOT = BASE_DIR / "test_media/"  # noqa: F405
+MEDIA_ROOT = BASE_DIR / "test_media/"
 
 CELERY_TASK_ALWAYS_EAGER = True

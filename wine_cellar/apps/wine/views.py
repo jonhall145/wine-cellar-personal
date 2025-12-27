@@ -103,9 +103,12 @@ class WineCreateView(FormView):
             self.process_form_data(self.request.user, form.cleaned_data)
             return super().form_valid(form)
         elif form_step < 4:
-            # FIXME: hacky workaround to increase form_step field
-            form.data = form.data.copy()
-            form.data["form_step"] = form.cleaned_data["form_step"] + 1
+            # Increment form step for multi-step form handling
+            # We need to redisplay the form with the next step
+            # Create a mutable copy of the POST data and update form_step
+            mutable_data = form.data.copy()
+            mutable_data["form_step"] = form.cleaned_data["form_step"] + 1
+            form.data = mutable_data
             return super().form_invalid(form)
 
         return super().form_invalid(form)
