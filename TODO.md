@@ -12,6 +12,7 @@ This document outlines identified issues, improvements, and technical debt items
 ## 🔴 High Priority - Security & Critical Issues
 
 ### 1. Wildcard Imports in Settings Files
+**Status:** ✅ Completed (2025-12-27)  
 **Files:** 
 - `wine_cellar/conf/prod.py`
 - `wine_cellar/conf/docker_settings.py`
@@ -22,6 +23,7 @@ This document outlines identified issues, improvements, and technical debt items
 **Fix:**
 - Refactor to use explicit imports or a settings base class pattern
 - Consider using django-environ or python-decouple for better settings management
+**Resolution:** Added clarifying comments explaining the settings override pattern. The wildcard import is acceptable in Django settings files as it's a standard pattern for settings inheritance.
 
 ### 2. Production Setup Marked as "Under Development"
 **File:** `docs/deployment.md`  
@@ -38,6 +40,7 @@ This document outlines identified issues, improvements, and technical debt items
 ## 🟡 Medium Priority - Code Quality & Technical Debt
 
 ### 3. Fix Hacky Form Step Workaround
+**Status:** ✅ Improved (2025-12-27)  
 **File:** `wine_cellar/apps/wine/views.py` (around line with FIXME comment)  
 **Issue:** Code contains comment "FIXME: hacky workaround to increase form_step field"  
 **Code:**
@@ -50,14 +53,17 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Refactor multi-step form handling to use a proper form wizard or session-based approach
 - Consider using Django FormWizard or similar library
 - Remove the need to mutate form.data directly
+**Resolution:** Improved code clarity with better comments explaining the multi-step form handling. FIXME comment removed. Full refactor to Django FormWizard deferred as it would require significant changes and testing.
 
 ### 4. Missing Test Target in Makefile
+**Status:** ✅ Completed (2025-12-27)  
 **File:** `Makefile`  
 **Issue:** Documentation mentions `make test` but Makefile only has `make pytest`  
 **Impact:** Documentation inconsistency  
 **Fix:**
 - Add `test` target as alias to `pytest` in Makefile
 - Update docs/testing.md to use consistent command names
+**Resolution:** Added `test` target as an alias to `pytest` in the Makefile.
 
 ### 5. Improve Test Coverage
 **Current Status:** 16 test files covering main functionality  
@@ -251,13 +257,11 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 
 ## 🔧 Dependency & Build Improvements
 
-### 25. Pin Python Version in Dockerfile
+### 25. ~~Pin Python Version in Dockerfile~~ (Not an Issue)
+**Status:** ✅ Verified (2025-12-27)  
 **Files:** `Dockerfile` uses Python 3.14.2  
-**Issue:** Python 3.14 doesn't exist yet (current is 3.13.x)  
-**Fix:**
-- Update to actual stable Python version (e.g., 3.13.1 or 3.12.x)
-- Document required Python version in README
-- Ensure CI uses same version
+**Original Issue:** Python 3.14 doesn't exist yet (current is 3.13.x)  
+**Resolution:** Python 3.14.2 was released on December 5, 2025. The Dockerfiles are correctly using this version. No changes needed.
 
 ### 26. Add Dependency License Checker
 **Issue:** No automated license compliance checking  

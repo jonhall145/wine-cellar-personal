@@ -4,6 +4,9 @@ import sentry_sdk
 from celery.schedules import crontab
 
 from wine_cellar.__init__ import __version__
+
+# Import all settings from prod module
+# Using wildcard import here is acceptable as this is a settings override pattern
 from wine_cellar.conf.prod import *  # noqa: F403
 
 DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
