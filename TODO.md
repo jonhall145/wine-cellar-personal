@@ -5,22 +5,13 @@ This document outlines identified issues, improvements, and technical debt items
 **Generated:** 2025-12-27  
 **Version:** 0.3.0-rc.0
 
+**Note:** Hardcoded credentials in settings files are development placeholders and not considered security issues.
+
 ---
 
 ## 🔴 High Priority - Security & Critical Issues
 
-### 1. Remove Hardcoded SECRET_KEY from Repository
-**File:** `wine_cellar/conf/settings.py`  
-**Issue:** The Django SECRET_KEY is hardcoded in the settings file with value `django-insecure-9_c29b95eghgc@yx6lyuiz3*h#oy7*zh8*vb36d1cwe)b4%v0d`  
-**Risk:** Security vulnerability - secret key should never be committed to version control  
-**Fix:**
-- Move SECRET_KEY to environment variable
-- Update settings.py to read from `os.environ.get('SECRET_KEY')`
-- Add SECRET_KEY to `.env.dev-sample` and `.env.prod-sample` with placeholder values
-- Document the change in setup.md
-- Regenerate a new secret key for production deployments
-
-### 2. Wildcard Imports in Settings Files
+### 1. Wildcard Imports in Settings Files
 **Files:** 
 - `wine_cellar/conf/prod.py`
 - `wine_cellar/conf/docker_settings.py`
@@ -32,7 +23,7 @@ This document outlines identified issues, improvements, and technical debt items
 - Refactor to use explicit imports or a settings base class pattern
 - Consider using django-environ or python-decouple for better settings management
 
-### 3. Production Setup Marked as "Under Development"
+### 2. Production Setup Marked as "Under Development"
 **File:** `docs/deployment.md`  
 **Issue:** Production deployment documentation states "This setup is under development. Proceed with caution."  
 **Risk:** May indicate incomplete or untested production deployment process  
@@ -46,7 +37,7 @@ This document outlines identified issues, improvements, and technical debt items
 
 ## 🟡 Medium Priority - Code Quality & Technical Debt
 
-### 4. Fix Hacky Form Step Workaround
+### 3. Fix Hacky Form Step Workaround
 **File:** `wine_cellar/apps/wine/views.py` (around line with FIXME comment)  
 **Issue:** Code contains comment "FIXME: hacky workaround to increase form_step field"  
 **Code:**
@@ -60,7 +51,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Consider using Django FormWizard or similar library
 - Remove the need to mutate form.data directly
 
-### 5. Missing Test Target in Makefile
+### 4. Missing Test Target in Makefile
 **File:** `Makefile`  
 **Issue:** Documentation mentions `make test` but Makefile only has `make pytest`  
 **Impact:** Documentation inconsistency  
@@ -68,7 +59,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Add `test` target as alias to `pytest` in Makefile
 - Update docs/testing.md to use consistent command names
 
-### 6. Improve Test Coverage
+### 5. Improve Test Coverage
 **Current Status:** 16 test files covering main functionality  
 **Issue:** Unknown test coverage percentage, potential gaps in testing  
 **Fix:**
@@ -81,7 +72,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
   - Edge cases in wine filtering and sorting
 - Set minimum coverage threshold (e.g., 80%)
 
-### 7. Missing API Documentation
+### 6. Missing API Documentation
 **Issue:** No OpenAPI/Swagger documentation for AJAX endpoints  
 **Impact:** Difficult for developers to understand available endpoints  
 **Fix:**
@@ -89,7 +80,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Consider adding django-rest-framework with automatic API documentation
 - Or manually document endpoints in docs/
 
-### 8. No Database Backup/Restore Documentation
+### 7. No Database Backup/Restore Documentation
 **Issue:** Missing documentation for backup and restore procedures  
 **Impact:** Risk of data loss without clear backup strategy  
 **Fix:**
@@ -104,14 +95,14 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 
 ## 🟢 Low Priority - Enhancements & Nice-to-Have
 
-### 9. Add Pre-commit Hooks Configuration File
+### 8. Add Pre-commit Hooks Configuration File
 **Issue:** Husky is configured but no documented pre-commit hooks setup  
 **Fix:**
 - Add `.pre-commit-config.yaml` for Python developers not using npm
 - Document pre-commit hook setup in setup.md
 - Include black, isort, flake8 in pre-commit configuration
 
-### 10. Improve Error Handling in Views
+### 9. Improve Error Handling in Views
 **Issue:** Generic error handling in views, may not provide clear feedback  
 **Fix:**
 - Add custom error pages (400, 403, 404, 500)
@@ -119,7 +110,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Add logging for debugging production issues
 - Consider using Django's message framework more extensively
 
-### 11. Add Health Check Endpoint
+### 10. Add Health Check Endpoint
 **Issue:** No health check endpoint for monitoring/orchestration  
 **Impact:** Difficult to monitor application health in production  
 **Fix:**
@@ -129,7 +120,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
   - Disk space for media uploads
 - Document endpoint for monitoring tools
 
-### 12. Internationalization Improvements
+### 11. Internationalization Improvements
 **Current Status:** German locale files present but incomplete  
 **Fix:**
 - Complete German translations
@@ -137,7 +128,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Document translation contribution process
 - Consider adding more languages
 
-### 13. Add Docker Healthchecks
+### 12. Add Docker Healthchecks
 **Files:** `Dockerfile`, `Dockerfile.prod`, `docker-compose.yml`, `docker-compose.prod.yml`  
 **Issue:** Docker containers lack HEALTHCHECK instructions  
 **Fix:**
@@ -145,7 +136,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Configure healthchecks in docker-compose files
 - Test automatic container restart on failure
 
-### 14. Performance Optimization Opportunities
+### 13. Performance Optimization Opportunities
 **Areas to investigate:**
 - Add database query optimization (check for N+1 queries)
 - Implement Django caching framework
@@ -153,7 +144,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Consider adding database indexes for frequently filtered fields
 - Optimize wine image serving (thumbnails, lazy loading)
 
-### 15. Accessibility Improvements
+### 14. Accessibility Improvements
 **Issue:** No documented accessibility testing or WCAG compliance  
 **Fix:**
 - Run accessibility audit (e.g., with Lighthouse, axe)
@@ -162,7 +153,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Test with screen readers
 - Add accessibility documentation
 
-### 16. Mobile Responsiveness Review
+### 15. Mobile Responsiveness Review
 **Issue:** Unknown state of mobile responsiveness  
 **Fix:**
 - Test all pages on mobile devices
@@ -171,7 +162,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Add viewport meta tags if missing
 - Test touch interactions
 
-### 17. Add Contributing Guidelines
+### 16. Add Contributing Guidelines
 **File:** Create `CONTRIBUTING.md`  
 **Contents:**
 - Code of conduct
@@ -182,7 +173,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Commit message format (conventional commits)
 - Development setup instructions
 
-### 18. Add Security Policy
+### 17. Add Security Policy
 **File:** Create `SECURITY.md`  
 **Contents:**
 - How to report security vulnerabilities
@@ -190,7 +181,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Supported versions
 - Response timeline
 
-### 19. Improve Logging Strategy
+### 18. Improve Logging Strategy
 **Issue:** No documented logging configuration  
 **Fix:**
 - Configure Django logging in settings
@@ -199,7 +190,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Set up log rotation
 - Document log locations and formats
 
-### 20. Add Rate Limiting
+### 19. Add Rate Limiting
 **Issue:** No rate limiting on forms or API endpoints  
 **Risk:** Vulnerable to abuse/spam  
 **Fix:**
@@ -214,7 +205,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 
 ## 📋 Documentation Improvements
 
-### 21. Add Architecture Documentation
+### 20. Add Architecture Documentation
 **File:** Create `docs/architecture.md`  
 **Contents:**
 - System architecture diagram
@@ -223,7 +214,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Component interactions
 - Technology stack rationale
 
-### 22. Improve README.md
+### 21. Improve README.md
 **Enhancements:**
 - Add badges for build status, coverage, version
 - Add quick start section
@@ -232,7 +223,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Add troubleshooting section
 - Link to live demo if available
 
-### 23. Add API Reference Documentation
+### 22. Add API Reference Documentation
 **File:** Create `docs/api.md`  
 **Contents:**
 - List all AJAX endpoints
@@ -240,7 +231,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Authentication requirements
 - Example curl commands
 
-### 24. Document Environment Variables
+### 23. Document Environment Variables
 **File:** Create `docs/configuration.md`  
 **Contents:**
 - Complete list of all environment variables
@@ -248,7 +239,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Required vs optional
 - Examples for different deployment scenarios
 
-### 25. Add Upgrade Guide
+### 24. Add Upgrade Guide
 **File:** Create `docs/upgrading.md`  
 **Contents:**
 - Version upgrade procedures
@@ -260,7 +251,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 
 ## 🔧 Dependency & Build Improvements
 
-### 26. Pin Python Version in Dockerfile
+### 25. Pin Python Version in Dockerfile
 **Files:** `Dockerfile` uses Python 3.14.2  
 **Issue:** Python 3.14 doesn't exist yet (current is 3.13.x)  
 **Fix:**
@@ -268,21 +259,21 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Document required Python version in README
 - Ensure CI uses same version
 
-### 27. Add Dependency License Checker
+### 26. Add Dependency License Checker
 **Issue:** No automated license compliance checking  
 **Fix:**
 - Add tool to check dependency licenses
 - Ensure all dependencies are compatible with AGPL-3.0
 - Document license information
 
-### 28. Add SBOM Generation
+### 27. Add SBOM Generation
 **Issue:** No Software Bill of Materials  
 **Fix:**
 - Generate SBOM for security/compliance
 - Use tools like syft or cyclonedx
 - Include in release artifacts
 
-### 29. Review and Update Dependencies
+### 28. Review and Update Dependencies
 **Note:** Renovate is configured for automated updates  
 **Action items:**
 - Review current dependency versions
@@ -293,28 +284,28 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 
 ## 🎨 UI/UX Improvements
 
-### 30. Add Loading States
+### 29. Add Loading States
 **Issue:** No visible loading indicators for async operations  
 **Fix:**
 - Add spinners for barcode scanning
 - Add loading states for form submissions
 - Add skeleton screens for data loading
 
-### 31. Improve Empty States
+### 30. Improve Empty States
 **Issue:** Unknown quality of empty states (no wines, no stock)  
 **Fix:**
 - Add helpful empty state messages
 - Include call-to-action buttons
 - Add illustrations or icons
 
-### 32. Add Data Export Functionality
+### 31. Add Data Export Functionality
 **Enhancement:** Allow users to export their wine data  
 **Fix:**
 - Add CSV/JSON export for wine list
 - Add PDF export for individual wine details
 - Add backup export (all user data)
 
-### 33. Add Bulk Operations
+### 32. Add Bulk Operations
 **Enhancement:** Support bulk actions on wines  
 **Fix:**
 - Bulk delete wines
@@ -326,7 +317,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 
 ## 🔐 Security Hardening
 
-### 34. Add Content Security Policy (CSP)
+### 33. Add Content Security Policy (CSP)
 **Issue:** No CSP headers configured  
 **Fix:**
 - Configure django-csp or similar
@@ -334,7 +325,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Test with inline scripts
 - Document CSP configuration
 
-### 35. Add Security Headers
+### 34. Add Security Headers
 **Issue:** Missing security headers  
 **Fix:**
 - Add X-Frame-Options
@@ -343,7 +334,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Add Permissions-Policy
 - Use django-security middleware
 
-### 36. Implement Password Strength Requirements
+### 35. Implement Password Strength Requirements
 **Issue:** No documented password policy  
 **Fix:**
 - Configure Django password validators
@@ -351,7 +342,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Document password requirements
 - Consider adding 2FA support
 
-### 37. Add Audit Logging
+### 36. Add Audit Logging
 **Enhancement:** Track security-relevant events  
 **Fix:**
 - Log login attempts (success/failure)
@@ -364,7 +355,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 
 ## 🧪 Testing Improvements
 
-### 38. Add End-to-End Tests
+### 37. Add End-to-End Tests
 **Issue:** No E2E tests for critical user flows  
 **Fix:**
 - Add Selenium or Playwright tests
@@ -375,7 +366,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
   - Stock management
 - Run E2E tests in CI
 
-### 39. Add Performance Tests
+### 38. Add Performance Tests
 **Issue:** No performance benchmarks  
 **Fix:**
 - Add load testing (e.g., with Locust)
@@ -383,7 +374,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Test concurrent user scenarios
 - Document performance benchmarks
 
-### 40. Add Visual Regression Testing
+### 39. Add Visual Regression Testing
 **Enhancement:** Catch unintended UI changes  
 **Fix:**
 - Add Percy or BackstopJS
@@ -394,7 +385,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 
 ## 📊 Monitoring & Observability
 
-### 41. Add Application Monitoring
+### 40. Add Application Monitoring
 **Enhancement:** Better production visibility  
 **Fix:**
 - Integrate with Sentry for error tracking
@@ -402,7 +393,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Track user metrics
 - Document monitoring setup
 
-### 42. Add Database Monitoring
+### 41. Add Database Monitoring
 **Enhancement:** Track database health  
 **Fix:**
 - Monitor query performance
@@ -414,7 +405,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 
 ## 🚀 Deployment & Infrastructure
 
-### 43. Add Deployment Automation
+### 42. Add Deployment Automation
 **Enhancement:** Simplify deployment process  
 **Fix:**
 - Add deployment scripts
@@ -422,7 +413,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Add rollback procedures
 - Consider adding staging environment
 
-### 44. Add Database Migration Testing
+### 43. Add Database Migration Testing
 **Issue:** No documented migration testing process  
 **Fix:**
 - Test migrations on production-like data
@@ -430,7 +421,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Add migration safety checks
 - Consider using django-migration-linter
 
-### 45. Improve Docker Image Size
+### 44. Improve Docker Image Size
 **Issue:** Potential for smaller Docker images  
 **Fix:**
 - Use multi-stage builds
@@ -442,7 +433,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 
 ## 🌟 Feature Completeness
 
-### 46. Complete Email Notification System
+### 45. Complete Email Notification System
 **Status:** Drink-by reminders mentioned but implementation unclear  
 **Fix:**
 - Ensure email templates exist and are tested
@@ -450,14 +441,14 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Test with different email providers
 - Add email notification preferences
 
-### 47. Add Wine Recommendation System
+### 46. Add Wine Recommendation System
 **Enhancement:** Suggest wines based on user preferences  
 **Fix:**
 - Implement basic recommendation algorithm
 - Based on ratings, wine types, regions
 - Add "wines you might like" section
 
-### 48. Add Wine Statistics Dashboard
+### 47. Add Wine Statistics Dashboard
 **Enhancement:** More analytics for users  
 **Fix:**
 - Add charts for wine types, regions, vintages
@@ -470,25 +461,24 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 ## Priority Summary
 
 **Immediate Action Required (Security):**
-- #1 - Remove hardcoded SECRET_KEY
-- #26 - Fix Python version in Dockerfile
+- #25 - Fix Python version in Dockerfile
 
 **Should Address Soon (Quality):**
-- #2 - Wildcard imports
-- #4 - Form step workaround
-- #6 - Test coverage
-- #20 - Rate limiting
+- #1 - Wildcard imports
+- #3 - Form step workaround
+- #5 - Test coverage
+- #19 - Rate limiting
 
 **Good to Have (Enhancements):**
-- #11 - Health check endpoint
-- #21-25 - Documentation improvements
-- #32 - Data export
-- #41 - Application monitoring
+- #10 - Health check endpoint
+- #20-24 - Documentation improvements
+- #31 - Data export
+- #40 - Application monitoring
 
 **Nice to Have (Future):**
-- #47 - Recommendation system
-- #48 - Statistics dashboard
-- #40 - Visual regression testing
+- #46 - Recommendation system
+- #47 - Statistics dashboard
+- #39 - Visual regression testing
 
 ---
 
