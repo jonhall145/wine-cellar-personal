@@ -4,7 +4,42 @@ import sentry_sdk
 from celery.schedules import crontab
 
 from wine_cellar.__init__ import __version__
-from wine_cellar.conf.prod import *  # noqa: F403
+from wine_cellar.conf.prod import (
+    ACCOUNT_ADAPTER,
+    ALLOWED_HOSTS as _ALLOWED_HOSTS,
+    AUTH_PASSWORD_VALIDATORS,
+    AUTHENTICATION_BACKENDS,
+    BASE_DIR,
+    CURRENCIES,
+    CURRENCY_SYMBOLS,
+    DATABASES as _DATABASES,
+    DEBUG as _DEBUG,
+    DEFAULT_AUTO_FIELD,
+    EMAIL_BACKEND as _EMAIL_BACKEND,
+    INSTALLED_APPS,
+    LANGUAGE_CODE,
+    LANGUAGES,
+    LOCALE_PATHS,
+    LOGIN_REDIRECT_URL,
+    LOGOUT_REDIRECT_URL,
+    MAP_BASEURL,
+    MEDIA_URL,
+    MIDDLEWARE,
+    ROOT_DIR,
+    ROOT_URLCONF,
+    SECRET_KEY as _SECRET_KEY,
+    SITE_URL as _SITE_URL,
+    STATIC_ROOT as _STATIC_ROOT,
+    STATIC_URL,
+    STATICFILES_DIRS,
+    STORAGES,
+    TEMPLATES,
+    TIME_ZONE,
+    USE_I18N,
+    USE_TZ,
+    VERSION,
+    WSGI_APPLICATION,
+)
 
 DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")
@@ -12,7 +47,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 DATABASES = {
     "default": {
         "ENGINE": os.environ.get("SQL_ENGINE", "django.db.backends.sqlite3"),
-        "NAME": os.environ.get("SQL_DATABASE", BASE_DIR / "db.sqlite3"),  # noqa: F405
+        "NAME": os.environ.get("SQL_DATABASE", BASE_DIR / "db.sqlite3"),
         "USER": os.environ.get("SQL_USER", "user"),
         "PASSWORD": os.environ.get("SQL_PASSWORD", "password"),
         "HOST": os.environ.get("SQL_HOST", "localhost"),
