@@ -1,5 +1,6 @@
-from .settings import *  # noqa: F403
+from wine_cellar.conf.settings import *  # noqa: F403, F401
+from wine_cellar.conf.settings import BASE_DIR
 
-MEDIA_ROOT = BASE_DIR / "test_media/"  # noqa: F405
+MEDIA_ROOT = BASE_DIR / "test_media/"
 
 CELERY_TASK_ALWAYS_EAGER = True

@@ -4,7 +4,8 @@ import sentry_sdk
 from celery.schedules import crontab
 
 from wine_cellar.__init__ import __version__
-from wine_cellar.conf.prod import *  # noqa: F403
+from wine_cellar.conf.prod import *  # noqa: F403, F401
+from wine_cellar.conf.prod import BASE_DIR
 
 DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")
@@ -12,7 +13,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 DATABASES = {
     "default": {
         "ENGINE": os.environ.get("SQL_ENGINE", "django.db.backends.sqlite3"),
-        "NAME": os.environ.get("SQL_DATABASE", BASE_DIR / "db.sqlite3"),  # noqa: F405
+        "NAME": os.environ.get("SQL_DATABASE", BASE_DIR / "db.sqlite3"),
         "USER": os.environ.get("SQL_USER", "user"),
         "PASSWORD": os.environ.get("SQL_PASSWORD", "password"),
         "HOST": os.environ.get("SQL_HOST", "localhost"),
