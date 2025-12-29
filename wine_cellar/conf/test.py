@@ -1,3 +1,4 @@
+from wine_cellar.conf.settings import *  # noqa: F403, F401
 from wine_cellar.conf.settings import BASE_DIR
 
 MEDIA_ROOT = BASE_DIR / "test_media/"

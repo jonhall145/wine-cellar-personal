@@ -4,35 +4,8 @@ import sentry_sdk
 from celery.schedules import crontab
 
 from wine_cellar.__init__ import __version__
-from wine_cellar.conf.prod import (  # noqa: F401
-    ACCOUNT_ADAPTER,
-    AUTH_PASSWORD_VALIDATORS,
-    AUTHENTICATION_BACKENDS,
-    BASE_DIR,
-    CURRENCIES,
-    CURRENCY_SYMBOLS,
-    DEFAULT_AUTO_FIELD,
-    INSTALLED_APPS,
-    LANGUAGE_CODE,
-    LANGUAGES,
-    LOCALE_PATHS,
-    LOGIN_REDIRECT_URL,
-    LOGOUT_REDIRECT_URL,
-    MAP_BASEURL,
-    MEDIA_URL,
-    MIDDLEWARE,
-    ROOT_DIR,
-    ROOT_URLCONF,
-    STATIC_URL,
-    STATICFILES_DIRS,
-    STORAGES,
-    TEMPLATES,
-    TIME_ZONE,
-    USE_I18N,
-    USE_TZ,
-    VERSION,
-    WSGI_APPLICATION,
-)
+from wine_cellar.conf.prod import *  # noqa: F403, F401
+from wine_cellar.conf.prod import BASE_DIR
 
 DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS").split(" ")
