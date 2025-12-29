@@ -1,16 +1,21 @@
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.wine.models import UserContentModel, Wine
 
 
 class Storage(UserContentModel):
-    name = models.CharField(max_length=100, verbose_name="Storage Name")
+    name = models.CharField(max_length=100, verbose_name=_("Storage Name"))
     description = models.TextField(
-        verbose_name="Storage Description", null=True, blank=True
+        verbose_name=_("Storage Description"), null=True, blank=True
     )
-    location = models.CharField(max_length=100, verbose_name="Location")
-    rows = models.PositiveIntegerField(default=0, verbose_name="Number of Rows")
-    columns = models.PositiveIntegerField(default=0, verbose_name="Number of Columns")
+    location = models.CharField(max_length=100, verbose_name=_("Location"))
+    rows = models.PositiveIntegerField(default=0, verbose_name=_("Number of Rows"))
+    columns = models.PositiveIntegerField(default=0, verbose_name=_("Number of Columns"))
+
+    class Meta:
+        verbose_name = _("Storage")
+        verbose_name_plural = _("Storages")
 
     def __str__(self):
         return self.name
@@ -40,5 +45,9 @@ class StorageItem(UserContentModel):
     wine = models.ForeignKey(Wine, on_delete=models.CASCADE)
     row = models.PositiveIntegerField(null=True, blank=True)
     column = models.PositiveIntegerField(null=True, blank=True)
-    deleted = models.BooleanField(default=False)
+    deleted = models.BooleanField(default=False, db_index=True)
     price = models.DecimalField(max_digits=6, decimal_places=2, null=True)
+
+    class Meta:
+        verbose_name = _("Storage Item")
+        verbose_name_plural = _("Storage Items")

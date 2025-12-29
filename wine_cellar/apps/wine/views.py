@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_not_required
-from django.db import connections
+from django.db import connections, transaction
 from django.db.models import Avg, Q, Sum
 from django.db.models.functions import Coalesce
 from django.forms import model_to_dict
@@ -18,6 +18,9 @@ from wine_cellar.apps.user.views import get_user_settings
 from wine_cellar.apps.wine.filters import WineFilter
 from wine_cellar.apps.wine.forms import WineEditForm, WineForm, image_fields_map
 from wine_cellar.apps.wine.models import Wine, WineImage
+
+# Form step constants
+FINAL_FORM_STEP = 4
 
 
 class HomePageView(TemplateView):
@@ -94,15 +97,15 @@ class WineCreateView(FormView):
         return kwargs
 
     def form_valid(self, form):
-        form_step = form.cleaned_data.get("form_step", 4)
+        form_step = form.cleaned_data.get("form_step", FINAL_FORM_STEP)
 
         # assume form_step is last step if not send
         if form_step is None:
-            form_step = 4
-        if form_step == 4 or "save_finish" in self.request.POST:
+            form_step = FINAL_FORM_STEP
+        if form_step == FINAL_FORM_STEP or "save_finish" in self.request.POST:
             self.process_form_data(self.request.user, form.cleaned_data)
             return super().form_valid(form)
-        elif form_step < 4:
+        elif form_step < FINAL_FORM_STEP:
             # FIXME: hacky workaround to increase form_step field
             form.data = form.data.copy()
             form.data["form_step"] = form.cleaned_data["form_step"] + 1
@@ -111,6 +114,7 @@ class WineCreateView(FormView):
         return super().form_invalid(form)
 
     @staticmethod
+    @transaction.atomic
     def process_form_data(user, cleaned_data):
         abv = cleaned_data["abv"]
         size = cleaned_data["size"][0]
@@ -147,7 +151,7 @@ class WineCreateView(FormView):
         )
         wine.save()
 
-        wine.vineyard.set(vineyards),
+        wine.vineyard.set(vineyards)
         wine.grapes.set(grapes)
         wine.food_pairings.set(food_pairings)
         wine.source.set(source)
@@ -185,6 +189,7 @@ class WineUpdateView(FormView):
         return super().form_valid(form)
 
     @staticmethod
+    @transaction.atomic
     def process_form_data(wine, user, cleaned_data):
         abv = cleaned_data["abv"]
         size = cleaned_data["size"][0]
@@ -309,6 +314,12 @@ class WineMapView(TemplateView):
 
 @login_not_required
 def health_check(request):
-    db_ok = all(conn.cursor().execute("SELECT 1") for conn in connections.all())
+    """Health check endpoint for container orchestration."""
+    try:
+        for conn in connections.all():
+            conn.ensure_connection()
+        db_ok = True
+    except Exception:
+        db_ok = False
     status_code = 200 if db_ok else 503
     return JsonResponse({"status": "ok" if db_ok else "unhealthy"}, status=status_code)

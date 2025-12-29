@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 from django.utils.translation import gettext_lazy as _
@@ -25,7 +26,9 @@ VERSION = __version__
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-9_c29b95eghgc@yx6lyuiz3*h#oy7*zh8*vb36d1cwe)b4%v0d"
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY", "django-insecure-dev-only-key-do-not-use-in-production"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -142,7 +145,7 @@ USE_TZ = True
 LOCALE_PATHS = [ROOT_DIR / "locale"]
 
 LANGUAGES = [
-    ("de-DE", _("German")),
+    ("de-de", _("German")),
     ("en-gb", _("British English")),
 ]
 
@@ -174,6 +177,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 MEDIA_ROOT = "media/"
 MEDIA_URL = "media/"
+
+# Default image for wines without photos
+DEFAULT_WINE_IMAGE = "images/bottle.svg"
 
 MAP_BASEURL = "https://tiles.openfreemap.org/styles/liberty"
 

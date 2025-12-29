@@ -1,15 +1,19 @@
 import os
+from typing import TYPE_CHECKING
 
 from django.conf import settings
 from PIL import ExifTags, Image
 
-
-def user_directory_path(instance, filename):
-    # file will be uploaded to MEDIA_ROOT/user_<id>/<filename>
-    return "user_{0}/{1}".format(instance.user.pk, filename)
+if TYPE_CHECKING:
+    from wine_cellar.apps.wine.models import WineImage
 
 
-def make_thumbnail(instance, height=225):
+def user_directory_path(instance: "WineImage", filename: str) -> str:
+    """Generate upload path for user files."""
+    return f"user_{instance.user.pk}/{filename}"
+
+
+def make_thumbnail(instance: "WineImage", height: int = 225) -> str:
     """
     Creates a proportional thumbnail with given height.
     Returns the path to the thumbnail file.

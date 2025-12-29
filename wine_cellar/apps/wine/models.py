@@ -15,9 +15,23 @@ from wine_cellar.apps.wine.utils import user_directory_path
 
 
 class UserContentModel(models.Model):
-    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, null=True)
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
+    """Abstract base model for user-owned content."""
+
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        null=True,
+        verbose_name=_("User"),
+    )
+    created = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        verbose_name=_("Created"),
+    )
+    modified = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Modified"),
+    )
 
     class Meta:
         abstract = True
@@ -52,6 +66,8 @@ class Size(UserContentModel):
     name = models.FloatField(verbose_name=_("Size"))
 
     class Meta:
+        verbose_name = _("Size")
+        verbose_name_plural = _("Sizes")
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "user"],
@@ -67,6 +83,8 @@ class Grape(UserContentModel):
     name = models.CharField(max_length=100, verbose_name=_("Grape"))
 
     class Meta:
+        verbose_name = _("Grape")
+        verbose_name_plural = _("Grapes")
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "user"],
@@ -75,22 +93,23 @@ class Grape(UserContentModel):
         ]
 
     def __str__(self):
-        if self.name:
-            return self.name
-        return ""
+        return self.name or ""
 
 
 class Vineyard(UserContentModel):
-    name = models.CharField(max_length=100)
-    website = models.CharField(max_length=100, null=True)
-    region = models.CharField(max_length=250, null=True)
+    name = models.CharField(max_length=100, verbose_name=_("Name"))
+    website = models.CharField(max_length=100, null=True, verbose_name=_("Website"))
+    region = models.CharField(max_length=250, null=True, verbose_name=_("Region"))
     country = models.CharField(
         max_length=3,
         null=True,
         choices={country.alpha_2: country.name for country in pycountry.countries},
+        verbose_name=_("Country"),
     )
 
     class Meta:
+        verbose_name = _("Vineyard")
+        verbose_name_plural = _("Vineyards")
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "country", "region", "user"],
@@ -106,6 +125,8 @@ class FoodPairing(UserContentModel):
     name = models.CharField(max_length=100, verbose_name=_("Food"))
 
     class Meta:
+        verbose_name = _("Food Pairing")
+        verbose_name_plural = _("Food Pairings")
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "user"],
@@ -118,9 +139,11 @@ class FoodPairing(UserContentModel):
 
 
 class Attribute(UserContentModel):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, verbose_name=_("Attribute"))
 
     class Meta:
+        verbose_name = _("Attribute")
+        verbose_name_plural = _("Attributes")
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "user"],
@@ -133,9 +156,11 @@ class Attribute(UserContentModel):
 
 
 class Source(UserContentModel):
-    name = models.CharField(max_length=250)
+    name = models.CharField(max_length=250, verbose_name=_("Source"))
 
     class Meta:
+        verbose_name = _("Source")
+        verbose_name_plural = _("Sources")
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "user"],
@@ -148,33 +173,37 @@ class Source(UserContentModel):
 
 
 class Wine(UserContentModel):
-    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, null=True)
-    name = models.CharField(max_length=100)
-    barcode = models.CharField(max_length=100, null=True)
-    wine_type = models.CharField(max_length=2, choices=WineType)
-    category = models.CharField(max_length=2, choices=Category, null=True)
-    grapes = models.ManyToManyField(Grape)
-    attributes = models.ManyToManyField(Attribute)
-    food_pairings = models.ManyToManyField(FoodPairing)
-    abv = models.FloatField(null=True, blank=True)
-    size = models.ForeignKey(Size, on_delete=models.SET_NULL, null=True)
+    name = models.CharField(max_length=100, verbose_name=_("Name"))
+    barcode = models.CharField(max_length=100, null=True, verbose_name=_("Barcode"))
+    wine_type = models.CharField(max_length=2, choices=WineType, verbose_name=_("Type"))
+    category = models.CharField(max_length=2, choices=Category, null=True, verbose_name=_("Category"))
+    grapes = models.ManyToManyField(Grape, verbose_name=_("Grapes"))
+    attributes = models.ManyToManyField(Attribute, verbose_name=_("Attributes"))
+    food_pairings = models.ManyToManyField(FoodPairing, verbose_name=_("Food Pairings"))
+    abv = models.FloatField(null=True, blank=True, verbose_name=_("ABV"))
+    size = models.ForeignKey(Size, on_delete=models.SET_NULL, null=True, verbose_name=_("Size"))
     vintage = models.PositiveIntegerField(
         validators=[MinValueValidator(1900)],
         null=True,
+        db_index=True,
+        verbose_name=_("Vintage"),
     )
-    drink_by = models.DateField(blank=True, null=True)
-    comment = models.CharField(max_length=250, blank=True)
+    drink_by = models.DateField(blank=True, null=True, db_index=True, verbose_name=_("Drink By"))
+    comment = models.CharField(max_length=250, blank=True, verbose_name=_("Comment"))
     rating = models.PositiveIntegerField(
         null=True,
         validators=[MinValueValidator(0), MaxValueValidator(10)],
+        verbose_name=_("Rating"),
     )
     country = models.CharField(
         max_length=3,
         choices={country.alpha_2: country.name for country in pycountry.countries},
+        db_index=True,
+        verbose_name=_("Country"),
     )
-    vineyard = models.ManyToManyField(Vineyard)
-    source = models.ManyToManyField(Source)
-    price = models.DecimalField(max_digits=6, decimal_places=2, null=True)
+    vineyard = models.ManyToManyField(Vineyard, verbose_name=_("Vineyard"))
+    source = models.ManyToManyField(Source, verbose_name=_("Source"))
+    price = models.DecimalField(max_digits=6, decimal_places=2, null=True, verbose_name=_("Price"))
 
     def get_absolute_url(self):
         return reverse("wine-detail", kwargs={"pk": self.pk})
@@ -245,14 +274,14 @@ class Wine(UserContentModel):
     def image(self):
         i = self.wineimage_set.first()
         if not i:
-            return static("images/bottle.svg")
+            return static(settings.DEFAULT_WINE_IMAGE)
         return i.image.url
 
     @property
     def image_thumbnail(self):
         i = self.wineimage_set.filter(image_type=ImageType.FRONT)
         if not i:
-            return static("images/bottle.svg")
+            return static(settings.DEFAULT_WINE_IMAGE)
         front = i.first()
         if front.thumbnail:
             return front.thumbnail.url
@@ -285,6 +314,8 @@ class Wine(UserContentModel):
         return pycountry.countries.get(alpha_2=self.country).flag
 
     class Meta:
+        verbose_name = _("Wine")
+        verbose_name_plural = _("Wines")
         constraints = [
             models.UniqueConstraint(
                 fields=[
@@ -302,10 +333,14 @@ class Wine(UserContentModel):
 
 
 class WineImage(models.Model):
-    image = models.ImageField(upload_to=user_directory_path)
-    thumbnail = models.ImageField(upload_to=user_directory_path, blank=True, null=True)
-    wine = models.ForeignKey(Wine, on_delete=models.CASCADE)
-    user = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True)
+    image = models.ImageField(upload_to=user_directory_path, verbose_name=_("Image"))
+    thumbnail = models.ImageField(upload_to=user_directory_path, blank=True, null=True, verbose_name=_("Thumbnail"))
+    wine = models.ForeignKey(Wine, on_delete=models.CASCADE, verbose_name=_("Wine"))
+    user = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, verbose_name=_("User"))
     image_type = models.CharField(
-        max_length=3, choices=ImageType, default=ImageType.FRONT
+        max_length=3, choices=ImageType, default=ImageType.FRONT, verbose_name=_("Image Type")
     )
+
+    class Meta:
+        verbose_name = _("Wine Image")
+        verbose_name_plural = _("Wine Images")
