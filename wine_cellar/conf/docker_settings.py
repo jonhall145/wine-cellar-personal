@@ -58,4 +58,3 @@ if SENTRY_DSN:
         dsn=SENTRY_DSN,
         release="wine-cellar@" + __version__,
     )
-WHITENOISE_MANIFEST_STRICT = False
