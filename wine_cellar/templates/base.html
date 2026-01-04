@@ -14,7 +14,9 @@
         <link rel="icon"
               type="image/x-icon"
               href="{% static 'images/favicon.svg' %}">
-        <script src="{% url 'javascript-catalog' %}"></script>
+        {% if user.is_authenticated %}
+            <script src="{% url 'javascript-catalog' %}"></script>
+        {% endif %}
         {% block styles %}
         {% endblock styles %}
         {% block extra_js %}
@@ -52,10 +54,36 @@
                                         <a href="{% url 'wine-scan' %}" class="pure-menu-link">{% translate "Scan Wine" %}</a>
                                     </li>
                                     <li class="pure-menu-item">
+                                        <a href="{% url 'label-scan' %}" class="pure-menu-link">{% translate "Scan Label" %}</a>
+                                    </li>
+                                    <li class="pure-menu-item">
                                         <a href="{% url 'wine-map' %}" class="pure-menu-link">{% translate "Map" %}</a>
                                     </li>
                                     <li class="pure-menu-item">
                                         <a href="{% url 'storage-list' %}" class="pure-menu-link">{% translate "Storage" %}</a>
+                                    </li>
+                                    <li class="pure-menu-item pure-menu-has-children pure-menu-allow-hover">
+                                        <a href="#" class="pure-menu-link">{% translate "More" %}</a>
+                                        <ul class="pure-menu-children">
+                                            <li class="pure-menu-item">
+                                                <a href="{% url 'wishlist-list' %}" class="pure-menu-link">{% translate "Wishlist" %}</a>
+                                            </li>
+                                            <li class="pure-menu-item">
+                                                <a href="{% url 'drink-history' %}" class="pure-menu-link">{% translate "Drink History" %}</a>
+                                            </li>
+                                            <li class="pure-menu-item">
+                                                <a href="{% url 'consumption-stats' %}" class="pure-menu-link">{% translate "Statistics" %}</a>
+                                            </li>
+                                            <li class="pure-menu-item">
+                                                <a href="{% url 'cellar-value' %}" class="pure-menu-link">{% translate "Cellar Value" %}</a>
+                                            </li>
+                                            <li class="pure-menu-item">
+                                                <a href="{% url 'drinking-alerts' %}" class="pure-menu-link">{% translate "Alerts" %}</a>
+                                            </li>
+                                            <li class="pure-menu-item">
+                                                <a href="{% url 'reorder-reminders' %}" class="pure-menu-link">{% translate "Reorder" %}</a>
+                                            </li>
+                                        </ul>
                                     </li>
                                     <li class="pure-menu-item">
                                         <a href="{% url 'user-settings' %}" class="pure-menu-link">{% translate "Settings" %}</a>
@@ -65,6 +93,12 @@
                                             {% csrf_token %}
                                             <button class="pure-menu-link button" type="submit">{% translate "Logout" %}</button>
                                         </form>
+                                    </li>
+                                    <li class="pure-menu-item">
+                                        <button class="theme-toggle" type="button" aria-label="{% translate 'Toggle dark mode' %}">
+                                            <i class="fa-solid fa-moon theme-toggle__icon--light"></i>
+                                            <i class="fa-solid fa-sun theme-toggle__icon--dark"></i>
+                                        </button>
                                     </li>
                                 {% else %}
                                     <li class="pure-menu-item">
@@ -90,10 +124,36 @@
                                         <a href="{% url 'wine-scan' %}" class="pure-menu-link">{% translate "Scan Wine" %}</a>
                                     </li>
                                     <li class="pure-menu-item">
+                                        <a href="{% url 'label-scan' %}" class="pure-menu-link">{% translate "Scan Label" %}</a>
+                                    </li>
+                                    <li class="pure-menu-item">
                                         <a href="{% url 'wine-map' %}" class="pure-menu-link">{% translate "Map" %}</a>
                                     </li>
                                     <li class="pure-menu-item">
                                         <a href="{% url 'storage-list' %}" class="pure-menu-link">{% translate "Storage" %}</a>
+                                    </li>
+                                    <li class="pure-menu-item pure-menu-has-children pure-menu-allow-hover">
+                                        <a href="#" class="pure-menu-link">{% translate "More" %} ▾</a>
+                                        <ul class="pure-menu-children">
+                                            <li class="pure-menu-item">
+                                                <a href="{% url 'wishlist-list' %}" class="pure-menu-link">{% translate "Wishlist" %}</a>
+                                            </li>
+                                            <li class="pure-menu-item">
+                                                <a href="{% url 'drink-history' %}" class="pure-menu-link">{% translate "Drink History" %}</a>
+                                            </li>
+                                            <li class="pure-menu-item">
+                                                <a href="{% url 'consumption-stats' %}" class="pure-menu-link">{% translate "Statistics" %}</a>
+                                            </li>
+                                            <li class="pure-menu-item">
+                                                <a href="{% url 'cellar-value' %}" class="pure-menu-link">{% translate "Cellar Value" %}</a>
+                                            </li>
+                                            <li class="pure-menu-item">
+                                                <a href="{% url 'drinking-alerts' %}" class="pure-menu-link">{% translate "Alerts" %}</a>
+                                            </li>
+                                            <li class="pure-menu-item">
+                                                <a href="{% url 'reorder-reminders' %}" class="pure-menu-link">{% translate "Reorder" %}</a>
+                                            </li>
+                                        </ul>
                                     </li>
                                     <li class="pure-menu-item">
                                         <a href="{% url 'user-settings' %}" class="pure-menu-link">{% translate "Settings" %}</a>
@@ -103,6 +163,12 @@
                                             {% csrf_token %}
                                             <button class="pure-menu-link button" type="submit">{% translate "Logout" %}</button>
                                         </form>
+                                    </li>
+                                    <li class="pure-menu-item">
+                                        <button class="theme-toggle" type="button" aria-label="{% translate 'Toggle dark mode' %}">
+                                            <i class="fa-solid fa-moon theme-toggle__icon--light"></i>
+                                            <i class="fa-solid fa-sun theme-toggle__icon--dark"></i>
+                                        </button>
                                     </li>
                                 {% else %}
                                     <li class="pure-menu-item">
@@ -124,6 +190,42 @@
                 {% endblock content %}
             {% endblock allauth_wrapper %}
         </main>
+        {% if user.is_authenticated %}
+            <div class="fab-container">
+                <a href="{% url 'wine-scan' %}" class="fab fab--small" aria-label="{% translate 'Scan wine barcode' %}">
+                    <i class="fa-solid fa-barcode"></i>
+                </a>
+                <a href="{% url 'wine-add' %}" class="fab fab--small" aria-label="{% translate 'Add new wine' %}">
+                    <i class="fa-solid fa-wine-bottle"></i>
+                </a>
+                <button class="fab fab--main" type="button" aria-label="{% translate 'Quick actions' %}">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </div>
+            <!-- Mobile bottom navigation -->
+            <nav class="bottom-nav">
+                <a href="{% url 'homepage' %}" class="bottom-nav__item">
+                    <i class="fa-solid fa-home"></i>
+                    <span>{% translate "Home" %}</span>
+                </a>
+                <a href="{% url 'wine-list' %}" class="bottom-nav__item">
+                    <i class="fa-solid fa-wine-bottle"></i>
+                    <span>{% translate "Wines" %}</span>
+                </a>
+                <a href="{% url 'wine-add' %}" class="bottom-nav__item bottom-nav__item--primary">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>{% translate "Add" %}</span>
+                </a>
+                <a href="{% url 'label-scan' %}" class="bottom-nav__item">
+                    <i class="fa-solid fa-camera"></i>
+                    <span>{% translate "Scan" %}</span>
+                </a>
+                <a href="{% url 'storage-list' %}" class="bottom-nav__item">
+                    <i class="fa-solid fa-warehouse"></i>
+                    <span>{% translate "Storage" %}</span>
+                </a>
+            </nav>
+        {% endif %}
         <footer class="footer">
             <p>
                 AGPL 3.0 | {% translate "Version" %} {% get_setting "VERSION" %} | <a href="https://github.com/the-broke-sommeliers/wine-cellar"

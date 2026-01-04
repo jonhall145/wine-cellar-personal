@@ -8,11 +8,12 @@ function initTomSelect (): void {
     const rawConfig : string | undefined = el.dataset.tom_config
     const clear : boolean = Boolean(JSON.parse(el.dataset.clear ?? "false"))
     const clearOpts : boolean = Boolean(JSON.parse(el.dataset.clearOpts ?? "false"))
+    const enableSearch : boolean = Boolean(JSON.parse(el.dataset.search ?? "false"))
     let config : RecursivePartial<TomSettings> = {
       create: false,
       closeAfterSelect: true,
       maxItems: 1,
-      // disable search
+      // disable search by default
       controlInput: '',
     }
     if (rawConfig) {
@@ -23,6 +24,10 @@ function initTomSelect (): void {
           return true
         }
       }
+    }
+    // Enable search if data-search="true" is set
+    if (enableSearch) {
+      delete config.controlInput
     }
     const ts = new TomSelect(el, config)
     if (clear) {

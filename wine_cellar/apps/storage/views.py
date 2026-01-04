@@ -172,6 +172,9 @@ class StorageItemAddView(FormView):
         row = cleaned_data["row"]
         column = cleaned_data["column"]
         price = cleaned_data.get("price")
+        is_gift = cleaned_data.get("is_gift", False)
+        gift_from = cleaned_data.get("gift_from")
+        occasion = cleaned_data.get("occasion")
 
         StorageItem.objects.create(
             storage=storage,
@@ -180,6 +183,9 @@ class StorageItemAddView(FormView):
             column=column,
             user=user,
             price=price,
+            is_gift=is_gift,
+            gift_from=gift_from,
+            occasion=occasion,
         )
 
 

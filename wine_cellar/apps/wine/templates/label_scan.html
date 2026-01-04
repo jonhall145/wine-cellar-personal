@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+{% block title %}
+    {% translate "Scan Wine Label" %}
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">{% translate "Scan Wine Label" %}</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1 pure-u-lg-1-3 m-auto">
+            <p>{% translate "Upload a photo of a wine label to automatically extract information." %}</p>
+            <form method="post"
+                  enctype="multipart/form-data"
+                  class="pure-form pure-form-stacked wine-form"
+                  novalidate>
+                {% csrf_token %}
+                {% include 'forms/form_field.html' with field=form.image %}
+                <div class="pure-controls">
+                    <button type="submit"
+                            class="pure-button button__secondary">{% translate "Scan Label" %}</button>
+                </div>
+            </form>
+            <p class="text--gray mt-12">
+                {% translate "The scanner will try to extract vintage year, ABV, and bottle size from the label image." %}
+            </p>
+        </div>
+    </div>
+{% endblock content %}

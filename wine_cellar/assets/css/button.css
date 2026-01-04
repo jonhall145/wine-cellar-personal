@@ -1,67 +1,99 @@
 .button__primary {
-  background-color: var(--dark-green);
-  color: var(--light);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--border-radius-sm);
+  font-weight: 600;
+  font-size: var(--font-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--container-box-shadow);
 
   &:hover {
-    background-color: var(--darker-green);
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+    transform: translateY(-2px);
+    box-shadow: var(--container-box-shadow-lg);
   }
 
   &:focus {
-    outline: revert;
-    background-color: var(--darker-green);
+    outline: 3px solid rgba(114, 47, 55, 0.4);
+    outline-offset: 2px;
   }
 
   &:active {
-    background-color: var(--darkest-green);
+    transform: translateY(0);
+    background: var(--primary-dark);
   }
 }
 
 .button__secondary {
-  background-color: var(--dark-purple);
-  color: var(--light);
+  background: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-dark) 100%);
+  color: white;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--border-radius-sm);
+  font-weight: 600;
+  font-size: var(--font-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--container-box-shadow);
 
   &:hover {
-    background-color: var(--darker-purple);
+    background: linear-gradient(135deg, var(--secondary-light) 0%, var(--secondary) 100%);
+    transform: translateY(-2px);
   }
 
   &:focus {
-    outline: revert;
-    background-color: var(--darker-purple);
+    outline: 3px solid rgba(45, 55, 72, 0.4);
+    outline-offset: 2px;
   }
 
   &:active {
-    background-color: var(--darkest-purple);
+    transform: translateY(0);
+    background: var(--secondary-dark);
   }
 }
 
 .button__neutral {
-  color: black;
-  background-color: var(--gray-green);
+  color: var(--secondary-dark);
+  background: var(--white);
   text-decoration: none;
-  border-radius: 6px;
+  border: 2px solid var(--border-color);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--border-radius-sm);
+  font-weight: 500;
+  font-size: var(--font-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
 
   &:hover {
-    background-color: var(--gray-green);
+    background: var(--light);
+    border-color: var(--primary-light);
+    color: var(--primary);
+    transform: translateY(-2px);
   }
 
   &:focus {
-    outline: revert;
-    background-color: var(--darker-green);
+    outline: 3px solid rgba(114, 47, 55, 0.3);
+    outline-offset: 2px;
   }
 
   &:active {
-    background-color: var(--darkest-green);
+    transform: translateY(0);
   }
 }
 
 .ts-control:focus-within,
 .pure-control-group > input[type='number']:focus,
 .pure-control-group > input[type='text']:focus {
-  border: 2px solid #3584e4 !important; /* Blue glow effect */
+  border: 2px solid var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(114, 47, 55, 0.15) !important;
 }
 
 .wine__edit-delete-buttons {
   display: flex;
-  gap: 6px;
-  margin-bottom: 36px;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xl);
+  flex-wrap: wrap;
 }

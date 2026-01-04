@@ -1,4 +1,4 @@
-{% load static i18n %}
+{% load static i18n wine_tags %}
 <li class="wine-card">
     <div class="wine-card__image-wrapper">
         <img src="{{ wine.image_thumbnail }}"
@@ -12,6 +12,12 @@
         <h2 class="wine-card__title">
             <a class="wine-card__link" href="{% url 'wine-detail' wine.pk %}">{{ wine.name }}</a>
         </h2>
+        <div class="wine-card__meta">
+            {% wine_type_badge wine.wine_type %}
+            {% if wine.rating %}
+                {% rating_stars wine.rating %}
+            {% endif %}
+        </div>
         {% if wine.get_grapes %}
             <div class="pure-u-1-1">
                 <span class="text--gray">Grape</span>
@@ -19,19 +25,28 @@
             </div>
         {% endif %}
         {% if wine.vintage %}
-            <div class="pure-u-1-1">
+            <div class="pure-u-1-1 wine-card__vintage-row">
                 <span class="text--gray">Vintage</span>
                 <p>{{ wine.vintage }}</p>
-            </div>
-        {% endif %}
-        {% if wine.drink_by %}
-            <div class="pure-u-1-1">
-                <span class="text--gray">Drink By</span>
-                <p>{{ wine.drink_by }}</p>
+                {% drink_window_indicator wine.vintage wine.drink_by %}
             </div>
         {% endif %}
     </div>
     <div class="wine-card__stock">
-        <p>{% translate "Stock:" %} {{ wine.total_stock }}</p>
+        {% if wine.total_stock == 0 %}
+            <span class="stock-badge stock-badge--out"><i class="fa-solid fa-xmark"></i> {% translate "Out" %}</span>
+        {% elif wine.total_stock <= 2 %}
+            <span class="stock-badge stock-badge--low"><i class="fa-solid fa-arrow-down"></i> {{ wine.total_stock }}</span>
+        {% else %}
+            <span class="stock-badge stock-badge--plenty"><i class="fa-solid fa-check"></i> {{ wine.total_stock }}</span>
+        {% endif %}
+    </div>
+    <div class="wine-card__actions">
+        <a href="{% url 'stock-add' wine.pk %}" class="wine-card__action" title="{% translate 'Add bottle' %}">
+            <i class="fa-solid fa-plus"></i>
+        </a>
+        <a href="{% url 'drink-record-add' wine.pk %}" class="wine-card__action" title="{% translate 'Record drink' %}">
+            <i class="fa-solid fa-wine-glass"></i>
+        </a>
     </div>
 </li>

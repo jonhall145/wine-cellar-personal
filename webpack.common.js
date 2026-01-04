@@ -19,6 +19,8 @@ module.exports = {
         './node_modules/tom-select/dist/css/tom-select.css',
         './node_modules/@fortawesome/fontawesome-free/css/fontawesome.css',
         './node_modules/@fortawesome/fontawesome-free/css/solid.css',
+        './wine_cellar/assets/js/theme_toggle.ts',
+        './wine_cellar/assets/js/fab.ts',
       ],
     },
     tom_select: {

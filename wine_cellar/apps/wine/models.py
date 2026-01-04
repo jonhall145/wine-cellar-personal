@@ -62,8 +62,37 @@ class ImageType(models.TextChoices):
     LABEL_BACK = "LB", _("Label Back")
 
 
+class SizeChoices(models.TextChoices):
+    PICCOLO = "PI", _("Piccolo (187ml)")
+    DEMI = "DE", _("Demi (375ml)")
+    HALF = "HA", _("Half (500ml)")
+    STANDARD = "ST", _("Standard (750ml)")
+    LITER = "LI", _("Liter (1L)")
+    MAGNUM = "MA", _("Magnum (1.5L)")
+    JEROBOAM = "JE", _("Jeroboam (3L)")
+    REHOBOAM = "RE", _("Rehoboam (4.5L)")
+
+
+# Mapping from numeric liters to size codes for migration
+SIZE_LITERS_TO_CODE = {
+    0.1875: "PI",
+    0.375: "DE",
+    0.5: "HA",
+    0.75: "ST",
+    1.0: "LI",
+    1.5: "MA",
+    3.0: "JE",
+    4.5: "RE",
+}
+
+
 class Size(UserContentModel):
-    name = models.FloatField(verbose_name=_("Size"))
+    name = models.CharField(
+        max_length=2,
+        choices=SizeChoices,
+        default=SizeChoices.STANDARD,
+        verbose_name=_("Size"),
+    )
 
     class Meta:
         verbose_name = _("Size")
@@ -76,7 +105,7 @@ class Size(UserContentModel):
         ]
 
     def __str__(self):
-        return str(number_format(self.name, use_l10n=True))
+        return str(SizeChoices(self.name).label) if self.name else ""
 
 
 class Grape(UserContentModel):
@@ -176,19 +205,25 @@ class Wine(UserContentModel):
     name = models.CharField(max_length=100, verbose_name=_("Name"))
     barcode = models.CharField(max_length=100, null=True, verbose_name=_("Barcode"))
     wine_type = models.CharField(max_length=2, choices=WineType, verbose_name=_("Type"))
-    category = models.CharField(max_length=2, choices=Category, null=True, verbose_name=_("Category"))
+    category = models.CharField(
+        max_length=2, choices=Category, null=True, verbose_name=_("Category")
+    )
     grapes = models.ManyToManyField(Grape, verbose_name=_("Grapes"))
     attributes = models.ManyToManyField(Attribute, verbose_name=_("Attributes"))
     food_pairings = models.ManyToManyField(FoodPairing, verbose_name=_("Food Pairings"))
     abv = models.FloatField(null=True, blank=True, verbose_name=_("ABV"))
-    size = models.ForeignKey(Size, on_delete=models.SET_NULL, null=True, verbose_name=_("Size"))
+    size = models.ForeignKey(
+        Size, on_delete=models.SET_NULL, null=True, verbose_name=_("Size")
+    )
     vintage = models.PositiveIntegerField(
         validators=[MinValueValidator(1900)],
         null=True,
         db_index=True,
         verbose_name=_("Vintage"),
     )
-    drink_by = models.DateField(blank=True, null=True, db_index=True, verbose_name=_("Drink By"))
+    drink_by = models.DateField(
+        blank=True, null=True, db_index=True, verbose_name=_("Drink By")
+    )
     comment = models.CharField(max_length=250, blank=True, verbose_name=_("Comment"))
     rating = models.PositiveIntegerField(
         null=True,
@@ -201,9 +236,24 @@ class Wine(UserContentModel):
         db_index=True,
         verbose_name=_("Country"),
     )
+    subregion = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        verbose_name=_("Subregion"),
+    )
     vineyard = models.ManyToManyField(Vineyard, verbose_name=_("Vineyard"))
     source = models.ManyToManyField(Source, verbose_name=_("Source"))
-    price = models.DecimalField(max_digits=6, decimal_places=2, null=True, verbose_name=_("Price"))
+    price = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, verbose_name=_("Price")
+    )
+    rrp = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("RRP"),
+    )
 
     def get_absolute_url(self):
         return reverse("wine-detail", kwargs={"pk": self.pk})
@@ -231,6 +281,15 @@ class Wine(UserContentModel):
             getattr(user_settings, "currency", "EUR"), "€"
         )
         formatted_price = number_format(self.price, use_l10n=True)
+        return f"{formatted_price}{currency}"
+
+    @property
+    def get_rrp_with_currency(self):
+        user_settings = get_user_settings(self.user)
+        currency = settings.CURRENCY_SYMBOLS.get(
+            getattr(user_settings, "currency", "EUR"), "€"
+        )
+        formatted_price = number_format(self.rrp, use_l10n=True)
         return f"{formatted_price}{currency}"
 
     @property
@@ -333,14 +392,155 @@ class Wine(UserContentModel):
 
 
 class WineImage(models.Model):
-    image = models.ImageField(upload_to=user_directory_path, verbose_name=_("Image"))
-    thumbnail = models.ImageField(upload_to=user_directory_path, blank=True, null=True, verbose_name=_("Thumbnail"))
-    wine = models.ForeignKey(Wine, on_delete=models.CASCADE, verbose_name=_("Wine"))
-    user = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, verbose_name=_("User"))
+    image = models.ImageField(
+        upload_to=user_directory_path, verbose_name=_("Image")
+    )
+    thumbnail = models.ImageField(
+        upload_to=user_directory_path,
+        blank=True,
+        null=True,
+        verbose_name=_("Thumbnail"),
+    )
+    wine = models.ForeignKey(
+        Wine, on_delete=models.CASCADE, verbose_name=_("Wine")
+    )
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.SET_NULL,
+        null=True,
+        verbose_name=_("User"),
+    )
     image_type = models.CharField(
-        max_length=3, choices=ImageType, default=ImageType.FRONT, verbose_name=_("Image Type")
+        max_length=3,
+        choices=ImageType,
+        default=ImageType.FRONT,
+        verbose_name=_("Image Type"),
     )
 
     class Meta:
         verbose_name = _("Wine Image")
         verbose_name_plural = _("Wine Images")
+
+
+class DrinkRecord(UserContentModel):
+    """Record of drinking/consuming a bottle."""
+
+    wine = models.ForeignKey(
+        Wine, on_delete=models.CASCADE, verbose_name=_("Wine")
+    )
+    date_consumed = models.DateField(verbose_name=_("Date Consumed"))
+    tasting_notes = models.TextField(
+        null=True, blank=True, verbose_name=_("Tasting Notes")
+    )
+    rating = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(10)],
+        verbose_name=_("Rating"),
+    )
+    shared_with = models.CharField(
+        max_length=250, null=True, blank=True, verbose_name=_("Shared With")
+    )
+    occasion = models.CharField(
+        max_length=100, null=True, blank=True, verbose_name=_("Occasion")
+    )
+
+    class Meta:
+        verbose_name = _("Drink Record")
+        verbose_name_plural = _("Drink Records")
+        ordering = ["-date_consumed"]
+
+
+class Wishlist(UserContentModel):
+    """Wines the user wants to buy."""
+
+    name = models.CharField(max_length=100, verbose_name=_("Name"))
+    wine_type = models.CharField(
+        max_length=2, choices=WineType, null=True, blank=True, verbose_name=_("Type")
+    )
+    country = models.CharField(
+        max_length=3,
+        null=True,
+        blank=True,
+        choices={country.alpha_2: country.name for country in pycountry.countries},
+        verbose_name=_("Country"),
+    )
+    subregion = models.CharField(
+        max_length=100, null=True, blank=True, verbose_name=_("Subregion")
+    )
+    vintage = models.PositiveIntegerField(
+        null=True, blank=True, verbose_name=_("Vintage")
+    )
+    price_limit = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True, verbose_name=_("Price Limit")
+    )
+    notes = models.TextField(null=True, blank=True, verbose_name=_("Notes"))
+    priority = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        verbose_name=_("Priority"),
+    )
+    purchased = models.BooleanField(default=False, verbose_name=_("Purchased"))
+
+    class Meta:
+        verbose_name = _("Wishlist Item")
+        verbose_name_plural = _("Wishlist Items")
+        ordering = ["-priority", "name"]
+
+
+class BottleNote(UserContentModel):
+    """Dated notes for a specific bottle over time."""
+
+    storage_item = models.ForeignKey(
+        "storage.StorageItem",
+        on_delete=models.CASCADE,
+        related_name="notes",
+        verbose_name=_("Bottle"),
+    )
+    note_date = models.DateField(verbose_name=_("Date"))
+    note = models.TextField(verbose_name=_("Note"))
+
+    class Meta:
+        verbose_name = _("Bottle Note")
+        verbose_name_plural = _("Bottle Notes")
+        ordering = ["-note_date"]
+
+
+class DrinkingWindowAlert(UserContentModel):
+    """Alerts for wines approaching drinking window."""
+
+    wine = models.ForeignKey(
+        Wine, on_delete=models.CASCADE, verbose_name=_("Wine")
+    )
+    alert_date = models.DateField(verbose_name=_("Alert Date"))
+    message = models.CharField(
+        max_length=250, null=True, blank=True, verbose_name=_("Message")
+    )
+    is_read = models.BooleanField(default=False, verbose_name=_("Read"))
+
+    class Meta:
+        verbose_name = _("Drinking Window Alert")
+        verbose_name_plural = _("Drinking Window Alerts")
+        ordering = ["alert_date"]
+
+
+class ReorderReminder(UserContentModel):
+    """Reminder to reorder a wine when stock drops below threshold."""
+
+    wine = models.ForeignKey(
+        Wine, on_delete=models.CASCADE, verbose_name=_("Wine")
+    )
+    min_stock = models.PositiveIntegerField(
+        default=1, verbose_name=_("Minimum Stock")
+    )
+    is_active = models.BooleanField(default=True, verbose_name=_("Active"))
+
+    class Meta:
+        verbose_name = _("Reorder Reminder")
+        verbose_name_plural = _("Reorder Reminders")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["wine", "user"],
+                name="unique_reorder_reminder",
+            )
+        ]

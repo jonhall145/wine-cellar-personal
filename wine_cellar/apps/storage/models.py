@@ -11,7 +11,9 @@ class Storage(UserContentModel):
     )
     location = models.CharField(max_length=100, verbose_name=_("Location"))
     rows = models.PositiveIntegerField(default=0, verbose_name=_("Number of Rows"))
-    columns = models.PositiveIntegerField(default=0, verbose_name=_("Number of Columns"))
+    columns = models.PositiveIntegerField(
+        default=0, verbose_name=_("Number of Columns")
+    )
 
     class Meta:
         verbose_name = _("Storage")
@@ -47,6 +49,13 @@ class StorageItem(UserContentModel):
     column = models.PositiveIntegerField(null=True, blank=True)
     deleted = models.BooleanField(default=False, db_index=True)
     price = models.DecimalField(max_digits=6, decimal_places=2, null=True)
+    is_gift = models.BooleanField(default=False, verbose_name=_("Is Gift"))
+    gift_from = models.CharField(
+        max_length=100, null=True, blank=True, verbose_name=_("Gift From")
+    )
+    occasion = models.CharField(
+        max_length=100, null=True, blank=True, verbose_name=_("Occasion")
+    )
 
     class Meta:
         verbose_name = _("Storage Item")

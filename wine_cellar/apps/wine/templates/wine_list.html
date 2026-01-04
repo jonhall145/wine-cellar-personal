@@ -64,11 +64,14 @@
                 {% for wine in wines %}
                     {% include 'wine_card.html' with wine=wine %}
                 {% empty %}
-                    <div class="pure-u-1 m-auto">
-                        <p>
-                            <strong>{% translate "There are no wines yet." %}</strong>
-                        </p>
-                    </div>
+                    <li class="empty-state">
+                        <div class="empty-state__icon">🍷</div>
+                        <h3 class="empty-state__title">{% translate "No wines yet" %}</h3>
+                        <p class="empty-state__message">{% translate "Start building your collection by adding your first wine." %}</p>
+                        <a href="{% url 'wine-add' %}" class="pure-button button__primary empty-state__action">
+                            <i class="fa-solid fa-plus"></i> {% translate "Add Wine" %}
+                        </a>
+                    </li>
                 {% endfor %}
             </ul>
             {% include "includes/pagination.html" %}

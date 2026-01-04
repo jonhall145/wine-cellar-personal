@@ -123,13 +123,13 @@ def test_wine_create_post_unauthenticated(client):
 @pytest.mark.django_db
 def test_wine_create_post_with_barcode(client, user):
     client.force_login(user)
-    size = Size.objects.get(name=0.75)
+    
     data = {
         "name": "Merlot",
         "wine_type": "RE",
         "category": "DR",
         "abv": 13.0,
-        "size": size.pk,
+        "size": "ST",
         "vintage": 2002,
         "country": "DE",
         "form_step": 4,
@@ -150,7 +150,7 @@ def test_wine_create_post_with_barcode(client, user):
     assert wine.name == data["name"]
     assert wine.wine_type == data["wine_type"]
     assert wine.abv == data["abv"]
-    assert wine.size == size
+    assert wine.size.name == "ST"
     assert wine.vintage == data["vintage"]
     assert wine.barcode == "12345"
 
@@ -158,13 +158,13 @@ def test_wine_create_post_with_barcode(client, user):
 @pytest.mark.django_db
 def test_wine_create_post_with_drink_by(client, user):
     client.force_login(user)
-    size = Size.objects.get(name=0.75)
+    
     data = {
         "name": "Merlot",
         "wine_type": "RE",
         "category": "DR",
         "abv": 13.0,
-        "size": size.pk,
+        "size": "ST",
         "vintage": 2002,
         "drink_by": "2003-02-25",
         "country": "DE",
@@ -186,7 +186,7 @@ def test_wine_create_post_with_drink_by(client, user):
     assert wine.name == data["name"]
     assert wine.wine_type == data["wine_type"]
     assert wine.abv == data["abv"]
-    assert wine.size == size
+    assert wine.size.name == "ST"
     assert wine.vintage == data["vintage"]
     assert wine.barcode == "12345"
     assert wine.drink_by == datetime.date(day=25, month=2, year=2003)
@@ -195,13 +195,13 @@ def test_wine_create_post_with_drink_by(client, user):
 @pytest.mark.django_db
 def test_wine_create_post_with_invalid_drink_by(client, user):
     client.force_login(user)
-    size = Size.objects.get(name=0.75)
+    
     data = {
         "name": "Merlot",
         "wine_type": "RE",
         "category": "DR",
         "abv": 13.0,
-        "size": size.pk,
+        "size": "ST",
         "vintage": 2002,
         "drink_by": "02-02-2000",
         "country": "DE",
@@ -219,64 +219,25 @@ def test_wine_create_post_with_invalid_drink_by(client, user):
 
 
 @pytest.mark.django_db
-def test_wine_create_post_with_steps(client, user):
+def test_wine_create_post_single_page(client, user):
+    """Test creating wine with single-page form (no steps)."""
     client.force_login(user)
-    size = Size.objects.get(name=0.75)
-    data_step0 = {
+    
+    data = {
         "name": "Merlot",
         "wine_type": "RE",
-        "size": size.pk,
+        "size": "ST",
         "country": "DE",
+        "category": "DR",
+        "abv": 13.0,
+        "vintage": 2002,
+        "rating": 5,
+        "comment": "Good wine",
     }
     assert not Wine.objects.exists()
     r = client.get(reverse("wine-add"))
     initial = r.context_data["form"].initial.copy()
-    assert initial["form_step"] == 0
-    initial.update(data_step0)
-    # post form step 1
-    r = client.post(reverse("wine-add"), data=initial, follow=True)
-    assert r.status_code == HTTPStatus.OK
-    assert not Wine.objects.exists()
-
-    # post form step 1
-    data_step1 = {
-        "category": "DR",
-        "abv": 13.0,
-        "vintage": 2002,
-    }
-    initial = r.context_data["form"].data.copy()
-    assert initial["form_step"] == 1
-    initial.update(data_step1)
-    r = client.post(reverse("wine-add"), data=initial, follow=True)
-    assert r.status_code == HTTPStatus.OK
-    assert not Wine.objects.exists()
-
-    # post form step 2
-    data_step2 = {
-        "source": "tom_new_optSupermarket",
-    }
-    initial = r.context_data["form"].data.copy()
-    assert initial["form_step"] == 2
-    initial.update(data_step2)
-    r = client.post(reverse("wine-add"), data=initial, follow=True)
-    assert r.status_code == HTTPStatus.OK
-    assert not Wine.objects.exists()
-
-    # post form step 3
-    data_step3 = {
-        "rating": 5,
-        "comment": "Good wine",
-    }
-    initial = r.context_data["form"].data.copy()
-    assert initial["form_step"] == 3
-    initial.update(data_step3)
-    r = client.post(reverse("wine-add"), data=initial, follow=True)
-    assert r.status_code == HTTPStatus.OK
-    assert not Wine.objects.exists()
-
-    # post form step 4
-    initial = r.context_data["form"].data.copy()
-    assert initial["form_step"] == 4
+    initial.update(data)
     r = client.post(reverse("wine-add"), data=initial, follow=True)
     assert r.status_code == HTTPStatus.OK
     assertRedirects(response=r, expected_url=reverse("wine-list"))
@@ -284,15 +245,10 @@ def test_wine_create_post_with_steps(client, user):
     assertTemplateUsed(response=r, template_name="wine_list.html")
     assert Wine.objects.exists()
     wine = Wine.objects.first()
-    data = {}
-    data.update(data_step0)
-    data.update(data_step1)
-    data.update(data_step2)
-    data.update(data_step3)
     assert wine.name == data["name"]
     assert wine.wine_type == data["wine_type"]
     assert wine.abv == data["abv"]
-    assert wine.size == size
+    assert wine.size.name == "ST"
     assert wine.vintage == data["vintage"]
     assert wine.comment == data["comment"]
     assert wine.rating == data["rating"]
@@ -301,13 +257,13 @@ def test_wine_create_post_with_steps(client, user):
 @pytest.mark.django_db
 def test_wine_create_post_invalid_step(client, user):
     client.force_login(user)
-    size = Size.objects.get(name=0.75)
+    
     data = {
         "name": "Merlot",
         "wine_type": "RE",
         "category": "DR",
         "abv": 13.0,
-        "size": size.pk,
+        "size": "ST",
         "vintage": 2002,
         "country": "DE",
         "form_step": 5,
@@ -324,13 +280,13 @@ def test_wine_create_post_invalid_step(client, user):
 @pytest.mark.django_db
 def test_wine_create_post_valid(client, user):
     client.force_login(user)
-    size = Size.objects.get(name=0.75)
+    
     data = {
         "name": "Merlot",
         "wine_type": "RE",
         "category": "DR",
         "abv": 13.0,
-        "size": size.pk,
+        "size": "ST",
         "vintage": 2002,
         "country": "DE",
     }
@@ -345,7 +301,7 @@ def test_wine_create_post_valid(client, user):
     assert wine.name == data["name"]
     assert wine.wine_type == data["wine_type"]
     assert wine.abv == data["abv"]
-    assert wine.size == size
+    assert wine.size.name == "ST"
     assert wine.vintage == data["vintage"]
 
 
@@ -353,14 +309,14 @@ def test_wine_create_post_valid(client, user):
 def test_wine_create_post_single_grape_valid(client, user, grape_factory):
     grape1 = grape_factory()
     grape_factory()
-    size = Size.objects.get(name=0.75)
+    
     client.force_login(user)
     data = {
         "name": "Wine Single Grape",
         "wine_type": "RE",
         "category": "DR",
         "abv": 13.0,
-        "size": size.pk,
+        "size": "ST",
         "vintage": 2002,
         "grapes": grape1.pk,
         "country": "DE",
@@ -376,7 +332,7 @@ def test_wine_create_post_single_grape_valid(client, user, grape_factory):
     assert wine.name == data["name"]
     assert wine.wine_type == data["wine_type"]
     assert wine.abv == data["abv"]
-    assert wine.size == size
+    assert wine.size.name == "ST"
     assert wine.vintage == data["vintage"]
     assert wine.grapes.count() == 1
     assert wine.grapes.first() == grape1
@@ -386,14 +342,14 @@ def test_wine_create_post_single_grape_valid(client, user, grape_factory):
 def test_wine_create_post_multiple_grape_valid(client, user, grape_factory):
     grape1 = grape_factory()
     grape2 = grape_factory()
-    size = Size.objects.get(name=0.75)
+    
     client.force_login(user)
     data = {
         "name": "Wine Single Grape",
         "wine_type": "RE",
         "category": "DR",
         "abv": 13.0,
-        "size": size.pk,
+        "size": "ST",
         "vintage": 2002,
         "grapes": [grape1.pk, grape2.pk],
         "country": "DE",
@@ -409,7 +365,7 @@ def test_wine_create_post_multiple_grape_valid(client, user, grape_factory):
     assert wine.name == data["name"]
     assert wine.wine_type == data["wine_type"]
     assert wine.abv == data["abv"]
-    assert wine.size == size
+    assert wine.size.name == "ST"
     assert wine.vintage == data["vintage"]
     assert wine.grapes.count() == 2
     assert wine.grapes.filter(id__in=[grape1.pk, grape2.pk])
@@ -417,14 +373,14 @@ def test_wine_create_post_multiple_grape_valid(client, user, grape_factory):
 
 @pytest.mark.django_db
 def test_wine_create_post_new_grape_valid(client, user, grape_factory):
-    size = Size.objects.get(name=0.75)
+    
     client.force_login(user)
     data = {
         "name": "Wine Single Grape",
         "wine_type": "RE",
         "category": "DR",
         "abv": 13.0,
-        "size": size.pk,
+        "size": "ST",
         "vintage": 2002,
         "grapes": "tom_new_optTestGrape",
         "country": "DE",
@@ -440,7 +396,7 @@ def test_wine_create_post_new_grape_valid(client, user, grape_factory):
     assert wine.name == data["name"]
     assert wine.wine_type == data["wine_type"]
     assert wine.abv == data["abv"]
-    assert wine.size == size
+    assert wine.size.name == "ST"
     assert wine.vintage == data["vintage"]
     assert wine.grapes.count() == 1
     assert wine.grapes.first().name == "TestGrape"
@@ -449,13 +405,13 @@ def test_wine_create_post_new_grape_valid(client, user, grape_factory):
 @pytest.mark.django_db
 def test_wine_create_post_invalid_grape(client, user, grape_factory):
     client.force_login(user)
-    size = Size.objects.get(name=0.75)
+    
     data = {
         "name": "Wine Single Grape",
         "wine_type": "RE",
         "category": "DR",
         "abv": 13.0,
-        "capacity": size.pk,
+        "size": "ST",
         "vintage": 2002,
         "grapes": [1.0],
         "country": "DE",
@@ -473,7 +429,7 @@ def test_wine_create_post_invalid_grape(client, user, grape_factory):
         "wine_type": "RE",
         "category": "DR",
         "abv": 13.0,
-        "size": size.pk,
+        "size": "ST",
         "vintage": 2002,
         "grapes": 1,
         "country": "DE",
@@ -492,14 +448,14 @@ def test_wine_create_post_invalid_grape(client, user, grape_factory):
 def test_wine_create_post_new_grape_multiple_valid(client, user, grape_factory):
     grape1 = grape_factory()
     grape2 = grape_factory()
-    size = Size.objects.get(name=0.75)
+    
     client.force_login(user)
     data = {
         "name": "Wine Single Grape",
         "wine_type": "RE",
         "category": "DR",
         "abv": 13.0,
-        "size": size.pk,
+        "size": "ST",
         "vintage": 2002,
         "grapes": ["tom_new_optTestGrape", grape1.pk, grape2.pk],
         "country": "DE",
@@ -515,7 +471,7 @@ def test_wine_create_post_new_grape_multiple_valid(client, user, grape_factory):
     assert wine.name == data["name"]
     assert wine.wine_type == data["wine_type"]
     assert wine.abv == data["abv"]
-    assert wine.size == size
+    assert wine.size.name == "ST"
     assert wine.vintage == data["vintage"]
     assert wine.grapes.count() == 3
     assert wine.grapes.filter(id__in=[grape1.pk, grape2.pk])
@@ -538,14 +494,14 @@ def test_wine_create_post_all_valid_fields(
     source = source_factory()
     vineyard = vineyard_factory()
     attribute = attribute_factory()
-    size = Size.objects.get(name=0.75)
+    
     client.force_login(user)
     data = {
         "name": "Wine All",
         "wine_type": "RE",
         "category": "DR",
         "abv": 13.0,
-        "size": size.pk,
+        "size": "ST",
         "vintage": 2002,
         "grapes": grape1.pk,
         "food_pairings": food_pairing.pk,
@@ -565,7 +521,7 @@ def test_wine_create_post_all_valid_fields(
     assert wine.name == data["name"]
     assert wine.wine_type == data["wine_type"]
     assert wine.abv == data["abv"]
-    assert wine.size == size
+    assert wine.size.name == "ST"
     assert wine.vintage == data["vintage"]
     assert wine.grapes.count() == 1
     assert wine.grapes.first() == grape1
@@ -595,14 +551,14 @@ def test_wine_update_valid_fields(
     source = source_factory()
     vineyard = vineyard_factory()
     attribute = attribute_factory()
-    size = Size.objects.get(name=0.75)
+    
     client.force_login(user)
     data = {
         "name": wine.name,
         "wine_type": "RE",
         "category": "DR",
         "abv": 13.0,
-        "size": size.pk,
+        "size": "ST",
         "vintage": 2002,
         "grapes": grape1.pk,
         "food_pairings": food_pairing.pk,
@@ -622,7 +578,7 @@ def test_wine_update_valid_fields(
     assert changed_wine.name == wine.name
     assert changed_wine.wine_type == data["wine_type"]
     assert changed_wine.abv == data["abv"]
-    assert changed_wine.size == size
+    assert changed_wine.size.name == "ST"
     assert changed_wine.vintage == data["vintage"]
     assert changed_wine.grapes.count() == 1
     assert changed_wine.grapes.first() == grape1

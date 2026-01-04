@@ -10,6 +10,7 @@ from django.db.models import Q
 from django.forms import DateField, ImageField
 from django.utils.translation import gettext_lazy as _
 
+from wine_cellar.apps.storage.models import Storage
 from wine_cellar.apps.user.views import get_user_settings
 from wine_cellar.apps.wine.fields import OpenMultipleChoiceField
 from wine_cellar.apps.wine.models import (
@@ -19,6 +20,7 @@ from wine_cellar.apps.wine.models import (
     Grape,
     ImageType,
     Size,
+    SizeChoices,
     Source,
     Vineyard,
     WineImage,
@@ -45,6 +47,7 @@ class TomSelectMixin:
         clear=True,
         placeholder=None,
         closeAfterSelect=True,
+        search=False,
     ):
         tom_config = {
             "create": create,
@@ -62,6 +65,7 @@ class TomSelectMixin:
             {
                 "data-tom_config": json.dumps(tom_config),
                 "data-clear": "true" if clear else "false",
+                "data-search": "true" if search else "false",
             }
         )
 
@@ -119,15 +123,6 @@ class WineFormPostCleanMixin:
                     max_options=-1,
                     clear=False,
                 )
-            size = self.cleaned_data.get("size")
-            if size:
-                self.set_tom_config(
-                    name="size",
-                    items=[s.pk for s in size],
-                    max_items=1,
-                    max_options=-1,
-                    clear=False,
-                )
 
 
 class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
@@ -140,17 +135,21 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
             "grapes",
             "food_pairings",
             "source",
-            "size",
         ]
         for user_field in user_fields:
             self.fields[user_field].queryset = self.fields[
                 user_field
             ].queryset.model.objects.filter(Q(user=None) | Q(user=user))
             self.fields[user_field].user = user
+        self.user = user
         user_settings = get_user_settings(user)
         self.fields["price"].help_text = _(
             "Enter the price of the bottle in %(currency)s."
         ) % {"currency": settings.CURRENCY_SYMBOLS[user_settings.currency]}
+
+        # Configure storage field for user's storages
+        if "storage" in self.fields:
+            self.fields["storage"].queryset = Storage.objects.filter(user=user)
 
         for field_name, image_type_code in image_fields_map.items():
             field = self.fields.get(field_name)
@@ -188,7 +187,7 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         label="Sweetness",
         required=False,
         max_length=2,
-        widget=forms.Select(choices=Category),
+        widget=forms.Select(choices=[("", "---------")] + list(Category.choices)),
         help_text=_("Select the sweetness level of the wine."),
     )
     country = forms.CharField(
@@ -200,13 +199,20 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
             "Select the country the wine was produced in as indicated on the label."
         ),
     )
-    size = OpenMultipleChoiceField(
-        queryset=Size.objects.none(),
-        field_name="name",
-        label="Size",
+    subregion = forms.CharField(
+        max_length=100,
+        required=False,
         help_text=_(
-            "Please enter the volume of bottle or box ect. in liters, e.g. 0.75."
+            "Enter the subregion or appellation of the wine, e.g. Douro Valley, Dao."
         ),
+    )
+    size = forms.CharField(
+        max_length=2,
+        required=False,
+        initial=SizeChoices.STANDARD,
+        widget=forms.Select(choices=SizeChoices.choices),
+        label="Size",
+        help_text=_("Select the bottle size."),
     )
     abv = forms.FloatField(
         required=False,
@@ -284,6 +290,13 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         decimal_places=2,
         localize=True,
     )
+    rrp = forms.DecimalField(
+        required=False,
+        max_digits=6,
+        decimal_places=2,
+        localize=True,
+        help_text=_("Enter the recommended retail price if different from purchase price."),
+    )
     barcode = forms.CharField(
         max_length=100,
         required=False,
@@ -323,6 +336,34 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         required=False,
         help_text=_("Upload a photo of the back of the bottle label."),
     )
+    # Storage fields for adding bottle to cellar
+    storage = forms.ModelChoiceField(
+        queryset=Storage.objects.none(),
+        required=False,
+        help_text=_("Select where to store this bottle (optional)."),
+    )
+    row = forms.IntegerField(
+        required=False,
+        min_value=1,
+        label=_("Row"),
+        help_text=_("Select the row in the storage."),
+        widget=forms.Select(),
+    )
+    column = forms.IntegerField(
+        required=False,
+        min_value=1,
+        label=_("Column"),
+        help_text=_("Select the column in the storage."),
+        widget=forms.Select(),
+    )
+    bottle_price = forms.DecimalField(
+        required=False,
+        max_digits=6,
+        decimal_places=2,
+        label=_("Bottle Price"),
+        help_text=_("Price paid for this specific bottle (if different from wine price)."),
+        localize=True,
+    )
     form_step = forms.IntegerField(
         widget=forms.HiddenInput(),
         label="",
@@ -344,7 +385,6 @@ class WineForm(WineBaseForm):
         self.set_tom_config(name="source", create=True)
         self.set_tom_config(name="vineyard", create=True)
         self.set_tom_config(name="country", max_items=1, max_options=-1)
-        self.set_tom_config(name="size", max_items=1, max_options=-1)
 
 
 class WineEditForm(WineBaseForm):
@@ -359,7 +399,10 @@ class WineEditForm(WineBaseForm):
         source = [s.pk for s in initial["source"]]
         vineyard = [v.pk for v in initial["vineyard"]]
         country = initial["country"]
-        size = initial["size"]
+        # Size is now a simple FK to Size model, get its name (the code)
+        size_obj = initial.get("size")
+        if size_obj:
+            self.initial["size"] = size_obj.name if hasattr(size_obj, "name") else size_obj
 
         self.fields["category"].widget.attrs.update(
             {
@@ -420,18 +463,6 @@ class WineEditForm(WineBaseForm):
                 ),
             }
         )
-        self.fields["size"].widget.attrs.update(
-            {
-                "data-tom_config": json.dumps(
-                    {
-                        "create": False,
-                        "items": size,
-                        "maxItems": 1,
-                        "maxOptions": None,
-                    }
-                ),
-            }
-        )
 
 
 class WineFilterForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
@@ -446,5 +477,103 @@ class WineFilterForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         self.set_tom_config(name="vineyard", create=False)
         self.set_tom_config(name="attributes", create=False)
         self.set_tom_config(
-            name="country", create=False, max_options=-1, placeholder=""
+            name="country", create=False, max_options=-1, placeholder="", search=True
         )
+
+
+class DrinkRecordForm(forms.Form):
+    date_consumed = forms.DateField(
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+        help_text=_("When did you drink this wine?"),
+    )
+    tasting_notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea,
+        help_text=_("Your tasting notes for this wine."),
+    )
+    rating = forms.IntegerField(
+        required=False,
+        validators=[MinValueValidator(0), MaxValueValidator(10)],
+        help_text=_("Rate this wine on a scale from 0 to 10."),
+    )
+    shared_with = forms.CharField(
+        max_length=250,
+        required=False,
+        help_text=_("Who did you share this wine with?"),
+    )
+    occasion = forms.CharField(
+        max_length=100,
+        required=False,
+        help_text=_("What was the occasion?"),
+    )
+
+
+class WishlistForm(forms.Form):
+    name = forms.CharField(
+        max_length=100,
+        help_text=_("Name of the wine you want to buy."),
+    )
+    wine_type = forms.CharField(
+        max_length=2,
+        required=False,
+        widget=forms.Select(choices=[("", "---------")] + list(WineType.choices)),
+        help_text=_("Type of wine."),
+    )
+    country = forms.CharField(
+        max_length=250,
+        required=False,
+        widget=forms.Select(
+            choices=[("", "---------")] + [(c.alpha_2, c.name) for c in pycountry.countries],
+        ),
+        help_text=_("Country of origin."),
+    )
+    subregion = forms.CharField(
+        max_length=100,
+        required=False,
+        help_text=_("Subregion or appellation."),
+    )
+    vintage = forms.IntegerField(
+        required=False,
+        help_text=_("Desired vintage year."),
+    )
+    price_limit = forms.DecimalField(
+        required=False,
+        max_digits=6,
+        decimal_places=2,
+        help_text=_("Maximum price you want to pay."),
+    )
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea,
+        help_text=_("Any notes about why you want this wine."),
+    )
+    priority = forms.IntegerField(
+        initial=1,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text=_("Priority from 1 (low) to 5 (high)."),
+    )
+
+
+class BottleNoteForm(forms.Form):
+    note_date = forms.DateField(
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+        help_text=_("Date of this note."),
+    )
+    note = forms.CharField(
+        widget=forms.Textarea,
+        help_text=_("Your note about this bottle."),
+    )
+
+
+class ReorderReminderForm(forms.Form):
+    min_stock = forms.IntegerField(
+        min_value=1,
+        initial=1,
+        help_text=_("Alert when stock drops to or below this number."),
+    )
+
+
+class LabelScanForm(forms.Form):
+    image = forms.ImageField(
+        help_text=_("Upload a photo of the wine label to scan."),
+    )

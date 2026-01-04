@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+{% block title %}
+    {% translate "Drinking Window Alerts" %}
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">{% translate "Drinking Window Alerts" %}</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1">
+            {% if overdue_wines %}
+                <h2 class="text--danger">{% translate "Past Drink-By Date" %}</h2>
+                <table class="pure-table pure-table-horizontal pure-table-striped mb-12">
+                    <thead>
+                        <tr>
+                            <th>{% translate "Wine" %}</th>
+                            <th>{% translate "Vintage" %}</th>
+                            <th>{% translate "Drink By" %}</th>
+                            <th>{% translate "Bottles" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for wine in overdue_wines %}
+                            <tr>
+                                <td><a href="{% url 'wine-detail' wine.pk %}">{{ wine.name }}</a></td>
+                                <td>{{ wine.vintage|default_if_none:"-" }}</td>
+                                <td>{{ wine.drink_by }}</td>
+                                <td>{{ wine.total_stock }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+
+            {% if upcoming_wines %}
+                <h2>{% translate "Approaching Drink-By Date (within 6 months)" %}</h2>
+                <table class="pure-table pure-table-horizontal pure-table-striped mb-12">
+                    <thead>
+                        <tr>
+                            <th>{% translate "Wine" %}</th>
+                            <th>{% translate "Vintage" %}</th>
+                            <th>{% translate "Drink By" %}</th>
+                            <th>{% translate "Bottles" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for wine in upcoming_wines %}
+                            <tr>
+                                <td><a href="{% url 'wine-detail' wine.pk %}">{{ wine.name }}</a></td>
+                                <td>{{ wine.vintage|default_if_none:"-" }}</td>
+                                <td>{{ wine.drink_by }}</td>
+                                <td>{{ wine.total_stock }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+
+            {% if not overdue_wines and not upcoming_wines %}
+                <div class="empty-state">
+                    <div class="empty-state__icon">✅</div>
+                    <h3 class="empty-state__title">{% translate "All Clear!" %}</h3>
+                    <p class="empty-state__message">{% translate "No wines approaching their drink-by date. Your cellar is in great shape." %}</p>
+                    <a href="{% url 'wine-list' %}" class="pure-button button__primary empty-state__action">
+                        <i class="fa-solid fa-wine-bottle"></i> {% translate "Browse Wines" %}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock content %}

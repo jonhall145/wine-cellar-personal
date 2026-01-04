@@ -15,3 +15,7 @@ media/
 *.mo
 autopo.ooo
 .vscode/
+nohup.out
+gunicorn.log
+.env.prod.local
+ssl/
