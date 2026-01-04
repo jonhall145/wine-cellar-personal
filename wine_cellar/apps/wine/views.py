@@ -774,29 +774,53 @@ class LabelScanView(FormView):
 
     def get_form_class(self):
         from wine_cellar.apps.wine.forms import LabelScanForm
+
         return LabelScanForm
+
+    def post(self, request, *args, **kwargs):
+        import base64
+        from io import BytesIO
+
+        from PIL import Image
+
+        # Handle camera capture data
+        image_data = request.POST.get("image_data")
+        if image_data:
+            # Remove data URL prefix if present
+            if "," in image_data:
+                image_data = image_data.split(",")[1]
+
+            # Decode base64 image
+            image_bytes = base64.b64decode(image_data)
+
+            # Store in session for the create view to use
+            self.request.session["scanned_label"] = {
+                "filename": "camera_capture.jpg",
+                "size": len(image_bytes),
+                "data": image_data,
+            }
+
+            return redirect("wine-add")
+
+        # Fallback to form handling for file uploads
+        return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
         import base64
-        import json
-        import re
-        
+
         image = form.cleaned_data["image"]
-        
+
         # Read image and encode to base64
         image_data = image.read()
         base64_image = base64.b64encode(image_data).decode("utf-8")
-        
-        # Try to extract text using simple pattern matching on filename
-        # In production, this would call an OCR API like Google Vision or Tesseract
-        # For now, store the image and redirect to create form
-        
+
         # Store in session for the create view to use
         self.request.session["scanned_label"] = {
             "filename": image.name,
             "size": len(image_data),
+            "data": base64_image,
         }
-        
+
         return redirect("wine-add")
 
 

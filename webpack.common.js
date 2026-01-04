@@ -32,6 +32,9 @@ module.exports = {
     barcode_scanner: {
       import: ['./wine_cellar/react/react_bar_code.tsx'],
     },
+    label_scanner: {
+      import: ['./wine_cellar/react/react_label_scanner.tsx'],
+    },
     maps: {
       import: [
         'leaflet/dist/leaflet.css',

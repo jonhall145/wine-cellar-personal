@@ -19,7 +19,6 @@ from wine_cellar.apps.wine.models import (
     FoodPairing,
     Grape,
     ImageType,
-    Size,
     SizeChoices,
     Source,
     Vineyard,

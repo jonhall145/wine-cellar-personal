@@ -409,3 +409,37 @@ p.form-hint {
   outline: none;
   box-shadow: 0 0 0 3px rgba(114, 47, 55, 0.3);
 }
+
+/* Label Scanner Styles */
+.label-scanner {
+  width: 100%;
+}
+
+.label-scanner__viewport {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto var(--spacing-lg);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+  background: var(--black);
+  box-shadow: var(--container-box-shadow-lg);
+}
+
+.label-scanner__video,
+.label-scanner__preview {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.label-scanner__controls {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.label-scanner__controls button {
+  min-width: 150px;
+}

@@ -9,7 +9,7 @@ from pytest_django.asserts import (
     assertTemplateUsed,
 )
 
-from wine_cellar.apps.wine.models import Size, Wine
+from wine_cellar.apps.wine.models import Wine
 
 
 @pytest.mark.django_db
