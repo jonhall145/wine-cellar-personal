@@ -6,6 +6,7 @@ venv/
 *.pyc
 node_modules/
 static/
+staticfiles/
 build/
 *.egg-info/
 media/
@@ -19,3 +20,6 @@ nohup.out
 gunicorn.log
 .env.prod.local
 ssl/
+*.png
+*.html
+*.js

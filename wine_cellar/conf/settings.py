@@ -167,11 +167,11 @@ CURRENCY_SYMBOLS = {"EUR": "€", "USD": "$", "GBP": "£"}
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = "static/"
-STATIC_ROOT = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = ROOT_DIR / "staticfiles"  # Where collectstatic gathers all static files
 
 STATICFILES_DIRS = [
-    BASE_DIR / "static",
+    BASE_DIR / "static",  # wine_cellar/static/ - where webpack builds to
 ]
 
 # Default primary key field type

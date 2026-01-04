@@ -216,12 +216,10 @@ p.form-hint {
   --border-space: 20px;
 
   position: absolute;
-  top: 37.5%;
-  left: 10%;
-  right: 10%;
-  bottom: 37.5%;
-  height: 35%;
-  width: 80%;
+  top: 25%;      /* Center vertically with 50% height */
+  left: 5%;      /* 5% margin on each side for 90% width */
+  right: 5%;
+  bottom: 25%;   /* 25% top + 50% height + 25% bottom = 100% */
 }
 
 .overlay-element {
@@ -424,12 +422,17 @@ p.form-hint {
   overflow: hidden;
   background: var(--black);
   box-shadow: var(--container-box-shadow-lg);
+  padding-top: 100%; /* 1:1 Aspect Ratio - creates square container */
 }
 
 .label-scanner__video,
 .label-scanner__preview {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: cover; /* Fill the square container */
   display: block;
 }
 
