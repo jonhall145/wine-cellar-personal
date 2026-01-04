@@ -5,7 +5,7 @@ set -e
 # Usage: ./run_prod_local.sh [start|stop|status]
 
 PIDFILE="/tmp/wine_cellar_gunicorn.pid"
-LOGFILE="/tmp/wine_cellar_gunicorn.log"
+LOGFILE="gunicorn.log"
 
 show_help() {
     echo "Wine Cellar - Production Server (No Docker)"
@@ -90,18 +90,25 @@ PYEOF
     echo "Starting Gunicorn..."
     
     # Start Gunicorn in background
-    nohup venv/bin/gunicorn wine_cellar.conf.wsgi:application \
-        --bind 0.0.0.0:80 \
-        --workers 3 \
-        --timeout 120 \
-        --access-logfile "$LOGFILE" \
-        --error-logfile "$LOGFILE" \
-        --capture-output \
-        --pid "$PIDFILE" \
-        --daemon
+    # Load environment and run gunicorn without daemon mode, using nohup instead
+    nohup bash -c "
+        source venv/bin/activate
+        set -a
+        source .env.prod.local
+        set +a
+        exec venv/bin/gunicorn wine_cellar.conf.wsgi:application \
+            --bind 0.0.0.0:80 \
+            --workers 3 \
+            --timeout 120 \
+            --pid '$PIDFILE'
+    " >> "$LOGFILE" 2>&1 &
     
-    sleep 2
+    # Save the PID manually since --daemon doesn't work with bash wrapper
+    echo $! > /tmp/wine_cellar_wrapper.pid
     
+    sleep 3
+    
+    # Check if PID file was created by gunicorn
     if [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null; then
         echo ""
         echo "=========================================="

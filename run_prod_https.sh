@@ -5,7 +5,7 @@ set -e
 # Uses Gunicorn with SSL certificates
 
 PIDFILE="/tmp/wine_cellar_gunicorn_https.pid"
-LOGFILE="/tmp/wine_cellar_gunicorn_https.log"
+LOGFILE="gunicorn.log"
 PORT="${PORT:-443}"
 
 cd "$(dirname "$0")"
@@ -94,21 +94,28 @@ start_server() {
     echo ""
     echo "Starting Gunicorn with HTTPS on port $PORT..."
     
-    # Start Gunicorn with SSL
-    nohup venv/bin/gunicorn wine_cellar.conf.wsgi:application \
-        --bind 0.0.0.0:$PORT \
-        --workers 3 \
-        --timeout 120 \
-        --certfile ssl/server.crt \
-        --keyfile ssl/server.key \
-        --access-logfile "$LOGFILE" \
-        --error-logfile "$LOGFILE" \
-        --capture-output \
-        --pid "$PIDFILE" \
-        --daemon
+    # Start Gunicorn with SSL in background
+    # Load environment and run gunicorn without daemon mode, using nohup instead
+    nohup bash -c "
+        source venv/bin/activate
+        set -a
+        source .env.prod.local
+        set +a
+        exec venv/bin/gunicorn wine_cellar.conf.wsgi:application \
+            --bind 0.0.0.0:$PORT \
+            --workers 3 \
+            --timeout 120 \
+            --certfile ssl/server.crt \
+            --keyfile ssl/server.key \
+            --pid '$PIDFILE'
+    " >> "$LOGFILE" 2>&1 &
     
-    sleep 2
+    # Save the PID manually since --daemon doesn't work with bash wrapper
+    echo $! > /tmp/wine_cellar_wrapper.pid
     
+    sleep 3
+    
+    # Check if PID file was created by gunicorn
     if [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null; then
         echo ""
         echo "=========================================="
