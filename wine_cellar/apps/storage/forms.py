@@ -68,6 +68,20 @@ class StockAddForm(forms.Form):
         decimal_places=2,
         localize=True,
     )
+    is_gift = forms.BooleanField(
+        required=False,
+        help_text=_("Check if this bottle was received as a gift."),
+    )
+    gift_from = forms.CharField(
+        max_length=100,
+        required=False,
+        help_text=_("Enter who gave you this bottle."),
+    )
+    occasion = forms.CharField(
+        max_length=100,
+        required=False,
+        help_text=_("Enter a special occasion this bottle is reserved for."),
+    )
 
     def clean_row(self):
         row = self.cleaned_data.get("row")

@@ -6,6 +6,7 @@ venv/
 *.pyc
 node_modules/
 static/
+staticfiles/
 build/
 *.egg-info/
 media/
@@ -15,3 +16,10 @@ media/
 *.mo
 autopo.ooo
 .vscode/
+nohup.out
+gunicorn.log
+.env.prod.local
+ssl/
+*.png
+*.html
+*.js

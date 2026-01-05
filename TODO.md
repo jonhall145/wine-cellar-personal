@@ -14,7 +14,6 @@ This document outlines identified issues, improvements, and technical debt items
 ### 1. Wildcard Imports in Settings Files
 **Files:** 
 - `wine_cellar/conf/prod.py`
-- `wine_cellar/conf/docker_settings.py`
 - `wine_cellar/conf/test.py`
 
 **Issue:** These files use `from .settings import *` which is considered bad practice  
@@ -89,7 +88,6 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
   - Media files backup (wine images)
   - Restore procedures
   - Recommended backup schedules
-  - Docker volume backup strategies
 
 ---
 
@@ -128,15 +126,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Document translation contribution process
 - Consider adding more languages
 
-### 12. Add Docker Healthchecks
-**Files:** `Dockerfile`, `Dockerfile.prod`, `docker-compose.yml`, `docker-compose.prod.yml`  
-**Issue:** Docker containers lack HEALTHCHECK instructions  
-**Fix:**
-- Add HEALTHCHECK to Dockerfiles
-- Configure healthchecks in docker-compose files
-- Test automatic container restart on failure
-
-### 13. Performance Optimization Opportunities
+### 12. Performance Optimization Opportunities
 **Areas to investigate:**
 - Add database query optimization (check for N+1 queries)
 - Implement Django caching framework
@@ -251,15 +241,7 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 
 ## 🔧 Dependency & Build Improvements
 
-### 25. Pin Python Version in Dockerfile
-**Files:** `Dockerfile` uses Python 3.14.2  
-**Issue:** Python 3.14 doesn't exist yet (current is 3.13.x)  
-**Fix:**
-- Update to actual stable Python version (e.g., 3.13.1 or 3.12.x)
-- Document required Python version in README
-- Ensure CI uses same version
-
-### 26. Add Dependency License Checker
+### 25. Add Dependency License Checker
 **Issue:** No automated license compliance checking  
 **Fix:**
 - Add tool to check dependency licenses
@@ -421,14 +403,6 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Add migration safety checks
 - Consider using django-migration-linter
 
-### 44. Improve Docker Image Size
-**Issue:** Potential for smaller Docker images  
-**Fix:**
-- Use multi-stage builds
-- Remove build dependencies from final image
-- Optimize layer caching
-- Document image size optimizations
-
 ---
 
 ## 🌟 Feature Completeness
@@ -459,9 +433,6 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 ---
 
 ## Priority Summary
-
-**Immediate Action Required (Security):**
-- #25 - Fix Python version in Dockerfile
 
 **Should Address Soon (Quality):**
 - #1 - Wildcard imports

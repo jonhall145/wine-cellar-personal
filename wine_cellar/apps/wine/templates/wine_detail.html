@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static i18n l10n %}
+{% load static i18n l10n wine_tags %}
 {% block extra_js %}
     {{ block.super }}
     <script src="{% static 'wine_carousel.js' %}" type="module" defer></script>
@@ -51,6 +51,12 @@
                         <th>{% translate "Country" context "Singular" %}</th>
                         <td>{{ wine.country_icon }} {{ wine.country_name }}</td>
                     </tr>
+                    {% if wine.subregion %}
+                        <tr>
+                            <th>{% translate "Subregion" %}</th>
+                            <td>{{ wine.subregion }}</td>
+                        </tr>
+                    {% endif %}
                     {% if wine.get_vineyards %}
                         <tr>
                             <th>{% translate "Vineyard" %}</th>
@@ -59,7 +65,7 @@
                     {% endif %}
                     <tr>
                         <th>{% translate "Type" %}</th>
-                        <td>{{ wine.get_type }}</td>
+                        <td>{% wine_type_badge wine.wine_type %}</td>
                     </tr>
                     {% if wine.get_attributes %}
                         <tr>
@@ -85,7 +91,7 @@
                     </tr>
                     <tr>
                         <th>{% translate "Drink By" %}</th>
-                        <td>{{ wine.drink_by }}</td>
+                        <td>{{ wine.drink_by }} {% drink_window_indicator wine.vintage wine.drink_by %}</td>
                     </tr>
                     <tr>
                         <th>{% translate "Grapes" %}</th>
@@ -109,6 +115,12 @@
                             <td>{{ wine.get_price_with_currency }}{% if wine.get_average_price_with_currency %} ({% translate "Average" %}: {{ wine.get_average_price_with_currency }}){% endif %}</td>
                         </tr>
                     {% endif %}
+                    {% if wine.rrp is not None %}
+                        <tr>
+                            <th>{% translate "RRP" %}</th>
+                            <td>{{ wine.get_rrp_with_currency }}</td>
+                        </tr>
+                    {% endif %}
                     {% if wine.comment %}
                         <tr>
                             <th>{% translate "Comment" %}</th>
@@ -119,7 +131,7 @@
                         <th>{% translate "Rating" %}</th>
                         <td>
                             {% if wine.rating %}
-                                {{ wine.rating }} / 10
+                                {% rating_stars wine.rating %} <span class="text--gray">({{ wine.rating }}/10)</span>
                             {% else %}
                                 {% translate "No rating yet" %}
                             {% endif %}
@@ -139,8 +151,14 @@
                     {{ counter }} bottles
                     {% endblocktranslate %}
                     </p>
-                    <a href="{% url 'stock-add' wine.pk %}"
-                       class="pure-button button__neutral"><i class="fa-regular fa-plus"></i> <span>{% translate "Add bottle" %}</span></a>
+                    <div>
+                        <a href="{% url 'stock-add' wine.pk %}"
+                           class="pure-button button__neutral"><i class="fa-regular fa-plus"></i> <span>{% translate "Add bottle" %}</span></a>
+                        <a href="{% url 'drink-record-add' wine.pk %}"
+                           class="pure-button button__neutral"><i class="fa-solid fa-wine-glass"></i> <span>{% translate "Record Drink" %}</span></a>
+                        <a href="{% url 'reorder-reminder-add' wine.pk %}"
+                           class="pure-button button__neutral"><i class="fa-solid fa-bell"></i> <span>{% translate "Reorder Alert" %}</span></a>
+                    </div>
                 </div>
                 <div class="pure-u-1 pure-u-md-1">
                     {% if wine.get_stock %}
@@ -150,6 +168,8 @@
                                     <th>{% translate "Location" %}</th>
                                     <th>{% translate "Row" %}</th>
                                     <th>{% translate "Cell" %}</th>
+                                    <th>{% translate "Gift" %}</th>
+                                    <th>{% translate "Occasion" %}</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -158,14 +178,36 @@
                                     <td>{{ item.storage }}</td>
                                     <td>{{ item.row|default_if_none:"" }}</td>
                                     <td>{{ item.column|default_if_none:"" }}</td>
+                                    <td>{% if item.is_gift %}<i class="fa-solid fa-gift" title="{{ item.gift_from|default:'' }}"></i>{% if item.gift_from %} {{ item.gift_from }}{% endif %}{% endif %}</td>
+                                    <td>{{ item.occasion|default_if_none:"" }}</td>
                                     <td>
-                                        <a class=" pure-button" href="{% url 'stock-delete' item.pk %}"><i class="fa-regular fa-trash-can"></i></a>
+                                        <a class="pure-button" href="{% url 'bottle-note-add' item.pk %}" title="{% translate 'Add note' %}"><i class="fa-regular fa-note-sticky"></i></a>
+                                        <a class="pure-button" href="{% url 'stock-delete' item.pk %}"><i class="fa-regular fa-trash-can"></i></a>
                                     </td>
                                 </tr>
+                                {% if item.notes.all %}
+                                    <tr>
+                                        <td colspan="6" class="bottle-notes">
+                                            <strong>{% translate "Notes" %}:</strong>
+                                            <ul>
+                                                {% for note in item.notes.all %}
+                                                    <li><em>{{ note.note_date }}</em>: {{ note.note }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                {% endif %}
                             {% endfor %}
                         </table>
                     {% else %}
-                        <p>{% translate "No bottles in stock." %}</p>
+                        <div class="empty-state">
+                            <div class="empty-state__icon">📦</div>
+                            <h3 class="empty-state__title">{% translate "No bottles in stock" %}</h3>
+                            <p class="empty-state__message">{% translate "Add bottles to track your inventory." %}</p>
+                            <a href="{% url 'stock-add' wine.pk %}" class="pure-button button__primary empty-state__action">
+                                <i class="fa-solid fa-plus"></i> {% translate "Add bottle" %}
+                            </a>
+                        </div>
                     {% endif %}
                 </div>
             </div>

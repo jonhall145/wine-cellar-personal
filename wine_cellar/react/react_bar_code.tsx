@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BarcodeScanner, DetectedBarcode } from 'react-barcode-scanner'
 // @ts-ignore
@@ -11,16 +11,106 @@ const translated = {
   helptext: django.gettext(
     "Choose the type of barcode you want to scan, sometimes this can help if scanning doesn't work."
   ),
+  cameraError: django.gettext('Camera access denied'),
+  cameraErrorHint: django.gettext(
+    'Please allow camera access in your browser settings, or ensure you are using HTTPS.'
+  ),
+  httpsRequired: django.gettext('HTTPS required'),
+  httpsRequiredHint: django.gettext(
+    'Camera access requires a secure connection (HTTPS). Please access this page via HTTPS.'
+  ),
+  noCameraFound: django.gettext('No camera found'),
+  noCameraFoundHint: django.gettext(
+    'No camera was detected on this device. Please ensure a camera is connected.'
+  ),
+  unknownError: django.gettext('Scanner error'),
+  unknownErrorHint: django.gettext(
+    'An error occurred while accessing the camera. Please try again.'
+  ),
+  retryButton: django.gettext('Try Again'),
+}
+
+type CameraErrorType = 'permission' | 'https' | 'notfound' | 'unknown' | null
+
+const CameraError = ({ errorType, onRetry }: { errorType: CameraErrorType; onRetry: () => void }) => {
+  let title = translated.unknownError
+  let message = translated.unknownErrorHint
+
+  if (errorType === 'permission') {
+    title = translated.cameraError
+    message = translated.cameraErrorHint
+  } else if (errorType === 'https') {
+    title = translated.httpsRequired
+    message = translated.httpsRequiredHint
+  } else if (errorType === 'notfound') {
+    title = translated.noCameraFound
+    message = translated.noCameraFoundHint
+  }
+
+  return (
+    <div className="camera-error">
+      <div className="camera-error__icon">⚠️</div>
+      <h3 className="camera-error__title">{title}</h3>
+      <p className="camera-error__message">{message}</p>
+      {errorType !== 'https' && (
+        <button className="camera-error__retry" onClick={onRetry}>
+          {translated.retryButton}
+        </button>
+      )}
+    </div>
+  )
 }
 
 const Scanner = () => {
   const [selectedFormat, setSelectedFormat] = useState('any')
+  const [cameraError, setCameraError] = useState<CameraErrorType>(null)
+  const [retryKey, setRetryKey] = useState(0)
   const defaultFormats = ['ean_13', 'ean_8', 'upc_a', 'code_39', 'itf']
 
-  const handleCapture = (barcodes:  DetectedBarcode[]) => {
+  useEffect(() => {
+    // Check if we're on HTTPS or localhost
+    const isSecureContext = window.isSecureContext
+    if (!isSecureContext) {
+      setCameraError('https')
+    }
+  }, [])
+
+  const handleCapture = (barcodes: DetectedBarcode[]) => {
     if (barcodes.length > 0) {
       window.location.href = '/wine/scan/' + barcodes[0].rawValue
     }
+  }
+
+  const handleError = (error: unknown) => {
+    console.error('Camera error:', error)
+    
+    if (error instanceof Error) {
+      const errorName = error.name
+      const errorMessage = error.message.toLowerCase()
+
+      if (errorName === 'NotAllowedError' || errorMessage.includes('permission')) {
+        setCameraError('permission')
+      } else if (errorName === 'NotFoundError' || errorMessage.includes('not found')) {
+        setCameraError('notfound')
+      } else if (errorName === 'NotReadableError' || errorMessage.includes('could not start')) {
+        setCameraError('unknown')
+      } else if (!window.isSecureContext) {
+        setCameraError('https')
+      } else {
+        setCameraError('unknown')
+      }
+    } else {
+      setCameraError('unknown')
+    }
+  }
+
+  const handleRetry = () => {
+    setCameraError(null)
+    setRetryKey((prev) => prev + 1)
+  }
+
+  if (cameraError) {
+    return <CameraError errorType={cameraError} onRetry={handleRetry} />
   }
 
   return (
@@ -47,7 +137,9 @@ const Scanner = () => {
       </section>
       <section className="form__scanner">
         <BarcodeScanner
+          key={retryKey}
           onCapture={handleCapture}
+          onError={handleError}
           options={{
             formats: selectedFormat ? [selectedFormat] : defaultFormats,
           }}

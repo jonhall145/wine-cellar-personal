@@ -1,80 +1,78 @@
 # Deployment
-The easiest way to run Wine Cellar is by using docker as described below.
 
-## Docker Deployment
+## Running from Source
 
-### Development / Demo Mode
-
-!!! Note
-
-    Not for production use.
-
-#### Steps:
+### Development Mode
 
 1. Copy the development environment configuration:
    ```sh
    cp .env.dev-sample .env.dev
    ```
-2. Build the Docker image:
+
+2. Install dependencies:
    ```sh
-   docker build -t wine-cellar-dev .
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   npm install
+   npm run build
    ```
-3. Start the application:
+
+3. Start the development server:
    ```sh
-   docker compose up
+   ./run_local.sh
    ```
+
+Access at: http://localhost:8000
 
 ---
 
 ### Production Setup
 
-!!! Note
+#### Prerequisites
 
-    This setup is under development. Proceed with caution.
+- Python 3.11+
+- Node.js 20+
 
-!!! Note
+#### Steps
 
-    When using podman instead of docker you might have to add `:z` to the
-    volumes to allow sharing them between containers and make SELinux happy.
-
-#### Option 1: Using a Reverse Proxy
-
-**Prerequisites:**
-
-- A configured reverse proxy.
-- Properly set `.env` files.
-
-#### Steps:
-
-1. Copy and configure environment files:
+1. Install production dependencies:
    ```sh
-   cp .env.prod.db-sample .env.prod.db
-   cp .env.prod-sample .env.prod
+   source venv/bin/activate
+   pip install -r requirements/prod.txt
+   pip install gunicorn
+   npm install
+   npm run build:prod
    ```
-2. Edit `.env` files with secure credentials.
-3. Start the production container:
+
+2. Create production environment file:
    ```sh
-   docker compose -f docker-compose.prod.yml up
+   # Create .env.prod.local with your settings
    ```
-4. Configure your reverse proxy to forward traffic to `http://127.0.0.1:8085`.
+
+3. Start the production server:
+   ```sh
+   sudo ./run_prod_local.sh start
+   ```
+
+See `DEPLOYMENT.md` in the project root for detailed configuration options.
 
 ---
 
-#### Email Setup
+### Email Setup
 
 Wine Cellar can send notification emails, including reminders for when a wine should be drunk by ("drink by" reminders).
 
-To enable email notifications, configure the email backend and credentials in your `.env-prod` file:
+To enable email notifications, configure the email backend in your environment file:
 
 ```
 DJANGO_EMAIL_HOST=smtp.example.com
 DJANGO_EMAIL_PORT=587
 DJANGO_EMAIL_HOST_USER=your@email.com
 DJANGO_EMAIL_HOST_PASSWORD=yourpassword
-DJANGO_EMAIL_USE_TLS=
-DJANGO_EMAIL_USE_SSL=
+DJANGO_EMAIL_USE_TLS=True
 DJANGO_DEFAULT_FROM_EMAIL=Wine Cellar <your@email.com>
 ```
 
 !!! Note
-    USE_TLS and USE_SSL are mutual exclusive, only one can be True
+    USE_TLS and USE_SSL are mutually exclusive - only one can be True.

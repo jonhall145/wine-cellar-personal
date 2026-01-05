@@ -1,54 +1,106 @@
 .pure-form input[aria-invalid='true'] {
   border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(197, 48, 48, 0.15);
 }
 
 .login-container {
   margin: 0 auto;
-  padding: 20px;
+  padding: var(--spacing-xl);
+  max-width: 420px;
+  background: var(--white);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--container-box-shadow-lg);
 }
 
-.pure-form input:not([type='radio']) {
+.pure-form input:not([type='radio']):not([type='checkbox']) {
   display: block;
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-md);
+  transition: all var(--transition-fast);
+  
+  &:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(114, 47, 55, 0.15);
+    outline: none;
+  }
 }
+
 .pure-form input[type='text'],
 .pure-form input[type='email'],
-.pure-form input[type='password'] {
+.pure-form input[type='password'],
+.pure-form input[type='number'] {
   width: 100%;
-  margin-bottom: 10px;
-  max-width: 400px;
+  margin-bottom: var(--spacing-md);
+  max-width: 100%;
+}
+
+.pure-form label {
+  font-weight: 500;
+  color: var(--secondary-dark);
+  margin-bottom: var(--spacing-xs);
+  display: block;
+}
+
+.pure-form select {
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-md);
+  background: var(--white);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  
+  &:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(114, 47, 55, 0.15);
+    outline: none;
+  }
 }
 
 .login__error-list {
   ul {
     padding: unset;
     list-style: none;
-    color: red;
+    color: var(--red);
+    background: rgba(197, 48, 48, 0.1);
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius-sm);
+    margin-bottom: var(--spacing-md);
   }
 }
 
 .filter-legend {
-  padding-right: 20px;
+  padding-right: var(--spacing-lg);
+  font-weight: 600;
+  color: var(--secondary-dark);
 }
 
 .form-subhead {
   font-size: var(--font-xl);
-  margin: 20px 0 10px 0;
-  font-weight: 300;
-  color: #333;
+  margin: var(--spacing-xl) 0 var(--spacing-md) 0;
+  font-weight: 600;
+  color: var(--secondary-dark);
 }
 
 .wine-form {
+  background: var(--white);
+  padding: var(--spacing-xl);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--container-box-shadow);
+  
   input:not([type='checkbox']),
   select,
   textarea,
   .ts-wrapper {
     width: 100%;
-    min-height: 40px;
+    min-height: 44px;
   }
 
   label {
-    margin-bottom: 0px;
-    line-height: 0.75rem;
+    margin-bottom: var(--spacing-xs);
+    line-height: 1.4;
   }
 
   @media screen and (min-width: 48em) {
@@ -164,12 +216,10 @@ p.form-hint {
   --border-space: 20px;
 
   position: absolute;
-  top: 37.5%;
-  left: 10%;
-  right: 10%;
-  bottom: 37.5%;
-  height: 35%;
-  width: 80%;
+  top: 25%;      /* Center vertically with 50% height */
+  left: 5%;      /* 5% margin on each side for 90% width */
+  right: 5%;
+  bottom: 25%;   /* 25% top + 50% height + 25% bottom = 100% */
 }
 
 .overlay-element {
@@ -301,4 +351,98 @@ p.form-hint {
   @media screen and (max-width: 48em) {
     text-align: center;
   }
+}
+
+/* Camera error styles for barcode scanner */
+.camera-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  background: var(--white);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--container-box-shadow);
+  text-align: center;
+  min-height: 300px;
+}
+
+.camera-error__icon {
+  font-size: 3rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.camera-error__title {
+  font-size: var(--font-xl);
+  font-weight: 600;
+  color: var(--secondary-dark);
+  margin: 0 0 var(--spacing-sm) 0;
+}
+
+.camera-error__message {
+  font-size: var(--font-md);
+  color: var(--text-color-gray);
+  margin: 0 0 var(--spacing-lg) 0;
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+.camera-error__retry {
+  background: var(--primary);
+  color: var(--white);
+  border: none;
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-size: var(--font-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.camera-error__retry:hover {
+  background: var(--primary-dark);
+}
+
+.camera-error__retry:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(114, 47, 55, 0.3);
+}
+
+/* Label Scanner Styles */
+.label-scanner {
+  width: 100%;
+}
+
+.label-scanner__viewport {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto var(--spacing-lg);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+  background: var(--black);
+  box-shadow: var(--container-box-shadow-lg);
+  padding-top: 100%; /* 1:1 Aspect Ratio - creates square container */
+}
+
+.label-scanner__video,
+.label-scanner__preview {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Fill the square container */
+  display: block;
+}
+
+.label-scanner__controls {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.label-scanner__controls button {
+  min-width: 150px;
 }

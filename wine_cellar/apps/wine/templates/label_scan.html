@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+{% block title %}
+    {% translate "Scan Wine Label" %}
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">{% translate "Scan Wine Label" %}</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1 pure-u-lg-1-2 m-auto">
+            <div id="label-scanner"></div>
+        </div>
+    </div>
+{% endblock content %}
+{% block extra_js %}
+    <script src="{% static 'label_scanner.js' %}"></script>
+{% endblock extra_js %}

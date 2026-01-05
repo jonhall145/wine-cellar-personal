@@ -19,6 +19,8 @@ module.exports = {
         './node_modules/tom-select/dist/css/tom-select.css',
         './node_modules/@fortawesome/fontawesome-free/css/fontawesome.css',
         './node_modules/@fortawesome/fontawesome-free/css/solid.css',
+        './wine_cellar/assets/js/theme_toggle.ts',
+        './wine_cellar/assets/js/fab.ts',
       ],
     },
     tom_select: {
@@ -29,6 +31,9 @@ module.exports = {
     },
     barcode_scanner: {
       import: ['./wine_cellar/react/react_bar_code.tsx'],
+    },
+    label_scanner: {
+      import: ['./wine_cellar/react/react_label_scanner.tsx'],
     },
     maps: {
       import: [

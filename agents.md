@@ -21,7 +21,7 @@
 - **Image Management**: Upload multiple images (front, back, label front/back)
 - **Drink By Reminder**: Email notifications to drink bottles before they expire
 - **Sorting & Filtering**: Sort wines by average price, vintage, rating, etc.
-- **Self-hosted**: Full control over your data with Docker deployment support
+- **Self-hosted**: Full control over your data
 
 ## Technology Stack
 
@@ -53,9 +53,8 @@
 - **Version Control**: Commitizen for conventional commits
 
 ### Deployment
-- **Containerization**: Docker with docker-compose
 - **Static Files**: Whitenoise with Brotli compression
-- **Reverse Proxy**: Caddy (configured in production)
+- **Production Server**: Gunicorn
 
 ## Project Structure
 
@@ -76,8 +75,6 @@ wine-cellar-personal/
 ├── fixtures/                   # Sample data (grapes, wines, stock, users)
 ├── docs/                       # MkDocs documentation
 ├── requirements/               # Python dependencies (base, dev, prod)
-├── docker-compose.yml          # Development Docker setup
-├── docker-compose.prod.yml     # Production Docker setup
 ├── Makefile                    # Development commands
 └── package.json                # Node.js dependencies
 ```
@@ -129,9 +126,9 @@ User management and preferences:
 6. **Load Data**: `make fixtures` - Loads sample wines, grapes, stock
 
 ### Deployment Workflow
-1. **Development**: `docker compose up` with `.env.dev`
-2. **Production**: `docker compose -f docker-compose.prod.yml up` with `.env.prod`
-3. **Email Setup**: Configure SMTP settings in `.env.prod` for notifications
+1. **Development**: `./run_local.sh`
+2. **Production**: `./run_prod_local.sh start` with `.env.prod.local`
+3. **Email Setup**: Configure SMTP settings for notifications
 
 ## Database Schema Highlights
 
@@ -210,7 +207,7 @@ Key settings in `.env` files:
 
 Comprehensive documentation available in `docs/` directory:
 - **setup.md**: Installation and getting started
-- **deployment.md**: Docker deployment guide (dev & prod)
+- **deployment.md**: Deployment guide (dev & prod)
 - **testing.md**: How to run tests
 - **wine.md**: Wine management features
 - **storage.md**: Inventory management
@@ -267,6 +264,20 @@ Documentation site built with MkDocs Material theme.
 - **Issue Tracking**: GitHub Issues
 - **Discussions**: GitHub Discussions
 - **License**: AGPL-3.0 (requires source disclosure for derivative works)
+
+## AI Agent Capabilities
+
+See `CLAUDE.md` for Claude-specific capabilities including:
+- **UI Testing**: Playwright and Puppeteer for browser automation
+- **Visual Inspection**: Screenshot capture and comparison
+- **Accessibility Checks**: Automated detection of common issues
+- **Console Monitoring**: Capture JavaScript errors and warnings
+
+### Available Tools
+- Playwright with Chromium for headless browser testing
+- Full page screenshot capture
+- Console error detection
+- Accessibility auditing (alt text, labels, links)
 
 ## Recent Changes (v0.3.0-rc.0)
 

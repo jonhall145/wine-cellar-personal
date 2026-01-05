@@ -7,6 +7,12 @@ nav:
     - Testing: testing.md
   - Wine: wine.md
   - Storage: storage.md
+  - AI Skills:
+    - UI Testing with Playwright: skills/ui-testing-playwright.md
+    - CSS Debugging: skills/css-debugging.md
+    - Empty State Patterns: skills/empty-state-patterns.md
+    - Django Test Users: skills/django-test-users.md
+    - Fixing Console Errors: skills/fixing-console-errors.md
 
 theme:
   name: material

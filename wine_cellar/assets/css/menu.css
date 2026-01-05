@@ -1,11 +1,16 @@
 .pure-menu,
 .pure-menu-heading {
-  background-color: var(--dark-green);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
 }
 
 .pure-menu-link {
   color: white;
-  padding: 1em 0.7em;
+  padding: 1em 1em;
+  font-weight: 500;
+  font-size: var(--font-sm);
+  border-radius: var(--border-radius-sm);
+  margin: 0 2px;
+  transition: all var(--transition-fast);
 }
 
 .pure-menu a:hover,
@@ -14,54 +19,70 @@
 .pure-menu .button:hover,
 .pure-menu .button:focus,
 .pure-menu .button:focus-visible {
-  background: var(--darker-green);
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
 }
 
 /* remove styling for logout */
 .pure-menu .button {
   background: none;
   border: none;
+  cursor: pointer;
 }
 
 .menu__container {
-  max-width: 1140px;
+  max-width: 1200px;
   margin: 0 auto;
+  padding: 0 var(--spacing-md);
 }
 
 /* responsive styling for large and small menus */
 .menu__md {
   display: none;
+  box-shadow: var(--container-box-shadow-lg);
 }
 
 .menu__sm {
-  padding-bottom: 50px;
+  padding-bottom: 60px;
 }
 
 .menu__sm .pure-menu {
-  margin-left: -200px;
-  width: 200px;
+  margin-left: -280px;
+  width: 280px;
   position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
-  z-index: 1000; /* so the menu or its navicon stays above all content */
-  background-color: var(--dark-green);
+  z-index: 1000;
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-dark) 100%);
   overflow-y: auto;
+  box-shadow: var(--container-box-shadow-lg);
 }
 
 .menu__sm .menu-link {
   position: fixed;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   top: 10px;
-  left: 0;
-  background: var(--dark-green);
-  font-size: 40px;
+  left: 10px;
+  background: var(--primary);
+  font-size: 28px;
   z-index: 10;
-  padding: 0.1em 0.4em;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--border-radius-sm);
+  box-shadow: var(--container-box-shadow);
+  transition: all var(--transition-fast);
 
   span:before {
     content: '\2261';
-    color: var(--light);
+    color: white;
+  }
+  
+  &:hover {
+    background: var(--primary-light);
+    transform: scale(1.05);
   }
 }
 
@@ -72,6 +93,9 @@
   left: 0;
   right: 0;
   z-index: 5;
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: var(--font-lg);
+  font-weight: 600;
 }
 
 .menu-toggle {
@@ -82,10 +106,10 @@
 }
 
 .menu-toggle:checked ~ .menu-link {
-  background: var(--dark-green);
+  background: var(--primary-dark);
   position: fixed;
-  width: fit-content;
-  left: 140px;
+  width: 48px;
+  left: 222px;
   z-index: 1001;
   span:before {
     content: '\00d7';
@@ -96,7 +120,7 @@
   margin-left: 0;
 }
 
-@media screen and (min-width: 35.5em) {
+@media screen and (min-width: 48em) {
   .menu__md {
     display: block;
   }
@@ -106,8 +130,8 @@
 }
 
 .settings-sidebar {
-  margin-top: 2rem;
-  background-color: revert;
+  margin-top: var(--spacing-xl);
+  background-color: transparent;
 
   .pure-menu-list {
     list-style: none;
@@ -116,17 +140,26 @@
   }
 
   .pure-menu-item {
-    padding-right: 24px;
-  }
-
-  .pure-menu-link:hover,
-  .pure-menu-link:focus {
-    background-color: var(--gray-green);
+    padding-right: var(--spacing-lg);
+    margin-bottom: var(--spacing-xs);
   }
 
   .pure-menu-link {
-    font-size: var(--font-md);
-    font-weight: 300;
     color: var(--text-color-gray);
+    background: var(--white);
+    border-radius: var(--border-radius-sm);
+    box-shadow: var(--container-box-shadow);
+    font-size: var(--font-md);
+    font-weight: 500;
+    padding: var(--spacing-md) var(--spacing-lg);
+    display: block;
+    transition: all var(--transition-fast);
+  }
+  
+  .pure-menu-link:hover,
+  .pure-menu-link:focus {
+    background: var(--primary);
+    color: white;
+    transform: translateX(4px);
   }
 }
