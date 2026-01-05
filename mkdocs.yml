@@ -5,6 +5,8 @@ nav:
   - Development:
     - Setup: setup.md
     - Testing: testing.md
+  - Database:
+    - Models: models.md
   - Wine: wine.md
   - Storage: storage.md
   - AI Skills:
