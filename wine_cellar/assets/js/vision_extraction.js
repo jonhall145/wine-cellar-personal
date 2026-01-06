@@ -54,7 +54,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 'X-CSRFToken': csrfToken ? csrfToken.value : '',
             },
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status} ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 // Auto-fill form fields with extracted data
@@ -73,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Vision extraction error:', error);
-            showMessage('error', 'An error occurred during extraction');
+            showMessage('error', `An error occurred: ${error.message}`);
         })
         .finally(() => {
             // Restore button state
