@@ -49,6 +49,9 @@ module.exports = {
     },
     image_preview: {
       import: ['./wine_cellar/assets/js/image_preview.ts'],
+    },
+    vision_extraction: {
+      import: ['./wine_cellar/assets/js/vision_extraction.js'],
     }
   },
   output: {
