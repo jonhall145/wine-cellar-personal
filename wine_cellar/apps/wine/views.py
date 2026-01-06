@@ -1083,12 +1083,13 @@ class LabelScanResultView(TemplateView):
         return info
 
 
+from django.contrib.auth.decorators import login_required
+
+
+@login_required
 def extract_wine_vision_ajax(request):
     """AJAX endpoint for vision extraction from uploaded images."""
     import base64
-    import json
-
-    from django.contrib.auth.decorators import login_required
 
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
