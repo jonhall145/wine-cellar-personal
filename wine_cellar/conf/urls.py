@@ -30,6 +30,8 @@ from wine_cellar.apps.storage.views import (
     StorageItemHistoryView,
     StorageListView,
     StorageUpdateView,
+    move_bottle,
+    storage_grid_data,
 )
 from wine_cellar.apps.user.views import UserSettingsView
 from wine_cellar.apps.wine.views import (
@@ -71,6 +73,9 @@ urlpatterns = [
         "storage/delete/<int:pk>/", StorageDeleteView.as_view(), name="storage-delete"
     ),
     path("storage/edit/<int:pk>/", StorageUpdateView.as_view(), name="storage-edit"),
+    path("storage/history/", StorageItemHistoryView.as_view(), name="storage-history"),
+    path("api/storage/grid-data/", storage_grid_data, name="storage-grid-data"),
+    path("api/storage/move-bottle/", move_bottle, name="storage-move-bottle"),
     path("stock/add/<int:pk>/", StorageItemAddView.as_view(), name="stock-add"),
     path(
         "stock/delete/<int:pk>/", StorageItemDeleteView.as_view(), name="stock-delete"

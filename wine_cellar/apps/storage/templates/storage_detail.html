@@ -1,5 +1,9 @@
 {% extends 'base.html' %}
 {% load static i18n %}
+{% block extra_js %}
+    {{ block.super }}
+    <script src="{% static 'storage_grid.js' %}" defer></script>
+{% endblock extra_js %}
 {% block header %}
     <h1 class="header__title">{{ storage.name }}</h1>
 {% endblock header %}
@@ -19,7 +23,29 @@
                     <span>{% translate "Bottles:" %} {{ storage.used_slots }}</span>
                 {% endif %}
             </div>
-            <div class="pure-u-1 pure-u-md-1 text-align-center">
+            
+            {% if storage.rows > 0 and storage.columns > 0 %}
+            <!-- View Toggle -->
+            <div class="pure-u-1 text-align-center" style="margin: 16px 0;">
+                <div class="storage-view-toggle">
+                    <button type="button" class="storage-view-toggle__btn" id="btn-list-view" onclick="toggleView('list')">
+                        <i class="fa-solid fa-list"></i> {% translate "List" %}
+                    </button>
+                    <button type="button" class="storage-view-toggle__btn storage-view-toggle__btn--active" id="btn-grid-view" onclick="toggleView('grid')">
+                        <i class="fa-solid fa-grid"></i> {% translate "Grid" %}
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Grid View -->
+            <div class="pure-u-1" id="grid-view" {% if not storage.rows or not storage.columns %}style="display:none"{% endif %}>
+                {% csrf_token %}
+                <div id="storage-grid-container" data-storage-id="{{ storage.pk }}"></div>
+            </div>
+            
+            <!-- List View -->
+            <div class="pure-u-1 pure-u-md-1 text-align-center" id="list-view" style="display:none">
                 {% if object_list %}
                     <table class="storage-list__table">
                         <tr>
@@ -49,4 +75,25 @@
             </div>
         </div>
     </div>
+    
+    <script>
+        function toggleView(view) {
+            const listView = document.getElementById('list-view');
+            const gridView = document.getElementById('grid-view');
+            const btnList = document.getElementById('btn-list-view');
+            const btnGrid = document.getElementById('btn-grid-view');
+            
+            if (view === 'list') {
+                listView.style.display = '';
+                gridView.style.display = 'none';
+                btnList.classList.add('storage-view-toggle__btn--active');
+                btnGrid.classList.remove('storage-view-toggle__btn--active');
+            } else {
+                listView.style.display = 'none';
+                gridView.style.display = '';
+                btnList.classList.remove('storage-view-toggle__btn--active');
+                btnGrid.classList.add('storage-view-toggle__btn--active');
+            }
+        }
+    </script>
 {% endblock content %}
