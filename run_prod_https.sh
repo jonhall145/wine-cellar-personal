@@ -6,7 +6,7 @@ set -e
 
 PIDFILE="/tmp/wine_cellar_gunicorn_https.pid"
 LOGFILE="gunicorn.log"
-PORT="${PORT:-443}"
+PORT="${PORT:-8000}"
 
 cd "$(dirname "$0")"
 

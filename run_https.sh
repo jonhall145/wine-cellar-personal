@@ -46,4 +46,5 @@ echo "  2. Accept the security warning"
 echo "  3. Camera access will then work"
 echo ""
 
-python manage.py runserver_plus 0.0.0.0:8000 --cert-file ssl/server.crt --key-file ssl/server.key
+PORT="${PORT:-8000}"
+python manage.py runserver_plus 0.0.0.0:$PORT --cert-file ssl/server.crt --key-file ssl/server.key

@@ -56,6 +56,7 @@ from wine_cellar.apps.wine.views import (
     WishlistDeleteView,
     WishlistListView,
     WishlistPurchasedView,
+    extract_wine_vision_ajax,
     health_check,
 )
 
@@ -69,19 +70,20 @@ urlpatterns = [
     path(
         "storage/delete/<int:pk>/", StorageDeleteView.as_view(), name="storage-delete"
     ),
-    path(
-        "storage/edit/<int:pk>/", StorageUpdateView.as_view(), name="storage-edit"
-    ),
+    path("storage/edit/<int:pk>/", StorageUpdateView.as_view(), name="storage-edit"),
     path("stock/add/<int:pk>/", StorageItemAddView.as_view(), name="stock-add"),
     path(
         "stock/delete/<int:pk>/", StorageItemDeleteView.as_view(), name="stock-delete"
     ),
     path("wine/add/", WineCreateView.as_view(), name="wine-add"),
     path("wine/add/<str:code>/", WineCreateView.as_view(), name="wine-add"),
+    path("wine/extract-vision/", extract_wine_vision_ajax, name="wine-extract-vision"),
     path("wine/<int:pk>/", WineDetailView.as_view(), name="wine-detail"),
     path("wine/edit/<int:pk>/", WineUpdateView.as_view(), name="wine-edit"),
     path("wine/delete/<int:pk>/", WineDeleteView.as_view(), name="wine-delete"),
-    path("wine/<int:pk>/drink/", DrinkRecordCreateView.as_view(), name="drink-record-add"),
+    path(
+        "wine/<int:pk>/drink/", DrinkRecordCreateView.as_view(), name="drink-record-add"
+    ),
     path("wines/", WineListView.as_view(), name="wine-list"),
     path("wine/scan/", WineScanView.as_view(), name="wine-scan"),
     path("wine/scan/<str:code>/", WineScannedView.as_view(), name="wine-scan"),
@@ -89,15 +91,33 @@ urlpatterns = [
     path("drink-history/", DrinkRecordListView.as_view(), name="drink-history"),
     path("wishlist/", WishlistListView.as_view(), name="wishlist-list"),
     path("wishlist/add/", WishlistCreateView.as_view(), name="wishlist-add"),
-    path("wishlist/delete/<int:pk>/", WishlistDeleteView.as_view(), name="wishlist-delete"),
-    path("wishlist/purchased/<int:pk>/", WishlistPurchasedView.as_view(), name="wishlist-purchased"),
+    path(
+        "wishlist/delete/<int:pk>/",
+        WishlistDeleteView.as_view(),
+        name="wishlist-delete",
+    ),
+    path(
+        "wishlist/purchased/<int:pk>/",
+        WishlistPurchasedView.as_view(),
+        name="wishlist-purchased",
+    ),
     path("cellar-value/", CellarValueView.as_view(), name="cellar-value"),
-    path("bottle/<int:pk>/note/", BottleNoteCreateView.as_view(), name="bottle-note-add"),
+    path(
+        "bottle/<int:pk>/note/", BottleNoteCreateView.as_view(), name="bottle-note-add"
+    ),
     path("alerts/", DrinkingWindowAlertsView.as_view(), name="drinking-alerts"),
     path("stats/", ConsumptionStatsView.as_view(), name="consumption-stats"),
     path("reorder/", ReorderRemindersView.as_view(), name="reorder-reminders"),
-    path("reorder/add/<int:pk>/", ReorderReminderCreateView.as_view(), name="reorder-reminder-add"),
-    path("reorder/delete/<int:pk>/", ReorderReminderDeleteView.as_view(), name="reorder-reminder-delete"),
+    path(
+        "reorder/add/<int:pk>/",
+        ReorderReminderCreateView.as_view(),
+        name="reorder-reminder-add",
+    ),
+    path(
+        "reorder/delete/<int:pk>/",
+        ReorderReminderDeleteView.as_view(),
+        name="reorder-reminder-delete",
+    ),
     path("label-scan/", LabelScanView.as_view(), name="label-scan"),
     path("storage/history/", StorageItemHistoryView.as_view(), name="stock-history"),
     path("health/", health_check, name="health_check"),
