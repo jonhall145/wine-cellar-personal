@@ -5,8 +5,12 @@ nav:
   - Development:
     - Setup: setup.md
     - Testing: testing.md
-  - Wine: wine.md
-  - Storage: storage.md
+  - Database:
+    - Models: models.md
+  - Features:
+    - Wine Management: wine.md
+    - Storage: storage.md
+    - Vision-Based Entry: vision-wine-entry.md
   - AI Skills:
     - UI Testing with Playwright: skills/ui-testing-playwright.md
     - CSS Debugging: skills/css-debugging.md

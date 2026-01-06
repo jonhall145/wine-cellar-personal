@@ -150,6 +150,67 @@ class WineCreateView(FormView):
     form_class = WineForm
     success_url = reverse_lazy("wine-list")
 
+    def get_initial(self):
+        """Pre-fill form with data from scanned wine label if available."""
+        initial = super().get_initial()
+
+        # Check for scanned label in session
+        scanned_label = self.request.session.get("scanned_label")
+        if scanned_label:
+            try:
+                from wine_cellar.apps.wine.services import WineVisionExtractor
+
+                # Extract wine data using vision service
+                extractor = WineVisionExtractor()
+                result = extractor.extract_from_image(scanned_label["data"])
+
+                # Pre-fill form with extracted data
+                if result["data"]:
+                    # Map extracted data to form fields
+                    initial.update(result["data"])
+
+                    # Handle special fields that need processing
+                    # Grapes: convert list to initial format expected by form
+                    if "grapes" in result["data"] and isinstance(
+                        result["data"]["grapes"], list
+                    ):
+                        # Store as list for form to handle
+                        initial["grapes"] = result["data"]["grapes"]
+
+                    # Vineyard: convert to list if string
+                    if "vineyard" in result["data"]:
+                        if isinstance(result["data"]["vineyard"], str):
+                            initial["vineyard"] = [result["data"]["vineyard"]]
+                        elif isinstance(result["data"]["vineyard"], list):
+                            initial["vineyard"] = result["data"]["vineyard"]
+
+                    # Size field mapping (already handled by service)
+                    # wine_type field (already handled by service)
+                    # category field (already handled by service)
+
+                # Store extraction metadata for template display
+                self.request.session["extraction_result"] = {
+                    "confidence": result.get("confidence", "low"),
+                    "extracted_fields": result.get("extracted_fields", []),
+                    "errors": result.get("errors", []),
+                    "scanned_image": scanned_label["data"],
+                }
+
+            except Exception as e:
+                # Log error but don't break the page
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.exception("Error extracting wine data from scanned label")
+                self.request.session["extraction_result"] = {
+                    "confidence": "low",
+                    "extracted_fields": [],
+                    "errors": [f"Extraction failed: {str(e)}"],
+                    "scanned_image": scanned_label.get("data"),
+                }
+
+        return initial
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         if "user" not in kwargs:
@@ -180,10 +241,26 @@ class WineCreateView(FormView):
                         free.append(column)
                 free_cells_by_storage[storage.pk][row] = free
         context["free_cells_by_storage"] = free_cells_by_storage
+
+        # Add extraction result to context if available
+        extraction_result = self.request.session.get("extraction_result")
+        if extraction_result:
+            context["extraction_result"] = extraction_result
+            context["scanned_image"] = extraction_result.get("scanned_image")
+            context["extracted_fields"] = extraction_result.get("extracted_fields", [])
+            context["confidence"] = extraction_result.get("confidence", "low")
+
         return context
 
     def form_valid(self, form):
         self.process_form_data(self.request.user, form.cleaned_data)
+
+        # Clear scanned label data from session after successful save
+        if "scanned_label" in self.request.session:
+            del self.request.session["scanned_label"]
+        if "extraction_result" in self.request.session:
+            del self.request.session["extraction_result"]
+
         return super().form_valid(form)
 
     @staticmethod
