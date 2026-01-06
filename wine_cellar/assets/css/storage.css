@@ -227,7 +227,15 @@
   color: #dc3545;
 }
 
-/* View toggle buttons */
+/* View toggle container */
+.storage-view-toggle-container {
+  margin: 16px 0;
+}
+
+/* Hidden state for views */
+.storage-view--hidden {
+  display: none;
+}
 .storage-view-toggle {
   display: flex;
   gap: 8px;

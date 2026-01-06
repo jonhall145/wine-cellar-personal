@@ -26,26 +26,26 @@
             
             {% if storage.rows > 0 and storage.columns > 0 %}
             <!-- View Toggle -->
-            <div class="pure-u-1 text-align-center" style="margin: 16px 0;">
+            <div class="pure-u-1 text-align-center storage-view-toggle-container">
                 <div class="storage-view-toggle">
                     <button type="button" class="storage-view-toggle__btn" id="btn-list-view" onclick="toggleView('list')">
                         <i class="fa-solid fa-list"></i> {% translate "List" %}
                     </button>
                     <button type="button" class="storage-view-toggle__btn storage-view-toggle__btn--active" id="btn-grid-view" onclick="toggleView('grid')">
-                        <i class="fa-solid fa-grid"></i> {% translate "Grid" %}
+                        <i class="fa-solid fa-table-cells"></i> {% translate "Grid" %}
                     </button>
                 </div>
             </div>
             {% endif %}
             
             <!-- Grid View -->
-            <div class="pure-u-1" id="grid-view" {% if not storage.rows or not storage.columns %}style="display:none"{% endif %}>
+            <div class="pure-u-1" id="grid-view" {% if not storage.rows or not storage.columns %}class="storage-view--hidden"{% endif %}>
                 {% csrf_token %}
                 <div id="storage-grid-container" data-storage-id="{{ storage.pk }}"></div>
             </div>
             
             <!-- List View -->
-            <div class="pure-u-1 pure-u-md-1 text-align-center" id="list-view" style="display:none">
+            <div class="pure-u-1 pure-u-md-1 text-align-center storage-view--hidden" id="list-view">
                 {% if object_list %}
                     <table class="storage-list__table">
                         <tr>
@@ -84,13 +84,13 @@
             const btnGrid = document.getElementById('btn-grid-view');
             
             if (view === 'list') {
-                listView.style.display = '';
-                gridView.style.display = 'none';
+                listView.classList.remove('storage-view--hidden');
+                gridView.classList.add('storage-view--hidden');
                 btnList.classList.add('storage-view-toggle__btn--active');
                 btnGrid.classList.remove('storage-view-toggle__btn--active');
             } else {
-                listView.style.display = 'none';
-                gridView.style.display = '';
+                listView.classList.add('storage-view--hidden');
+                gridView.classList.remove('storage-view--hidden');
                 btnList.classList.remove('storage-view-toggle__btn--active');
                 btnGrid.classList.add('storage-view-toggle__btn--active');
             }

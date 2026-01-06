@@ -235,13 +235,13 @@ const LabelScanner: React.FC = () => {
 
             {/* Show thumbnails of captured images */}
             {capturedImages.length > 0 && (
-                <div style={{ display: 'flex', gap: '8px', marginTop: '12px', justifyContent: 'center' }}>
+                <div className="label-scanner__thumbnails">
                     {capturedImages.map((img, idx) => (
                         <img
                             key={idx}
                             src={img}
                             alt={`Captured ${idx + 1}`}
-                            style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #ccc' }}
+                            className="label-scanner__thumbnail"
                         />
                     ))}
                 </div>

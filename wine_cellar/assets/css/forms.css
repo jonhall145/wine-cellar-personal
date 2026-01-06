@@ -446,3 +446,19 @@ p.form-hint {
 .label-scanner__controls button {
   min-width: 150px;
 }
+
+/* Thumbnail previews for captured images */
+.label-scanner__thumbnails {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: center;
+}
+
+.label-scanner__thumbnail {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 2px solid #ccc;
+}

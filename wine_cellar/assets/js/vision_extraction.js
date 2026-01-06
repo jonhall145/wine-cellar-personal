@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         if (!hasImages) {
-            alert('Please upload at least one image before using auto-fill.');
+            showMessage('warning', 'Please upload at least one image before using auto-fill.');
             return;
         }
         

@@ -332,9 +332,6 @@ const StorageGrid: React.FC = () => {
                 <p><i className="fa-solid fa-hand-pointer"></i> Tap a bottle to see details</p>
                 <p><i className="fa-solid fa-arrows-up-down-left-right"></i> Drag and drop to move bottles</p>
             </div>
-            
-            {/* CSRF token for forms */}
-            <input type="hidden" name="csrfmiddlewaretoken" value="" />
         </div>
     );
 };
