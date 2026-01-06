@@ -1,6 +1,5 @@
 """Vision-based wine label extraction service using Claude Vision API."""
 
-import base64
 import logging
 import re
 from typing import Any
@@ -59,12 +58,13 @@ class WineVisionExtractor:
         """Initialize the extractor."""
         self.api_key = settings.ANTHROPIC_API_KEY
 
-    def extract_from_image(self, base64_image: str) -> dict:
+    def extract_from_images(self, base64_images: list[str]) -> dict:
         """
-        Main extraction method.
+        Main extraction method supporting multiple images.
 
         Args:
-            base64_image: Base64-encoded image data
+            base64_images: List of base64-encoded image data
+                (barcode, front label, back label)
 
         Returns:
             dict with keys:
@@ -83,13 +83,15 @@ class WineVisionExtractor:
         }
 
         if not self.api_key:
-            logger.warning("ANTHROPIC_API_KEY not configured, using fallback extraction")
+            logger.warning(
+                "ANTHROPIC_API_KEY not configured, using fallback extraction"
+            )
             result["errors"].append("AI vision disabled - API key not configured")
             return self._fallback_regex_extraction("")
 
         try:
-            # Call Claude Vision API
-            vision_result = self._call_claude_vision(base64_image)
+            # Call Claude Vision API with all images
+            vision_result = self._call_claude_vision(base64_images)
 
             if vision_result.get("success"):
                 result["data"] = vision_result["data"]
@@ -106,12 +108,25 @@ class WineVisionExtractor:
 
         return result
 
-    def _call_claude_vision(self, base64_image: str) -> dict:
+    def extract_from_image(self, base64_image: str) -> dict:
+        """
+        Legacy single-image extraction method.
+
+        Args:
+            base64_image: Base64-encoded image data
+
+        Returns:
+            dict with extraction results
+        """
+        # Delegate to multi-image method with single image
+        return self.extract_from_images([base64_image])
+
+    def _call_claude_vision(self, base64_images: list[str]) -> dict:
         """
         Call Claude Vision API with structured prompt.
 
         Args:
-            base64_image: Base64-encoded image data
+            base64_images: List of base64-encoded image data
 
         Returns:
             dict with extraction results
@@ -130,27 +145,41 @@ class WineVisionExtractor:
             # Construct the prompt for structured extraction
             prompt = self._build_extraction_prompt()
 
+            # Build content array with all images
+            content = []
+            image_labels = ["barcode", "front label", "back label"]
+            for idx, base64_image in enumerate(base64_images):
+                label = (
+                    image_labels[idx] if idx < len(image_labels) else f"image {idx+1}"
+                )
+                content.append({"type": "text", "text": f"[{label.upper()}]"})
+                content.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": base64_image,
+                        },
+                    }
+                )
+
+            # Add the extraction prompt at the end
+            content.append(
+                {
+                    "type": "text",
+                    "text": prompt,
+                }
+            )
+
             # Call the API
             response = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-sonnet-4-5",
                 max_tokens=2048,
                 messages=[
                     {
                         "role": "user",
-                        "content": [
-                            {
-                                "type": "image",
-                                "source": {
-                                    "type": "base64",
-                                    "media_type": "image/jpeg",
-                                    "data": base64_image,
-                                },
-                            },
-                            {
-                                "type": "text",
-                                "text": prompt,
-                            },
-                        ],
+                        "content": content,
                     }
                 ],
             )
@@ -178,9 +207,12 @@ class WineVisionExtractor:
 
     def _build_extraction_prompt(self) -> str:
         """Build the structured extraction prompt for Claude."""
-        return """You are analyzing a wine label image. Extract as much information as possible from the label and return it in a structured format.
+        return """You are analyzing wine label images. I've provided \
+multiple images (barcode, front label, back label) to help you extract \
+comprehensive information. Analyze ALL images to extract as much \
+information as possible and return it in a structured format.
 
-Please extract the following information if visible:
+Please extract the following information if visible in ANY of the images:
 
 1. **Wine Name**: The main name/title of the wine
 2. **Wine Type**: red, white, rosé, sparkling, dessert, fortified, or orange
@@ -192,7 +224,7 @@ Please extract the following information if visible:
 8. **ABV**: Alcohol by volume percentage (as a number, e.g., 13.5)
 9. **Volume**: Bottle size in ml (e.g., 750, 375, 1500)
 10. **Sweetness**: dry, semi-dry, medium sweet, sweet, or feinherb
-11. **Barcode**: If visible
+11. **Barcode**: If visible in the barcode image
 
 Return your response in this exact format:
 
@@ -212,10 +244,11 @@ CONFIDENCE: [high/medium/low]
 ```
 
 **Important**:
-- If you cannot read or find a field, write "not found"
+- Combine information from ALL images provided
+- If you cannot read or find a field in any image, write "not found"
 - For grapes, use comma-separated list
-- For confidence, use "high" if you're very confident in most fields, "medium" if some fields are unclear, "low" if the label is hard to read
-- Be precise and only extract what you can actually see on the label
+- For confidence, use "high" if you're very confident in most fields, "medium" if some fields are unclear, "low" if the labels are hard to read
+- Be precise and only extract what you can actually see on the labels
 """
 
     def _parse_claude_response(self, response_text: str) -> dict:

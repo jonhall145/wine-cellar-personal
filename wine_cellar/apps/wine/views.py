@@ -86,34 +86,45 @@ class HomePageView(TemplateView):
 
         # Dashboard widget data
         from datetime import date, timedelta
+
         from wine_cellar.apps.wine.models import DrinkRecord, ReorderReminder, Wishlist
 
         # Alerts
-        overdue_count = Wine.objects.filter(
-            user=self.request.user,
-            drink_by__isnull=False,
-            drink_by__lt=date.today(),
-            storageitem__deleted=False,
-        ).distinct().count()
-
-        upcoming_count = Wine.objects.filter(
-            user=self.request.user,
-            drink_by__isnull=False,
-            drink_by__lte=date.today() + timedelta(days=180),
-            drink_by__gte=date.today(),
-            storageitem__deleted=False,
-        ).distinct().count()
-
-        # Low stock reminders
-        reminders = ReorderReminder.objects.filter(user=self.request.user, is_active=True)
-        low_stock_count = sum(
-            1 for r in reminders if r.wine.total_stock <= r.min_stock
+        overdue_count = (
+            Wine.objects.filter(
+                user=self.request.user,
+                drink_by__isnull=False,
+                drink_by__lt=date.today(),
+                storageitem__deleted=False,
+            )
+            .distinct()
+            .count()
         )
 
+        upcoming_count = (
+            Wine.objects.filter(
+                user=self.request.user,
+                drink_by__isnull=False,
+                drink_by__lte=date.today() + timedelta(days=180),
+                drink_by__gte=date.today(),
+                storageitem__deleted=False,
+            )
+            .distinct()
+            .count()
+        )
+
+        # Low stock reminders
+        reminders = ReorderReminder.objects.filter(
+            user=self.request.user, is_active=True
+        )
+        low_stock_count = sum(1 for r in reminders if r.wine.total_stock <= r.min_stock)
+
         # Recent drinks
-        recent_drinks = DrinkRecord.objects.filter(
-            user=self.request.user
-        ).select_related("wine").order_by("-date_consumed")[:3]
+        recent_drinks = (
+            DrinkRecord.objects.filter(user=self.request.user)
+            .select_related("wine")
+            .order_by("-date_consumed")[:3]
+        )
 
         # Wishlist
         wishlist_items = Wishlist.objects.filter(
@@ -125,22 +136,24 @@ class HomePageView(TemplateView):
         total_bottles = StorageItem.objects.filter(
             user=self.request.user, deleted=False
         ).count()
-        
+
         avg_rating = None
         rated = DrinkRecord.objects.filter(user=self.request.user, rating__isnull=False)
         if rated.exists():
             avg_rating = round(sum(r.rating for r in rated) / rated.count(), 1)
 
-        context.update({
-            "overdue_count": overdue_count,
-            "upcoming_count": upcoming_count,
-            "low_stock_count": low_stock_count,
-            "recent_drinks": recent_drinks,
-            "wishlist_items": wishlist_items,
-            "total_consumed": total_consumed,
-            "total_bottles": total_bottles,
-            "avg_rating": avg_rating,
-        })
+        context.update(
+            {
+                "overdue_count": overdue_count,
+                "upcoming_count": upcoming_count,
+                "low_stock_count": low_stock_count,
+                "recent_drinks": recent_drinks,
+                "wishlist_items": wishlist_items,
+                "total_consumed": total_consumed,
+                "total_bottles": total_bottles,
+                "avg_rating": avg_rating,
+            }
+        )
 
         return context
 
@@ -156,44 +169,39 @@ class WineCreateView(FormView):
 
         # Check for scanned label in session
         scanned_label = self.request.session.get("scanned_label")
-        if scanned_label:
+
+        # Check if we've already processed this scan
+        extraction_result = self.request.session.get("extraction_result")
+
+        if scanned_label and not extraction_result:
+            # Only process if we haven't already extracted data
             try:
                 from wine_cellar.apps.wine.services import WineVisionExtractor
 
                 # Extract wine data using vision service
                 extractor = WineVisionExtractor()
-                result = extractor.extract_from_image(scanned_label["data"])
 
-                # Pre-fill form with extracted data
-                if result["data"]:
-                    # Map extracted data to form fields
-                    initial.update(result["data"])
-
-                    # Handle special fields that need processing
-                    # Grapes: convert list to initial format expected by form
-                    if "grapes" in result["data"] and isinstance(
-                        result["data"]["grapes"], list
-                    ):
-                        # Store as list for form to handle
-                        initial["grapes"] = result["data"]["grapes"]
-
-                    # Vineyard: convert to list if string
-                    if "vineyard" in result["data"]:
-                        if isinstance(result["data"]["vineyard"], str):
-                            initial["vineyard"] = [result["data"]["vineyard"]]
-                        elif isinstance(result["data"]["vineyard"], list):
-                            initial["vineyard"] = result["data"]["vineyard"]
-
-                    # Size field mapping (already handled by service)
-                    # wine_type field (already handled by service)
-                    # category field (already handled by service)
+                # Handle both single and multiple images
+                image_data = scanned_label.get("data")
+                if isinstance(image_data, list):
+                    # Multiple images
+                    result = extractor.extract_from_images(image_data)
+                else:
+                    # Legacy single image (backwards compatibility)
+                    result = extractor.extract_from_image(image_data)
 
                 # Store extraction metadata for template display
                 self.request.session["extraction_result"] = {
                     "confidence": result.get("confidence", "low"),
                     "extracted_fields": result.get("extracted_fields", []),
                     "errors": result.get("errors", []),
-                    "scanned_image": scanned_label["data"],
+                    "scanned_image": (
+                        image_data[0] if isinstance(image_data, list) else image_data
+                    ),  # Show first image
+                    "image_count": (
+                        len(image_data) if isinstance(image_data, list) else 1
+                    ),
+                    "extracted_data": result.get("data", {}),  # Store for reuse
                 }
 
             except Exception as e:
@@ -207,7 +215,32 @@ class WineCreateView(FormView):
                     "extracted_fields": [],
                     "errors": [f"Extraction failed: {str(e)}"],
                     "scanned_image": scanned_label.get("data"),
+                    "extracted_data": {},
                 }
+
+        # If we have extraction results (either just created or from previous load), use them
+        if extraction_result:
+            result_data = extraction_result.get("extracted_data", {})
+            if result_data:
+                # Map extracted data to form fields
+                initial.update(result_data)
+
+                # Handle special fields that need processing
+                # Grapes: convert list to initial format expected by form
+                if "grapes" in result_data and isinstance(result_data["grapes"], list):
+                    # Store as list for form to handle
+                    initial["grapes"] = result_data["grapes"]
+
+                # Vineyard: convert to list if string
+                if "vineyard" in result_data:
+                    if isinstance(result_data["vineyard"], str):
+                        initial["vineyard"] = [result_data["vineyard"]]
+                    elif isinstance(result_data["vineyard"], list):
+                        initial["vineyard"] = result_data["vineyard"]
+
+                # Size field mapping (already handled by service)
+                # wine_type field (already handled by service)
+                # category field (already handled by service)
 
         return initial
 
@@ -251,6 +284,60 @@ class WineCreateView(FormView):
             context["confidence"] = extraction_result.get("confidence", "low")
 
         return context
+
+    def post(self, request, *args, **kwargs):
+        """Handle form submission and vision extraction."""
+        import base64
+
+        # Check if user clicked "Auto-fill from Images" button
+        if "extract_vision" in request.POST:
+            form = self.get_form()
+            if form.is_valid():
+                # Collect uploaded images for vision extraction
+                images = []
+                image_fields = [
+                    "image_front_label",
+                    "image_back_label",
+                    "image_front",
+                    "image_back",
+                ]
+
+                for field_name in image_fields:
+                    image_file = form.cleaned_data.get(field_name)
+                    if image_file:
+                        # Read and encode to base64
+                        image_data = image_file.read()
+                        base64_image = base64.b64encode(image_data).decode("utf-8")
+                        images.append(base64_image)
+                        # Reset file pointer for later use
+                        image_file.seek(0)
+
+                if images:
+                    # Store images in session for vision extraction
+                    self.request.session["scanned_label"] = {
+                        "filename": "uploaded_images.jpg",
+                        "size": sum(len(base64.b64decode(img)) for img in images),
+                        "data": images,
+                        "multi_image": True,
+                    }
+                    # Clear any previous extraction results to trigger new extraction
+                    if "extraction_result" in self.request.session:
+                        del self.request.session["extraction_result"]
+
+                    # Reload the page to trigger vision extraction in get_initial()
+                    return redirect("wine-add")
+                else:
+                    # No images uploaded, show error
+                    from django.contrib import messages
+
+                    messages.warning(
+                        request,
+                        "Please upload at least one image before using auto-fill.",
+                    )
+                    return self.form_invalid(form)
+
+        # Normal form submission
+        return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
         self.process_form_data(self.request.user, form.cleaned_data)
@@ -518,6 +605,7 @@ class DrinkRecordCreateView(FormView):
 
     def get_form_class(self):
         from wine_cellar.apps.wine.forms import DrinkRecordForm
+
         return DrinkRecordForm
 
     def get_context_data(self, **kwargs):
@@ -529,6 +617,7 @@ class DrinkRecordCreateView(FormView):
 
     def form_valid(self, form):
         from wine_cellar.apps.wine.models import DrinkRecord
+
         wine = get_object_or_404(Wine, pk=self.kwargs["pk"], user=self.request.user)
         DrinkRecord.objects.create(
             wine=wine,
@@ -548,6 +637,7 @@ class DrinkRecordListView(TemplateView):
 
     def get_context_data(self, **kwargs):
         from wine_cellar.apps.wine.models import DrinkRecord
+
         context = super().get_context_data(**kwargs)
         context["drink_records"] = DrinkRecord.objects.filter(
             user=self.request.user
@@ -560,6 +650,7 @@ class WishlistListView(TemplateView):
 
     def get_context_data(self, **kwargs):
         from wine_cellar.apps.wine.models import Wishlist
+
         context = super().get_context_data(**kwargs)
         context["wishlist_items"] = Wishlist.objects.filter(
             user=self.request.user, purchased=False
@@ -573,10 +664,12 @@ class WishlistCreateView(FormView):
 
     def get_form_class(self):
         from wine_cellar.apps.wine.forms import WishlistForm
+
         return WishlistForm
 
     def form_valid(self, form):
         from wine_cellar.apps.wine.models import Wishlist
+
         Wishlist.objects.create(
             user=self.request.user,
             name=form.cleaned_data["name"],
@@ -597,6 +690,7 @@ class WishlistDeleteView(DeleteView):
 
     def get_queryset(self):
         from wine_cellar.apps.wine.models import Wishlist
+
         return Wishlist.objects.filter(user=self.request.user)
 
 
@@ -605,6 +699,7 @@ class WishlistPurchasedView(TemplateView):
 
     def get(self, request, *args, **kwargs):
         from wine_cellar.apps.wine.models import Wishlist
+
         item = get_object_or_404(Wishlist, pk=kwargs["pk"], user=request.user)
         item.purchased = True
         item.save()
@@ -648,13 +743,15 @@ class CellarValueView(TemplateView):
             if item.price:
                 wines_by_type[wine_type]["value"] += item.price
 
-        context.update({
-            "total_value": number_format(total_value, use_l10n=True),
-            "total_bottles": storage_items.count(),
-            "currency": currency,
-            "by_country": wines_by_country,
-            "by_type": wines_by_type,
-        })
+        context.update(
+            {
+                "total_value": number_format(total_value, use_l10n=True),
+                "total_bottles": storage_items.count(),
+                "currency": currency,
+                "by_country": wines_by_country,
+                "by_type": wines_by_type,
+            }
+        )
         return context
 
 
@@ -663,6 +760,7 @@ class BottleNoteCreateView(FormView):
 
     def get_form_class(self):
         from wine_cellar.apps.wine.forms import BottleNoteForm
+
         return BottleNoteForm
 
     def get_context_data(self, **kwargs):
@@ -674,6 +772,7 @@ class BottleNoteCreateView(FormView):
 
     def form_valid(self, form):
         from wine_cellar.apps.wine.models import BottleNote
+
         storage_item = get_object_or_404(
             StorageItem, pk=self.kwargs["pk"], user=self.request.user
         )
@@ -683,7 +782,9 @@ class BottleNoteCreateView(FormView):
             note_date=form.cleaned_data["note_date"],
             note=form.cleaned_data["note"],
         )
-        self.success_url = reverse_lazy("wine-detail", kwargs={"pk": storage_item.wine.pk})
+        self.success_url = reverse_lazy(
+            "wine-detail", kwargs={"pk": storage_item.wine.pk}
+        )
         return super().form_valid(form)
 
 
@@ -692,34 +793,46 @@ class DrinkingWindowAlertsView(TemplateView):
 
     def get_context_data(self, **kwargs):
         from datetime import date, timedelta
+
         from wine_cellar.apps.wine.models import DrinkingWindowAlert
+
         context = super().get_context_data(**kwargs)
-        
+
         # Get existing alerts
         alerts = DrinkingWindowAlert.objects.filter(
             user=self.request.user, is_read=False
         ).select_related("wine")
-        
+
         # Also find wines approaching drink_by date (within 6 months)
-        upcoming_wines = Wine.objects.filter(
-            user=self.request.user,
-            drink_by__isnull=False,
-            drink_by__lte=date.today() + timedelta(days=180),
-            drink_by__gte=date.today(),
-        ).filter(storageitem__deleted=False).distinct()
-        
+        upcoming_wines = (
+            Wine.objects.filter(
+                user=self.request.user,
+                drink_by__isnull=False,
+                drink_by__lte=date.today() + timedelta(days=180),
+                drink_by__gte=date.today(),
+            )
+            .filter(storageitem__deleted=False)
+            .distinct()
+        )
+
         # Wines past drink_by
-        overdue_wines = Wine.objects.filter(
-            user=self.request.user,
-            drink_by__isnull=False,
-            drink_by__lt=date.today(),
-        ).filter(storageitem__deleted=False).distinct()
-        
-        context.update({
-            "alerts": alerts,
-            "upcoming_wines": upcoming_wines,
-            "overdue_wines": overdue_wines,
-        })
+        overdue_wines = (
+            Wine.objects.filter(
+                user=self.request.user,
+                drink_by__isnull=False,
+                drink_by__lt=date.today(),
+            )
+            .filter(storageitem__deleted=False)
+            .distinct()
+        )
+
+        context.update(
+            {
+                "alerts": alerts,
+                "upcoming_wines": upcoming_wines,
+                "overdue_wines": overdue_wines,
+            }
+        )
         return context
 
 
@@ -727,56 +840,59 @@ class ConsumptionStatsView(TemplateView):
     template_name = "consumption_stats.html"
 
     def get_context_data(self, **kwargs):
-        from datetime import date
         from collections import defaultdict
+        from datetime import date
+
         from django.db.models import Count
         from django.db.models.functions import TruncMonth
+
         from wine_cellar.apps.wine.models import DrinkRecord, WineType
-        
+
         context = super().get_context_data(**kwargs)
         user = self.request.user
-        
+
         records = DrinkRecord.objects.filter(user=user).select_related("wine")
-        
+
         # Drinks by month (last 12 months)
         by_month = (
-            records
-            .annotate(month=TruncMonth("date_consumed"))
+            records.annotate(month=TruncMonth("date_consumed"))
             .values("month")
             .annotate(count=Count("id"))
             .order_by("month")
         )
-        
+
         # Drinks by wine type
         by_type = defaultdict(int)
         for record in records:
             wine_type = record.wine.get_type if record.wine.wine_type else "Unknown"
             by_type[wine_type] += 1
-        
+
         # Drinks by country
         by_country = defaultdict(int)
         for record in records:
             country = record.wine.country_name if record.wine.country else "Unknown"
             by_country[country] += 1
-        
+
         # Average rating over time
         rated_records = records.filter(rating__isnull=False).order_by("date_consumed")
         avg_rating = None
         if rated_records.exists():
             total_rating = sum(r.rating for r in rated_records)
             avg_rating = round(total_rating / rated_records.count(), 1)
-        
+
         # Top rated wines
         top_rated = records.filter(rating__isnull=False).order_by("-rating")[:5]
-        
-        context.update({
-            "total_consumed": records.count(),
-            "by_month": list(by_month),
-            "by_type": dict(by_type),
-            "by_country": dict(by_country),
-            "avg_rating": avg_rating,
-            "top_rated": top_rated,
-        })
+
+        context.update(
+            {
+                "total_consumed": records.count(),
+                "by_month": list(by_month),
+                "by_type": dict(by_type),
+                "by_country": dict(by_country),
+                "avg_rating": avg_rating,
+                "top_rated": top_rated,
+            }
+        )
         return context
 
 
@@ -785,29 +901,34 @@ class ReorderRemindersView(TemplateView):
 
     def get_context_data(self, **kwargs):
         from wine_cellar.apps.wine.models import ReorderReminder
+
         context = super().get_context_data(**kwargs)
         user = self.request.user
-        
+
         reminders = ReorderReminder.objects.filter(
             user=user, is_active=True
         ).select_related("wine")
-        
+
         # Find wines that need reordering
         needs_reorder = []
         for reminder in reminders:
             current_stock = reminder.wine.total_stock
             if current_stock <= reminder.min_stock:
-                needs_reorder.append({
-                    "wine": reminder.wine,
-                    "current_stock": current_stock,
-                    "min_stock": reminder.min_stock,
-                    "reminder": reminder,
-                })
-        
-        context.update({
-            "reminders": reminders,
-            "needs_reorder": needs_reorder,
-        })
+                needs_reorder.append(
+                    {
+                        "wine": reminder.wine,
+                        "current_stock": current_stock,
+                        "min_stock": reminder.min_stock,
+                        "reminder": reminder,
+                    }
+                )
+
+        context.update(
+            {
+                "reminders": reminders,
+                "needs_reorder": needs_reorder,
+            }
+        )
         return context
 
 
@@ -816,6 +937,7 @@ class ReorderReminderCreateView(FormView):
 
     def get_form_class(self):
         from wine_cellar.apps.wine.forms import ReorderReminderForm
+
         return ReorderReminderForm
 
     def get_context_data(self, **kwargs):
@@ -827,6 +949,7 @@ class ReorderReminderCreateView(FormView):
 
     def form_valid(self, form):
         from wine_cellar.apps.wine.models import ReorderReminder
+
         wine = get_object_or_404(Wine, pk=self.kwargs["pk"], user=self.request.user)
         ReorderReminder.objects.update_or_create(
             wine=wine,
@@ -834,7 +957,7 @@ class ReorderReminderCreateView(FormView):
             defaults={
                 "min_stock": form.cleaned_data["min_stock"],
                 "is_active": True,
-            }
+            },
         )
         self.success_url = reverse_lazy("wine-detail", kwargs={"pk": wine.pk})
         return super().form_valid(form)
@@ -846,6 +969,7 @@ class ReorderReminderDeleteView(DeleteView):
 
     def get_queryset(self):
         from wine_cellar.apps.wine.models import ReorderReminder
+
         return ReorderReminder.objects.filter(user=self.request.user)
 
 
@@ -859,11 +983,31 @@ class LabelScanView(FormView):
 
     def post(self, request, *args, **kwargs):
         import base64
-        from io import BytesIO
 
-        from PIL import Image
+        # Handle camera capture data - check for multiple images
+        image_count = request.POST.get("image_count")
+        if image_count:
+            # Multiple images submitted
+            images = []
+            for i in range(int(image_count)):
+                image_data = request.POST.get(f"image_data_{i}")
+                if image_data:
+                    # Remove data URL prefix if present
+                    if "," in image_data:
+                        image_data = image_data.split(",")[1]
+                    images.append(image_data)
 
-        # Handle camera capture data
+            if images:
+                # Store all images in session
+                self.request.session["scanned_label"] = {
+                    "filename": "camera_captures.jpg",
+                    "size": sum(len(base64.b64decode(img)) for img in images),
+                    "data": images,  # List of base64 images
+                    "multi_image": True,
+                }
+                return redirect("wine-add")
+
+        # Handle single camera capture (legacy)
         image_data = request.POST.get("image_data")
         if image_data:
             # Remove data URL prefix if present
@@ -877,7 +1021,8 @@ class LabelScanView(FormView):
             self.request.session["scanned_label"] = {
                 "filename": "camera_capture.jpg",
                 "size": len(image_bytes),
-                "data": image_data,
+                "data": [image_data],  # Wrap in list for consistency
+                "multi_image": False,
             }
 
             return redirect("wine-add")
@@ -898,7 +1043,8 @@ class LabelScanView(FormView):
         self.request.session["scanned_label"] = {
             "filename": image.name,
             "size": len(image_data),
-            "data": base64_image,
+            "data": [base64_image],  # Wrap in list for consistency
+            "multi_image": False,
         }
 
         return redirect("wine-add")
@@ -906,26 +1052,27 @@ class LabelScanView(FormView):
 
 class LabelScanResultView(TemplateView):
     """Process OCR results and pre-fill wine form."""
+
     template_name = "label_scan_result.html"
-    
+
     def extract_wine_info(self, text):
         """Extract wine information from OCR text."""
         import re
-        
+
         info = {}
-        
+
         # Try to extract vintage year (4 digit number between 1900-2030)
-        year_match = re.search(r'\b(19\d{2}|20[0-2]\d)\b', text)
+        year_match = re.search(r"\b(19\d{2}|20[0-2]\d)\b", text)
         if year_match:
             info["vintage"] = int(year_match.group(1))
-        
+
         # Try to extract ABV
-        abv_match = re.search(r'(\d+\.?\d*)\s*%?\s*(alc|abv|vol)', text, re.IGNORECASE)
+        abv_match = re.search(r"(\d+\.?\d*)\s*%?\s*(alc|abv|vol)", text, re.IGNORECASE)
         if abv_match:
             info["abv"] = float(abv_match.group(1))
-        
+
         # Try to extract volume
-        vol_match = re.search(r'(\d+\.?\d*)\s*(ml|cl|l)\b', text, re.IGNORECASE)
+        vol_match = re.search(r"(\d+\.?\d*)\s*(ml|cl|l)\b", text, re.IGNORECASE)
         if vol_match:
             vol = float(vol_match.group(1))
             unit = vol_match.group(2).lower()
@@ -934,5 +1081,5 @@ class LabelScanResultView(TemplateView):
             elif unit == "cl":
                 vol = vol / 100
             info["size"] = vol
-        
+
         return info

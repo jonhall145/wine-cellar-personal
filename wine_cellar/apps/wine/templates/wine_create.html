@@ -112,10 +112,23 @@
                     <legend>
                         <h2 class="form-subhead text--gray">{% translate "Images" %}</h2>
                     </legend>
+                    <div class="form-hint mb-12">
+                        {% translate "Upload images and click 'Auto-fill from Images' to extract wine details using AI vision." %}
+                    </div>
                     {% include 'forms/form_field.html' with field=form.image_front %}
                     {% include 'forms/form_field.html' with field=form.image_back %}
                     {% include 'forms/form_field.html' with field=form.image_front_label %}
                     {% include 'forms/form_field.html' with field=form.image_back_label %}
+                    
+                    <div class="pure-controls" style="margin-top: 12px;">
+                        <button type="submit" name="extract_vision" class="pure-button button__secondary">
+                            <i class="fa fa-magic"></i>
+                            {% translate "Auto-fill from Images" %}
+                        </button>
+                        <span class="form-hint" style="display: inline-block; margin-left: 8px;">
+                            {% translate "Extract wine details from uploaded images" %}
+                        </span>
+                    </div>
                 </fieldset>
                 <fieldset>
                     <legend>
