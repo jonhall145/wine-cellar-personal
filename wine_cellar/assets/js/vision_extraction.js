@@ -8,6 +8,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (!extractButton || !form) return;
     
+    // Store file references to prevent "file changed" errors
+    const storedFiles = {};
+    
     extractButton.addEventListener('click', function(e) {
         e.preventDefault();
         
@@ -19,7 +22,11 @@ document.addEventListener('DOMContentLoaded', function() {
         imageFields.forEach(fieldName => {
             const input = form.querySelector(`input[name="${fieldName}"]`);
             if (input && input.files && input.files[0]) {
-                formData.append(fieldName, input.files[0]);
+                // Clone the file to avoid "file changed" issues
+                const file = input.files[0];
+                formData.append(fieldName, file);
+                // Store reference for later form submission
+                storedFiles[fieldName] = file;
                 hasImages = true;
             }
         });

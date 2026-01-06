@@ -1112,6 +1112,8 @@ def extract_wine_vision_ajax(request):
                 image_data = image_file.read()
                 base64_image = base64.b64encode(image_data).decode("utf-8")
                 images.append(base64_image)
+                # Reset file pointer so Django can read it again later
+                image_file.seek(0)
 
         if not images:
             return JsonResponse(
