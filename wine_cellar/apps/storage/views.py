@@ -219,3 +219,128 @@ class StorageItemHistoryView(ListView):
     def get_queryset(self):
         qs = super().get_queryset().order_by("-created")
         return qs.filter(user=self.request.user, deleted=True)
+
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+import json
+
+
+@login_required
+def storage_grid_data(request):
+    """API endpoint to get storage grid data for React component."""
+    storages = Storage.objects.filter(user=request.user).order_by("name")
+
+    # Get current storage from query param or use first one
+    current_storage_id = request.GET.get("storage_id")
+    if current_storage_id:
+        current_storage_id = int(current_storage_id)
+    elif storages.exists():
+        current_storage_id = storages.first().pk
+    else:
+        current_storage_id = None
+
+    storage_data = []
+    for storage in storages:
+        items = []
+        for item in storage.items.filter(deleted=False).select_related("wine"):
+            wine = item.wine
+            items.append(
+                {
+                    "row": item.row,
+                    "column": item.column,
+                    "wine": {
+                        "id": wine.pk,
+                        "name": wine.name,
+                        "vintage": wine.vintage,
+                        "wine_type": (
+                            wine.get_wine_type_display() if wine.wine_type else ""
+                        ),
+                        "country": wine.country or "",
+                        "item_id": item.pk,
+                    },
+                }
+            )
+
+        storage_data.append(
+            {
+                "id": storage.pk,
+                "name": storage.name,
+                "rows": storage.rows,
+                "columns": storage.columns,
+                "items": items,
+            }
+        )
+
+    return JsonResponse(
+        {
+            "storages": storage_data,
+            "current_storage_id": current_storage_id,
+        }
+    )
+
+
+@login_required
+@require_POST
+def move_bottle(request):
+    """API endpoint to move a bottle to a new position."""
+    try:
+        data = json.loads(request.body)
+        item_id = data.get("item_id")
+        target_storage_id = data.get("target_storage_id")
+        target_row = data.get("target_row")
+        target_column = data.get("target_column")
+
+        # Validate inputs
+        if not all([item_id, target_storage_id, target_row, target_column]):
+            return JsonResponse({"error": "Missing required fields"}, status=400)
+
+        # Get the item to move
+        try:
+            item = StorageItem.objects.get(pk=item_id, user=request.user, deleted=False)
+        except StorageItem.DoesNotExist:
+            return JsonResponse({"error": "Bottle not found"}, status=404)
+
+        # Get target storage
+        try:
+            target_storage = Storage.objects.get(
+                pk=target_storage_id, user=request.user
+            )
+        except Storage.DoesNotExist:
+            return JsonResponse({"error": "Storage not found"}, status=404)
+
+        # Check if target position is valid
+        if target_row < 1 or target_row > target_storage.rows:
+            return JsonResponse({"error": "Invalid row"}, status=400)
+        if target_column < 1 or target_column > target_storage.columns:
+            return JsonResponse({"error": "Invalid column"}, status=400)
+
+        # Check if target position is occupied
+        if target_storage.is_slot_occupied(target_row, target_column):
+            # Check if it's the same item (no-op)
+            if (
+                item.storage_id == target_storage_id
+                and item.row == target_row
+                and item.column == target_column
+            ):
+                return JsonResponse({"success": True, "message": "No change needed"})
+            return JsonResponse({"error": "Target position is occupied"}, status=400)
+
+        # Move the bottle
+        item.storage = target_storage
+        item.row = target_row
+        item.column = target_column
+        item.save(update_fields=["storage", "row", "column"])
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": f"Moved to {target_storage.name} ({target_row}, {target_column})",
+            }
+        )
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

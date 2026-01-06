@@ -28,3 +28,257 @@
 .storage-detail__location {
   margin-right: 24px;
 }
+
+/* Storage Grid View */
+.storage-grid {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 16px;
+}
+
+.storage-grid__controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.storage-grid__select {
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  min-width: 200px;
+}
+
+.storage-grid__message {
+  padding: 12px 16px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+.storage-grid__message--success {
+  background-color: #d4edda;
+  color: #155724;
+  border-left: 4px solid #28a745;
+}
+
+.storage-grid__message--error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-left: 4px solid #dc3545;
+}
+
+.storage-grid__header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.storage-grid__corner {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+}
+
+.storage-grid__col-label {
+  width: 50px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.storage-grid__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.storage-grid__row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.storage-grid__row-label {
+  width: 30px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.storage-grid__cell {
+  width: 50px;
+  height: 50px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background-color: #f9f9f9;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.storage-grid__cell:hover {
+  border-color: #999;
+  background-color: #f0f0f0;
+}
+
+.storage-grid__cell--filled {
+  background-color: var(--wine-red, #722f37);
+  border-color: var(--wine-red-dark, #5a252c);
+}
+
+.storage-grid__cell--filled:hover {
+  background-color: var(--wine-red-dark, #5a252c);
+  transform: scale(1.05);
+}
+
+.storage-grid__cell--selected {
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.storage-grid__cell--drag-over {
+  border-color: #28a745;
+  background-color: rgba(40, 167, 69, 0.2);
+  border-style: dashed;
+}
+
+.storage-grid__bottle {
+  color: white;
+  font-size: 20px;
+}
+
+.storage-grid__bottle i {
+  transform: rotate(-45deg);
+}
+
+/* Tooltip */
+.storage-grid__tooltip {
+  background-color: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  pointer-events: none;
+  max-width: 250px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.tooltip__name {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.tooltip__vintage {
+  color: #ffc107;
+  font-weight: 500;
+}
+
+.tooltip__type,
+.tooltip__country {
+  color: #aaa;
+  font-size: 12px;
+}
+
+.storage-grid__instructions {
+  margin-top: 20px;
+  padding: 16px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #666;
+}
+
+.storage-grid__instructions p {
+  margin: 4px 0;
+}
+
+.storage-grid__instructions i {
+  width: 20px;
+  color: #999;
+  margin-right: 8px;
+}
+
+.storage-grid__loading,
+.storage-grid__error,
+.storage-grid__empty {
+  padding: 40px;
+  text-align: center;
+  color: #666;
+}
+
+.storage-grid__error {
+  color: #dc3545;
+}
+
+/* View toggle container */
+.storage-view-toggle-container {
+  margin: 16px 0;
+}
+
+/* Hidden state for views */
+.storage-view--hidden {
+  display: none;
+}
+.storage-view-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.storage-view-toggle__btn {
+  padding: 8px 16px;
+  border: 1px solid #ccc;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.storage-view-toggle__btn--active {
+  background: var(--wine-red, #722f37);
+  color: white;
+  border-color: var(--wine-red, #722f37);
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .storage-grid__cell {
+  background-color: #333;
+  border-color: #555;
+}
+
+[data-theme="dark"] .storage-grid__cell:hover {
+  background-color: #444;
+  border-color: #777;
+}
+
+[data-theme="dark"] .storage-grid__cell--drag-over {
+  background-color: rgba(40, 167, 69, 0.3);
+}
+
+[data-theme="dark"] .storage-grid__instructions {
+  background-color: #333;
+  color: #aaa;
+}
+
+[data-theme="dark"] .storage-grid__select {
+  background-color: #333;
+  color: #eee;
+  border-color: #555;
+}
