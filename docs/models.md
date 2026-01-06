@@ -59,7 +59,7 @@ Core model representing a unique wine type or label. This is the template for ac
 | `drink_by` | DateField | Recommended consumption date | Optional, indexed |
 | `comment` | CharField(250) | Additional notes | Optional |
 | `rating` | PositiveIntegerField | Wine rating | Optional, 0-10 range |
-| `country` | CharField(3) | Country of origin | Required, ISO alpha-2 code, indexed |
+| `country` | CharField(3) | Country of origin | Required, ISO alpha-2 code (max 3 chars), indexed |
 | `subregion` | CharField(100) | Wine region/subregion | Optional |
 | `vineyard` | ManyToManyField | Producer vineyards | Links to Vineyard model |
 | `source` | ManyToManyField | Purchase sources | Links to Source model |
@@ -68,7 +68,7 @@ Core model representing a unique wine type or label. This is the template for ac
 
 **Properties**:
 - `get_absolute_url()`: Returns detail view URL
-- `get_vineyards`: Comma-separated vineyard names
+- `get_vineyards`: Newline-separated vineyard names
 - `get_grapes`: Comma-separated grape names
 - `get_sources`: Comma-separated source names
 - `get_attributes`: Newline-separated attributes
@@ -151,7 +151,7 @@ Stores information about wine producers and vineyards.
 | `name` | CharField(100) | Vineyard name | Required |
 | `website` | CharField(100) | Website URL | Optional |
 | `region` | CharField(250) | Geographic region | Optional |
-| `country` | CharField(3) | Country code | Optional, ISO alpha-2 |
+| `country` | CharField(3) | Country code | Optional, ISO alpha-2 code (max 3 chars) |
 
 **Constraints**:
 - Unique constraint on: `name`, `country`, `region`, `user`
@@ -269,7 +269,7 @@ Tracks wines the user wants to purchase.
 |-------|------|-------------|-------------|
 | `name` | CharField(100) | Wine name | Required |
 | `wine_type` | CharField(2) | Wine type | Optional, choices from WineType |
-| `country` | CharField(3) | Country | Optional, ISO alpha-2 |
+| `country` | CharField(3) | Country | Optional, ISO alpha-2 code (max 3 chars) |
 | `subregion` | CharField(100) | Region | Optional |
 | `vintage` | PositiveIntegerField | Desired vintage | Optional |
 | `price_limit` | DecimalField(6,2) | Maximum price | Optional |
@@ -484,7 +484,6 @@ User (Django Auth)
   │     ├─── DrinkRecord (1:N)
   │     ├─── DrinkingWindowAlert (1:N)
   │     ├─── ReorderReminder (1:N)
-  │     ├─── Wishlist (1:N)
   │     │
   │     └─── Many-to-Many:
   │           ├─── Grape (N:M)
@@ -492,6 +491,8 @@ User (Django Auth)
   │           ├─── Attribute (N:M)
   │           ├─── FoodPairing (N:M)
   │           └─── Source (N:M)
+  │
+  ├─── Wishlist (1:N)
   │
   ├─── Storage (1:N)
   │     └─── StorageItem (1:N) ──→ Wine (N:1)
