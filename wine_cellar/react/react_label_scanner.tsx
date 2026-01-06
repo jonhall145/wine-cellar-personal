@@ -265,7 +265,7 @@ const LabelScanner: React.FC = () => {
                         >
                             {translated.retakeButton}
                         </button>
-                        {currentStep < 2 ? (
+                        {currentStep < stepInstructions.length - 1 ? (
                             <button
                                 type="button"
                                 className="pure-button button__secondary"
