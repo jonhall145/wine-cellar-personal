@@ -286,7 +286,30 @@ class WineCreateView(FormView):
         return context
 
     def post(self, request, *args, **kwargs):
-        """Handle form submission and vision extraction."""
+        """
+        Handle wine creation form submission and optional vision-based auto-fill.
+
+        This method has two behaviors depending on the submitted POST data:
+
+        * Vision extraction mode: If the ``extract_vision`` key is present in
+          ``request.POST`` (e.g. when the user clicks an "Auto-fill from Images"
+          button), the form is validated and the configured image fields
+          (``image_front_label``, ``image_back_label``, ``image_front``,
+          ``image_back``) are read, base64-encoded, and sent to the external
+          vision API configured via ``settings.WINE_VISION_API_URL`` and
+          ``settings.WINE_VISION_API_KEY``. The response is stored in the
+          session under the ``"extraction_result"`` key, including the
+          ``scanned_image``, any ``extracted_fields``, and a ``confidence``
+          level. The user is then redirected back to this view so that the
+          extraction result can be displayed and used to pre-fill form fields.
+          If no images were uploaded, a warning message is added and the form
+          is treated as invalid.
+
+        * Normal submission mode: If ``extract_vision`` is not present in
+          ``request.POST``, this method delegates to ``FormView.post`` for the
+          standard form submission and validation flow, ultimately creating the
+          wine record on success.
+        """
         import base64
 
         # Check if user clicked "Auto-fill from Images" button
