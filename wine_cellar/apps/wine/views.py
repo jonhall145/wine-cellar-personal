@@ -1081,3 +1081,62 @@ class LabelScanResultView(TemplateView):
             info["size"] = vol
 
         return info
+
+
+def extract_wine_vision_ajax(request):
+    """AJAX endpoint for vision extraction from uploaded images."""
+    import base64
+    import json
+
+    from django.contrib.auth.decorators import login_required
+
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    try:
+        from wine_cellar.apps.wine.services import WineVisionExtractor
+
+        # Collect uploaded images
+        images = []
+        image_fields = [
+            "image_front_label",
+            "image_back_label",
+            "image_front",
+            "image_back",
+        ]
+
+        for field_name in image_fields:
+            image_file = request.FILES.get(field_name)
+            if image_file:
+                # Read and encode to base64
+                image_data = image_file.read()
+                base64_image = base64.b64encode(image_data).decode("utf-8")
+                images.append(base64_image)
+
+        if not images:
+            return JsonResponse(
+                {"error": "No images uploaded. Please select at least one image."},
+                status=400,
+            )
+
+        # Extract wine data using vision service
+        extractor = WineVisionExtractor()
+        result = extractor.extract_from_images(images)
+
+        # Return extracted data as JSON
+        return JsonResponse(
+            {
+                "success": True,
+                "data": result.get("data", {}),
+                "confidence": result.get("confidence", "low"),
+                "extracted_fields": result.get("extracted_fields", []),
+                "errors": result.get("errors", []),
+            }
+        )
+
+    except Exception as e:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.exception("Error in AJAX vision extraction")
+        return JsonResponse({"error": str(e)}, status=500)

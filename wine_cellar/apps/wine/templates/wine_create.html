@@ -5,6 +5,7 @@
     <script src="{% static 'tom_select.js' %}" type="module" defer></script>
     <script src="{% static 'image_preview.js' %}" type="module" defer></script>
     <script src="{% static 'stock_add.js' %}" defer></script>
+    <script src="{% static 'vision_extraction.js' %}" defer></script>
 {% endblock extra_js %}
 {% block extra_head %}
     {{ block.super }}
@@ -121,7 +122,7 @@
                     {% include 'forms/form_field.html' with field=form.image_back_label %}
                     
                     <div class="pure-controls" style="margin-top: 12px;">
-                        <button type="submit" name="extract_vision" class="pure-button button__secondary">
+                        <button type="button" name="extract_vision" class="pure-button button__secondary">
                             <i class="fa fa-magic"></i>
                             {% translate "Auto-fill from Images" %}
                         </button>
