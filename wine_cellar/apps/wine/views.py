@@ -291,50 +291,48 @@ class WineCreateView(FormView):
 
         # Check if user clicked "Auto-fill from Images" button
         if "extract_vision" in request.POST:
-            form = self.get_form()
-            if form.is_valid():
-                # Collect uploaded images for vision extraction
-                images = []
-                image_fields = [
-                    "image_front_label",
-                    "image_back_label",
-                    "image_front",
-                    "image_back",
-                ]
+            # Don't validate the form - just collect uploaded images
+            images = []
+            image_fields = [
+                "image_front_label",
+                "image_back_label",
+                "image_front",
+                "image_back",
+            ]
 
-                for field_name in image_fields:
-                    image_file = form.cleaned_data.get(field_name)
-                    if image_file:
-                        # Read and encode to base64
-                        image_data = image_file.read()
-                        base64_image = base64.b64encode(image_data).decode("utf-8")
-                        images.append(base64_image)
-                        # Reset file pointer for later use
-                        image_file.seek(0)
+            for field_name in image_fields:
+                image_file = request.FILES.get(field_name)
+                if image_file:
+                    # Read and encode to base64
+                    image_data = image_file.read()
+                    base64_image = base64.b64encode(image_data).decode("utf-8")
+                    images.append(base64_image)
+                    # Reset file pointer for later use
+                    image_file.seek(0)
 
-                if images:
-                    # Store images in session for vision extraction
-                    self.request.session["scanned_label"] = {
-                        "filename": "uploaded_images.jpg",
-                        "size": sum(len(base64.b64decode(img)) for img in images),
-                        "data": images,
-                        "multi_image": True,
-                    }
-                    # Clear any previous extraction results to trigger new extraction
-                    if "extraction_result" in self.request.session:
-                        del self.request.session["extraction_result"]
+            if images:
+                # Store images in session for vision extraction
+                self.request.session["scanned_label"] = {
+                    "filename": "uploaded_images.jpg",
+                    "size": sum(len(base64.b64decode(img)) for img in images),
+                    "data": images,
+                    "multi_image": True,
+                }
+                # Clear any previous extraction results to trigger new extraction
+                if "extraction_result" in self.request.session:
+                    del self.request.session["extraction_result"]
 
-                    # Reload the page to trigger vision extraction in get_initial()
-                    return redirect("wine-add")
-                else:
-                    # No images uploaded, show error
-                    from django.contrib import messages
+                # Reload the page to trigger vision extraction in get_initial()
+                return redirect("wine-add")
+            else:
+                # No images uploaded, show error
+                from django.contrib import messages
 
-                    messages.warning(
-                        request,
-                        "Please upload at least one image before using auto-fill.",
-                    )
-                    return self.form_invalid(form)
+                messages.warning(
+                    request, "Please upload at least one image before using auto-fill."
+                )
+                # Return to form without validation
+                return self.render_to_response(self.get_context_data())
 
         # Normal form submission
         return super().post(request, *args, **kwargs)
