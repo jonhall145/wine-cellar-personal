@@ -121,7 +121,7 @@ const GridCell: React.FC<GridCellProps> = ({
         >
             {hasWine && (
                 <div className="storage-grid__bottle">
-                    <i className="fa-solid fa-wine-bottle"></i>
+                    <i className="fa-solid fa-wine-bottle" />
                 </div>
             )}
         </div>
@@ -295,7 +295,7 @@ const StorageGrid: React.FC = () => {
             
             {/* Grid header with column numbers */}
             <div className="storage-grid__header">
-                <div className="storage-grid__corner"></div>
+                <div className="storage-grid__corner" />
                 {Array.from({ length: currentStorage.columns }, (_, i) => (
                     <div key={i} className="storage-grid__col-label">{i + 1}</div>
                 ))}
@@ -329,8 +329,8 @@ const StorageGrid: React.FC = () => {
             
             {/* Instructions */}
             <div className="storage-grid__instructions">
-                <p><i className="fa-solid fa-hand-pointer"></i> Tap a bottle to see details</p>
-                <p><i className="fa-solid fa-arrows-up-down-left-right"></i> Drag and drop to move bottles</p>
+                <p><i className="fa-solid fa-hand-pointer" /> Tap a bottle to see details</p>
+                <p><i className="fa-solid fa-arrows-up-down-left-right" /> Drag and drop to move bottles</p>
             </div>
         </div>
     );
