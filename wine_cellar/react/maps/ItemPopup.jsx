@@ -69,9 +69,15 @@ export const ItemPopup = ({ feature }) => {
         )}
       </div>
       <div className="popup-content">
-        <a href={linkHref} className="popup-title">
-          {feature.properties.name}
-        </a>
+        {linkHref ? (
+          <a href={linkHref} className="popup-title">
+            {feature.properties.name}
+          </a>
+        ) : (
+          <span className="popup-title">
+            {feature.properties.name}
+          </span>
+        )}
         <div className="popup-details">
           <div className="popup-detail">
             <span className="popup-label">{translations.country}:</span>
