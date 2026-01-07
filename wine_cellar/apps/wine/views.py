@@ -142,6 +142,14 @@ class HomePageView(TemplateView):
         if rated.exists():
             avg_rating = round(sum(r.rating for r in rated) / rated.count(), 1)
 
+        # Pending hardware position reviews
+        from wine_cellar.apps.hardware.models import PositionChangeReview, ReviewStatus
+
+        pending_reviews_count = PositionChangeReview.objects.filter(
+            user=self.request.user,
+            status=ReviewStatus.PENDING,
+        ).count()
+
         context.update(
             {
                 "overdue_count": overdue_count,
@@ -152,6 +160,7 @@ class HomePageView(TemplateView):
                 "total_consumed": total_consumed,
                 "total_bottles": total_bottles,
                 "avg_rating": avg_rating,
+                "pending_reviews_count": pending_reviews_count,
             }
         )
 

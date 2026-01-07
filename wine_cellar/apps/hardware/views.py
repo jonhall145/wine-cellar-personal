@@ -4,13 +4,18 @@ import json
 import secrets
 from datetime import datetime
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.files.base import ContentFile
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse_lazy
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
+from django.views.generic import TemplateView
 
 from wine_cellar.apps.storage.models import Storage, StorageItem
 from wine_cellar.apps.wine.models import Wine, WineImage, ImageType, Grape, Size
@@ -21,6 +26,7 @@ from .models import (
     RackSnapshot,
     HardwareDevice,
     OfflineOperation,
+    RackVisionConfig,
     ChangeType,
     ReviewStatus,
 )
@@ -792,3 +798,143 @@ def remove_wine_from_position(request):
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+
+# ============== Web Views ==============
+
+class PositionReviewView(LoginRequiredMixin, TemplateView):
+    """Web interface for reviewing detected position changes."""
+
+    template_name = "position_review.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        reviews = PositionChangeReview.objects.filter(
+            user=self.request.user,
+            status=ReviewStatus.PENDING,
+        ).select_related("storage", "wine").order_by("-created")
+
+        context["reviews"] = reviews
+        context["review_count"] = reviews.count()
+        return context
+
+
+class DeviceSettingsView(LoginRequiredMixin, TemplateView):
+    """Web interface for managing hardware devices."""
+
+    template_name = "device_settings.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        devices = HardwareDevice.objects.filter(
+            user=self.request.user
+        ).select_related("storage").order_by("-created")
+
+        storages = Storage.objects.filter(user=self.request.user)
+
+        context["devices"] = devices
+        context["storages"] = storages
+        context["new_token"] = self.request.session.pop("new_device_token", None)
+        return context
+
+    def post(self, request, *args, **kwargs):
+        """Handle device registration and management."""
+        action = request.POST.get("action")
+
+        if action == "register":
+            name = request.POST.get("name", "Pi Device")
+            device_id = request.POST.get("device_id")
+            storage_id = request.POST.get("storage_id")
+
+            if not device_id:
+                messages.error(request, _("Device ID is required"))
+                return redirect("hardware:device-settings")
+
+            # Check if device already exists
+            if HardwareDevice.objects.filter(device_id=device_id).exists():
+                messages.error(request, _("Device ID already registered"))
+                return redirect("hardware:device-settings")
+
+            storage = None
+            if storage_id:
+                storage = get_object_or_404(Storage, pk=storage_id, user=request.user)
+
+            api_token = secrets.token_urlsafe(32)
+
+            HardwareDevice.objects.create(
+                user=request.user,
+                name=name,
+                device_id=device_id,
+                storage=storage,
+                api_token=api_token,
+            )
+
+            # Store token in session to display once
+            request.session["new_device_token"] = api_token
+            messages.success(request, _("Device registered successfully"))
+
+        elif action == "toggle":
+            device_id = request.POST.get("device_pk")
+            device = get_object_or_404(HardwareDevice, pk=device_id, user=request.user)
+            device.is_active = not device.is_active
+            device.save(update_fields=["is_active"])
+            status = _("activated") if device.is_active else _("deactivated")
+            messages.success(request, _("Device %(status)s") % {"status": status})
+
+        elif action == "delete":
+            device_id = request.POST.get("device_pk")
+            device = get_object_or_404(HardwareDevice, pk=device_id, user=request.user)
+            device.delete()
+            messages.success(request, _("Device deleted"))
+
+        return redirect("hardware:device-settings")
+
+
+class RackConfigView(LoginRequiredMixin, TemplateView):
+    """Web interface for configuring vision-enabled rack."""
+
+    template_name = "rack_config.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Get or create config for this user
+        config, created = RackVisionConfig.objects.get_or_create(
+            user=self.request.user,
+            defaults={
+                "auto_apply_threshold": 90,
+                "enable_hourly_snapshots": True,
+                "enable_daily_reconciliation": True,
+            }
+        )
+
+        storages = Storage.objects.filter(user=self.request.user)
+
+        context["config"] = config
+        context["storages"] = storages
+        return context
+
+    def post(self, request, *args, **kwargs):
+        """Save rack configuration."""
+        config, _ = RackVisionConfig.objects.get_or_create(
+            user=request.user,
+            defaults={}
+        )
+
+        storage_id = request.POST.get("storage_id")
+        if storage_id:
+            storage = get_object_or_404(Storage, pk=storage_id, user=request.user)
+            config.storage = storage
+        else:
+            config.storage = None
+
+        config.auto_apply_threshold = int(request.POST.get("auto_apply_threshold", 90))
+        config.enable_hourly_snapshots = "enable_hourly_snapshots" in request.POST
+        config.enable_daily_reconciliation = "enable_daily_reconciliation" in request.POST
+
+        config.save()
+
+        messages.success(request, _("Configuration saved"))
+        return redirect("hardware:rack-config")

@@ -1,4 +1,4 @@
-"""URL configuration for hardware API endpoints."""
+"""URL configuration for hardware API and web endpoints."""
 
 from django.urls import path
 
@@ -6,7 +6,15 @@ from . import views
 
 app_name = "hardware"
 
-urlpatterns = [
+# Web UI routes
+web_urlpatterns = [
+    path("reviews/", views.PositionReviewView.as_view(), name="position-reviews"),
+    path("devices/", views.DeviceSettingsView.as_view(), name="device-settings"),
+    path("rack-config/", views.RackConfigView.as_view(), name="rack-config"),
+]
+
+# API routes (under /api/v1/)
+api_urlpatterns = [
     # Health check
     path("health/", views.api_health_check, name="health"),
 
@@ -36,3 +44,6 @@ urlpatterns = [
     path("storage/add/", views.add_wine_to_position, name="storage-add"),
     path("storage/remove/", views.remove_wine_from_position, name="storage-remove"),
 ]
+
+# Default urlpatterns is the API endpoints for backwards compatibility
+urlpatterns = api_urlpatterns

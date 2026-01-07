@@ -251,3 +251,64 @@ class OfflineOperation(UserContentModel):
 
     def __str__(self):
         return f"{self.operation_type} from {self.device.name}"
+
+
+class RackVisionConfig(UserContentModel):
+    """
+    Configuration for vision-enabled rack detection.
+
+    Stores settings for the Pi camera rack detection system.
+    Only one configuration per user (singleton per user).
+    """
+
+    storage = models.ForeignKey(
+        Storage,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="vision_config",
+        verbose_name=_("Vision-Enabled Storage"),
+        help_text=_("The storage rack monitored by the Pi camera"),
+    )
+    auto_apply_threshold = models.IntegerField(
+        default=90,
+        verbose_name=_("Auto-Apply Threshold"),
+        help_text=_("Confidence threshold (0-100) for auto-applying detections"),
+    )
+    enable_hourly_snapshots = models.BooleanField(
+        default=True,
+        verbose_name=_("Enable Hourly Snapshots"),
+    )
+    enable_daily_reconciliation = models.BooleanField(
+        default=True,
+        verbose_name=_("Enable Daily Reconciliation"),
+    )
+    is_calibrated = models.BooleanField(
+        default=False,
+        verbose_name=_("Calibrated"),
+    )
+    calibrated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Calibrated At"),
+    )
+    calibration_data = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name=_("Calibration Data"),
+        help_text=_("Corner points and perspective transform data"),
+    )
+
+    class Meta:
+        verbose_name = _("Rack Vision Configuration")
+        verbose_name_plural = _("Rack Vision Configurations")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user"],
+                name="unique_vision_config_per_user",
+            )
+        ]
+
+    def __str__(self):
+        storage_name = self.storage.name if self.storage else "Not configured"
+        return f"Vision Config - {storage_name}"
