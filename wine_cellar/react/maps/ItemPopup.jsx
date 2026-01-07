@@ -36,7 +36,7 @@ const sanitizeImageSrc = (value) => {
     // If value is absolute, check protocol explicitly.
     const url = new URL(trimmed, window.location.origin)
     if (url.protocol === 'http:' || url.protocol === 'https:') {
-      return trimmed
+      return url.href
     }
     // For other protocols, do not use the value.
     return undefined
