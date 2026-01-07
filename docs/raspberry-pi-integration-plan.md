@@ -8,6 +8,23 @@ This document outlines the phased implementation plan for:
 3. Hardware integration (1-line display, fixed camera)
 4. Automated bottle tracking workflows (add/remove/reconcile)
 
+## Implementation Status
+
+| Phase | Component | Status |
+|-------|-----------|--------|
+| 2 | Hardware API endpoints | ✅ Complete |
+| 2 | Hardware device authentication | ✅ Complete |
+| 3 | Rack vision system | ✅ Complete |
+| 4 | Pi client camera module | ✅ Complete |
+| 4 | Pi client display module | ✅ Complete |
+| 4 | Pi client API client | ✅ Complete |
+| 4 | Pi client offline queue | ✅ Complete |
+| 4 | Pi client workflow controller | ✅ Complete |
+| 1 | HTTPS improvements (mkcert) | ⏳ Pending |
+| 4b | Web UI for position review | ⏳ Pending |
+| 5 | Celery task setup | ⏳ Pending |
+| 6 | Integration testing | ⏳ Pending |
+
 ---
 
 ## Phase 1: Web Access Hardening & HTTPS Fixes
@@ -52,89 +69,63 @@ mkcert localhost 192.168.x.x wine-cellar.local
 
 ---
 
-## Phase 2: API Layer for Hardware Integration
+## Phase 2: API Layer for Hardware Integration ✅ COMPLETE
 
 **Goal**: Create dedicated API endpoints for hardware devices (Pi, scanners, cameras).
 
-### 2.1 New API Endpoints
+**Status**: ✅ Implemented in `wine_cellar/apps/hardware/`
 
-```
-POST /api/v1/hardware/barcode-lookup/
-  Request:  { "barcode": "1234567890123" }
-  Response: { "found": true, "wine": {...}, "action": "add_bottle" }
-            { "found": false, "action": "request_labels" }
+### 2.1 Implemented API Endpoints
 
-POST /api/v1/hardware/label-extract/
-  Request:  { "images": [base64_front, base64_back] }
-  Response: { "extracted_data": {...}, "confidence": "high" }
+All endpoints are under `/api/v1/`:
 
-POST /api/v1/hardware/bottle-add/
-  Request:  {
-    "wine_id": 123,           # or null for new wine
-    "wine_data": {...},       # if creating new
-    "storage_id": 1,
-    "row": 3, "column": 2,
-    "detected_position": true  # from vision system
-  }
-  Response: { "success": true, "storage_item_id": 456 }
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health/` | GET | Health check for connectivity |
+| `/devices/register/` | POST | Register new Pi device (returns API token) |
+| `/position-change/` | POST | Report detected position change |
+| `/pending-reviews/` | GET | Get changes pending user review |
+| `/reviews/<id>/approve/` | POST | Approve position change |
+| `/reviews/<id>/reject/` | POST | Reject position change |
+| `/rack-snapshot/` | POST | Upload periodic rack snapshot |
+| `/sync/` | POST | Sync offline operations |
+| `/wines/barcode/<code>/` | GET | Look up wine by barcode |
+| `/wines/<id>/` | GET | Get wine details |
+| `/wines/from-labels/` | POST | Create wine from label images (AI) |
+| `/storage/racks/<id>/positions/` | GET | Get all rack positions |
+| `/storage/racks/<id>/positions/<row>/<col>/` | GET | Get specific position |
+| `/storage/add/` | POST | Add wine to position |
+| `/storage/remove/` | POST | Remove wine from position |
 
-POST /api/v1/hardware/bottle-remove/
-  Request:  {
-    "wine_id": 123,           # or null if unknown
-    "barcode": "...",         # if scanned
-    "position": {"row": 3, "column": 2}  # from vision diff
-  }
-  Response: { "success": true, "removed_item": {...} }
+### 2.2 Implemented Models
 
-GET /api/v1/hardware/rack-state/
-  Response: {
-    "storage_id": 1,
-    "grid": [[null, wine_id, wine_id], [wine_id, null, null], ...],
-    "last_image_capture": "2026-01-07T10:00:00Z"
-  }
+Located in `wine_cellar/apps/hardware/models.py`:
 
-POST /api/v1/hardware/rack-image/
-  Request:  { "storage_id": 1, "image": base64, "capture_type": "scheduled|manual" }
-  Response: { "success": true, "analysis_task_id": "abc123" }
+- **HardwareDevice**: Registered Pi devices with unique API tokens
+- **PositionChangeReview**: Detected changes pending user review
+- **RackSnapshot**: Periodic rack images for reconciliation
+- **OfflineOperation**: Synced operations from Pi offline queue
 
-GET /api/v1/hardware/reconciliation-status/
-  Response: {
-    "last_check": "...",
-    "issues": [...],
-    "drift_detected": true
-  }
-```
+### 2.3 Authentication
 
-### 2.2 Authentication for Hardware
-
-**Options**:
-- API keys per device (simple, stateless)
-- JWT tokens with device registration
-- mTLS with client certificates (most secure)
-
-**Recommendation**: Start with API keys, migrate to JWT later:
-```python
-# New model
-class HardwareDevice(models.Model):
-    name = models.CharField(max_length=100)  # "Kitchen Pi Scanner"
-    device_type = models.CharField(choices=['pi', 'scanner', 'camera'])
-    api_key = models.CharField(max_length=64, unique=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    last_seen = models.DateTimeField(null=True)
-    is_active = models.BooleanField(default=True)
-```
+Token-based authentication for hardware devices:
+- Register device via web UI → receive API token
+- Pi client sends `Authorization: Token <token>` header
+- `@hardware_auth_required` decorator validates token and sets `request.user`
 
 **Tasks**:
-- [ ] Create HardwareDevice model with API key auth
-- [ ] Add `@hardware_api_auth` decorator for endpoints
-- [ ] Create device management UI in settings
-- [ ] Add rate limiting for hardware endpoints
+- [x] Create HardwareDevice model with API key auth
+- [x] Add `@hardware_api_auth` decorator for endpoints
+- [ ] Create device management UI in settings *(remaining)*
+- [ ] Add rate limiting for hardware endpoints *(optional)*
 
 ---
 
-## Phase 3: Rack Vision System (Non-AI Hardware Analysis)
+## Phase 3: Rack Vision System (Non-AI Hardware Analysis) ✅ COMPLETE
 
 **Goal**: Use computer vision (non-AI) to detect bottle positions in rack.
+
+**Status**: ✅ Implemented in `pi_client/rack_vision/`
 
 ### 3.1 Architecture
 
@@ -254,19 +245,22 @@ class RackCalibrator:
 
 ### 3.4 Tasks
 
-- [ ] Create `rack_vision/` Python package for Pi
-- [ ] Implement `RackDetector` class with OpenCV
-- [ ] Create calibration wizard (web UI + Pi display)
-- [ ] Add perspective transformation for angled camera views
-- [ ] Implement diff detection between captures
-- [ ] Add lighting normalization for consistent detection
-- [ ] Create test suite with sample rack images
+- [x] Create `rack_vision/` Python package for Pi
+- [x] Implement `GridDetector` class with OpenCV
+- [x] Create calibration classes (`RackCalibrator`, `AutoDetectingCalibrator`, `MarkerBasedCalibrator`)
+- [x] Add perspective transformation for angled camera views
+- [x] Implement diff detection between captures (`GridDiff`)
+- [x] Add lighting normalization for consistent detection
+- [ ] Create test suite with sample rack images *(remaining)*
+- [ ] Create calibration wizard web UI *(optional - CLI works)*
 
 ---
 
-## Phase 4: Raspberry Pi Client Application
+## Phase 4: Raspberry Pi Client Application ✅ COMPLETE
 
 **Goal**: Create the Pi-side application that orchestrates hardware.
+
+**Status**: ✅ Implemented in `pi_client/`
 
 ### 4.1 Hardware Setup
 
@@ -692,16 +686,16 @@ class SyncManager:
 
 ### 4.6 Tasks
 
-- [ ] Create `pi_client/` package structure
-- [ ] Implement `DisplayManager` for I2C LCD 1602
-- [ ] Implement `CameraService` for image capture
-- [ ] Implement `BarcodeScanner` service (USB)
-- [ ] Implement `WorkflowController` for orchestration
-- [ ] Create `APIClient` for server communication
-- [ ] Implement `OfflineQueue` with SQLite storage
-- [ ] Implement `SyncManager` for queue processing
-- [ ] Add systemd service for auto-start
-- [ ] Create installation script for Pi
+- [x] Create `pi_client/` package structure
+- [x] Implement `DisplayManager` for I2C LCD 1602 (`pi_client/display.py`)
+- [x] Implement `PiCamera` and `DualModeCamera` (`pi_client/camera.py`)
+- [x] Implement `BottleDetector` with barcode scanning (`pi_client/rack_vision/bottle_detector.py`)
+- [x] Implement `WorkflowController` for orchestration (`pi_client/workflow.py`)
+- [x] Create `APIClient` for server communication (`pi_client/api_client.py`)
+- [x] Implement `OfflineQueue` with SQLite storage (`pi_client/offline_queue.py`)
+- [x] Implement `SyncManager` for queue processing (`pi_client/offline_queue.py`)
+- [ ] Add systemd service for auto-start *(deployment task)*
+- [ ] Create installation script for Pi *(deployment task)*
 
 ---
 
@@ -1228,11 +1222,25 @@ Add to dashboard:
 
 1. ~~Review and approve this plan~~ ✅
 2. ~~Decide on technical decisions~~ ✅ (see table above)
-3. Order Raspberry Pi hardware (see shopping list)
-4. Begin Phase 1 (HTTPS improvements with mkcert)
-5. Begin Phase 2 (Hardware API endpoints)
-6. Parallel: Prototype OpenCV rack detection with test images
-7. When Pi arrives: Implement Pi client application
+3. ~~Order Raspberry Pi hardware~~ ✅ (all hardware available)
+4. ~~Begin Phase 2 (Hardware API endpoints)~~ ✅ Complete
+5. ~~Implement OpenCV rack detection~~ ✅ Complete with auto-detecting calibration
+6. ~~Implement Pi client application~~ ✅ Complete
+
+### Remaining Work
+
+**High Priority:**
+1. **Run migrations** - Apply hardware app migrations (`python manage.py migrate`)
+2. **Phase 4b: Web UI for position review** - Create position review page for uncertain detections
+3. **Device management UI** - Add settings page to register/manage Pi devices
+
+**Medium Priority:**
+4. **Phase 1: HTTPS with mkcert** - Set up local CA for trusted HTTPS
+5. **Pi deployment** - Create systemd service and installation script
+
+**Lower Priority:**
+6. **Phase 5: Celery tasks** - Set up periodic tasks for scheduled snapshots
+7. **Phase 6: Integration testing** - End-to-end tests with actual hardware
 
 ---
 
@@ -1275,77 +1283,79 @@ sudo i2cdetect -y 1
 
 ## Appendix: Implemented Code
 
-The following Pi client code has been implemented in `pi_client/`:
+### Pi Client (`pi_client/`)
 
-### pi_client/camera.py
-- `PiCamera`: Unified camera interface (supports Picamera2 and OpenCV)
-- `DualModeCamera`: Switches between rack view and scan mode
-- Auto-detects best available camera backend
+The complete Pi client implementation:
 
-### pi_client/rack_vision/calibration.py
-- `RackCalibrator`: One-time calibration to detect rack bounds
-- Stores corner points and computes perspective transform
-- `interactive_calibration()`: CLI tool for manual corner selection
-- Auto-detect corners via edge detection (optional)
+| File | Components | Description |
+|------|------------|-------------|
+| `__init__.py` | Package exports | All main classes exported |
+| `camera.py` | `PiCamera`, `DualModeCamera`, `CameraConfig` | Unified camera interface |
+| `display.py` | `DisplayManager`, `DisplayState`, `MockDisplayManager` | I2C LCD 1602 driver |
+| `api_client.py` | `APIClient`, `ServerConfig`, `Wine`, `StoragePosition` | Server HTTP client |
+| `offline_queue.py` | `OfflineQueue`, `SyncManager`, `QueuedOperation` | SQLite offline queue |
+| `workflow.py` | `WorkflowController`, `WorkflowConfig` | Main workflow orchestration |
 
-### pi_client/rack_vision/grid_detector.py
-- `GridDetector`: Analyzes rectified rack image for bottle presence
-- `GridState`: Complete state of all cells with occupancy info
-- `GridDiff`: Comparison showing added/removed positions
-- Uses edge density and intensity variance for detection
-- Optional empty-rack reference for improved accuracy
+### Rack Vision (`pi_client/rack_vision/`)
 
-### pi_client/rack_vision/bottle_detector.py
-- `BottleDetector`: Camera-based barcode scanning with pyzbar
-- Auto-detects barcodes without button press
-- Debouncing to prevent duplicate scans
-- `LabelScanner`: Capture front/back label images for AI extraction
+| File | Components | Description |
+|------|------------|-------------|
+| `calibration.py` | `RackCalibrator`, `AutoDetectingCalibrator`, `MarkerBasedCalibrator` | Rack corner detection |
+| `grid_detector.py` | `GridDetector`, `GridState`, `GridDiff` | Bottle position detection |
+| `bottle_detector.py` | `BottleDetector`, `LabelScanner`, `BarcodeResult` | Barcode/label scanning |
+
+### Server Hardware App (`wine_cellar/apps/hardware/`)
+
+| File | Components | Description |
+|------|------------|-------------|
+| `models.py` | `HardwareDevice`, `PositionChangeReview`, `RackSnapshot`, `OfflineOperation` | Database models |
+| `views.py` | API view functions | All hardware endpoints |
+| `urls.py` | URL routing | Routes under `/api/v1/` |
+| `admin.py` | Admin configuration | Django admin interface |
 
 ### Usage Example
 
 ```python
-from pi_client.camera import PiCamera
-from pi_client.rack_vision import RackCalibrator, GridDetector, BottleDetector
+from pi_client import WorkflowController, WorkflowConfig
 
-# Initialize camera
-camera = PiCamera()
+# Configure the controller
+config = WorkflowConfig(
+    server_host="192.168.1.100",
+    server_port=8000,
+    server_https=True,
+    api_token="your-device-token",
+    rack_id=1,
+    rack_rows=5,
+    rack_cols=10,
+)
 
-# One-time calibration (run once when setting up)
-calibrator = RackCalibrator(storage_id=1, rows=5, columns=8)
-if not calibrator.is_calibrated:
-    # Interactive calibration - click 4 corners
-    from pi_client.rack_vision.calibration import interactive_calibration
-    calibrator = interactive_calibration(camera, storage_id=1, rows=5, columns=8)
+# Initialize and start
+controller = WorkflowController(config)
+controller.start()
 
-# Initialize detectors
-grid_detector = GridDetector(calibrator)
-barcode_detector = BottleDetector()
+# Run workflows
+controller.add_bottle_workflow()    # Scan barcode → detect position → add
+controller.remove_bottle_workflow()  # Detect empty position → remove
 
-# Workflow: Add bottle
-# 1. Scan barcode
-barcode_result = barcode_detector.scan_continuous(camera, timeout=30)
-if barcode_result:
-    print(f"Scanned: {barcode_result.barcode}")
+# Force sync offline queue
+controller.force_sync()
 
-    # 2. Capture rack state before
-    before_image = camera.capture()
-    before_state = grid_detector.analyze_grid(before_image)
+# Stop
+controller.stop()
+```
 
-    # 3. Wait for user to place bottle...
-    print("Place bottle in rack, then press Enter")
-    input()
+### Simple CLI Usage
 
-    # 4. Capture rack state after
-    after_image = camera.capture()
-    after_state = grid_detector.analyze_grid(after_image)
+```bash
+# Run the Pi client interactively
+python -m pi_client.workflow --host 192.168.1.100 --port 8000 --token YOUR_TOKEN
 
-    # 5. Detect position change
-    position = grid_detector.detect_single_change(before_state, after_state, 'add')
-    if position:
-        row, col = position
-        print(f"Bottle placed at row {row}, column {col}")
-    else:
-        print("Could not detect position")
+# Options:
+# 1. Add bottle
+# 2. Remove bottle
+# 3. Take snapshot
+# 4. Force sync
+# 5. Exit
 ```
 
 ### Dependencies (Pi-side)
@@ -1356,5 +1366,11 @@ sudo apt-get install libzbar0 python3-opencv
 
 # Python packages
 pip install pyzbar opencv-python numpy picamera2
-pip install RPLCD smbus2  # For LCD display
+pip install smbus2  # For LCD display
+pip install schedule  # For scheduled tasks
 ```
+
+### Dependencies (Server-side)
+
+The hardware app uses existing Django models and the Anthropic API for label extraction.
+Ensure `ANTHROPIC_API_KEY` is set for AI-based wine creation from labels.
