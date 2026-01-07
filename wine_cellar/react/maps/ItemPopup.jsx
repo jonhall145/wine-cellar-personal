@@ -9,7 +9,7 @@ const translations = {
 }
 
 /**
- * Safely derive an image src value from an untrusted input.
+ * Safely derive a URL value from an untrusted input.
  *
  * Allows only http/https absolute URLs and path-relative URLs (e.g., "/static/img.png").
  * Rejects protocol-relative URLs (e.g., "//evil.com") and dangerous schemes.
@@ -18,7 +18,7 @@ const translations = {
  * @param {string} value
  * @returns {string|undefined}
  */
-const sanitizeImageSrc = (value) => {
+const sanitizeUrl = (value) => {
   if (!value || typeof value !== 'string') {
     return undefined
   }
@@ -62,7 +62,8 @@ const sanitizeImageSrc = (value) => {
  * @returns {JSX.Element} The JSX element representing the popup.
  */
 export const ItemPopup = ({ feature }) => {
-  const imageSrc = sanitizeImageSrc(feature?.properties?.image)
+  const imageSrc = sanitizeUrl(feature?.properties?.image)
+  const linkHref = sanitizeUrl(feature?.properties?.url)
 
   return (
     <MapPopup feature={feature}>
@@ -76,9 +77,15 @@ export const ItemPopup = ({ feature }) => {
         )}
       </div>
       <div className="popup-content">
-        <a href={feature.properties.url} className="popup-title">
-          {feature.properties.name}
-        </a>
+        {linkHref ? (
+          <a href={linkHref} className="popup-title">
+            {feature.properties.name}
+          </a>
+        ) : (
+          <span className="popup-title">
+            {feature.properties.name}
+          </span>
+        )}
         <div className="popup-details">
           <div className="popup-detail">
             <span className="popup-label">{translations.country}:</span>
