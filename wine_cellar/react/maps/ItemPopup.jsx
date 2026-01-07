@@ -11,7 +11,9 @@ const translations = {
 /**
  * Safely derive an image src value from an untrusted input.
  *
- * Allows only http/https/relative URLs; returns undefined for anything else.
+ * Allows only http/https absolute URLs and path-relative URLs (e.g., "/static/img.png").
+ * Rejects protocol-relative URLs (e.g., "//evil.com") and dangerous schemes.
+ * Returns undefined for anything else.
  *
  * @param {string} value
  * @returns {string|undefined}
@@ -29,6 +31,12 @@ const sanitizeImageSrc = (value) => {
     lower.startsWith('data:') ||
     lower.startsWith('vbscript:')
   ) {
+    return undefined
+  }
+
+  // Reject protocol-relative URLs like "//evil.com/image.jpg"
+  // These can redirect to external domains and are not truly "relative"
+  if (trimmed.startsWith('//')) {
     return undefined
   }
 
