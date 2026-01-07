@@ -9,6 +9,44 @@ const translations = {
 }
 
 /**
+ * Safely derive an image src value from an untrusted input.
+ *
+ * Allows only http/https/relative URLs; returns undefined for anything else.
+ *
+ * @param {string} value
+ * @returns {string|undefined}
+ */
+const sanitizeImageSrc = (value) => {
+  if (!value || typeof value !== 'string') {
+    return undefined
+  }
+
+  // Disallow obvious dangerous prefixes like "javascript:", "data:", "vbscript:", etc.
+  const trimmed = value.trim()
+  const lower = trimmed.toLowerCase()
+  if (
+    lower.startsWith('javascript:') ||
+    lower.startsWith('data:') ||
+    lower.startsWith('vbscript:')
+  ) {
+    return undefined
+  }
+
+  try {
+    // If value is absolute, check protocol explicitly.
+    const url = new URL(trimmed, window.location.origin)
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      return url.href
+    }
+    // For other protocols, do not use the value.
+    return undefined
+  } catch (e) {
+    // If URL construction fails (e.g., malformed), do not use the value.
+    return undefined
+  }
+}
+
+/**
  * Renders a popup for an item feature on a map.
  *
  * @param {Object} props - The component props.
@@ -16,14 +54,18 @@ const translations = {
  * @returns {JSX.Element} The JSX element representing the popup.
  */
 export const ItemPopup = ({ feature }) => {
+  const imageSrc = sanitizeImageSrc(feature?.properties?.image)
+
   return (
     <MapPopup feature={feature}>
       <div className="popup-image">
-        <img
-          src={feature.properties.image}
-          alt={translations.image_alt}
-          height="100"
-        />
+        {imageSrc && (
+          <img
+            src={imageSrc}
+            alt={translations.image_alt}
+            height="100"
+          />
+        )}
       </div>
       <div className="popup-content">
         <a href={feature.properties.url} className="popup-title">
