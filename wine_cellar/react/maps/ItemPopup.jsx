@@ -21,10 +21,14 @@ const sanitizeImageSrc = (value) => {
     return undefined
   }
 
-  // Disallow obvious dangerous prefixes like "javascript:" etc.
+  // Disallow obvious dangerous prefixes like "javascript:", "data:", "vbscript:", etc.
   const trimmed = value.trim()
   const lower = trimmed.toLowerCase()
-  if (lower.startsWith('javascript:') || lower.startsWith('data:text/html')) {
+  if (
+    lower.startsWith('javascript:') ||
+    lower.startsWith('data:') ||
+    lower.startsWith('vbscript:')
+  ) {
     return undefined
   }
 
