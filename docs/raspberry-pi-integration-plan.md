@@ -20,8 +20,11 @@ This document outlines the phased implementation plan for:
 | 4 | Pi client API client | ✅ Complete |
 | 4 | Pi client offline queue | ✅ Complete |
 | 4 | Pi client workflow controller | ✅ Complete |
+| 4b | Web UI for position review | ✅ Complete |
+| 4b | Device management UI | ✅ Complete |
+| 4b | Rack configuration UI | ✅ Complete |
+| 4b | Dashboard integration | ✅ Complete |
 | 1 | HTTPS improvements (mkcert) | ⏳ Pending |
-| 4b | Web UI for position review | ⏳ Pending |
 | 5 | Celery task setup | ⏳ Pending |
 | 6 | Integration testing | ⏳ Pending |
 
@@ -699,11 +702,38 @@ class SyncManager:
 
 ---
 
-## Phase 4b: Web UI for Position Review
+## Phase 4b: Web UI for Position Review ✅ COMPLETE
 
 **Goal**: Auto-detected bottle positions are highlighted on the web interface for user review and confirmation.
 
-### 4b.1 Data Model Additions
+**Status**: ✅ Implemented in `wine_cellar/apps/hardware/` with web views and templates.
+
+### 4b.0 Implemented Web UI
+
+The following web interfaces have been implemented:
+
+| URL | View | Description |
+|-----|------|-------------|
+| `/hardware/reviews/` | `PositionReviewView` | Review auto-detected position changes |
+| `/hardware/devices/` | `DeviceSettingsView` | Register and manage Pi devices |
+| `/hardware/rack-config/` | `RackConfigView` | Configure vision-enabled rack settings |
+
+**Templates:**
+- `position_review.html` - Grid of pending reviews with approve/reject/correct actions
+- `device_settings.html` - Device registration form and device list
+- `rack_config.html` - Storage selection, auto-apply threshold, snapshot/reconciliation toggles
+
+**Models Added:**
+- `RackVisionConfig` - Per-user configuration for vision-enabled rack
+
+**Dashboard Integration:**
+- Homepage shows pending reviews count in Alerts widget
+- Links directly to position review page
+
+**Navigation:**
+- Settings sidebar includes Hardware section with links to all three pages
+
+### 4b.1 Data Model Additions (Alternative Approach - Not Used)
 
 ```python
 # wine_cellar/apps/storage/models.py (additions)
@@ -946,16 +976,20 @@ Add to homepage when unconfirmed positions exist:
 
 ### 4b.6 Tasks
 
+**Implemented (Current Approach):**
+- [x] Create `PositionChangeReview` model for tracking detected changes
+- [x] Create `RackVisionConfig` model for per-user settings
+- [x] Create position review web view (`/hardware/reviews/`)
+- [x] Create device settings web view (`/hardware/devices/`)
+- [x] Create rack config web view (`/hardware/rack-config/`)
+- [x] Add pending reviews count to homepage dashboard
+- [x] Add Hardware section to settings sidebar navigation
+- [x] Create migrations for new models
+
+**Not Implemented (Alternative Approach - Optional):**
 - [ ] Add `position_auto_detected`, `position_confirmed` fields to StorageItem
-- [ ] Create migration for new fields
-- [ ] Add `/api/storage/confirm-position/` endpoint
-- [ ] Add `/api/storage/correct-position/` endpoint
-- [ ] Add `/api/storage/unconfirmed-positions/` endpoint
 - [ ] Update `storage_grid.tsx` with unconfirmed highlighting
 - [ ] Add CSS for pulsing unconfirmed cells
-- [ ] Add dashboard banner for unconfirmed positions
-- [ ] Create dedicated review positions page
-- [ ] Add "Confirm All" bulk action
 
 ---
 
@@ -1231,16 +1265,25 @@ Add to dashboard:
 
 **High Priority:**
 1. **Run migrations** - Apply hardware app migrations (`python manage.py migrate`)
-2. **Phase 4b: Web UI for position review** - Create position review page for uncertain detections
-3. **Device management UI** - Add settings page to register/manage Pi devices
+2. ~~**Phase 4b: Web UI for position review**~~ ✅ Complete
+3. ~~**Device management UI**~~ ✅ Complete
 
 **Medium Priority:**
 4. **Phase 1: HTTPS with mkcert** - Set up local CA for trusted HTTPS
 5. **Pi deployment** - Create systemd service and installation script
+6. **Storage grid integration** - Add visual indicators for unconfirmed positions (optional)
 
 **Lower Priority:**
-6. **Phase 5: Celery tasks** - Set up periodic tasks for scheduled snapshots
-7. **Phase 6: Integration testing** - End-to-end tests with actual hardware
+7. **Phase 5: Celery tasks** - Set up periodic tasks for scheduled snapshots
+8. **Phase 6: Integration testing** - End-to-end tests with actual hardware
+
+### Future Enhancements
+
+- Physical button input for workflow triggers
+- LED status indicator
+- Voice feedback (text-to-speech)
+- Temperature/humidity monitoring (optional sensor)
+- Multiple rack support (currently single rack only)
 
 ---
 
@@ -1308,10 +1351,14 @@ The complete Pi client implementation:
 
 | File | Components | Description |
 |------|------------|-------------|
-| `models.py` | `HardwareDevice`, `PositionChangeReview`, `RackSnapshot`, `OfflineOperation` | Database models |
-| `views.py` | API view functions | All hardware endpoints |
-| `urls.py` | URL routing | Routes under `/api/v1/` |
+| `models.py` | `HardwareDevice`, `PositionChangeReview`, `RackSnapshot`, `OfflineOperation`, `RackVisionConfig` | Database models |
+| `views.py` | API views + `PositionReviewView`, `DeviceSettingsView`, `RackConfigView` | All API and web endpoints |
+| `urls.py` | API URL routing | Routes under `/api/v1/` |
+| `web_urls.py` | Web URL routing | Routes under `/hardware/` |
 | `admin.py` | Admin configuration | Django admin interface |
+| `templates/position_review.html` | Position review template | Review auto-detected positions |
+| `templates/device_settings.html` | Device settings template | Register and manage Pi devices |
+| `templates/rack_config.html` | Rack config template | Configure vision rack settings |
 
 ### Usage Example
 

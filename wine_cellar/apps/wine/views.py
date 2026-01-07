@@ -142,13 +142,18 @@ class HomePageView(TemplateView):
         if rated.exists():
             avg_rating = round(sum(r.rating for r in rated) / rated.count(), 1)
 
-        # Pending hardware position reviews
-        from wine_cellar.apps.hardware.models import PositionChangeReview, ReviewStatus
+        # Pending hardware position reviews (gracefully handle if hardware not set up)
+        pending_reviews_count = 0
+        try:
+            from wine_cellar.apps.hardware.models import PositionChangeReview, ReviewStatus
 
-        pending_reviews_count = PositionChangeReview.objects.filter(
-            user=self.request.user,
-            status=ReviewStatus.PENDING,
-        ).count()
+            pending_reviews_count = PositionChangeReview.objects.filter(
+                user=self.request.user,
+                status=ReviewStatus.PENDING,
+            ).count()
+        except Exception:
+            # Hardware app not configured or migration not run - skip silently
+            pass
 
         context.update(
             {
