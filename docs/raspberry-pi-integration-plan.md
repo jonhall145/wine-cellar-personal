@@ -1207,17 +1207,20 @@ Add to dashboard:
 
 ## Hardware Shopping List
 
-| Item | Model/Notes | Est. Cost |
-|------|-------------|-----------|
-| Raspberry Pi | Pi 4 (4GB) or Pi 5 | $55-80 |
-| Pi Camera | Module v2 or v3 | $25-35 |
-| Display | Freenove I2C LCD 1602 | $8-12 |
-| USB Barcode Scanner | Any HID-compatible | $20-40 |
-| MicroSD Card | 32GB+ Class 10 | $10 |
-| Power Supply | Official Pi PSU | $15 |
-| Camera Mount | Fixed bracket/mount | $10-20 |
-| Case | Optional, with camera slot | $15 |
-| **Total** | | **~$160-220** |
+| Item | Model/Notes | Status |
+|------|-------------|--------|
+| Raspberry Pi | Pi 4 (4GB) or Pi 5 | ✅ Have |
+| Pi Camera | Module v2 or v3 (dual-use: barcode + rack) | ✅ Have |
+| Display | Freenove I2C LCD 1602 | ✅ Have |
+| ~~USB Barcode Scanner~~ | ~~Not needed - using Pi camera~~ | ~~N/A~~ |
+| MicroSD Card | 32GB+ Class 10 | ✅ Have |
+| Power Supply | Official Pi PSU | ✅ Have |
+| Camera Mount | Fixed bracket for rack view | ⚠️ Needed for rack detection |
+| Case | With camera slot | ✅ Have |
+
+**Note**: The Pi Camera serves dual purpose:
+- **Rack mode**: Fixed view of entire rack for position detection
+- **Scan mode**: User holds bottle up to camera for barcode/label scanning
 
 ---
 
@@ -1239,9 +1242,9 @@ Add to dashboard:
 Raspberry Pi 4/5
 ┌────────────────────────────────┐
 │                                │
-│  [Camera Port] ◄── Pi Camera   │
-│                    (ribbon)    │
-│                                │
+│  [Camera Port] ◄── Pi Camera   │  Pi Camera (ribbon cable)
+│                    (ribbon)    │  - Fixed mount viewing rack
+│                                │  - Also used for barcode scanning
 │  GPIO Pins:                    │
 │  ┌─────────────────────────┐   │
 │  │ 3.3V (1) ─────► LCD VCC │   │
@@ -1250,14 +1253,13 @@ Raspberry Pi 4/5
 │  │ SCL  (5) ─────► LCD SCL │   │
 │  └─────────────────────────┘   │
 │                                │
-│  USB Ports:                    │
-│  ┌─────────────────────────┐   │
-│  │ USB ◄──── Barcode       │   │  USB Barcode Scanner
-│  │          Scanner        │   │  (HID keyboard mode)
-│  └─────────────────────────┘   │
-│                                │
 └────────────────────────────────┘
 ```
+
+**Camera Dual-Mode Operation:**
+- The same camera handles both rack viewing and barcode scanning
+- For scanning: hold bottle label in front of camera
+- Auto-detects barcodes using pyzbar library (no button needed)
 
 **I2C Address Detection:**
 ```bash
@@ -1267,4 +1269,92 @@ sudo i2cdetect -y 1
 # Expected output shows address (typically 27 or 3f):
 #      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
 # 20: -- -- -- -- -- -- -- 27 -- -- -- -- -- -- -- --
+```
+
+---
+
+## Appendix: Implemented Code
+
+The following Pi client code has been implemented in `pi_client/`:
+
+### pi_client/camera.py
+- `PiCamera`: Unified camera interface (supports Picamera2 and OpenCV)
+- `DualModeCamera`: Switches between rack view and scan mode
+- Auto-detects best available camera backend
+
+### pi_client/rack_vision/calibration.py
+- `RackCalibrator`: One-time calibration to detect rack bounds
+- Stores corner points and computes perspective transform
+- `interactive_calibration()`: CLI tool for manual corner selection
+- Auto-detect corners via edge detection (optional)
+
+### pi_client/rack_vision/grid_detector.py
+- `GridDetector`: Analyzes rectified rack image for bottle presence
+- `GridState`: Complete state of all cells with occupancy info
+- `GridDiff`: Comparison showing added/removed positions
+- Uses edge density and intensity variance for detection
+- Optional empty-rack reference for improved accuracy
+
+### pi_client/rack_vision/bottle_detector.py
+- `BottleDetector`: Camera-based barcode scanning with pyzbar
+- Auto-detects barcodes without button press
+- Debouncing to prevent duplicate scans
+- `LabelScanner`: Capture front/back label images for AI extraction
+
+### Usage Example
+
+```python
+from pi_client.camera import PiCamera
+from pi_client.rack_vision import RackCalibrator, GridDetector, BottleDetector
+
+# Initialize camera
+camera = PiCamera()
+
+# One-time calibration (run once when setting up)
+calibrator = RackCalibrator(storage_id=1, rows=5, columns=8)
+if not calibrator.is_calibrated:
+    # Interactive calibration - click 4 corners
+    from pi_client.rack_vision.calibration import interactive_calibration
+    calibrator = interactive_calibration(camera, storage_id=1, rows=5, columns=8)
+
+# Initialize detectors
+grid_detector = GridDetector(calibrator)
+barcode_detector = BottleDetector()
+
+# Workflow: Add bottle
+# 1. Scan barcode
+barcode_result = barcode_detector.scan_continuous(camera, timeout=30)
+if barcode_result:
+    print(f"Scanned: {barcode_result.barcode}")
+
+    # 2. Capture rack state before
+    before_image = camera.capture()
+    before_state = grid_detector.analyze_grid(before_image)
+
+    # 3. Wait for user to place bottle...
+    print("Place bottle in rack, then press Enter")
+    input()
+
+    # 4. Capture rack state after
+    after_image = camera.capture()
+    after_state = grid_detector.analyze_grid(after_image)
+
+    # 5. Detect position change
+    position = grid_detector.detect_single_change(before_state, after_state, 'add')
+    if position:
+        row, col = position
+        print(f"Bottle placed at row {row}, column {col}")
+    else:
+        print("Could not detect position")
+```
+
+### Dependencies (Pi-side)
+
+```bash
+# System packages
+sudo apt-get install libzbar0 python3-opencv
+
+# Python packages
+pip install pyzbar opencv-python numpy picamera2
+pip install RPLCD smbus2  # For LCD display
 ```
