@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "wine_cellar.apps.wine",
     "wine_cellar.apps.user",
     "wine_cellar.apps.storage",
+    "wine_cellar.apps.hardware",
 ]
 
 MIDDLEWARE = [
