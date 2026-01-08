@@ -1125,14 +1125,22 @@ from django.contrib.auth.decorators import login_required
 
 @login_required
 def extract_wine_vision_ajax(request):
-    """AJAX endpoint for vision extraction from uploaded images."""
+    """
+    AJAX endpoint for wine data extraction from uploaded images.
+
+    This endpoint first attempts to detect barcodes in the uploaded images
+    using non-AI tooling (pyzbar). If a barcode is found and matches an
+    existing wine in the user's collection, that wine's data is returned.
+    Otherwise, AI vision extraction is used to extract wine details from
+    the label images.
+    """
     import base64
 
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
 
     try:
-        from wine_cellar.apps.wine.services import WineVisionExtractor
+        from wine_cellar.apps.wine.services import BarcodeScanner, WineVisionExtractor
 
         # Collect uploaded images
         images = []
@@ -1159,20 +1167,52 @@ def extract_wine_vision_ajax(request):
                 status=400,
             )
 
-        # Extract wine data using vision service
+        # Step 1: Try barcode scanning first (non-AI, faster)
+        barcode_scanner = BarcodeScanner()
+        barcode_result = barcode_scanner.scan_and_match(images, request.user)
+
+        if barcode_result.get("matched"):
+            # Found a matching wine via barcode
+            wine_data = barcode_result["wine_data"]
+            extracted_fields = list(wine_data.keys())
+
+            return JsonResponse(
+                {
+                    "success": True,
+                    "data": wine_data,
+                    "confidence": "high",
+                    "extracted_fields": extracted_fields,
+                    "errors": [],
+                    "match_type": "barcode",
+                    "matched_barcode": barcode_result["barcode"],
+                    "message": f"Matched existing wine via barcode: {barcode_result['barcode']}",
+                }
+            )
+
+        # Step 2: No barcode match, use AI vision extraction
         extractor = WineVisionExtractor()
         result = extractor.extract_from_images(images)
 
-        # Return extracted data as JSON
-        return JsonResponse(
-            {
-                "success": True,
-                "data": result.get("data", {}),
-                "confidence": result.get("confidence", "low"),
-                "extracted_fields": result.get("extracted_fields", []),
-                "errors": result.get("errors", []),
-            }
-        )
+        # Include any barcodes found (even if no match) in the result
+        response_data = {
+            "success": True,
+            "data": result.get("data", {}),
+            "confidence": result.get("confidence", "low"),
+            "extracted_fields": result.get("extracted_fields", []),
+            "errors": result.get("errors", []),
+            "match_type": "vision",
+        }
+
+        # If barcodes were found but didn't match, include them
+        if barcode_result.get("all_barcodes"):
+            barcodes = barcode_result["all_barcodes"]
+            # Add first barcode to data if not already extracted by vision
+            if barcodes and "barcode" not in response_data["data"]:
+                response_data["data"]["barcode"] = barcodes[0]
+                if "barcode" not in response_data["extracted_fields"]:
+                    response_data["extracted_fields"].append("barcode")
+
+        return JsonResponse(response_data)
 
     except Exception as e:
         import logging
