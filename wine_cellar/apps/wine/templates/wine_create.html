@@ -98,7 +98,7 @@
                 <fieldset>
                     <legend>
                         <h2 class="form-subhead text--gray">
-                            <i class="fa-solid fa-image" style="color: var(--primary);"></i>
+                            <i class="fa-solid fa-image text--primary"></i>
                             {% translate "Images & Auto-fill" %}
                         </h2>
                     </legend>
@@ -111,7 +111,7 @@
                     {% include 'forms/form_field.html' with field=form.image_back_label %}
 
                     <div class="pure-controls" style="margin-top: 12px;">
-                        <button type="button" name="extract_vision" class="pure-button button__primary">
+                        <button type="button" name="extract_vision" class="pure-button button__secondary">
                             <i class="fa fa-magic" aria-hidden="true"></i>
                             {% translate "Auto-fill from Images" %}
                         </button>

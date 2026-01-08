@@ -1,8 +1,6 @@
 """Tests for vision extraction AJAX endpoint with barcode-first workflow."""
 
-import base64
 import io
-import json
 from http import HTTPStatus
 from unittest.mock import MagicMock, patch
 
@@ -56,7 +54,7 @@ class TestExtractWineVisionAjax:
     def test_barcode_match_returns_wine_data(self, client, user, wine_factory):
         """Test that matching barcode returns the wine data."""
         # Create a wine with barcode
-        wine = wine_factory(
+        wine_factory(
             user=user,
             name="Barcode Match Wine",
             barcode="1234567890123",

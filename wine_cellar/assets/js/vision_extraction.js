@@ -161,7 +161,12 @@ document.addEventListener('DOMContentLoaded', function() {
             messageDiv.style.backgroundColor = '#cce5ff';
             messageDiv.style.color = '#004085';
             messageDiv.style.borderLeft = '4px solid #007bff';
-            messageDiv.innerHTML = '<i class="fa fa-barcode" style="margin-right: 8px;"></i>' + message;
+            // Use safe DOM manipulation instead of innerHTML
+            const icon = document.createElement('i');
+            icon.className = 'fa fa-barcode';
+            icon.style.marginRight = '8px';
+            messageDiv.appendChild(icon);
+            messageDiv.appendChild(document.createTextNode(message));
         } else if (type === 'success') {
             messageDiv.style.backgroundColor = '#d4edda';
             messageDiv.style.color = '#155724';

@@ -83,7 +83,7 @@ class TestBarcodeScanner:
     @pytest.mark.django_db
     def test_find_wine_by_barcode_with_match(self, user, wine_factory):
         """Test finding wine when match exists."""
-        wine = wine_factory(user=user, barcode="1234567890123", name="Test Wine")
+        wine_factory(user=user, barcode="1234567890123", name="Test Wine")
 
         scanner = BarcodeScanner()
         result = scanner.find_wine_by_barcode("1234567890123", user)
@@ -134,7 +134,7 @@ class TestBarcodeScanner:
     @pytest.mark.django_db
     def test_scan_and_match_barcode_found_with_match(self, user, wine_factory):
         """Test scan_and_match when barcode is found and matches a wine."""
-        wine = wine_factory(user=user, barcode="1234567890123", name="Matched Wine")
+        wine_factory(user=user, barcode="1234567890123", name="Matched Wine")
 
         scanner = BarcodeScanner()
         # Mock the barcode scanning to return our test barcode
