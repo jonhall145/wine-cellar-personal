@@ -462,3 +462,86 @@ p.form-hint {
   border-radius: 4px;
   border: 2px solid #ccc;
 }
+
+/* Quick Add Section - Image-based entry methods */
+.quick-add-section {
+  margin-bottom: var(--spacing-xl);
+}
+
+.quick-add-card {
+  background: var(--bg-card);
+  border: 2px solid var(--primary);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--container-box-shadow);
+}
+
+.quick-add-card .card__title {
+  font-size: var(--font-lg);
+  color: var(--secondary-dark);
+  margin: 0 0 var(--spacing-sm) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.quick-add-card .card__title i {
+  color: var(--primary);
+}
+
+.quick-add-buttons {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  margin: var(--spacing-md) 0;
+}
+
+.quick-add-btn {
+  flex: 1;
+  min-width: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: var(--font-md);
+  text-decoration: none;
+}
+
+.quick-add-btn i {
+  font-size: var(--font-lg);
+}
+
+.or-divider {
+  text-align: center;
+  margin-top: var(--spacing-lg);
+  position: relative;
+}
+
+.or-divider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px solid var(--border-color);
+}
+
+.or-divider span {
+  background: var(--bg-card);
+  padding: 0 var(--spacing-md);
+  position: relative;
+  color: var(--text-color-gray);
+  font-size: var(--font-sm);
+}
+
+/* Mobile adjustments for quick add */
+@media screen and (max-width: 480px) {
+  .quick-add-buttons {
+    flex-direction: column;
+  }
+
+  .quick-add-btn {
+    min-width: 100%;
+  }
+}
