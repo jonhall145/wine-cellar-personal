@@ -142,6 +142,7 @@ const Scanner = () => {
           onError={handleError}
           options={{
             formats: selectedFormat ? [selectedFormat] : defaultFormats,
+            delay: 100,
           }}
         />
         <div className="overlay">
