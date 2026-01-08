@@ -282,3 +282,155 @@
   color: #eee;
   border-color: #555;
 }
+
+/* Move Mode Styles */
+.storage-grid--move-mode {
+  max-width: 100%;
+}
+
+.storage-grid__mode-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--wine-red, #722f37);
+  background: white;
+  color: var(--wine-red, #722f37);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: auto;
+  transition: all 0.2s ease;
+}
+
+.storage-grid__mode-btn:hover {
+  background: var(--wine-red, #722f37);
+  color: white;
+}
+
+.storage-grid__mode-btn--active {
+  background: var(--wine-red, #722f37);
+  color: white;
+}
+
+.storage-grid__cancel-btn {
+  padding: 8px 16px;
+  border: 1px solid #dc3545;
+  background: white;
+  color: #dc3545;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 8px;
+}
+
+.storage-grid__cancel-btn:hover {
+  background: #dc3545;
+  color: white;
+}
+
+.storage-grid__move-hint {
+  padding: 12px 16px;
+  background-color: #e7f3ff;
+  border-left: 4px solid #007bff;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: #0056b3;
+}
+
+.storage-grid__move-hint i {
+  margin-right: 8px;
+}
+
+.storage-grid__dual-pane {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.storage-grid__pane {
+  flex: 1;
+  min-width: 280px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.storage-grid__pane-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.storage-grid__arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: var(--wine-red, #722f37);
+  padding: 0 8px;
+  align-self: center;
+}
+
+.storage-grid__cell--selected-for-move {
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.4);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.storage-grid__cell--drop-target {
+  border-color: #28a745;
+  border-style: dashed;
+  background-color: rgba(40, 167, 69, 0.1);
+}
+
+.storage-grid__cell--drop-target:hover {
+  background-color: rgba(40, 167, 69, 0.3);
+}
+
+/* Dark theme for move mode */
+[data-theme="dark"] .storage-grid__mode-btn {
+  background-color: #333;
+  border-color: var(--wine-red, #722f37);
+}
+
+[data-theme="dark"] .storage-grid__mode-btn:hover,
+[data-theme="dark"] .storage-grid__mode-btn--active {
+  background-color: var(--wine-red, #722f37);
+}
+
+[data-theme="dark"] .storage-grid__move-hint {
+  background-color: #1a3a5c;
+  color: #7db8ff;
+  border-color: #3d8bfd;
+}
+
+[data-theme="dark"] .storage-grid__cancel-btn {
+  background-color: #333;
+}
+
+/* Responsive: stack panes on mobile */
+@media (max-width: 768px) {
+  .storage-grid__dual-pane {
+    flex-direction: column;
+  }
+  
+  .storage-grid__arrow {
+    transform: rotate(90deg);
+    padding: 8px 0;
+  }
+  
+  .storage-grid__pane {
+    width: 100%;
+  }
+}
