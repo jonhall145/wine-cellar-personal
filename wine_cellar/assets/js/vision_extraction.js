@@ -64,10 +64,21 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 // Auto-fill form fields with extracted data
                 fillFormFields(data.data);
-                
-                // Show success message
-                showMessage('success', `Extracted ${data.extracted_fields.length} fields with ${data.confidence} confidence`);
-                
+
+                // Show success message based on match type
+                if (data.match_type === 'barcode') {
+                    // Barcode match found - show special message
+                    showMessage('barcode',
+                        `Found existing wine via barcode (${data.matched_barcode}). ` +
+                        `Filled ${data.extracted_fields.length} fields.`
+                    );
+                } else {
+                    // AI vision extraction
+                    showMessage('success',
+                        `Extracted ${data.extracted_fields.length} fields with ${data.confidence} confidence`
+                    );
+                }
+
                 // Show any errors
                 if (data.errors && data.errors.length > 0) {
                     showMessage('warning', data.errors.join(', '));
@@ -144,22 +155,31 @@ document.addEventListener('DOMContentLoaded', function() {
         const messageDiv = document.createElement('div');
         messageDiv.className = `alert alert-${type}`;
         messageDiv.style.cssText = 'padding: 12px; margin: 12px 0; border-radius: 4px;';
-        
-        if (type === 'success') {
+
+        if (type === 'barcode') {
+            // Special style for barcode match - blue/info with barcode icon
+            messageDiv.style.backgroundColor = '#cce5ff';
+            messageDiv.style.color = '#004085';
+            messageDiv.style.borderLeft = '4px solid #007bff';
+            messageDiv.innerHTML = '<i class="fa fa-barcode" style="margin-right: 8px;"></i>' + message;
+        } else if (type === 'success') {
             messageDiv.style.backgroundColor = '#d4edda';
             messageDiv.style.color = '#155724';
             messageDiv.style.borderLeft = '4px solid #28a745';
+            messageDiv.textContent = message;
         } else if (type === 'warning') {
             messageDiv.style.backgroundColor = '#fff3cd';
             messageDiv.style.color = '#856404';
             messageDiv.style.borderLeft = '4px solid #ffc107';
+            messageDiv.textContent = message;
         } else if (type === 'error') {
             messageDiv.style.backgroundColor = '#f8d7da';
             messageDiv.style.color = '#721c24';
             messageDiv.style.borderLeft = '4px solid #dc3545';
+            messageDiv.textContent = message;
+        } else {
+            messageDiv.textContent = message;
         }
-        
-        messageDiv.textContent = message;
         
         // Insert before form
         form.parentNode.insertBefore(messageDiv, form);

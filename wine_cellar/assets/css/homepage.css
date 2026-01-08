@@ -62,3 +62,31 @@
   margin: var(--spacing-xs) 0 0 0;
   line-height: 1.3;
 }
+
+/* Mobile-specific sizing for better centering */
+@media screen and (max-width: 480px) {
+  .stats__card {
+    width: 120px;
+    max-width: 42vw;
+  }
+
+  .stats__icon {
+    font-size: var(--font-lg);
+  }
+
+  .stats__number {
+    font-size: var(--font-lg);
+  }
+
+  .stats__label {
+    font-size: 0.7rem;
+  }
+}
+
+/* Ensure proper centering on small tablets */
+@media screen and (min-width: 481px) and (max-width: 768px) {
+  .stats__card {
+    width: 130px;
+    max-width: 28vw;
+  }
+}

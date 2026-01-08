@@ -22,6 +22,30 @@
 {% block content %}
     <div class="pure-g">
         <div class="pure-u-1 pure-u-lg-1-2 m-auto">
+            <!-- Quick Add Section - Image-based methods at top -->
+            {% if not scanned_image %}
+            <div class="quick-add-section">
+                <div class="card quick-add-card">
+                    <h2 class="card__title">
+                        <i class="fa-solid fa-bolt"></i> {% translate "Quick Add" %}
+                    </h2>
+                    <p class="form-hint mb-12">{% translate "Use your camera to quickly add wine details:" %}</p>
+                    <div class="quick-add-buttons">
+                        <a href="{% url 'label-scan' %}" class="pure-button button__primary quick-add-btn">
+                            <i class="fa-solid fa-camera"></i>
+                            {% translate "Scan Label" %}
+                        </a>
+                        <a href="{% url 'wine-scan' %}" class="pure-button button__secondary quick-add-btn">
+                            <i class="fa-solid fa-barcode"></i>
+                            {% translate "Scan Barcode" %}
+                        </a>
+                    </div>
+                    <div class="or-divider">
+                        <span>{% translate "or fill in the form manually" %}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
             {% if scanned_image %}
                 <div class="scanned-label-preview mb-12">
                     <div class="pure-g">
@@ -70,6 +94,32 @@
                   class="pure-form pure-form-stacked wine-form"
                   novalidate>
                 {% csrf_token %}
+                <!-- Images section first for image-based entry -->
+                <fieldset>
+                    <legend>
+                        <h2 class="form-subhead text--gray">
+                            <i class="fa-solid fa-image" style="color: var(--primary);"></i>
+                            {% translate "Images & Auto-fill" %}
+                        </h2>
+                    </legend>
+                    <div class="form-hint mb-12">
+                        {% translate "Upload images and click 'Auto-fill from Images' to extract wine details using AI vision." %}
+                    </div>
+                    {% include 'forms/form_field.html' with field=form.image_front %}
+                    {% include 'forms/form_field.html' with field=form.image_back %}
+                    {% include 'forms/form_field.html' with field=form.image_front_label %}
+                    {% include 'forms/form_field.html' with field=form.image_back_label %}
+
+                    <div class="pure-controls" style="margin-top: 12px;">
+                        <button type="button" name="extract_vision" class="pure-button button__primary">
+                            <i class="fa fa-magic" aria-hidden="true"></i>
+                            {% translate "Auto-fill from Images" %}
+                        </button>
+                        <span class="form-hint" style="display: inline-block; margin-left: 8px;">
+                            {% translate "Extract wine details from uploaded images" %}
+                        </span>
+                    </div>
+                </fieldset>
                 <fieldset>
                     <legend>
                         <h2 class="form-subhead text--gray">{% translate "Details" %}</h2>
@@ -108,28 +158,6 @@
                     {% include 'forms/form_field.html' with field=form.food_pairings %}
                     {% include 'forms/form_field.html' with field=form.rating %}
                     {% include 'forms/form_field.html' with field=form.comment %}
-                </fieldset>
-                <fieldset>
-                    <legend>
-                        <h2 class="form-subhead text--gray">{% translate "Images" %}</h2>
-                    </legend>
-                    <div class="form-hint mb-12">
-                        {% translate "Upload images and click 'Auto-fill from Images' to extract wine details using AI vision." %}
-                    </div>
-                    {% include 'forms/form_field.html' with field=form.image_front %}
-                    {% include 'forms/form_field.html' with field=form.image_back %}
-                    {% include 'forms/form_field.html' with field=form.image_front_label %}
-                    {% include 'forms/form_field.html' with field=form.image_back_label %}
-                    
-                    <div class="pure-controls" style="margin-top: 12px;">
-                        <button type="button" name="extract_vision" class="pure-button button__secondary">
-                            <i class="fa fa-magic" aria-hidden="true"></i>
-                            {% translate "Auto-fill from Images" %}
-                        </button>
-                        <span class="form-hint" style="display: inline-block; margin-left: 8px;">
-                            {% translate "Extract wine details from uploaded images" %}
-                        </span>
-                    </div>
                 </fieldset>
                 <fieldset>
                     <legend>
