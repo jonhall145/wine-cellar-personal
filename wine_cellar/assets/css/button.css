@@ -17,7 +17,7 @@
   }
 
   &:focus {
-    outline: 3px solid rgba(114, 47, 55, 0.4);
+    outline: 3px solid rgba(1, 150, 3, 0.4);
     outline-offset: 2px;
   }
 
@@ -45,7 +45,7 @@
   }
 
   &:focus {
-    outline: 3px solid rgba(45, 55, 72, 0.4);
+    outline: 3px solid rgba(1, 150, 3, 0.3);
     outline-offset: 2px;
   }
 
@@ -75,7 +75,7 @@
   }
 
   &:focus {
-    outline: 3px solid rgba(114, 47, 55, 0.3);
+    outline: 3px solid rgba(1, 150, 3, 0.3);
     outline-offset: 2px;
   }
 
@@ -88,7 +88,7 @@
 .pure-control-group > input[type='number']:focus,
 .pure-control-group > input[type='text']:focus {
   border: 2px solid var(--primary) !important;
-  box-shadow: 0 0 0 3px rgba(114, 47, 55, 0.15) !important;
+  box-shadow: 0 0 0 3px rgba(1, 150, 3, 0.15) !important;
 }
 
 .wine__edit-delete-buttons {
