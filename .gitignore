@@ -11,14 +11,12 @@ build/
 *.egg-info/
 media/
 .env.dev
-.env.prod
-.env.prod.db
+.env.prod.local
 *.mo
 autopo.ooo
 .vscode/
 nohup.out
 gunicorn.log
-.env.prod.local
 ssl/
 *.png
 *.html
