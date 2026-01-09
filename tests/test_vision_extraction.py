@@ -2,7 +2,7 @@
 
 import io
 from http import HTTPStatus
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from django.urls import reverse
@@ -323,7 +323,6 @@ class TestExtractWineVisionAjax:
         url = reverse("wine-extract-vision")
 
         # Create a mock file that appears to be larger than MAX_IMAGE_SIZE (10MB)
-        from unittest.mock import Mock
         large_file = Mock()
         large_file.size = 11 * 1024 * 1024  # 11MB
         large_file.read.return_value = b"fake data"
