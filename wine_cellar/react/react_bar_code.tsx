@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BarcodeScanner, DetectedBarcode } from 'react-barcode-scanner'
 // @ts-ignore
@@ -28,6 +28,9 @@ const translated = {
     'An error occurred while accessing the camera. Please try again.'
   ),
   retryButton: django.gettext('Try Again'),
+  captureButton: django.gettext('Capture & Analyze'),
+  analyzing: django.gettext('Analyzing...'),
+  noBarcodeFound: django.gettext('No barcode found in image'),
 }
 
 type CameraErrorType = 'permission' | 'https' | 'notfound' | 'unknown' | null
@@ -65,6 +68,9 @@ const Scanner = () => {
   const [selectedFormat, setSelectedFormat] = useState('any')
   const [cameraError, setCameraError] = useState<CameraErrorType>(null)
   const [retryKey, setRetryKey] = useState(0)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null)
+  const scannerRef = useRef<HTMLDivElement>(null)
   const defaultFormats = ['ean_13', 'ean_8', 'upc_a', 'code_39', 'itf']
 
   useEffect(() => {
@@ -109,6 +115,64 @@ const Scanner = () => {
     setRetryKey((prev) => prev + 1)
   }
 
+  const captureAndAnalyze = useCallback(async () => {
+    if (!scannerRef.current) return
+    
+    // Find the video element within the scanner
+    const video = scannerRef.current.querySelector('video')
+    if (!video || video.videoWidth === 0) {
+      setAnalyzeError('Camera not ready')
+      return
+    }
+
+    setIsAnalyzing(true)
+    setAnalyzeError(null)
+
+    try {
+      // Create a canvas and draw the current video frame
+      const canvas = document.createElement('canvas')
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        throw new Error('Could not get canvas context')
+      }
+      ctx.drawImage(video, 0, 0)
+
+      // Convert to base64
+      const imageData = canvas.toDataURL('image/png')
+
+      // Get CSRF token
+      const csrfToken = document.querySelector<HTMLInputElement>('[name=csrfmiddlewaretoken]')?.value
+        || document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content
+        || ''
+
+      // Send to server for analysis
+      const response = await fetch('/wine/scan-barcode/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify({ image: imageData }),
+      })
+
+      const result = await response.json()
+
+      if (result.success && result.barcode) {
+        // Barcode found - redirect to scanned wine page
+        window.location.href = '/wine/scan/' + result.barcode
+      } else {
+        setAnalyzeError(translated.noBarcodeFound)
+      }
+    } catch (error) {
+      console.error('Error analyzing image:', error)
+      setAnalyzeError(error instanceof Error ? error.message : 'Analysis failed')
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }, [])
+
   if (cameraError) {
     return <CameraError errorType={cameraError} onRetry={handleRetry} />
   }
@@ -135,7 +199,7 @@ const Scanner = () => {
           </select>
         </details>
       </section>
-      <section className="form__scanner">
+      <section className="form__scanner" ref={scannerRef}>
         <BarcodeScanner
           key={retryKey}
           onCapture={handleCapture}
@@ -151,6 +215,19 @@ const Scanner = () => {
           <div className="overlay-element bottom-left" />
           <div className="overlay-element bottom-right" />
         </div>
+      </section>
+      <section className="form__scanner__capture">
+        <button
+          type="button"
+          className="pure-button pure-button-primary"
+          onClick={captureAndAnalyze}
+          disabled={isAnalyzing}
+        >
+          {isAnalyzing ? translated.analyzing : translated.captureButton}
+        </button>
+        {analyzeError && (
+          <p className="form-error" role="alert">{analyzeError}</p>
+        )}
       </section>
     </>
   )

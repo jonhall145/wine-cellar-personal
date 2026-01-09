@@ -60,13 +60,21 @@ from wine_cellar.apps.wine.views import (
     WishlistPurchasedView,
     extract_wine_vision_ajax,
     health_check,
+    scan_barcode_ajax,
 )
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
-    path("api/v1/", include("wine_cellar.apps.hardware.urls", namespace="hardware-api")),
-    path("hardware/", include(("wine_cellar.apps.hardware.web_urls", "hardware"), namespace="hardware")),
+    path(
+        "api/v1/", include("wine_cellar.apps.hardware.urls", namespace="hardware-api")
+    ),
+    path(
+        "hardware/",
+        include(
+            ("wine_cellar.apps.hardware.web_urls", "hardware"), namespace="hardware"
+        ),
+    ),
     path("user/settings/", UserSettingsView.as_view(), name="user-settings"),
     path("storages/", StorageListView.as_view(), name="storage-list"),
     path("storage/<int:pk>/", StorageDetailView.as_view(), name="storage-detail"),
@@ -94,6 +102,7 @@ urlpatterns = [
     path("wines/", WineListView.as_view(), name="wine-list"),
     path("wine/scan/", WineScanView.as_view(), name="wine-scan"),
     path("wine/scan/<str:code>/", WineScannedView.as_view(), name="wine-scan"),
+    path("wine/scan-barcode/", scan_barcode_ajax, name="wine-scan-barcode"),
     path("wines/map/", WineMapView.as_view(), name="wine-map"),
     path("drink-history/", DrinkRecordListView.as_view(), name="drink-history"),
     path("wishlist/", WishlistListView.as_view(), name="wishlist-list"),

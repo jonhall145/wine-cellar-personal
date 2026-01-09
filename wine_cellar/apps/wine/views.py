@@ -1219,3 +1219,62 @@ def extract_wine_vision_ajax(request):
         logger = logging.getLogger(__name__)
         logger.exception("Error in AJAX vision extraction")
         return JsonResponse({"error": str(e)}, status=500)
+
+
+@login_required
+def scan_barcode_ajax(request):
+    """
+    AJAX endpoint for server-side barcode scanning from a captured image.
+
+    This endpoint uses pyzbar to scan barcodes from a base64-encoded image.
+    Returns detected barcodes without AI processing.
+    """
+    import json
+
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    try:
+        from wine_cellar.apps.wine.services import BarcodeScanner
+
+        # Parse JSON body
+        try:
+            data = json.loads(request.body)
+            image_data = data.get("image")
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        if not image_data:
+            return JsonResponse({"error": "No image data provided"}, status=400)
+
+        # Remove data URL prefix if present (e.g., "data:image/png;base64,")
+        if "," in image_data:
+            image_data = image_data.split(",", 1)[1]
+
+        # Scan the image for barcodes
+        barcode_scanner = BarcodeScanner()
+        barcodes = barcode_scanner.scan_images_for_barcodes([image_data])
+
+        if barcodes:
+            return JsonResponse(
+                {
+                    "success": True,
+                    "barcodes": barcodes,
+                    "barcode": barcodes[0],  # Primary barcode
+                }
+            )
+        else:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "barcodes": [],
+                    "message": "No barcode detected in image",
+                }
+            )
+
+    except Exception as e:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.exception("Error in barcode scanning")
+        return JsonResponse({"error": str(e)}, status=500)

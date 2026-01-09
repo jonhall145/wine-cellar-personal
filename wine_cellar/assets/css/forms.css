@@ -274,6 +274,20 @@ p.form-hint {
   padding-bottom: var(--spacing-md);
 }
 
+.form__scanner__capture {
+  padding-top: var(--spacing-md);
+  text-align: center;
+
+  button {
+    width: 100%;
+  }
+
+  .form-error {
+    margin-top: var(--spacing-sm);
+    color: var(--red-600);
+  }
+}
+
 .image-preview-wrapper {
   display: block;
   width: 100%;
