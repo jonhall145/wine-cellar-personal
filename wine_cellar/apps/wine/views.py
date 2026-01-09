@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.conf import settings
-from django.contrib.auth.decorators import login_not_required
+from django.contrib.auth.decorators import login_not_required, login_required
 from django.db import connections, transaction
 from django.db.models import Avg, Q, Sum
 from django.db.models.functions import Coalesce
@@ -71,7 +71,7 @@ class HomePageView(TemplateView):
         )
 
         formatted_price = number_format(total_value, use_l10n=True)
-        total_value = f"{formatted_price}{currency}"
+        total_value = f"{currency}{formatted_price}"
 
         context.update(
             {
@@ -145,7 +145,10 @@ class HomePageView(TemplateView):
         # Pending hardware position reviews (gracefully handle if hardware not set up)
         pending_reviews_count = 0
         try:
-            from wine_cellar.apps.hardware.models import PositionChangeReview, ReviewStatus
+            from wine_cellar.apps.hardware.models import (
+                PositionChangeReview,
+                ReviewStatus,
+            )
 
             pending_reviews_count = PositionChangeReview.objects.filter(
                 user=self.request.user,
@@ -232,7 +235,7 @@ class WineCreateView(FormView):
                     "extracted_data": {},
                 }
 
-        # If we have extraction results (either just created or from previous load), use them
+        # If we have extraction results, use them
         if extraction_result:
             result_data = extraction_result.get("extracted_data", {})
             if result_data:
@@ -876,12 +879,11 @@ class ConsumptionStatsView(TemplateView):
 
     def get_context_data(self, **kwargs):
         from collections import defaultdict
-        from datetime import date
 
         from django.db.models import Count
         from django.db.models.functions import TruncMonth
 
-        from wine_cellar.apps.wine.models import DrinkRecord, WineType
+        from wine_cellar.apps.wine.models import DrinkRecord
 
         context = super().get_context_data(**kwargs)
         user = self.request.user
@@ -1120,9 +1122,6 @@ class LabelScanResultView(TemplateView):
         return info
 
 
-from django.contrib.auth.decorators import login_required
-
-
 @login_required
 def extract_wine_vision_ajax(request):
     """
@@ -1185,7 +1184,7 @@ def extract_wine_vision_ajax(request):
                     "errors": [],
                     "match_type": "barcode",
                     "matched_barcode": barcode_result["barcode"],
-                    "message": f"Matched existing wine via barcode: {barcode_result['barcode']}",
+                    "message": f"Matched wine via barcode: {barcode_result['barcode']}",
                 }
             )
 

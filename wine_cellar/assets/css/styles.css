@@ -503,6 +503,8 @@ a:hover {
   height: 50px;
   margin-top: -20px;
   box-shadow: var(--container-box-shadow);
+  padding: 0;
+  justify-content: center;
 }
 
 .bottom-nav__item--primary i {
