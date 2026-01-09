@@ -290,9 +290,9 @@ class TestBarcodeScanner:
             valid_barcode = MagicMock()
             valid_barcode.data.decode.return_value = "1234567890123"
             valid_barcode.type = "EAN13"
-            
+
             invalid_barcode = create_unicode_error_barcode_mock()
-            
+
             mock_pyzbar.decode.return_value = [valid_barcode, invalid_barcode]
 
             result = scanner.scan_images_for_barcodes([base64_image])
@@ -316,14 +316,14 @@ class TestBarcodeScanner:
 
         with patch("wine_cellar.apps.wine.services.barcode_service.pyzbar") as mock_pyzbar, \
              patch("wine_cellar.apps.wine.services.barcode_service.Image") as mock_image_class:
-            
+
             # Mock the Image.open to return a mock image
             mock_image = MagicMock()
             mock_gray_image = MagicMock()
             mock_image.mode = "RGB"
             mock_image.convert.return_value = mock_gray_image
             mock_image_class.open.return_value = mock_image
-            
+
             # Mock barcode detection
             mock_barcode = MagicMock()
             mock_barcode.data.decode.return_value = "1234567890123"
@@ -352,14 +352,14 @@ class TestBarcodeScanner:
 
         with patch("wine_cellar.apps.wine.services.barcode_service.pyzbar") as mock_pyzbar, \
              patch("wine_cellar.apps.wine.services.barcode_service.Image") as mock_image_class:
-            
+
             # Mock the Image.open to return a mock image
             mock_image = MagicMock()
             mock_gray_image = MagicMock()
             mock_image.mode = "RGB"
             mock_image.convert.return_value = mock_gray_image
             mock_image_class.open.return_value = mock_image
-            
+
             # Make pyzbar.decode raise an exception
             mock_pyzbar.decode.side_effect = Exception("Test error")
 
@@ -386,12 +386,12 @@ class TestBarcodeScanner:
 
         with patch("wine_cellar.apps.wine.services.barcode_service.pyzbar") as mock_pyzbar, \
              patch("wine_cellar.apps.wine.services.barcode_service.Image") as mock_image_class:
-            
+
             # Mock the Image.open to return a grayscale mock image
             mock_image = MagicMock()
             mock_image.mode = "L"  # Already grayscale
             mock_image_class.open.return_value = mock_image
-            
+
             # Mock barcode detection
             mock_barcode = MagicMock()
             mock_barcode.data.decode.return_value = "1234567890123"
@@ -403,5 +403,4 @@ class TestBarcodeScanner:
             # Verify that close was called only once (no separate gray_image)
             mock_image.close.assert_called_once()
             assert "1234567890123" in result
-
 
