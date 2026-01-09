@@ -210,3 +210,202 @@ class TestBarcodeScanner:
 
         assert "attributes" in result
         assert set(result["attributes"]) == {"Organic", "Vegan"}
+
+    @patch("wine_cellar.apps.wine.services.barcode_service.BarcodeScanner._check_pyzbar")
+    def test_unicode_decode_error_handling_grayscale(self, mock_check):
+        """Test that non-UTF-8 barcode data is handled gracefully in grayscale scan."""
+        mock_check.return_value = True
+        scanner = BarcodeScanner()
+        scanner._pyzbar_available = True
+
+        # Create a dummy base64 image
+        img = Image.new("RGB", (100, 100), color="white")
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG")
+        base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+        with patch("wine_cellar.apps.wine.services.barcode_service.pyzbar") as mock_pyzbar:
+            # Mock barcode with non-UTF-8 data
+            mock_barcode = MagicMock()
+            mock_barcode.data = b'\xff\xfe'  # Invalid UTF-8
+            mock_barcode.data.decode.side_effect = UnicodeDecodeError(
+                'utf-8', b'\xff\xfe', 0, 2, 'invalid start byte'
+            )
+            mock_barcode.type = "EAN13"
+            mock_pyzbar.decode.return_value = [mock_barcode]
+
+            # Should not raise exception, should skip the barcode
+            result = scanner.scan_images_for_barcodes([base64_image])
+
+            # Result should be empty since the barcode was skipped
+            assert result == []
+
+    @patch("wine_cellar.apps.wine.services.barcode_service.BarcodeScanner._check_pyzbar")
+    def test_unicode_decode_error_handling_color(self, mock_check):
+        """Test that non-UTF-8 barcode data is handled gracefully in color scan."""
+        mock_check.return_value = True
+        scanner = BarcodeScanner()
+        scanner._pyzbar_available = True
+
+        # Create a dummy base64 image (color mode, not grayscale)
+        img = Image.new("RGB", (100, 100), color="blue")
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG")
+        base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+        with patch("wine_cellar.apps.wine.services.barcode_service.pyzbar") as mock_pyzbar:
+            # Mock barcode with non-UTF-8 data for both grayscale and color scans
+            mock_barcode = MagicMock()
+            mock_barcode.data = b'\xff\xfe'  # Invalid UTF-8
+            mock_barcode.data.decode.side_effect = UnicodeDecodeError(
+                'utf-8', b'\xff\xfe', 0, 2, 'invalid start byte'
+            )
+            mock_barcode.type = "EAN13"
+            
+            # Return the bad barcode for both grayscale and color scans
+            mock_pyzbar.decode.return_value = [mock_barcode]
+
+            # Should not raise exception, should skip the barcode
+            result = scanner.scan_images_for_barcodes([base64_image])
+
+            # Result should be empty since the barcode was skipped
+            assert result == []
+
+    @patch("wine_cellar.apps.wine.services.barcode_service.BarcodeScanner._check_pyzbar")
+    def test_mixed_valid_and_invalid_barcodes(self, mock_check):
+        """Test that valid barcodes are still returned when some have UTF-8 errors."""
+        mock_check.return_value = True
+        scanner = BarcodeScanner()
+        scanner._pyzbar_available = True
+
+        # Create a dummy base64 image
+        img = Image.new("RGB", (100, 100), color="white")
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG")
+        base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+        with patch("wine_cellar.apps.wine.services.barcode_service.pyzbar") as mock_pyzbar:
+            # Mock one valid and one invalid barcode
+            valid_barcode = MagicMock()
+            valid_barcode.data.decode.return_value = "1234567890123"
+            valid_barcode.type = "EAN13"
+            
+            invalid_barcode = MagicMock()
+            invalid_barcode.data = b'\xff\xfe'
+            invalid_barcode.data.decode.side_effect = UnicodeDecodeError(
+                'utf-8', b'\xff\xfe', 0, 2, 'invalid start byte'
+            )
+            invalid_barcode.type = "EAN13"
+            
+            mock_pyzbar.decode.return_value = [valid_barcode, invalid_barcode]
+
+            result = scanner.scan_images_for_barcodes([base64_image])
+
+            # Should only include the valid barcode
+            assert "1234567890123" in result
+            assert len(result) == 1
+
+    @patch("wine_cellar.apps.wine.services.barcode_service.BarcodeScanner._check_pyzbar")
+    def test_pil_image_cleanup_on_success(self, mock_check):
+        """Test that PIL Image objects are properly closed after successful processing."""
+        mock_check.return_value = True
+        scanner = BarcodeScanner()
+        scanner._pyzbar_available = True
+
+        # Create a dummy base64 image
+        img = Image.new("RGB", (100, 100), color="white")
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG")
+        base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+        with patch("wine_cellar.apps.wine.services.barcode_service.pyzbar") as mock_pyzbar, \
+             patch("wine_cellar.apps.wine.services.barcode_service.Image") as mock_image_class:
+            
+            # Mock the Image.open to return a mock image
+            mock_image = MagicMock()
+            mock_gray_image = MagicMock()
+            mock_image.mode = "RGB"
+            mock_image.convert.return_value = mock_gray_image
+            mock_image_class.open.return_value = mock_image
+            
+            # Mock barcode detection
+            mock_barcode = MagicMock()
+            mock_barcode.data.decode.return_value = "1234567890123"
+            mock_barcode.type = "EAN13"
+            mock_pyzbar.decode.return_value = [mock_barcode]
+
+            result = scanner.scan_images_for_barcodes([base64_image])
+
+            # Verify that close was called on both images
+            mock_gray_image.close.assert_called_once()
+            mock_image.close.assert_called_once()
+            assert "1234567890123" in result
+
+    @patch("wine_cellar.apps.wine.services.barcode_service.BarcodeScanner._check_pyzbar")
+    def test_pil_image_cleanup_on_error(self, mock_check):
+        """Test that PIL Image objects are closed even when an error occurs."""
+        mock_check.return_value = True
+        scanner = BarcodeScanner()
+        scanner._pyzbar_available = True
+
+        # Create a dummy base64 image
+        img = Image.new("RGB", (100, 100), color="white")
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG")
+        base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+        with patch("wine_cellar.apps.wine.services.barcode_service.pyzbar") as mock_pyzbar, \
+             patch("wine_cellar.apps.wine.services.barcode_service.Image") as mock_image_class:
+            
+            # Mock the Image.open to return a mock image
+            mock_image = MagicMock()
+            mock_gray_image = MagicMock()
+            mock_image.mode = "RGB"
+            mock_image.convert.return_value = mock_gray_image
+            mock_image_class.open.return_value = mock_image
+            
+            # Make pyzbar.decode raise an exception
+            mock_pyzbar.decode.side_effect = Exception("Test error")
+
+            # Should not raise exception due to try/except
+            result = scanner.scan_images_for_barcodes([base64_image])
+
+            # Verify that close was still called on both images despite the error
+            mock_gray_image.close.assert_called_once()
+            mock_image.close.assert_called_once()
+            assert result == []
+
+    @patch("wine_cellar.apps.wine.services.barcode_service.BarcodeScanner._check_pyzbar")
+    def test_pil_image_cleanup_grayscale_mode(self, mock_check):
+        """Test that only one close is called when image is already grayscale."""
+        mock_check.return_value = True
+        scanner = BarcodeScanner()
+        scanner._pyzbar_available = True
+
+        # Create a grayscale base64 image
+        img = Image.new("L", (100, 100), color=128)
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG")
+        base64_image = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+        with patch("wine_cellar.apps.wine.services.barcode_service.pyzbar") as mock_pyzbar, \
+             patch("wine_cellar.apps.wine.services.barcode_service.Image") as mock_image_class:
+            
+            # Mock the Image.open to return a grayscale mock image
+            mock_image = MagicMock()
+            mock_image.mode = "L"  # Already grayscale
+            mock_image_class.open.return_value = mock_image
+            
+            # Mock barcode detection
+            mock_barcode = MagicMock()
+            mock_barcode.data.decode.return_value = "1234567890123"
+            mock_barcode.type = "EAN13"
+            mock_pyzbar.decode.return_value = [mock_barcode]
+
+            result = scanner.scan_images_for_barcodes([base64_image])
+
+            # Verify that close was called only once (no separate gray_image)
+            mock_image.close.assert_called_once()
+            assert "1234567890123" in result
+
+

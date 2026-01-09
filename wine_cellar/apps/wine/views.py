@@ -22,6 +22,9 @@ from wine_cellar.apps.wine.models import Wine, WineImage
 # Form step constants - no longer used for multi-step, kept for compatibility
 FINAL_FORM_STEP = 4
 
+# Maximum allowed image upload size (10MB) to prevent memory exhaustion
+MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
+
 
 class HomePageView(TemplateView):
     template_name = "homepage.html"
@@ -1150,9 +1153,6 @@ def extract_wine_vision_ajax(request):
             "image_front",
             "image_back",
         ]
-
-        # Max file size: 10MB (to prevent memory exhaustion)
-        MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
 
         for field_name in image_fields:
             image_file = request.FILES.get(field_name)
