@@ -262,7 +262,7 @@ class TestBarcodeScanner:
         with patch("wine_cellar.apps.wine.services.barcode_service.pyzbar") as mock_pyzbar:
             # Mock barcode with non-UTF-8 data for both grayscale and color scans
             mock_barcode = create_unicode_error_barcode_mock()
-            
+
             # Return the bad barcode for both grayscale and color scans
             mock_pyzbar.decode.return_value = [mock_barcode]
 
