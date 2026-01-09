@@ -504,11 +504,13 @@ a:hover {
   margin-top: -20px;
   box-shadow: var(--container-box-shadow);
   padding: 0;
+  align-items: center;
   justify-content: center;
 }
 
 .bottom-nav__item--primary i {
   font-size: var(--font-xl);
+  line-height: 1;
 }
 
 .bottom-nav__item--primary span {

@@ -83,11 +83,38 @@ pkill -f gunicorn
 5. When starting the server, confirm it's accessible before reporting success
 6. When stopping the server, verify the port is freed
 
+## Server Startup Verification
+
+**IMPORTANT: Servers take 5-10 seconds to fully initialize.** Do not immediately test with curl after starting.
+
+**Correct verification sequence:**
+```bash
+# 1. Start server in background
+make server &
+
+# 2. Wait for startup (Django loads apps, checks migrations)
+sleep 8
+
+# 3. Verify process is running
+ps aux | grep "runserver" | grep -v grep
+
+# 4. Test HTTP response (use 127.0.0.1, not localhost)
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8003/
+```
+
+**If curl fails immediately after starting:**
+- This is normal - the server is still initializing
+- Wait a few more seconds and retry
+- Check if the process is running with `ps aux | grep runserver`
+- A 302 response means success (redirect to login page)
+
 ## Error Handling
 
 - **Port already in use**: Run `lsof -i :<port>` to identify, then `kill <pid>`
 - **"python: command not found"**: Use `venv/bin/python3` instead
 - **"No module named 'django'"**: Venv not activated; use full path `venv/bin/python3`
+- **curl exit code 7 (connection refused)**: Server still starting - wait 5-8 seconds and retry
+- **curl returns 000**: Server not ready yet - check process with `ps aux`, retry after waiting
 - **Migration conflicts**: Report clearly with file names
 - **SSL certificate issues**: Certificates auto-generate in `ssl/` directory
 
