@@ -10,6 +10,17 @@ from PIL import Image
 from wine_cellar.apps.wine.services.barcode_service import BarcodeScanner
 
 
+def create_unicode_error_barcode_mock():
+    """Helper to create a barcode mock that raises UnicodeDecodeError."""
+    mock_barcode = MagicMock()
+    mock_barcode.data = b'\xff\xfe'  # Invalid UTF-8
+    mock_barcode.data.decode.side_effect = UnicodeDecodeError(
+        'utf-8', b'\xff\xfe', 0, 2, 'invalid start byte'
+    )
+    mock_barcode.type = "EAN13"
+    return mock_barcode
+
+
 class TestBarcodeScanner:
     """Tests for the BarcodeScanner class."""
 
@@ -226,12 +237,7 @@ class TestBarcodeScanner:
 
         with patch("wine_cellar.apps.wine.services.barcode_service.pyzbar") as mock_pyzbar:
             # Mock barcode with non-UTF-8 data
-            mock_barcode = MagicMock()
-            mock_barcode.data = b'\xff\xfe'  # Invalid UTF-8
-            mock_barcode.data.decode.side_effect = UnicodeDecodeError(
-                'utf-8', b'\xff\xfe', 0, 2, 'invalid start byte'
-            )
-            mock_barcode.type = "EAN13"
+            mock_barcode = create_unicode_error_barcode_mock()
             mock_pyzbar.decode.return_value = [mock_barcode]
 
             # Should not raise exception, should skip the barcode
@@ -255,12 +261,7 @@ class TestBarcodeScanner:
 
         with patch("wine_cellar.apps.wine.services.barcode_service.pyzbar") as mock_pyzbar:
             # Mock barcode with non-UTF-8 data for both grayscale and color scans
-            mock_barcode = MagicMock()
-            mock_barcode.data = b'\xff\xfe'  # Invalid UTF-8
-            mock_barcode.data.decode.side_effect = UnicodeDecodeError(
-                'utf-8', b'\xff\xfe', 0, 2, 'invalid start byte'
-            )
-            mock_barcode.type = "EAN13"
+            mock_barcode = create_unicode_error_barcode_mock()
             
             # Return the bad barcode for both grayscale and color scans
             mock_pyzbar.decode.return_value = [mock_barcode]
@@ -290,12 +291,7 @@ class TestBarcodeScanner:
             valid_barcode.data.decode.return_value = "1234567890123"
             valid_barcode.type = "EAN13"
             
-            invalid_barcode = MagicMock()
-            invalid_barcode.data = b'\xff\xfe'
-            invalid_barcode.data.decode.side_effect = UnicodeDecodeError(
-                'utf-8', b'\xff\xfe', 0, 2, 'invalid start byte'
-            )
-            invalid_barcode.type = "EAN13"
+            invalid_barcode = create_unicode_error_barcode_mock()
             
             mock_pyzbar.decode.return_value = [valid_barcode, invalid_barcode]
 

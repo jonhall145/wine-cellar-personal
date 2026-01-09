@@ -8,6 +8,8 @@ import pytest
 from django.urls import reverse
 from PIL import Image
 
+from wine_cellar.apps.wine.views import MAX_IMAGE_SIZE
+
 
 def create_test_image_file():
     """Create a simple test image as bytes."""
@@ -322,9 +324,9 @@ class TestExtractWineVisionAjax:
         client.force_login(user)
         url = reverse("wine-extract-vision")
 
-        # Create a mock file that appears to be larger than MAX_IMAGE_SIZE (10MB)
+        # Create a mock file that is larger than MAX_IMAGE_SIZE
         large_file = Mock()
-        large_file.size = 11 * 1024 * 1024  # 11MB
+        large_file.size = MAX_IMAGE_SIZE + 1  # Just over the limit
         large_file.read.return_value = b"fake data"
 
         # Patch the request.FILES to return our mock file
