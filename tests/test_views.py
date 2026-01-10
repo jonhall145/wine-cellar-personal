@@ -59,6 +59,34 @@ def test_homepage_stats(client, user, wine_factory, storage_item_factory):
 
 
 @pytest.mark.django_db
+def test_homepage_pending_reviews_count(client, user, position_change_review_factory):
+    """Test homepage shows pending hardware position reviews count."""
+    from wine_cellar.apps.hardware.models import ReviewStatus
+
+    # Create pending reviews for this user
+    position_change_review_factory(user=user, status=ReviewStatus.PENDING)
+    position_change_review_factory(user=user, status=ReviewStatus.PENDING)
+    # Create an approved review (shouldn't be counted)
+    position_change_review_factory(user=user, status=ReviewStatus.APPROVED)
+    # Create a pending review for another user (shouldn't be counted)
+    position_change_review_factory(status=ReviewStatus.PENDING)
+
+    client.force_login(user)
+    r = client.get(reverse("homepage"), follow=True)
+    assert r.status_code == HTTPStatus.OK
+    assert r.context_data["pending_reviews_count"] == 2
+
+
+@pytest.mark.django_db
+def test_homepage_no_pending_reviews(client, user):
+    """Test homepage shows zero when no pending reviews."""
+    client.force_login(user)
+    r = client.get(reverse("homepage"), follow=True)
+    assert r.status_code == HTTPStatus.OK
+    assert r.context_data["pending_reviews_count"] == 0
+
+
+@pytest.mark.django_db
 def test_wine_create_unauthenticated(client, user):
     r = client.get(reverse("wine-add"), follow=True)
     assert r.status_code == HTTPStatus.OK
