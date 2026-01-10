@@ -174,7 +174,7 @@ class WineVisionExtractor:
 
             # Call the API
             response = client.messages.create(
-                model="claude-sonnet-4-5",
+                model="claude-haiku-4",
                 max_tokens=2048,
                 messages=[
                     {
@@ -217,7 +217,7 @@ Please extract the following information if visible in ANY of the images:
 1. **Wine Name**: The main name/title of the wine
 2. **Wine Type**: red, white, rosé, sparkling, dessert, fortified, or orange
 3. **Vintage**: The year (4-digit number between 1900-2030)
-4. **Country**: The country of origin (provide ISO alpha-2 code if possible, e.g., FR, IT, ES, US)
+4. **Country**: The country of origin (ISO alpha-2 code, e.g., FR, IT, ES, US)
 5. **Region/Subregion**: Geographic region (e.g., "Bordeaux", "Tuscany", "Napa Valley")
 6. **Grapes/Varieties**: List of grape varieties (e.g., Cabernet Sauvignon, Merlot)
 7. **Vineyard/Producer**: The winery or producer name
@@ -247,7 +247,7 @@ CONFIDENCE: [high/medium/low]
 - Combine information from ALL images provided
 - If you cannot read or find a field in any image, write "not found"
 - For grapes, use comma-separated list
-- For confidence, use "high" if you're very confident in most fields, "medium" if some fields are unclear, "low" if the labels are hard to read
+- For confidence: "high" if confident, "medium" if some unclear, "low" if hard to read
 - Be precise and only extract what you can actually see on the labels
 """
 

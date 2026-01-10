@@ -4,45 +4,45 @@
   text-align: center;
   box-sizing: border-box;
   margin-inline: auto;
-  margin-block-end: 1rem;
+  margin-block-end: var(--spacing-md);
 
   @media screen and (min-width: 48em) {
     margin-inline-start: auto;
-    margin-inline-end: 3rem;
-    margin-block-start: 0.5rem;
+    margin-inline-end: var(--spacing-2xl);
+    margin-block-start: var(--spacing-sm);
   }
 
   .image-controls {
     display: flex;
     justify-content: center;
-    gap: 8px;
+    gap: var(--spacing-sm);
 
     @media screen and (max-width: 48em) {
-      margin-bottom: 12px;
+      margin-bottom: var(--spacing-md);
     }
   }
 
   .image-controls button {
     width: 36px;
     height: 36px;
-    border-radius: 6px;
-    border: 1px solid #ddd;
-    background: white;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--gray-400);
+    background: var(--white);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    margin: 0 6px;
+    margin: 0 var(--spacing-xs);
     cursor: pointer;
   }
 
   .image-controls button:hover {
-    outline: 3px solid rgba(21, 156, 228, 0.35);
+    outline: 3px solid rgba(1, 150, 3, 0.3);
     outline-offset: 2px;
   }
 
   .image-controls button i {
-    font-size: 16px;
-    color: #333;
+    font-size: var(--font-md);
+    color: var(--gray-800);
     line-height: 1;
   }
 }
@@ -50,20 +50,20 @@
 .wine-detail__image {
   height: 237px;
   width: 158px;
-  background-color: white;
-  border-radius: 15px;
+  background-color: var(--white);
+  border-radius: var(--border-radius-lg);
   text-align: center;
   box-shadow: var(--container-box-shadow);
-  padding: 6px;
+  padding: var(--spacing-xs);
   box-sizing: border-box;
   margin-inline: auto;
-  margin-block-end: 1rem;
+  margin-block-end: var(--spacing-md);
 
   img {
     height: 225px;
     width: auto;
     max-width: 100%;
-    border-radius: 12px;
+    border-radius: var(--border-radius);
     object-fit: cover;
   }
 }
@@ -73,7 +73,7 @@
   margin: auto;
 
   @media screen and (min-width: 48em) {
-    margin-inline-start: 1rem;
+    margin-inline-start: var(--spacing-md);
     margin-inline-end: auto;
   }
 
@@ -84,12 +84,12 @@
 }
 
 .wine-detail__menu {
-  margin-bottom: 32px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .wine-detail__stock-table {
   text-align: left;
-  margin: 1rem auto;
+  margin: var(--spacing-md) auto;
   border-collapse: collapse;
   min-width: 100%;
 }

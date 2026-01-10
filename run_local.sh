@@ -65,9 +65,9 @@ echo "=========================================="
 echo "Starting development server..."
 echo "=========================================="
 echo ""
-echo "Local access:    http://127.0.0.1:8000"
+echo "Local access:    http://127.0.0.1:8003"
 if [ -n "$EXTERNAL_IP" ]; then
-    echo "External access: http://${EXTERNAL_IP}:8000"
+    echo "External access: http://${EXTERNAL_IP}:8003"
 fi
 echo ""
 echo "Admin credentials:"
@@ -78,4 +78,4 @@ echo "Press Ctrl+C to stop the server"
 echo "=========================================="
 echo ""
 
-python manage.py runserver 0.0.0.0:8000
+python manage.py runserver 0.0.0.0:8003
