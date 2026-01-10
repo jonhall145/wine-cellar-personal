@@ -1,11 +1,22 @@
+import json
+
+from django.contrib.auth.decorators import login_required
 from django.forms import model_to_dict
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
+from django.views.decorators.http import require_POST
 from django.views.generic import DeleteView, DetailView, FormView, ListView
 from django.views.generic.list import MultipleObjectMixin
+from django_filters.views import FilterView
 
-from wine_cellar.apps.storage.forms import StockAddForm, StorageForm
+from wine_cellar.apps.storage.filters import StorageItemFilter
+from wine_cellar.apps.storage.forms import (
+    StockAddForm,
+    StorageForm,
+    StorageItemEditForm,
+)
 from wine_cellar.apps.storage.models import Storage, StorageItem
 from wine_cellar.apps.wine.models import Wine
 
@@ -221,10 +232,118 @@ class StorageItemHistoryView(ListView):
         return qs.filter(user=self.request.user, deleted=True)
 
 
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from django.contrib.auth.decorators import login_required
-import json
+class StorageItemListView(FilterView):
+    """List all bottles (StorageItem) with filtering."""
+
+    model = StorageItem
+    template_name = "bottle_list.html"
+    context_object_name = "bottles"
+    filterset_class = StorageItemFilter
+    paginate_by = 20
+
+    def get_queryset(self):
+        return (
+            StorageItem.objects.filter(user=self.request.user, deleted=False)
+            .select_related("wine", "storage")
+            .order_by("-created")
+        )
+
+
+class StorageItemUpdateView(FormView):
+    """Edit an existing bottle (StorageItem)."""
+
+    template_name = "bottle_edit.html"
+    form_class = StorageItemEditForm
+
+    def get_object(self):
+        if not hasattr(self, "_object"):
+            self._object = get_object_or_404(
+                StorageItem,
+                pk=self.kwargs["pk"],
+                user=self.request.user,
+                deleted=False,
+            )
+        return self._object
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        kwargs["instance"] = self.get_object()
+        return kwargs
+
+    def get_initial(self):
+        initial = super().get_initial()
+        item = self.get_object()
+        initial.update(
+            {
+                "storage": item.storage,
+                "row": item.row,
+                "column": item.column,
+                "price": item.price,
+                "is_gift": item.is_gift,
+                "gift_from": item.gift_from,
+                "occasion": item.occasion,
+            }
+        )
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        item = self.get_object()
+        context["wine"] = item.wine
+        context["item"] = item
+
+        # Free cells calculation (same as StorageItemAddView but excluding current item)
+        user_storages = Storage.objects.filter(user=self.request.user)
+        free_cells_by_storage = {}
+        for storage in user_storages:
+            if storage.rows == 0:
+                free_cells_by_storage[storage.pk] = {}
+                continue
+            # Exclude current item from used cells
+            used_cells = set(
+                storage.items.filter(deleted=False)
+                .exclude(pk=item.pk)
+                .values_list("row", "column")
+            )
+            all_rows = range(1, storage.rows + 1)
+            all_columns = range(1, storage.columns + 1)
+            free_cells_by_storage[storage.pk] = {}
+            for row in all_rows:
+                free = [col for col in all_columns if (row, col) not in used_cells]
+                free_cells_by_storage[storage.pk][row] = free
+
+        context["free_cells_by_storage"] = free_cells_by_storage
+
+        # Cancel URL - return to wine detail or bottle list
+        next_url = self.request.GET.get("next")
+        if next_url == "list":
+            context["cancel_url"] = reverse_lazy("bottle-list")
+        else:
+            context["cancel_url"] = reverse_lazy(
+                "wine-detail", kwargs={"pk": item.wine.pk}
+            )
+
+        return context
+
+    def form_valid(self, form):
+        item = self.get_object()
+        item.storage = form.cleaned_data["storage"]
+        item.row = form.cleaned_data["row"]
+        item.column = form.cleaned_data["column"]
+        item.price = form.cleaned_data["price"]
+        item.is_gift = form.cleaned_data["is_gift"]
+        item.gift_from = form.cleaned_data["gift_from"]
+        item.occasion = form.cleaned_data["occasion"]
+        item.save()
+
+        next_url = self.request.GET.get("next")
+        if next_url == "list":
+            self.success_url = reverse_lazy("bottle-list")
+        else:
+            self.success_url = reverse_lazy("wine-detail", kwargs={"pk": item.wine.pk})
+
+        return super().form_valid(form)
 
 
 @login_required
@@ -336,7 +455,9 @@ def move_bottle(request):
         return JsonResponse(
             {
                 "success": True,
-                "message": f"Moved to {target_storage.name} ({target_row}, {target_column})",
+                "message": (
+                    f"Moved to {target_storage.name} ({target_row}, {target_column})"
+                ),
             }
         )
 
