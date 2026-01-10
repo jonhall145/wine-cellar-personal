@@ -1,14 +1,14 @@
 """Tests for vision extraction AJAX endpoint with barcode-first workflow."""
 
-import base64
 import io
-import json
 from http import HTTPStatus
 from unittest.mock import MagicMock, patch
 
 import pytest
 from django.urls import reverse
 from PIL import Image
+
+from wine_cellar.apps.wine.views import MAX_IMAGE_SIZE
 
 
 def create_test_image_file():
@@ -56,7 +56,7 @@ class TestExtractWineVisionAjax:
     def test_barcode_match_returns_wine_data(self, client, user, wine_factory):
         """Test that matching barcode returns the wine data."""
         # Create a wine with barcode
-        wine = wine_factory(
+        wine_factory(
             user=user,
             name="Barcode Match Wine",
             barcode="1234567890123",
@@ -317,3 +317,69 @@ class TestExtractWineVisionAjax:
         assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
         data = response.json()
         assert "error" in data
+
+    @pytest.mark.django_db
+    def test_file_size_validation_rejects_large_files(self, client, user):
+        """Test that files larger than MAX_IMAGE_SIZE are rejected."""
+        client.force_login(user)
+        url = reverse("wine-extract-vision")
+
+        # Create a mock file that is larger than MAX_IMAGE_SIZE
+        large_file = MagicMock()
+        large_file.size = MAX_IMAGE_SIZE + 1  # Just over the limit
+        large_file.read.return_value = b"fake data"
+
+        # Patch the request.FILES to return our mock file
+        response = client.post(
+            url,
+            {"image_front_label": large_file},
+            format="multipart",
+        )
+
+        assert response.status_code == HTTPStatus.BAD_REQUEST
+        data = response.json()
+        assert "error" in data
+        assert "too large" in data["error"].lower()
+        assert "10MB" in data["error"]
+
+    @pytest.mark.django_db
+    def test_file_size_validation_accepts_valid_files(self, client, user):
+        """Test that files within size limit are processed normally."""
+        client.force_login(user)
+        url = reverse("wine-extract-vision")
+
+        # Create a small test image (well under 10MB)
+        image_file = create_test_image_file()
+
+        with patch(
+            "wine_cellar.apps.wine.views.BarcodeScanner"
+        ) as MockScanner, patch(
+            "wine_cellar.apps.wine.views.WineVisionExtractor"
+        ) as MockVision:
+            mock_scanner = MagicMock()
+            mock_scanner.scan_and_match.return_value = {
+                "matched": False,
+                "barcode": None,
+                "wine_data": None,
+                "all_barcodes": [],
+            }
+            MockScanner.return_value = mock_scanner
+
+            mock_vision = MagicMock()
+            mock_vision.extract_from_images.return_value = {
+                "data": {"name": "Test Wine"},
+                "confidence": "high",
+                "extracted_fields": ["name"],
+                "errors": [],
+            }
+            MockVision.return_value = mock_vision
+
+            response = client.post(
+                url,
+                {"image_front_label": image_file},
+                format="multipart",
+            )
+
+        # Should succeed since the file is small
+        assert response.status_code == HTTPStatus.OK
+

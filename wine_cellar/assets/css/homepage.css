@@ -79,7 +79,7 @@
   }
 
   .stats__label {
-    font-size: 0.7rem;
+    font-size: var(--font-xs);
   }
 }
 

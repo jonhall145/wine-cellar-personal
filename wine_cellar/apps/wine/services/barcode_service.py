@@ -52,6 +52,8 @@ class BarcodeScanner:
         barcodes = set()
 
         for base64_image in base64_images:
+            image = None
+            gray_image = None
             try:
                 # Decode base64 to image
                 image_data = base64.b64decode(base64_image)
@@ -67,21 +69,37 @@ class BarcodeScanner:
                 decoded_barcodes = pyzbar.decode(gray_image)
 
                 for barcode in decoded_barcodes:
-                    barcode_data = barcode.data.decode("utf-8")
-                    barcode_type = barcode.type
-                    logger.info(f"Found barcode: {barcode_data} (type: {barcode_type})")
-                    barcodes.add(barcode_data)
+                    try:
+                        barcode_data = barcode.data.decode("utf-8")
+                        barcode_type = barcode.type
+                        logger.info(f"Found barcode: {barcode_data} (type: {barcode_type})")
+                        barcodes.add(barcode_data)
+                    except UnicodeDecodeError:
+                        # Skip barcodes with non-UTF-8 data
+                        logger.warning(f"Skipping barcode with non-UTF-8 data: {barcode.data}")
+                        continue
 
                 # Also try original image (sometimes color helps with certain barcodes)
                 if image.mode != "L":
                     decoded_barcodes = pyzbar.decode(image)
                     for barcode in decoded_barcodes:
-                        barcode_data = barcode.data.decode("utf-8")
-                        barcodes.add(barcode_data)
+                        try:
+                            barcode_data = barcode.data.decode("utf-8")
+                            barcodes.add(barcode_data)
+                        except UnicodeDecodeError:
+                            # Skip barcodes with non-UTF-8 data
+                            logger.warning(f"Skipping barcode with non-UTF-8 data: {barcode.data}")
+                            continue
 
             except Exception as e:
                 logger.warning(f"Error scanning image for barcodes: {e}")
                 continue
+            finally:
+                # Explicitly close PIL Image objects to free resources
+                if gray_image is not None and gray_image is not image:
+                    gray_image.close()
+                if image is not None:
+                    image.close()
 
         return list(barcodes)
 

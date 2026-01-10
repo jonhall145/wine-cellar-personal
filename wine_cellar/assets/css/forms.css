@@ -547,6 +547,7 @@ p.form-hint {
   position: relative;
   color: var(--text-color-gray);
   font-size: var(--font-sm);
+  z-index: 1;
 }
 
 /* Mobile adjustments for quick add */

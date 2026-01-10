@@ -41,3 +41,7 @@
 .text--gray {
   color: var(--text-color-gray);
 }
+
+.text--primary {
+  color: var(--primary);
+}
