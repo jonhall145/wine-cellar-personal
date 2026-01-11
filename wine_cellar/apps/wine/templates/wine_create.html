@@ -29,15 +29,11 @@
                     <h2 class="card__title">
                         <i class="fa-solid fa-bolt"></i> {% translate "Quick Add" %}
                     </h2>
-                    <p class="form-hint mb-12">{% translate "Use your camera to quickly add wine details:" %}</p>
+                    <p class="form-hint mb-12">{% translate "Use your camera to scan the wine label and barcode:" %}</p>
                     <div class="quick-add-buttons">
                         <a href="{% url 'label-scan' %}" class="pure-button button__primary quick-add-btn">
                             <i class="fa-solid fa-camera"></i>
-                            {% translate "Scan Label" %}
-                        </a>
-                        <a href="{% url 'wine-scan' %}" class="pure-button button__secondary quick-add-btn">
-                            <i class="fa-solid fa-barcode"></i>
-                            {% translate "Scan Barcode" %}
+                            {% translate "Scan Wine" %}
                         </a>
                     </div>
                     <div class="or-divider">

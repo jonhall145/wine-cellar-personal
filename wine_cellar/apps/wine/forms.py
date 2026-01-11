@@ -573,6 +573,20 @@ class ReorderReminderForm(forms.Form):
 
 
 class LabelScanForm(forms.Form):
-    image = forms.ImageField(
-        help_text=_("Upload a photo of the wine label to scan."),
+    """Form for uploading wine label images for scanning."""
+
+    barcode_image = forms.ImageField(
+        required=False,
+        label=_("Barcode Image"),
+        help_text=_("Optional: Upload barcode image"),
+    )
+    front_image = forms.ImageField(
+        required=True,
+        label=_("Front Label Image"),
+        help_text=_("Required: Upload front label image"),
+    )
+    back_image = forms.ImageField(
+        required=False,
+        label=_("Back Label Image"),
+        help_text=_("Optional: Upload back label image"),
     )

@@ -367,6 +367,13 @@ p.form-hint {
   }
 }
 
+.wine__stock-buttons--stacked {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
 /* Camera error styles for barcode scanner */
 .camera-error {
   display: flex;

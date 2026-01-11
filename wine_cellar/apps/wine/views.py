@@ -277,6 +277,11 @@ class WineCreateView(FormView):
             kwargs["user"] = self.request.user
         if "code" in self.kwargs:
             kwargs["initial"].update({"barcode": self.kwargs["code"]})
+        elif self.request.session.get("pending_barcode"):
+            # Use barcode from previous scan if available
+            kwargs["initial"].update(
+                {"barcode": self.request.session.pop("pending_barcode")}
+            )
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -610,6 +615,9 @@ class WineScannedView(TemplateView):
         wine = Wine.objects.filter(barcode=code).filter(user=self.request.user).first()
         if wine:
             return redirect(reverse("wine-detail", kwargs={"pk": wine.pk}))
+
+        # Store barcode in session for use if user continues to label scan
+        request.session["pending_barcode"] = code
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -1129,19 +1137,24 @@ class LabelScanView(FormView):
     def form_valid(self, form):
         import base64
 
-        image = form.cleaned_data["image"]
+        images = []
 
-        # Read image and encode to base64
-        image_data = image.read()
-        base64_image = base64.b64encode(image_data).decode("utf-8")
+        # Process all uploaded images in order: barcode, front, back
+        for field_name in ["barcode_image", "front_image", "back_image"]:
+            image = form.cleaned_data.get(field_name)
+            if image:
+                image_data = image.read()
+                base64_image = base64.b64encode(image_data).decode("utf-8")
+                images.append(base64_image)
 
-        # Store in session for the create view to use
-        self.request.session["scanned_label"] = {
-            "filename": image.name,
-            "size": len(image_data),
-            "data": [base64_image],  # Wrap in list for consistency
-            "multi_image": False,
-        }
+        if images:
+            # Store in session for the create view to use
+            self.request.session["scanned_label"] = {
+                "filename": "uploaded_images",
+                "size": sum(len(base64.b64decode(img)) for img in images),
+                "data": images,
+                "multi_image": len(images) > 1,
+            }
 
         return redirect("wine-add")
 
