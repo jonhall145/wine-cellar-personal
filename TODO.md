@@ -2,7 +2,7 @@
 
 This document outlines identified issues, improvements, and technical debt items that should be addressed to improve the Wine Cellar project's code quality, security, maintainability, and user experience.
 
-**Generated:** 2025-12-27  
+**Updated:** 2026-01-11
 **Version:** 0.3.0-rc.0
 
 **Note:** Hardcoded credentials in settings files are development placeholders and not considered security issues.
@@ -11,17 +11,10 @@ This document outlines identified issues, improvements, and technical debt items
 
 ## 🔴 High Priority - Security & Critical Issues
 
-### ~~1. Wildcard Imports in Settings Files~~ ✅ DONE
-**Files:**
-- `wine_cellar/conf/prod.py`
-- `wine_cellar/conf/test.py`
-
-**Status:** Already uses explicit imports - no wildcard imports present.
-
 ### 2. Production Setup Marked as "Under Development"
-**File:** `docs/deployment.md`  
-**Issue:** Production deployment documentation states "This setup is under development. Proceed with caution."  
-**Risk:** May indicate incomplete or untested production deployment process  
+**File:** `docs/deployment.md`
+**Issue:** Production deployment documentation states "This setup is under development. Proceed with caution."
+**Risk:** May indicate incomplete or untested production deployment process
 **Fix:**
 - Thoroughly test production deployment process
 - Document all production-ready configurations
@@ -32,31 +25,21 @@ This document outlines identified issues, improvements, and technical debt items
 
 ## 🟡 Medium Priority - Code Quality & Technical Debt
 
-### ~~3. Fix Hacky Form Step Workaround~~ ✅ DONE
-**Status:** No FIXME comments exist in codebase - issue has been resolved.
-
-### ~~4. Missing Test Target in Makefile~~ ✅ DONE
-**Status:** `make test` target exists as alias to `pytest`.
-
 ### 5. Improve Test Coverage
-**Current Status:** 16 test files covering main functionality  
-**Issue:** Unknown test coverage percentage, potential gaps in testing  
+**Current Status:** 67% coverage (target: 80%)
+**Issue:** Main gap in `views.py` at 52% coverage
 **Fix:**
-- Run coverage report to identify untested code paths
 - Add tests for:
   - Barcode scanning functionality
   - Email notification system
   - Image upload/delete operations
   - User settings management
   - Edge cases in wine filtering and sorting
-- Set minimum coverage threshold (e.g., 80%)
-
-### ~~6. Missing API Documentation~~ ✅ DONE
-**Status:** API documentation exists in `docs/api.md`.
+- Increase coverage to 80% minimum
 
 ### 7. No Database Backup/Restore Documentation
-**Issue:** Missing documentation for backup and restore procedures  
-**Impact:** Risk of data loss without clear backup strategy  
+**Issue:** Missing documentation for backup and restore procedures
+**Impact:** Risk of data loss without clear backup strategy
 **Fix:**
 - Add docs/backup.md with:
   - Database backup procedures for PostgreSQL
@@ -68,19 +51,8 @@ This document outlines identified issues, improvements, and technical debt items
 
 ## 🟢 Low Priority - Enhancements & Nice-to-Have
 
-### ~~8. Add Pre-commit Hooks Configuration File~~ ✅ DONE
-**Status:** `.pre-commit-config.yaml` added with black, isort, flake8, djlint,
-and Django migration checks.
-
-### ~~9. Improve Error Handling in Views~~ ✅ PARTIALLY DONE
-**Status:** Custom error pages added (400.html, 403.html, 404.html, 500.html).
-Logging already configured in settings.py.
-
-### ~~10. Add Health Check Endpoint~~ ✅ DONE
-**Status:** `/health/` endpoint exists with database, disk space, and Celery status checks.
-
 ### 11. Internationalization Improvements
-**Current Status:** German locale files present but incomplete  
+**Current Status:** German locale files present but incomplete
 **Fix:**
 - Complete German translations
 - Add language switcher in UI
@@ -96,7 +68,7 @@ Logging already configured in settings.py.
 - Optimize wine image serving (thumbnails, lazy loading)
 
 ### 14. Accessibility Improvements
-**Issue:** No documented accessibility testing or WCAG compliance  
+**Issue:** No documented accessibility testing or WCAG compliance
 **Fix:**
 - Run accessibility audit (e.g., with Lighthouse, axe)
 - Add ARIA labels where needed
@@ -105,7 +77,7 @@ Logging already configured in settings.py.
 - Add accessibility documentation
 
 ### 15. Mobile Responsiveness Review
-**Issue:** Unknown state of mobile responsiveness  
+**Issue:** Unknown state of mobile responsiveness
 **Fix:**
 - Test all pages on mobile devices
 - Ensure barcode scanner works on mobile
@@ -114,7 +86,7 @@ Logging already configured in settings.py.
 - Test touch interactions
 
 ### 16. Add Contributing Guidelines
-**File:** Create `CONTRIBUTING.md`  
+**File:** Create `CONTRIBUTING.md`
 **Contents:**
 - Code of conduct
 - How to submit issues
@@ -125,30 +97,19 @@ Logging already configured in settings.py.
 - Development setup instructions
 
 ### 17. Add Security Policy
-**File:** Create `SECURITY.md`  
+**File:** Create `SECURITY.md`
 **Contents:**
 - How to report security vulnerabilities
 - Security update policy
 - Supported versions
 - Response timeline
 
-### ~~18. Improve Logging Strategy~~ ✅ DONE
-**Status:** Comprehensive logging configured in `settings.py` with verbose formatters,
-console/mail handlers, and dedicated wine_cellar/audit loggers.
-
-### ~~19. Add Rate Limiting~~ ✅ DONE
-**Status:** Rate limiting implemented:
-- Login/signup via `ACCOUNT_RATE_LIMITS` in settings (5/min/ip)
-- Wine vision extraction: 10/min/user
-- Barcode scanning: 30/min/user
-- Wine creation: 20/min/user
-
 ---
 
 ## 📋 Documentation Improvements
 
 ### 20. Add Architecture Documentation
-**File:** Create `docs/architecture.md`  
+**File:** Create `docs/architecture.md`
 **Contents:**
 - System architecture diagram
 - Data flow diagrams
@@ -165,16 +126,8 @@ console/mail handlers, and dedicated wine_cellar/audit loggers.
 - Add troubleshooting section
 - Link to live demo if available
 
-### 22. Add API Reference Documentation
-**File:** Create `docs/api.md`  
-**Contents:**
-- List all AJAX endpoints
-- Request/response formats
-- Authentication requirements
-- Example curl commands
-
 ### 23. Document Environment Variables
-**File:** Create `docs/configuration.md`  
+**File:** Create `docs/configuration.md`
 **Contents:**
 - Complete list of all environment variables
 - Default values
@@ -182,7 +135,7 @@ console/mail handlers, and dedicated wine_cellar/audit loggers.
 - Examples for different deployment scenarios
 
 ### 24. Add Upgrade Guide
-**File:** Create `docs/upgrading.md`  
+**File:** Create `docs/upgrading.md`
 **Contents:**
 - Version upgrade procedures
 - Breaking changes between versions
@@ -194,21 +147,21 @@ console/mail handlers, and dedicated wine_cellar/audit loggers.
 ## 🔧 Dependency & Build Improvements
 
 ### 25. Add Dependency License Checker
-**Issue:** No automated license compliance checking  
+**Issue:** No automated license compliance checking
 **Fix:**
 - Add tool to check dependency licenses
 - Ensure all dependencies are compatible with AGPL-3.0
 - Document license information
 
 ### 27. Add SBOM Generation
-**Issue:** No Software Bill of Materials  
+**Issue:** No Software Bill of Materials
 **Fix:**
 - Generate SBOM for security/compliance
 - Use tools like syft or cyclonedx
 - Include in release artifacts
 
 ### 28. Review and Update Dependencies
-**Note:** Renovate is configured for automated updates  
+**Note:** Renovate is configured for automated updates
 **Action items:**
 - Review current dependency versions
 - Test major version upgrades in staging
@@ -219,28 +172,28 @@ console/mail handlers, and dedicated wine_cellar/audit loggers.
 ## 🎨 UI/UX Improvements
 
 ### 29. Add Loading States
-**Issue:** No visible loading indicators for async operations  
+**Issue:** No visible loading indicators for async operations
 **Fix:**
 - Add spinners for barcode scanning
 - Add loading states for form submissions
 - Add skeleton screens for data loading
 
 ### 30. Improve Empty States
-**Issue:** Unknown quality of empty states (no wines, no stock)  
+**Issue:** Unknown quality of empty states (no wines, no stock)
 **Fix:**
 - Add helpful empty state messages
 - Include call-to-action buttons
 - Add illustrations or icons
 
 ### 31. Add Data Export Functionality
-**Enhancement:** Allow users to export their wine data  
+**Enhancement:** Allow users to export their wine data
 **Fix:**
 - Add CSV/JSON export for wine list
 - Add PDF export for individual wine details
 - Add backup export (all user data)
 
 ### 32. Add Bulk Operations
-**Enhancement:** Support bulk actions on wines  
+**Enhancement:** Support bulk actions on wines
 **Fix:**
 - Bulk delete wines
 - Bulk update categories
@@ -252,22 +205,15 @@ console/mail handlers, and dedicated wine_cellar/audit loggers.
 ## 🔐 Security Hardening
 
 ### 33. Add Content Security Policy (CSP)
-**Issue:** No CSP headers configured  
+**Issue:** No CSP headers configured
 **Fix:**
 - Configure django-csp or similar
 - Set strict CSP policy
 - Test with inline scripts
 - Document CSP configuration
 
-### ~~34. Add Security Headers~~ ✅ DONE
-**Status:** Security headers configured in `settings.py`:
-- X_FRAME_OPTIONS = "DENY"
-- SECURE_CONTENT_TYPE_NOSNIFF = True
-- SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
-- SECURE_BROWSER_XSS_FILTER = True
-
 ### 35. Implement Password Strength Requirements
-**Issue:** No documented password policy  
+**Issue:** No documented password policy
 **Fix:**
 - Configure Django password validators
 - Add password strength meter in UI
@@ -275,7 +221,7 @@ console/mail handlers, and dedicated wine_cellar/audit loggers.
 - Consider adding 2FA support
 
 ### 36. Add Audit Logging
-**Enhancement:** Track security-relevant events  
+**Enhancement:** Track security-relevant events
 **Fix:**
 - Log login attempts (success/failure)
 - Log password changes
@@ -288,7 +234,7 @@ console/mail handlers, and dedicated wine_cellar/audit loggers.
 ## 🧪 Testing Improvements
 
 ### 37. Add End-to-End Tests
-**Issue:** No E2E tests for critical user flows  
+**Issue:** No E2E tests for critical user flows
 **Fix:**
 - Add Selenium or Playwright tests
 - Test critical flows:
@@ -299,7 +245,7 @@ console/mail handlers, and dedicated wine_cellar/audit loggers.
 - Run E2E tests in CI
 
 ### 38. Add Performance Tests
-**Issue:** No performance benchmarks  
+**Issue:** No performance benchmarks
 **Fix:**
 - Add load testing (e.g., with Locust)
 - Test database query performance
@@ -307,7 +253,7 @@ console/mail handlers, and dedicated wine_cellar/audit loggers.
 - Document performance benchmarks
 
 ### 39. Add Visual Regression Testing
-**Enhancement:** Catch unintended UI changes  
+**Enhancement:** Catch unintended UI changes
 **Fix:**
 - Add Percy or BackstopJS
 - Create baseline screenshots
@@ -318,7 +264,7 @@ console/mail handlers, and dedicated wine_cellar/audit loggers.
 ## 📊 Monitoring & Observability
 
 ### 40. Add Application Monitoring
-**Enhancement:** Better production visibility  
+**Enhancement:** Better production visibility
 **Fix:**
 - Integrate with Sentry for error tracking
 - Add performance monitoring (APM)
@@ -326,7 +272,7 @@ console/mail handlers, and dedicated wine_cellar/audit loggers.
 - Document monitoring setup
 
 ### 41. Add Database Monitoring
-**Enhancement:** Track database health  
+**Enhancement:** Track database health
 **Fix:**
 - Monitor query performance
 - Track connection pool usage
@@ -338,7 +284,7 @@ console/mail handlers, and dedicated wine_cellar/audit loggers.
 ## 🚀 Deployment & Infrastructure
 
 ### 42. Add Deployment Automation
-**Enhancement:** Simplify deployment process  
+**Enhancement:** Simplify deployment process
 **Fix:**
 - Add deployment scripts
 - Document zero-downtime deployment
@@ -346,7 +292,7 @@ console/mail handlers, and dedicated wine_cellar/audit loggers.
 - Consider adding staging environment
 
 ### 43. Add Database Migration Testing
-**Issue:** No documented migration testing process  
+**Issue:** No documented migration testing process
 **Fix:**
 - Test migrations on production-like data
 - Document migration rollback procedures
@@ -358,7 +304,7 @@ console/mail handlers, and dedicated wine_cellar/audit loggers.
 ## 🌟 Feature Completeness
 
 ### 45. Complete Email Notification System
-**Status:** Drink-by reminders mentioned but implementation unclear  
+**Status:** Drink-by reminders mentioned but implementation unclear
 **Fix:**
 - Ensure email templates exist and are tested
 - Add email preview functionality
@@ -366,14 +312,14 @@ console/mail handlers, and dedicated wine_cellar/audit loggers.
 - Add email notification preferences
 
 ### 46. Add Wine Recommendation System
-**Enhancement:** Suggest wines based on user preferences  
+**Enhancement:** Suggest wines based on user preferences
 **Fix:**
 - Implement basic recommendation algorithm
 - Based on ratings, wine types, regions
 - Add "wines you might like" section
 
 ### 47. Add Wine Statistics Dashboard
-**Enhancement:** More analytics for users  
+**Enhancement:** More analytics for users
 **Fix:**
 - Add charts for wine types, regions, vintages
 - Show spending over time
@@ -385,13 +331,10 @@ console/mail handlers, and dedicated wine_cellar/audit loggers.
 ## Priority Summary
 
 **Should Address Soon (Quality):**
-- ~~#1 - Wildcard imports~~ ✅ DONE
-- ~~#3 - Form step workaround~~ ✅ DONE
-- #5 - Test coverage
-- ~~#19 - Rate limiting~~ ✅ DONE
+- #5 - Test coverage (67% → 80%)
+- #33 - Content Security Policy
 
 **Good to Have (Enhancements):**
-- ~~#10 - Health check endpoint~~ ✅ DONE
 - #20-24 - Documentation improvements
 - #31 - Data export
 - #40 - Application monitoring
