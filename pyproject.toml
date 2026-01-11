@@ -36,6 +36,15 @@ python_files = ["test_*.py", "*_test.py"]
 [tool.coverage.run]
 omit = ["wine_cellar/conf/*","**/tests/*", "**/migrations/*"]
 
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
 
 [tool.commitizen]
 name = "cz_customize"

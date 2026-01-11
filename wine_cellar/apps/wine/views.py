@@ -576,7 +576,12 @@ class WineListView(FilterView):
     paginate_by = 10
 
     def get_queryset(self):
-        qs = super().get_queryset().order_by("-created")
+        qs = (
+            super()
+            .get_queryset()
+            .prefetch_related("grapes", "attributes", "food_pairings", "images")
+            .order_by("-created")
+        )
         qs = qs.annotate(
             effective_price=Coalesce(
                 Avg("storageitem__price"),
