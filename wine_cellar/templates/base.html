@@ -197,17 +197,6 @@
             {% endblock allauth_wrapper %}
         </main>
         {% if user.is_authenticated %}
-            <div class="fab-container">
-                <a href="{% url 'wine-scan' %}" class="fab fab--small" aria-label="{% translate 'Scan wine barcode' %}">
-                    <i class="fa-solid fa-barcode"></i>
-                </a>
-                <a href="{% url 'wine-add' %}" class="fab fab--small" aria-label="{% translate 'Add new wine' %}">
-                    <i class="fa-solid fa-wine-bottle"></i>
-                </a>
-                <button class="fab fab--main" type="button" aria-label="{% translate 'Quick actions' %}">
-                    <i class="fa-solid fa-plus"></i>
-                </button>
-            </div>
             <!-- Mobile bottom navigation -->
             <nav class="bottom-nav">
                 <a href="{% url 'homepage' %}" class="bottom-nav__item">

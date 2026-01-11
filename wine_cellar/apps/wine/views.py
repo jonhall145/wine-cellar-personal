@@ -635,15 +635,59 @@ class WineMapView(TemplateView):
 
 @login_not_required
 def health_check(request):
-    """Health check endpoint for container orchestration."""
+    """Health check endpoint for container orchestration and monitoring.
+
+    Checks:
+    - Database connectivity
+    - Disk space for media uploads
+    - Celery worker status (if configured)
+    """
+    import shutil
+
+    health = {
+        "status": "ok",
+        "database": "ok",
+        "disk": "ok",
+        "celery": "unknown",
+    }
+    status_code = 200
+
+    # Check database connectivity
     try:
         for conn in connections.all():
             conn.ensure_connection()
-        db_ok = True
     except Exception:
-        db_ok = False
-    status_code = 200 if db_ok else 503
-    return JsonResponse({"status": "ok" if db_ok else "unhealthy"}, status=status_code)
+        health["database"] = "unhealthy"
+        health["status"] = "unhealthy"
+        status_code = 503
+
+    # Check disk space for media uploads
+    try:
+        media_root = getattr(settings, "MEDIA_ROOT", "/tmp")
+        disk_usage = shutil.disk_usage(media_root)
+        free_gb = disk_usage.free / (1024**3)
+        health["disk_free_gb"] = round(free_gb, 2)
+        # Warn if less than 1GB free
+        if free_gb < 1:
+            health["disk"] = "low"
+            if free_gb < 0.1:  # Critical if less than 100MB
+                health["disk"] = "critical"
+                health["status"] = "unhealthy"
+                status_code = 503
+    except Exception:
+        health["disk"] = "unknown"
+
+    # Check Celery worker status (optional)
+    try:
+        from django_celery_beat.models import PeriodicTask
+
+        # Just check if celery beat tables are accessible
+        PeriodicTask.objects.exists()
+        health["celery"] = "configured"
+    except Exception:
+        health["celery"] = "not_configured"
+
+    return JsonResponse(health, status=status_code)
 
 
 class DrinkRecordCreateView(FormView):

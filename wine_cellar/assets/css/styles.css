@@ -321,64 +321,7 @@ a:hover {
   font-size: var(--font-sm);
 }
 
-/* Quick action FAB (Floating Action Button) - Mobile only */
-.fab-container {
-  position: fixed;
-  bottom: 80px;
-  right: 24px;
-  z-index: 100;
-  display: flex;
-  flex-direction: column-reverse;
-  align-items: center;
-  gap: 12px;
-}
 
-.fab {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-  color: white;
-  border: none;
-  box-shadow: 0 4px 12px rgba(1, 150, 3, 0.4);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  transition: all var(--transition-fast);
-}
-
-.fab:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 20px rgba(1, 150, 3, 0.5);
-}
-
-.fab--small {
-  width: 44px;
-  height: 44px;
-  font-size: 18px;
-  opacity: 0;
-  transform: scale(0.5) translateY(20px);
-  pointer-events: none;
-  transition: all var(--transition-normal);
-}
-
-.fab-container.active .fab--small {
-  opacity: 1;
-  transform: scale(1) translateY(0);
-  pointer-events: auto;
-}
-
-.fab-container.active .fab--main {
-  transform: rotate(45deg);
-}
-
-@media screen and (min-width: 48em) {
-  .fab-container {
-    display: none;
-  }
-}
 
 /* Dark mode toggle */
 .theme-toggle {
