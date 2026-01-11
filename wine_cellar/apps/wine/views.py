@@ -12,6 +12,7 @@ from django.urls import reverse, reverse_lazy
 from django.utils.formats import number_format
 from django.views.generic import DeleteView, DetailView, FormView, TemplateView
 from django_filters.views import FilterView
+from django_ratelimit.decorators import ratelimit
 
 from wine_cellar.apps.storage.models import Storage, StorageItem
 from wine_cellar.apps.user.views import get_user_settings
@@ -1130,6 +1131,7 @@ class LabelScanResultView(TemplateView):
         return info
 
 
+@ratelimit(key="user", rate="10/m", method="POST", block=True)
 @login_required
 def extract_wine_vision_ajax(request):
     """
@@ -1140,6 +1142,8 @@ def extract_wine_vision_ajax(request):
     existing wine in the user's collection, that wine's data is returned.
     Otherwise, AI vision extraction is used to extract wine details from
     the label images.
+
+    Rate limited to 10 requests per minute per user.
     """
     import base64
 
@@ -1238,6 +1242,7 @@ def extract_wine_vision_ajax(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
+@ratelimit(key="user", rate="30/m", method="POST", block=True)
 @login_required
 def scan_barcode_ajax(request):
     """
@@ -1245,6 +1250,8 @@ def scan_barcode_ajax(request):
 
     This endpoint uses pyzbar to scan barcodes from a base64-encoded image.
     Returns detected barcodes without AI processing.
+
+    Rate limited to 30 requests per minute per user.
     """
     import json
 

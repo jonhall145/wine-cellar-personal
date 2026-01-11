@@ -1,6 +1,101 @@
-from wine_cellar.conf.settings import *  # noqa: F403, F401
-from wine_cellar.conf.settings import BASE_DIR
+"""
+Test settings for Wine Cellar.
 
+This module imports all base settings and overrides test-specific values.
+"""
+
+# Import all base settings explicitly
+from wine_cellar.conf.settings import (
+    ACCOUNT_ADAPTER,
+    ALLOWED_HOSTS,
+    ANTHROPIC_API_KEY,
+    AUTH_PASSWORD_VALIDATORS,
+    AUTHENTICATION_BACKENDS,
+    BASE_DIR,
+    CSRF_TRUSTED_ORIGINS,
+    CURRENCIES,
+    CURRENCY_SYMBOLS,
+    DATABASES,
+    DEBUG,
+    DEFAULT_AUTO_FIELD,
+    DEFAULT_WINE_IMAGE,
+    EMAIL_BACKEND,
+    INSTALLED_APPS,
+    LANGUAGE_CODE,
+    LANGUAGES,
+    LOCALE_PATHS,
+    LOGIN_REDIRECT_URL,
+    LOGOUT_REDIRECT_URL,
+    MAP_BASEURL,
+    MEDIA_URL,
+    MIDDLEWARE,
+    ROOT_DIR,
+    ROOT_URLCONF,
+    SECRET_KEY,
+    SECURE_BROWSER_XSS_FILTER,
+    SECURE_CONTENT_TYPE_NOSNIFF,
+    SECURE_REFERRER_POLICY,
+    SITE_URL,
+    STATIC_ROOT,
+    STATIC_URL,
+    STATICFILES_DIRS,
+    TEMPLATES,
+    TIME_ZONE,
+    USE_I18N,
+    USE_TZ,
+    VERSION,
+    WSGI_APPLICATION,
+    X_FRAME_OPTIONS,
+)
+
+# Test-specific settings
 MEDIA_ROOT = BASE_DIR / "test_media/"
 
+# Run Celery tasks synchronously in tests
 CELERY_TASK_ALWAYS_EAGER = True
+
+# Ensure all exports are available
+__all__ = [
+    "ACCOUNT_ADAPTER",
+    "ALLOWED_HOSTS",
+    "ANTHROPIC_API_KEY",
+    "AUTH_PASSWORD_VALIDATORS",
+    "AUTHENTICATION_BACKENDS",
+    "BASE_DIR",
+    "CELERY_TASK_ALWAYS_EAGER",
+    "CSRF_TRUSTED_ORIGINS",
+    "CURRENCIES",
+    "CURRENCY_SYMBOLS",
+    "DATABASES",
+    "DEBUG",
+    "DEFAULT_AUTO_FIELD",
+    "DEFAULT_WINE_IMAGE",
+    "EMAIL_BACKEND",
+    "INSTALLED_APPS",
+    "LANGUAGE_CODE",
+    "LANGUAGES",
+    "LOCALE_PATHS",
+    "LOGIN_REDIRECT_URL",
+    "LOGOUT_REDIRECT_URL",
+    "MAP_BASEURL",
+    "MEDIA_ROOT",
+    "MEDIA_URL",
+    "MIDDLEWARE",
+    "ROOT_DIR",
+    "ROOT_URLCONF",
+    "SECRET_KEY",
+    "SECURE_BROWSER_XSS_FILTER",
+    "SECURE_CONTENT_TYPE_NOSNIFF",
+    "SECURE_REFERRER_POLICY",
+    "SITE_URL",
+    "STATIC_ROOT",
+    "STATIC_URL",
+    "STATICFILES_DIRS",
+    "TEMPLATES",
+    "TIME_ZONE",
+    "USE_I18N",
+    "USE_TZ",
+    "VERSION",
+    "WSGI_APPLICATION",
+    "X_FRAME_OPTIONS",
+]
