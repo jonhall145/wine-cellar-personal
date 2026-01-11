@@ -44,6 +44,12 @@ For production, configure a real email backend:
 | `CELERY_BROKER_URL` | No | - | Message broker URL (e.g., `redis://localhost:6379/0`) |
 | `CELERY_RESULT_BACKEND` | No | - | Result backend URL |
 
+## Logging
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `LOG_LEVEL` | No | `INFO` | Logging level for wine_cellar app (DEBUG, INFO, WARNING, ERROR) |
+
 ## Example .env File
 
 ```bash
