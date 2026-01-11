@@ -200,8 +200,16 @@ class WineCreateView(FormView):
         # Check if we've already processed this scan
         extraction_result = self.request.session.get("extraction_result")
 
-        if scanned_label and not extraction_result:
-            # Only process if we haven't already extracted data
+        # Determine if we should (re-)extract:
+        # - Extract if we have a scanned label and no extraction result
+        # - Re-extract if previous extraction had errors (don't get stuck on errors)
+        should_extract = scanned_label and (
+            not extraction_result
+            or extraction_result.get("errors")  # Retry if there were errors
+        )
+
+        if should_extract:
+            # Process extraction (or retry after error)
             try:
                 from wine_cellar.apps.wine.services import WineVisionExtractor
 
@@ -230,6 +238,8 @@ class WineCreateView(FormView):
                     ),
                     "extracted_data": result.get("data", {}),  # Store for reuse
                 }
+                # Update local variable for use below
+                extraction_result = self.request.session["extraction_result"]
 
             except Exception as e:
                 # Log error but don't break the page
@@ -244,6 +254,7 @@ class WineCreateView(FormView):
                     "scanned_image": scanned_label.get("data"),
                     "extracted_data": {},
                 }
+                extraction_result = self.request.session["extraction_result"]
 
         # If we have extraction results, use them
         if extraction_result:
@@ -1088,6 +1099,10 @@ class LabelScanView(FormView):
     def post(self, request, *args, **kwargs):
         import base64
 
+        # Clear any previous extraction results when starting a new scan
+        if "extraction_result" in self.request.session:
+            del self.request.session["extraction_result"]
+
         # Handle camera capture data - check for multiple images
         image_count = request.POST.get("image_count")
         if image_count:
@@ -1136,6 +1151,10 @@ class LabelScanView(FormView):
 
     def form_valid(self, form):
         import base64
+
+        # Clear any previous extraction results when starting a new scan
+        if "extraction_result" in self.request.session:
+            del self.request.session["extraction_result"]
 
         images = []
 
