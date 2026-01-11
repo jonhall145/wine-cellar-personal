@@ -110,3 +110,4 @@ make fixtures   # Load sample data
 3. **Clean up test artifacts** (screenshots, test scripts) after inspection
 4. **The jsi18n endpoint requires authentication** - script tag is conditionally loaded
 5. **Map tiles require internet access** - expect fetch errors in isolated environments
+6. **Only update jonhall145 repos** - Do not create PRs to upstream repos (the-broke-sommeliers). Only push to origin (jonhall145)
