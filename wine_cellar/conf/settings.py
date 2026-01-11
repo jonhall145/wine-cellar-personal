@@ -198,6 +198,15 @@ ACCOUNT_ADAPTER = (
     "wine_cellar.apps.user.signup_adapter.ConfigurableSignupAccountAdapter"
 )
 
+# Rate limiting for authentication (django-allauth)
+# Limits login attempts to prevent brute force attacks
+ACCOUNT_RATE_LIMITS = {
+    "login": "5/m/ip",  # 5 login attempts per minute per IP
+    "login_failed": "5/m/ip,10/h/ip",  # After 5 failures/min or 10/hour, block
+    "signup": "5/m/ip",  # 5 signups per minute per IP
+    "password_reset": "5/m/ip",  # 5 password reset requests per minute
+}
+
 # Security settings
 # These provide baseline security headers for all responses
 SECURE_BROWSER_XSS_FILTER = True

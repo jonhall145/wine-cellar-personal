@@ -11,16 +11,12 @@ This document outlines identified issues, improvements, and technical debt items
 
 ## 🔴 High Priority - Security & Critical Issues
 
-### 1. Wildcard Imports in Settings Files
-**Files:** 
+### ~~1. Wildcard Imports in Settings Files~~ ✅ DONE
+**Files:**
 - `wine_cellar/conf/prod.py`
 - `wine_cellar/conf/test.py`
 
-**Issue:** These files use `from .settings import *` which is considered bad practice  
-**Risk:** Makes it difficult to track which settings are being used, can lead to namespace pollution  
-**Fix:**
-- Refactor to use explicit imports or a settings base class pattern
-- Consider using django-environ or python-decouple for better settings management
+**Status:** Already uses explicit imports - no wildcard imports present.
 
 ### 2. Production Setup Marked as "Under Development"
 **File:** `docs/deployment.md`  
@@ -36,27 +32,11 @@ This document outlines identified issues, improvements, and technical debt items
 
 ## 🟡 Medium Priority - Code Quality & Technical Debt
 
-### 3. Fix Hacky Form Step Workaround
-**File:** `wine_cellar/apps/wine/views.py` (around line with FIXME comment)  
-**Issue:** Code contains comment "FIXME: hacky workaround to increase form_step field"  
-**Code:**
-```python
-# FIXME: hacky workaround to increase form_step field
-form.data = form.data.copy()
-form.data["form_step"] = form.cleaned_data["form_step"] + 1
-```
-**Fix:**
-- Refactor multi-step form handling to use a proper form wizard or session-based approach
-- Consider using Django FormWizard or similar library
-- Remove the need to mutate form.data directly
+### ~~3. Fix Hacky Form Step Workaround~~ ✅ DONE
+**Status:** No FIXME comments exist in codebase - issue has been resolved.
 
-### 4. Missing Test Target in Makefile
-**File:** `Makefile`  
-**Issue:** Documentation mentions `make test` but Makefile only has `make pytest`  
-**Impact:** Documentation inconsistency  
-**Fix:**
-- Add `test` target as alias to `pytest` in Makefile
-- Update docs/testing.md to use consistent command names
+### ~~4. Missing Test Target in Makefile~~ ✅ DONE
+**Status:** `make test` target exists as alias to `pytest`.
 
 ### 5. Improve Test Coverage
 **Current Status:** 16 test files covering main functionality  
@@ -71,13 +51,8 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
   - Edge cases in wine filtering and sorting
 - Set minimum coverage threshold (e.g., 80%)
 
-### 6. Missing API Documentation
-**Issue:** No OpenAPI/Swagger documentation for AJAX endpoints  
-**Impact:** Difficult for developers to understand available endpoints  
-**Fix:**
-- Document all AJAX/JSON endpoints
-- Consider adding django-rest-framework with automatic API documentation
-- Or manually document endpoints in docs/
+### ~~6. Missing API Documentation~~ ✅ DONE
+**Status:** API documentation exists in `docs/api.md`.
 
 ### 7. No Database Backup/Restore Documentation
 **Issue:** Missing documentation for backup and restore procedures  
@@ -108,15 +83,8 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Add logging for debugging production issues
 - Consider using Django's message framework more extensively
 
-### 10. Add Health Check Endpoint
-**Issue:** No health check endpoint for monitoring/orchestration  
-**Impact:** Difficult to monitor application health in production  
-**Fix:**
-- Add `/health/` endpoint that checks:
-  - Database connectivity
-  - Celery worker status
-  - Disk space for media uploads
-- Document endpoint for monitoring tools
+### ~~10. Add Health Check Endpoint~~ ✅ DONE
+**Status:** `/health/` endpoint exists with database, disk space, and Celery status checks.
 
 ### 11. Internationalization Improvements
 **Current Status:** German locale files present but incomplete  
@@ -171,25 +139,16 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Supported versions
 - Response timeline
 
-### 18. Improve Logging Strategy
-**Issue:** No documented logging configuration  
-**Fix:**
-- Configure Django logging in settings
-- Add structured logging (JSON format for production)
-- Log important events (login, wine creation, stock changes)
-- Set up log rotation
-- Document log locations and formats
+### ~~18. Improve Logging Strategy~~ ✅ DONE
+**Status:** Comprehensive logging configured in `settings.py` with verbose formatters,
+console/mail handlers, and dedicated wine_cellar/audit loggers.
 
-### 19. Add Rate Limiting
-**Issue:** No rate limiting on forms or API endpoints  
-**Risk:** Vulnerable to abuse/spam  
-**Fix:**
-- Add django-ratelimit to protect:
-  - Login endpoint
-  - Barcode lookup
-  - Wine creation forms
-  - User registration (if enabled)
-- Configure reasonable limits
+### ~~19. Add Rate Limiting~~ ✅ DONE
+**Status:** Rate limiting implemented:
+- Login/signup via `ACCOUNT_RATE_LIMITS` in settings (5/min/ip)
+- Wine vision extraction: 10/min/user
+- Barcode scanning: 30/min/user
+- Wine creation: 20/min/user
 
 ---
 
@@ -307,14 +266,12 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 - Test with inline scripts
 - Document CSP configuration
 
-### 34. Add Security Headers
-**Issue:** Missing security headers  
-**Fix:**
-- Add X-Frame-Options
-- Add X-Content-Type-Options
-- Add Referrer-Policy
-- Add Permissions-Policy
-- Use django-security middleware
+### ~~34. Add Security Headers~~ ✅ DONE
+**Status:** Security headers configured in `settings.py`:
+- X_FRAME_OPTIONS = "DENY"
+- SECURE_CONTENT_TYPE_NOSNIFF = True
+- SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+- SECURE_BROWSER_XSS_FILTER = True
 
 ### 35. Implement Password Strength Requirements
 **Issue:** No documented password policy  
@@ -435,13 +392,13 @@ form.data["form_step"] = form.cleaned_data["form_step"] + 1
 ## Priority Summary
 
 **Should Address Soon (Quality):**
-- #1 - Wildcard imports
-- #3 - Form step workaround
+- ~~#1 - Wildcard imports~~ ✅ DONE
+- ~~#3 - Form step workaround~~ ✅ DONE
 - #5 - Test coverage
-- #19 - Rate limiting
+- ~~#19 - Rate limiting~~ ✅ DONE
 
 **Good to Have (Enhancements):**
-- #10 - Health check endpoint
+- ~~#10 - Health check endpoint~~ ✅ DONE
 - #20-24 - Documentation improvements
 - #31 - Data export
 - #40 - Application monitoring

@@ -9,6 +9,7 @@ from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
+from django.utils.decorators import method_decorator
 from django.utils.formats import number_format
 from django.views.generic import DeleteView, DetailView, FormView, TemplateView
 from django_filters.views import FilterView
@@ -179,7 +180,12 @@ class HomePageView(TemplateView):
         return context
 
 
+@method_decorator(
+    ratelimit(key="user", rate="20/m", method="POST", block=True), name="post"
+)
 class WineCreateView(FormView):
+    """View for creating new wines. Rate limited to 20 creations/minute per user."""
+
     template_name = "wine_create.html"
     form_class = WineForm
     success_url = reverse_lazy("wine-list")
