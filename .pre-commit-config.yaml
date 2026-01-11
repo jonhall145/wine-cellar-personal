@@ -1,0 +1,59 @@
+# Pre-commit hooks configuration
+# Install: pip install pre-commit && pre-commit install
+# Run: pre-commit run --all-files
+#
+# Note: This project also uses Husky for JS/TS linting via npm.
+# This config provides Python-focused hooks for developers not using npm.
+
+repos:
+  # General hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  # Python code formatting with Black
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        language_version: python3.11
+
+  # Python import sorting
+  - repo: https://github.com/pycqa/isort
+    rev: 6.0.1
+    hooks:
+      - id: isort
+        args: ["--profile", "black"]
+
+  # Python linting with flake8
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.1.2
+    hooks:
+      - id: flake8
+        args: ["--exclude", "migrations,settings"]
+        additional_dependencies:
+          - flake8-bugbear
+
+  # Django template linting
+  - repo: https://github.com/djlint/djLint
+    rev: v1.36.4
+    hooks:
+      - id: djlint-django
+        args: ["--ignore", "H030,H031,T002"]
+
+  # Check for Django migrations
+  - repo: local
+    hooks:
+      - id: django-migrations
+        name: Check Django migrations
+        entry: python manage.py makemigrations --dry-run --check --noinput
+        language: system
+        types: [python]
+        pass_filenames: false

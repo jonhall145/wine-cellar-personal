@@ -68,20 +68,13 @@ This document outlines identified issues, improvements, and technical debt items
 
 ## 🟢 Low Priority - Enhancements & Nice-to-Have
 
-### 8. Add Pre-commit Hooks Configuration File
-**Issue:** Husky is configured but no documented pre-commit hooks setup  
-**Fix:**
-- Add `.pre-commit-config.yaml` for Python developers not using npm
-- Document pre-commit hook setup in setup.md
-- Include black, isort, flake8 in pre-commit configuration
+### ~~8. Add Pre-commit Hooks Configuration File~~ ✅ DONE
+**Status:** `.pre-commit-config.yaml` added with black, isort, flake8, djlint,
+and Django migration checks.
 
-### 9. Improve Error Handling in Views
-**Issue:** Generic error handling in views, may not provide clear feedback  
-**Fix:**
-- Add custom error pages (400, 403, 404, 500)
-- Improve error messages for common user errors
-- Add logging for debugging production issues
-- Consider using Django's message framework more extensively
+### ~~9. Improve Error Handling in Views~~ ✅ PARTIALLY DONE
+**Status:** Custom error pages added (400.html, 403.html, 404.html, 500.html).
+Logging already configured in settings.py.
 
 ### ~~10. Add Health Check Endpoint~~ ✅ DONE
 **Status:** `/health/` endpoint exists with database, disk space, and Celery status checks.
