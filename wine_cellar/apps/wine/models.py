@@ -377,6 +377,11 @@ class Wine(UserContentModel):
     class Meta:
         verbose_name = _("Wine")
         verbose_name_plural = _("Wines")
+        indexes = [
+            models.Index(fields=["user", "wine_type"], name="wine_user_type_idx"),
+            models.Index(fields=["name"], name="wine_name_idx"),
+            models.Index(fields=["barcode"], name="wine_barcode_idx"),
+        ]
         constraints = [
             models.UniqueConstraint(
                 fields=[
@@ -394,18 +399,14 @@ class Wine(UserContentModel):
 
 
 class WineImage(models.Model):
-    image = models.ImageField(
-        upload_to=user_directory_path, verbose_name=_("Image")
-    )
+    image = models.ImageField(upload_to=user_directory_path, verbose_name=_("Image"))
     thumbnail = models.ImageField(
         upload_to=user_directory_path,
         blank=True,
         null=True,
         verbose_name=_("Thumbnail"),
     )
-    wine = models.ForeignKey(
-        Wine, on_delete=models.CASCADE, verbose_name=_("Wine")
-    )
+    wine = models.ForeignKey(Wine, on_delete=models.CASCADE, verbose_name=_("Wine"))
     user = models.ForeignKey(
         get_user_model(),
         on_delete=models.SET_NULL,
@@ -427,9 +428,7 @@ class WineImage(models.Model):
 class DrinkRecord(UserContentModel):
     """Record of drinking/consuming a bottle."""
 
-    wine = models.ForeignKey(
-        Wine, on_delete=models.CASCADE, verbose_name=_("Wine")
-    )
+    wine = models.ForeignKey(Wine, on_delete=models.CASCADE, verbose_name=_("Wine"))
     date_consumed = models.DateField(verbose_name=_("Date Consumed"))
     tasting_notes = models.TextField(
         null=True, blank=True, verbose_name=_("Tasting Notes")
@@ -474,7 +473,11 @@ class Wishlist(UserContentModel):
         null=True, blank=True, verbose_name=_("Vintage")
     )
     price_limit = models.DecimalField(
-        max_digits=6, decimal_places=2, null=True, blank=True, verbose_name=_("Price Limit")
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("Price Limit"),
     )
     notes = models.TextField(null=True, blank=True, verbose_name=_("Notes"))
     priority = models.PositiveIntegerField(
@@ -511,9 +514,7 @@ class BottleNote(UserContentModel):
 class DrinkingWindowAlert(UserContentModel):
     """Alerts for wines approaching drinking window."""
 
-    wine = models.ForeignKey(
-        Wine, on_delete=models.CASCADE, verbose_name=_("Wine")
-    )
+    wine = models.ForeignKey(Wine, on_delete=models.CASCADE, verbose_name=_("Wine"))
     alert_date = models.DateField(verbose_name=_("Alert Date"))
     message = models.CharField(
         max_length=250, null=True, blank=True, verbose_name=_("Message")
@@ -529,12 +530,8 @@ class DrinkingWindowAlert(UserContentModel):
 class ReorderReminder(UserContentModel):
     """Reminder to reorder a wine when stock drops below threshold."""
 
-    wine = models.ForeignKey(
-        Wine, on_delete=models.CASCADE, verbose_name=_("Wine")
-    )
-    min_stock = models.PositiveIntegerField(
-        default=1, verbose_name=_("Minimum Stock")
-    )
+    wine = models.ForeignKey(Wine, on_delete=models.CASCADE, verbose_name=_("Wine"))
+    min_stock = models.PositiveIntegerField(default=1, verbose_name=_("Minimum Stock"))
     is_active = models.BooleanField(default=True, verbose_name=_("Active"))
 
     class Meta:

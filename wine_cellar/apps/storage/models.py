@@ -60,3 +60,9 @@ class StorageItem(UserContentModel):
     class Meta:
         verbose_name = _("Storage Item")
         verbose_name_plural = _("Storage Items")
+        indexes = [
+            models.Index(fields=["user", "deleted"], name="storageitem_user_del_idx"),
+            models.Index(
+                fields=["storage", "row", "column"], name="storageitem_position_idx"
+            ),
+        ]
