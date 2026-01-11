@@ -1,13 +1,90 @@
 """Vision-based wine label extraction service using Claude Vision API."""
 
+import base64
+import io
 import logging
 import re
 from typing import Any
 
 import pycountry
 from django.conf import settings
+from PIL import Image
 
 logger = logging.getLogger(__name__)
+
+# Maximum image dimensions for Claude Vision API
+# Claude supports up to 8000x8000 but recommends smaller for performance
+MAX_IMAGE_DIMENSION = 1568  # Recommended max for good quality/speed balance
+MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024  # 5MB max per image
+
+
+def resize_image_for_api(base64_image: str, max_dimension: int = MAX_IMAGE_DIMENSION) -> str:
+    """
+    Resize an image if it exceeds the maximum dimensions.
+
+    Args:
+        base64_image: Base64-encoded image data
+        max_dimension: Maximum width or height in pixels
+
+    Returns:
+        Base64-encoded resized image (or original if small enough)
+    """
+    try:
+        # Decode base64 to bytes
+        image_bytes = base64.b64decode(base64_image)
+
+        # Check size first - if already small, skip processing
+        if len(image_bytes) < MAX_IMAGE_SIZE_BYTES // 2:
+            # Open to check dimensions
+            img = Image.open(io.BytesIO(image_bytes))
+            if img.width <= max_dimension and img.height <= max_dimension:
+                return base64_image  # Already small enough
+
+        # Open image
+        img = Image.open(io.BytesIO(image_bytes))
+
+        # Convert RGBA to RGB if necessary (JPEG doesn't support alpha)
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+
+        # Calculate new dimensions maintaining aspect ratio
+        width, height = img.size
+        if width > max_dimension or height > max_dimension:
+            if width > height:
+                new_width = max_dimension
+                new_height = int(height * (max_dimension / width))
+            else:
+                new_height = max_dimension
+                new_width = int(width * (max_dimension / height))
+
+            # Resize with high quality
+            img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            logger.info(f"Resized image from {width}x{height} to {new_width}x{new_height}")
+
+        # Save to bytes with quality optimization
+        output = io.BytesIO()
+        quality = 85
+
+        # Reduce quality if still too large
+        img.save(output, format="JPEG", quality=quality, optimize=True)
+        while output.tell() > MAX_IMAGE_SIZE_BYTES and quality > 30:
+            output = io.BytesIO()
+            quality -= 10
+            img.save(output, format="JPEG", quality=quality, optimize=True)
+
+        # Encode back to base64
+        output.seek(0)
+        resized_b64 = base64.b64encode(output.read()).decode("utf-8")
+
+        logger.info(
+            f"Image processed: {len(base64_image)} -> {len(resized_b64)} chars "
+            f"(quality={quality})"
+        )
+        return resized_b64
+
+    except Exception as e:
+        logger.warning(f"Failed to resize image, using original: {e}")
+        return base64_image
 
 
 class WineVisionExtractor:
@@ -145,10 +222,13 @@ class WineVisionExtractor:
             # Construct the prompt for structured extraction
             prompt = self._build_extraction_prompt()
 
-            # Build content array with all images
+            # Build content array with all images (resized for API)
             content = []
             image_labels = ["barcode", "front label", "back label"]
             for idx, base64_image in enumerate(base64_images):
+                # Resize image if too large
+                resized_image = resize_image_for_api(base64_image)
+
                 label = (
                     image_labels[idx] if idx < len(image_labels) else f"image {idx+1}"
                 )
@@ -159,7 +239,7 @@ class WineVisionExtractor:
                         "source": {
                             "type": "base64",
                             "media_type": "image/jpeg",
-                            "data": base64_image,
+                            "data": resized_image,
                         },
                     }
                 )
