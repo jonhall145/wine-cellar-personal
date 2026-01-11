@@ -580,7 +580,7 @@ class WineListView(FilterView):
         qs = (
             super()
             .get_queryset()
-            .prefetch_related("grapes", "attributes", "food_pairings", "images")
+            .prefetch_related("grapes", "attributes", "food_pairings", "wineimage_set")
             .order_by("-created")
         )
         qs = qs.annotate(

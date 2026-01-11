@@ -1,0 +1,1125 @@
+
+ ▐▛███▜▌   Claude Code v2.1.3
+▝▜█████▛▘  Opus 4.5 · Claude Pro
+  ▘▘ ▝▝    ~/wine
+
+❯ how many branches are going in this project? 
+
+● Bash(git branch -a | wc -l)
+  ⎿  21
+
+● Bash(git branch -a)
+  ⎿    feature/multi-image-vision-extraction
+     * feature/storage-grid-view
+       main
+     … +18 lines (ctrl+o to expand)
+
+● There are 21 branches total in this project:
+
+  Local branches (3):
+  - feature/multi-image-vision-extraction
+  - feature/storage-grid-view ← (current)
+  - main
+
+  Remote origin branches (6):
+  - main
+  - feature/storage-grid-view
+  - feature/multi-image-vision-extraction
+  - claude/plan-web-access-migration-QpGXS
+  - claude/ui-review-mobile-vXl04
+  - copilot/sub-pr-16
+
+  Remote upstream branches (11):
+  - main, gh-pages
+  - add-logo-replace-favicon, colour-changes, styling, styling2
+  - fix-changelog, fix-release-action
+  - pm-2025-add-test, pm-2025-change-check
+  - renovate/django-6.x
+
+❯ for all non merged branches, create a pr and merge if appropriate so that 
+  the local files are up to date and all work is in one place               
+
+● I'll help you consolidate all the work by identifying unmerged branches, creating PRs, and merging them. Let me start by analyzing what's not merged.
+
+● Bash(git fetch --all 2>/dev/null && git branch -a --no-merged main)
+  ⎿  Fetching origin                        
+     Fetching upstream
+       feature/multi-image-vision-extraction
+     … +19 lines (ctrl+o to expand)
+
+● Bash(echo "=== Local branches not merged into main ===" && git branch
+      --no-merged main | grep -v "^\*" && echo "" && echo "=== Current branch
+      ===" && git branch --sh…)
+  ⎿  === Local branches not merged into main ===
+       feature/multi-image-vision-extraction
+     … +2 lines (ctrl+o to expand)
+
+● Bash(echo "=== origin branches not merged ===" && git branch -r --no-merged
+      origin/main | grep "origin/" | grep -v HEAD)
+  ⎿  === origin branches not merged ===             
+       origin/claude/plan-web-access-migration-QpGXS
+       origin/copilot/sub-pr-16
+       origin/feature/storage-grid-view
+
+● Bash(echo "=== feature/multi-image-vision-extraction ===" && git log
+      main..feature/multi-image-vision-extraction --oneline)
+  ⎿  === feature/multi-image-vision-extraction ===                     
+     b448af1 fix: Better error handling in vision extraction JS
+     d773aad fix: Add @login_required decorator to vision AJAX endpoint
+     … +6 lines (ctrl+o to expand)
+
+● Bash(echo "=== feature/storage-grid-view (current) ===" && git log
+      main..feature/storage-grid-view --oneline)
+  ⎿ === feature/storage-grid-view (current) ===                            
+    3ea6835 Add capture button for server-side barcode analysis
+    615a2ee Improve button centering and add server startup guidance to age
+    … +61 lines (ctrl+o to expand)
+
+
+● Bash(echo "=== origin/claude/plan-web-access-migration-QpGXS ===" && git log
+      origin/main..origin/claude/plan-web-access-migration-QpGXS --oneline)
+  ⎿ === origin/claude/plan-web-access-migration-QpGXS ===                  
+    f4bb1e5 Merge branch 'the-broke-sommeliers:main' into claude/plan-web-a
+    ccess-migration-QpGXS
+    … +3 lines (ctrl+o to expand)
+
+
+● Bash(echo "=== origin/copilot/sub-pr-16 ===" && git log
+      origin/main..origin/copilot/sub-pr-16 --oneline)
+  ⎿  === origin/copilot/sub-pr-16 ===                                   
+     296c507 Remove extra blank line for consistent formatting
+     0c44931 Fix code style: remove redundant import and fix indentation
+     … +7 lines (ctrl+o to expand)
+
+● Bash(gh pr list --state all --json number,title,state,headRefName,baseRefName
+      | jq -r '.[] | "\(.number) [\(.state)] \(.headRefName) -> \(.baseRefName):
+       \(.title)"')
+  ⎿ 19 [OPEN] claude/plan-web-access-migration-QpGXS -> main: Claude/plan w
+    eb access migration qp gxs
+    18 [OPEN] feature/storage-grid-view -> main: Feature/storage grid view
+    … +35 lines (ctrl+o to expand)
+
+
+● Bash(gh pr view 17 --json
+      title,body,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup)
+  ⎿ {                                                                      
+      "body": "Addresses 14 findings from automated review of PR #16, focus
+    ing on security vulnerabilities, resource management, and code consiste
+    … +107 lines (ctrl+o to expand)
+
+
+
+● Bash(gh pr view 18 --json
+      title,body,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup)
+  ⎿  {                             
+       "body": "",
+       "mergeStateStatus": "CLEAN",
+     … +61 lines (ctrl+o to expand)
+
+● Bash(gh pr view 19 --json
+      title,body,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup)
+  ⎿  {                             
+       "body": "",
+       "mergeStateStatus": "CLEAN",
+     … +61 lines (ctrl+o to expand)
+
+● All 3 open PRs are mergeable with passing CI checks. Let me check for potential conflicts between them by examining the files they touch.
+
+● Bash(echo "=== PR #17 files ===" && gh pr diff 17 --name-only)
+  ⎿  === PR #17 files ===           
+     tests/test_barcode_service.py
+     tests/test_vision_extraction.py
+     … +7 lines (ctrl+o to expand)
+
+● Bash(echo "=== PR #18 files ===" && gh pr diff 18 --name-only)
+  ⎿  === PR #18 files ===          
+     .claude/agents/server-ops.md
+     .github/workflows/image.yml
+     … +14 lines (ctrl+o to expand)
+
+● Bash(echo "=== PR #19 files ===" && gh pr diff 19 --name-only)
+  ⎿  === PR #19 files ===         
+     requirements/base.txt
+     tests/conftest.py
+     … +7 lines (ctrl+o to expand)
+
+● Bash(gh pr view 17 --json baseRefName,headRefName)
+  ⎿  {                                   
+       "baseRefName": "main",
+       "headRefName": "copilot/sub-pr-16"
+     }
+
+● Bash(gh pr view 18 --json baseRefName,headRefName)
+  ⎿  {                                           
+       "baseRefName": "main",
+       "headRefName": "feature/storage-grid-view"
+     }
+
+● Bash(gh pr view 19 --json baseRefName,headRefName)
+  ⎿  {                                                        
+       "baseRefName": "main",
+       "headRefName": "claude/plan-web-access-migration-QpGXS"
+     }
+
+● All 3 PRs already exist and are ready to merge. Let me merge them in order:
+
+  Summary:
+  - PR #18 - Main feature branch (storage grid view, barcode scanning, vision extraction)
+  - PR #17 - Security fixes and code quality improvements
+  - PR #19 - Dependency updates and hardware tests
+
+● Bash(gh pr merge 18 --merge --delete-branch)
+  ⎿  Error: Exit code 1
+     failed to run git: error: Your local changes to the following files would be
+      overwritten by checkout:
+     	.gitignore
+     Please commit your changes or stash them before you switch branches.
+     Aborting
+
+● Bash(git stash)
+  ⎿ Saved working directory and index state WIP on feature/storage-grid-vie
+    w: 3ea6835 Add capture button for server-side barcode analysis
+
+
+● Bash(gh pr merge 18 --merge --delete-branch)
+  ⎿  Updating c8cf408..2e9e454                                    
+     Fast-forward
+      .claude/agents/server-ops.md                       |  128 ++
+     … +96 lines (ctrl+o to expand)
+
+● Bash(gh pr view 17 --json mergeable,mergeStateStatus)
+  ⎿  {                               
+       "mergeStateStatus": "UNKNOWN",
+       "mergeable": "UNKNOWN"
+     }
+
+● Bash(sleep 3 && gh pr view 17 --json mergeable,mergeStateStatus)
+  ⎿  {                             
+       "mergeStateStatus": "CLEAN",
+       "mergeable": "MERGEABLE"
+     }
+
+● Bash(gh pr merge 17 --merge --delete-branch)
+  ⎿  (No content)
+
+● Bash(sleep 3 && gh pr view 19 --json mergeable,mergeStateStatus)
+  ⎿  {                               
+       "mergeStateStatus": "UNKNOWN",
+       "mergeable": "UNKNOWN"
+     }
+
+● Bash(sleep 5 && gh pr view 19 --json mergeable,mergeStateStatus)
+  ⎿  {                             
+       "mergeStateStatus": "CLEAN",
+       "mergeable": "MERGEABLE"
+     }
+
+● Bash(gh pr merge 19 --merge --delete-branch)
+  ⎿  (No content)
+
+● Bash(git checkout main && git pull origin main)
+  ⎿  Your branch is up to date with 'origin/main'.
+     Updating 2e9e454..be3e903
+     Fast-forward
+     … +30 lines (ctrl+o to expand)
+
+● Bash(echo "=== Local branches before cleanup ===" && git branch)
+  ⎿  === Local branches before cleanup ===  
+       feature/multi-image-vision-extraction
+     * main
+
+● Bash(git branch --merged main)
+  ⎿    feature/multi-image-vision-extraction
+     * main
+
+● Bash(git branch -d feature/multi-image-vision-extraction && git fetch --prune)
+  ⎿ Deleted branch feature/multi-image-vision-extraction (was b448af1).    
+    From https://github.com/jonhall145/wine-cellar-personal
+     - [deleted]         (none)     -> origin/claude/plan-web-access-migrat
+    … +5 lines (ctrl+o to expand)
+
+
+● Bash(git stash list)
+  ⎿ stash@{0}: WIP on feature/storage-grid-view: 3ea6835 Add capture button
+     for server-side barcode analysis
+
+
+● Bash(git stash show -p)
+  ⎿  diff --git a/.gitignore b/.gitignore
+     index bcd0a6d..a92d4dd 100644
+     --- a/.gitignore
+     … +7 lines (ctrl+o to expand)
+
+● Bash(git stash pop)
+  ⎿  On branch main                               
+     Your branch is up to date with 'origin/main'.
+     … +7 lines (ctrl+o to expand)
+
+● Bash(echo "=== Final branch state ===" && git branch -a)
+  ⎿  === Final branch state ===          
+     * main
+       remotes/origin/HEAD -> origin/main
+     … +13 lines (ctrl+o to expand)
+
+● Bash(git push origin --delete feature/storage-grid-view 2>/dev/null || echo
+      "Branch already deleted or doesn't exist")
+  ⎿  (No content)
+
+● Bash(git fetch --prune && git branch -a)
+  ⎿  * main                              
+       remotes/origin/HEAD -> origin/main
+       remotes/origin/main
+     … +11 lines (ctrl+o to expand)
+
+● Done! All work has been consolidated into main. Here's a summary:
+
+  Merged PRs
+  PR: #18
+  Branch: feature/storage-grid-view
+  Description: Main feature: storage grid view, drag-drop, barcode scanning,
+    vision extraction, Pi client
+  ────────────────────────────────────────
+  PR: #17
+  Branch: copilot/sub-pr-16
+  Description: Security fixes: XSS prevention, file size validation, resource
+    cleanup
+  ────────────────────────────────────────
+  PR: #19
+  Branch: claude/plan-web-access-migration
+  Description: Hardware tests and dependency updates
+  Cleaned Up
+
+  Deleted local branches:
+  - feature/multi-image-vision-extraction (already merged via PR #10)
+  - feature/storage-grid-view (merged via PR #18)
+
+  Deleted remote branches:
+  - origin/feature/storage-grid-view
+  - origin/copilot/sub-pr-16
+  - origin/claude/plan-web-access-migration-QpGXS
+  - origin/claude/ui-review-mobile-vXl04
+  - origin/feature/multi-image-vision-extraction
+
+  Current State
+
+  - Local: Only main branch
+  - Remote origin: Only main branch
+  - Remote upstream: 11 branches from the upstream fork (not your repo)
+
+  Your local main is up to date with all the merged work. There's one uncommitted change to .gitignore (adding GEMINI.md to ignore list) that was previously stashed.
+
+✻ Sautéed for 4m 56s
+
+❯ commit the gitignore change 
+
+● Bash(git add .gitignore && git commit -m "Add GEMINI.md to .gitignore…)
+  ⎿ [main 42023c8] Add GEMINI.md to .gitignore                             
+     1 file changed, 1 insertion(+)
+    → lint-staged could not find any staged files matching configured tasks
+    .
+
+
+● Bash(git status)
+  ⎿  On branch main                                    
+     Your branch is ahead of 'origin/main' by 1 commit.
+       (use "git push" to publish your local commits)
+     … +2 lines (ctrl+o to expand)
+
+● Committed. Your local main is now 1 commit ahead of origin. Let me know if you'd like me to push it.
+
+❯ push it 
+
+● Bash(git push origin main)
+  ⎿  To https://github.com/jonhall145/wine-cellar-personal.git
+        be3e903..42023c8  main -> main
+
+● Pushed to origin/main.
+
+❯ can we have a bottles page to edit apecific bottles to upsate eg reserved 
+  occasion                                                                  
+
+● I'll help you create a bottles page for editing bottle details like reserved occasions. Let me first explore the codebase to understand the current structure.
+                                                                   
+● Entered plan mode
+  Claude is now exploring and designing an implementation approach.
+
+● 2 Explore agents finished (ctrl+o to expand)
+   ├─ Explore wine/bottle models · 11 tool uses · 48.6k tokens
+   │  ⎿  Done
+   └─ Explore existing bottle views/templates · 15 tool uses · 62.3k tokens
+      ⎿  Done
+
+● I've gathered the key information. Here's what I found:
+
+  Current state:
+  - The StorageItem model (individual bottles) already has an occasion field, plus is_gift, gift_from, and price
+  - There's NO edit view for individual bottles - you can only set these when adding a bottle, or delete and re-add
+  - The wine detail page shows bottles but only has "Move" and "Delete" actions
+
+  Let me clarify what you're looking for:
+                                                                  
+● User answered Claude's questions:
+  ⎿  · What kind of bottles page do you want? → Both
+     · Which bottle fields should be editable? → All bottle fields
+
+● Let me design the implementation approach.
+
+● Plan(Design bottles page implementation)
+  ⎿  Done (27 tool uses · 71.0k tokens · 2m 36s)                           
+
+● Let me verify a few key files to finalize the plan.
+
+● Read(wine_cellar/apps/wine/templates/wine_detail.html)
+  ⎿  Read 217 lines
+
+● Read(wine_cellar/apps/storage/templates/stock_add.html)
+  ⎿  Read 57 lines
+
+● Read(wine_cellar/templates/base.html)
+  ⎿  Read 100 lines
+
+● Now I have all the context needed. Let me write the final plan.
+
+● Updated plan
+  ⎿  Wrote 111 lines to ../.claude/plans/jolly-percolating-clover.md       
+     # Bottles Page Implementation Plan
+     ## Overview
+     Add a bottles management feature with:
+     1. **Bottles list page** - List all bottles with filters
+     2. **Bottle edit page** - Full-page form to edit bottle details
+     3. **Edit button on wine detail** - Quick access to edit from wine
+     detail page
+     ## Files to Modify
+     … +101 lines (ctrl+o to expand)
+
+● I've created a plan for the bottles page feature. Here's the summary:
+
+  What you'll get:
+  1. Bottles list page (/bottles/) - See all your bottles with filters for wine name, storage location, gift status, and reserved occasions
+  2. Bottle edit page - Full form to update: storage location, row/column, price, gift info, and occasion
+  3. Edit button on wine detail - Quick pencil icon next to each bottle in the stock table
+
+  Files to create/modify:
+  - 2 new templates (bottle_list.html, bottle_edit.html)
+  - 1 new filter file (filters.py)
+  - 1 new JS file (bottle_edit.ts)
+  - Additions to forms.py, views.py, urls.py
+  - Small updates to wine_detail.html and base.html navigation
+                                                                           
+● User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/jolly-percolating-clover.md · /plan to 
+     edit
+     Bottles Page Implementation Plan
+
+     Overview
+
+     Add a bottles management feature with:
+     1. Bottles list page - List all bottles with filters
+     2. Bottle edit page - Full-page form to edit bottle details
+     3. Edit button on wine detail - Quick access to edit from wine detail
+     page
+
+     Files to Modify
+
+     1. Forms (wine_cellar/apps/storage/forms.py)
+
+     Add StorageItemEditForm class with fields:
+     - storage (ModelChoiceField)
+     - row, column (IntegerField with Select widget)
+     - price (DecimalField)
+     - is_gift (BooleanField)
+     - gift_from (CharField)
+     - occasion (CharField)
+
+     Include validation to check slot availability, excluding current item's
+      position.
+
+     2. Views (wine_cellar/apps/storage/views.py)
+
+     Add two new views:
+
+     StorageItemListView (FilterView):
+     - Template: bottle_list.html
+     - Filter by: wine name, storage, is_gift, has_occasion
+     - Paginate: 20 per page
+     - Order by: -created (newest first)
+
+     StorageItemUpdateView (FormView):
+     - Template: bottle_edit.html
+     - Form: StorageItemEditForm
+     - Context: wine info, free cells (excluding current position)
+     - Redirect back to wine detail or bottle list based on ?next= param
+
+     3. URLs (wine_cellar/conf/urls.py)
+
+     Add routes:
+     bottles/              -> StorageItemListView  (name: bottle-list)
+     bottle/edit/<int:pk>/ -> StorageItemUpdateView (name: bottle-edit)
+
+     4. New Filter (wine_cellar/apps/storage/filters.py) - NEW FILE
+
+     Create StorageItemFilter using django-filters:
+     - wine_name - CharFilter (icontains on wine__name)
+     - storage - ModelChoiceFilter
+     - is_gift - ChoiceFilter (Yes/No)
+     - has_occasion - ChoiceFilter (Yes/No)
+     - order - OrderingFilter (date, wine name, storage, price)
+
+     Files to Create
+
+     5. Template: wine_cellar/apps/storage/templates/bottle_list.html
+
+     Two-column layout (same pattern as wine_list.html):
+     - Left: Filter form
+     - Right: Table with columns: Wine, Storage, Position, Price, Gift,
+     Occasion, Actions
+     - Actions: Edit button, Delete button
+     - Empty state when no bottles
+
+     6. Template: wine_cellar/apps/storage/templates/bottle_edit.html
+
+     Follow stock_add.html pattern:
+     - Show wine name/vintage at top
+     - Form fields: storage, row, column, price, is_gift, gift_from,
+     occasion
+     - Save and Cancel buttons
+     - Include storage_cells template tag for JS cell selection
+
+     7. JavaScript: wine_cellar/assets/js/bottle_edit.ts
+
+     Copy and adapt from stock_add.ts:
+     - Handle storage/row/column dropdowns
+     - Include current position as available (for edit mode)
+     - Pass current position via data attribute
+
+     Template Modifications
+
+     8. Wine Detail (wine_cellar/apps/wine/templates/wine_detail.html)
+
+     Line 183-185: Add edit button to bottle actions:
+     <a class="pure-button" href="{% url 'bottle-edit' item.pk %}" title="{%
+      translate 'Edit' %}">
+         <i class="fa-regular fa-pen-to-square"></i>
+     </a>
+
+     9. Navigation (wine_cellar/templates/base.html)
+
+     Add "Bottles" link after "Storage" in both mobile and desktop menus:
+     <li class="pure-menu-item">
+         <a href="{% url 'bottle-list' %}" class="pure-menu-link">{%
+     translate "Bottles" %}</a>
+     </li>
+
+     Implementation Order
+
+     1. Create filters.py with StorageItemFilter
+     2. Add StorageItemEditForm to forms.py
+     3. Add views to views.py
+     4. Add URL patterns to urls.py
+     5. Create bottle_list.html template
+     6. Create bottle_edit.html template
+     7. Create bottle_edit.ts and build with webpack
+     8. Add edit button to wine_detail.html
+     9. Add nav link to base.html
+
+     Verification
+
+     1. Run make server and navigate to /bottles/
+     2. Verify filter functionality (by wine name, storage, gift status,
+     occasion)
+     3. Click edit on a bottle, verify form pre-fills with current values
+     4. Change occasion and save, verify redirect and updated value
+     5. Change storage location, verify slot validation works
+     6. Edit from wine detail page, verify returns to wine detail
+     7. Run make pytest to ensure no regressions
+
+● Let me set up the todo list and start implementing.
+
+● Read(wine_cellar/apps/storage/forms.py)
+  ⎿  Read 144 lines
+
+● Read(wine_cellar/apps/wine/filters.py)
+  ⎿  Read 125 lines
+
+● Read(wine_cellar/apps/storage/views.py)
+  ⎿  Read 347 lines
+
+● Now I have all the context. Let me start implementing. First, I'll create the filters.py file.
+
+● Write(wine_cellar/apps/storage/filters.py)
+  ⎿  Wrote 63 lines to wine_cellar/apps/storage/filters.py           
+     import django_filters
+     from django.db.models import Q
+     from django.utils.translation import gettext_lazy as _
+     from django_filters import ChoiceFilter, OrderingFilter
+     from wine_cellar.apps.storage.models import Storage, StorageItem
+     class StorageItemFilter(django_filters.FilterSet):
+         """Filter for the bottles list page."""
+     … +53 lines (ctrl+o to expand)
+
+● Update(wine_cellar/apps/storage/forms.py)
+  ⎿  Added 116 lines                                                     
+      141                           params={"row": row, "column":        
+           column},                                                      
+      142                       )                                        
+      143           return cleaned_data                                  
+      144 +                                                              
+      145 +                                                              
+      146 + class StorageItemEditForm(forms.Form):                       
+      147 +     """Form for editing an existing StorageItem (bottle).""" 
+      148 +                                                              
+      149 +     def __init__(self, *args, **kwargs):                     
+      150 +         self.user = kwargs.pop("user")                       
+      151 +         self.instance = kwargs.pop("instance", None)         
+      152 +         super().__init__(*args, **kwargs)                    
+      153 +         self.fields["storage"].queryset =                    
+          +Storage.objects.filter(user=self.user)                        
+      154 +         user_settings = get_user_settings(self.user)         
+      155 +         self.fields["price"].help_text = _(                  
+      156 +             "Enter the price of the bottle in %(currency)s." 
+      157 +         ) % {"currency":                                     
+          +settings.CURRENCY_SYMBOLS[user_settings.currency]}            
+      158 +                                                              
+      159 +     storage = forms.ModelChoiceField(                        
+      160 +         queryset=Storage.objects.none(),                     
+      161 +         help_text=_("Select the storage location."),         
+      162 +     )                                                        
+      163 +     row = forms.IntegerField(                                
+      164 +         required=False,                                      
+      165 +         min_value=0,                                         
+      166 +         help_text=_("Enter the row number."),                
+      167 +         widget=forms.Select(),                               
+      168 +     )                                                        
+      169 +     column = forms.IntegerField(                             
+      170 +         required=False,                                      
+      171 +         min_value=0,                                         
+      172 +         help_text=_("Enter the column number."),             
+      173 +         widget=forms.Select(),                               
+      174 +     )                                                        
+      175 +     price = forms.DecimalField(                              
+      176 +         required=False,                                      
+      177 +         max_digits=6,                                        
+      178 +         decimal_places=2,                                    
+      179 +         localize=True,                                       
+      180 +     )                                                        
+      181 +     is_gift = forms.BooleanField(                            
+      182 +         required=False,                                      
+      183 +         help_text=_("Check if this bottle was received as a  
+          +gift."),                                                      
+      184 +     )                                                        
+      185 +     gift_from = forms.CharField(                             
+      186 +         max_length=100,                                      
+      187 +         required=False,                                      
+      188 +         help_text=_("Enter who gave you this bottle."),      
+      189 +     )                                                        
+      190 +     occasion = forms.CharField(                              
+      191 +         max_length=100,                                      
+      192 +         required=False,                                      
+      193 +         help_text=_("Enter a special occasion this bottle is 
+          + reserved for."),                                             
+      194 +     )                                                        
+      195 +                                                              
+      196 +     def clean_row(self):                                     
+      197 +         row = self.cleaned_data.get("row")                   
+      198 +         storage = self.cleaned_data.get("storage")           
+      199 +         if storage and row:                                  
+      200 +             if storage.rows == 0:                            
+      201 +                 raise forms.ValidationError(                 
+      202 +                     _("The selected storage has no rows."),  
+          +code="redundant_row"                                          
+      203 +                 )                                            
+      204 +             if row > storage.rows:                           
+      205 +                 raise forms.ValidationError(                 
+      206 +                     _("The selected row exceeds the number   
+          +of rows in the storage."),                                    
+      207 +                     code="row_exceeds",                      
+      208 +                 )                                            
+      209 +         return row                                           
+      210 +                                                              
+      211 +     def clean_column(self):                                  
+      212 +         column = self.cleaned_data.get("column")             
+      213 +         storage = self.cleaned_data.get("storage")           
+      214 +         if storage and column:                               
+      215 +             if storage.columns == 0:                         
+      216 +                 raise forms.ValidationError(                 
+      217 +                     _("The selected storage has no           
+          +columns."), code="redundant_column"                           
+      218 +                 )                                            
+      219 +             if column > storage.columns:                     
+      220 +                 raise forms.ValidationError(                 
+      221 +                     _(                                       
+      222 +                         "The selected column exceeds the     
+          +number of columns in the"                                     
+      223 +                         " storage."                          
+      224 +                     ),                                       
+      225 +                     code="column_exceeds",                   
+      226 +                 )                                            
+      227 +         return column                                        
+      228 +                                                              
+      229 +     def clean(self):                                         
+      230 +         cleaned_data = super().clean()                       
+      231 +         row = cleaned_data.get("row")                        
+      232 +         column = cleaned_data.get("column")                  
+      233 +         storage = cleaned_data.get("storage")                
+      234 +         if storage:                                          
+      235 +             if storage.rows > 0 and storage.columns > 0:     
+      236 +                 if not row or not column:                    
+      237 +                     raise forms.ValidationError(             
+      238 +                         _(                                   
+      239 +                             "Both row and column must be     
+          +specified for the selected"                                   
+      240 +                             " storage."                      
+      241 +                         ),                                   
+      242 +                         code="row_column_required",          
+      243 +                     )                                        
+      244 +                 # Check slot occupation, excluding current   
+          +item                                                          
+      245 +                 occupied_query = storage.items.filter(       
+      246 +                     row=row, column=column, deleted=False    
+      247 +                 )                                            
+      248 +                 if self.instance:                            
+      249 +                     occupied_query =                         
+          +occupied_query.exclude(pk=self.instance.pk)                   
+      250 +                 if occupied_query.exists():                  
+      251 +                     raise forms.ValidationError(             
+      252 +                         _(                                   
+      253 +                             "The selected slot (row:         
+          +%(row)s, column: %(column)s)"                                 
+      254 +                             " is already occupied in the     
+          +storage."                                                     
+      255 +                         ),                                   
+      256 +                         code="slot_occupied",                
+      257 +                         params={"row": row, "column":        
+          +column},                                                      
+      258 +                     )                                        
+      259 +         return cleaned_data                                  
+
+● Update(wine_cellar/apps/storage/views.py)
+  ⎿  Added 3 lines, removed 1 line                                       
+       4   from django.utils.translation import gettext_lazy as _        
+       5   from django.views.generic import DeleteView, DetailView,      
+          FormView, ListView                                             
+       6   from django.views.generic.list import MultipleObjectMixin     
+       7 + from django_filters.views import FilterView                   
+       8                                                                 
+       9 - from wine_cellar.apps.storage.forms import StockAddForm,      
+         -StorageForm                                                    
+       9 + from wine_cellar.apps.storage.filters import                  
+         +StorageItemFilter                                              
+      10 + from wine_cellar.apps.storage.forms import StockAddForm,      
+         +StorageForm, StorageItemEditForm                               
+      11   from wine_cellar.apps.storage.models import Storage,          
+          StorageItem                                                    
+      12   from wine_cellar.apps.wine.models import Wine                 
+      13                                                                 
+
+● Update(wine_cellar/apps/storage/views.py)
+  ⎿  Added 114 lines                                                     
+      223           return qs.filter(user=self.request.user,             
+           deleted=True)                                                 
+      224                                                                
+      225                                                                
+      226 + class StorageItemListView(FilterView):                       
+      227 +     """List all bottles (StorageItem) with filtering."""     
+      228 +                                                              
+      229 +     model = StorageItem                                      
+      230 +     template_name = "bottle_list.html"                       
+      231 +     context_object_name = "bottles"                          
+      232 +     filterset_class = StorageItemFilter                      
+      233 +     paginate_by = 20                                         
+      234 +                                                              
+      235 +     def get_queryset(self):                                  
+      236 +         return (                                             
+      237 +                                                              
+          +StorageItem.objects.filter(user=self.request.user,            
+          +deleted=False)                                                
+      238 +             .select_related("wine", "storage")               
+      239 +             .order_by("-created")                            
+      240 +         )                                                    
+      241 +                                                              
+      242 +                                                              
+      243 + class StorageItemUpdateView(FormView):                       
+      244 +     """Edit an existing bottle (StorageItem)."""             
+      245 +                                                              
+      246 +     template_name = "bottle_edit.html"                       
+      247 +     form_class = StorageItemEditForm                         
+      248 +                                                              
+      249 +     def get_object(self):                                    
+      250 +         if not hasattr(self, "_object"):                     
+      251 +             self._object = get_object_or_404(                
+      252 +                 StorageItem,                                 
+      253 +                 pk=self.kwargs["pk"],                        
+      254 +                 user=self.request.user,                      
+      255 +                 deleted=False,                               
+      256 +             )                                                
+      257 +         return self._object                                  
+      258 +                                                              
+      259 +     def get_form_kwargs(self):                               
+      260 +         kwargs = super().get_form_kwargs()                   
+      261 +         kwargs["user"] = self.request.user                   
+      262 +         kwargs["instance"] = self.get_object()               
+      263 +         return kwargs                                        
+      264 +                                                              
+      265 +     def get_initial(self):                                   
+      266 +         initial = super().get_initial()                      
+      267 +         item = self.get_object()                             
+      268 +         initial.update(                                      
+      269 +             {                                                
+      270 +                 "storage": item.storage,                     
+      271 +                 "row": item.row,                             
+      272 +                 "column": item.column,                       
+      273 +                 "price": item.price,                         
+      274 +                 "is_gift": item.is_gift,                     
+      275 +                 "gift_from": item.gift_from,                 
+      276 +                 "occasion": item.occasion,                   
+      277 +             }                                                
+      278 +         )                                                    
+      279 +         return initial                                       
+      280 +                                                              
+      281 +     def get_context_data(self, **kwargs):                    
+      282 +         context = super().get_context_data(**kwargs)         
+      283 +         item = self.get_object()                             
+      284 +         context["wine"] = item.wine                          
+      285 +         context["item"] = item                               
+      286 +                                                              
+      287 +         # Free cells calculation (same as StorageItemAddView 
+          + but excluding current item)                                  
+      288 +         user_storages =                                      
+          +Storage.objects.filter(user=self.request.user)                
+      289 +         free_cells_by_storage = {}                           
+      290 +         for storage in user_storages:                        
+      291 +             if storage.rows == 0:                            
+      292 +                 free_cells_by_storage[storage.pk] = {}       
+      293 +                 continue                                     
+      294 +             # Exclude current item from used cells           
+      295 +             used_cells = set(                                
+      296 +                 storage.items.filter(deleted=False)          
+      297 +                 .exclude(pk=item.pk)                         
+      298 +                 .values_list("row", "column")                
+      299 +             )                                                
+      300 +             all_rows = range(1, storage.rows + 1)            
+      301 +             all_columns = range(1, storage.columns + 1)      
+      302 +             free_cells_by_storage[storage.pk] = {}           
+      303 +             for row in all_rows:                             
+      304 +                 free = [col for col in all_columns if (row,  
+          +col) not in used_cells]                                       
+      305 +                 free_cells_by_storage[storage.pk][row] =     
+          +free                                                          
+      306 +                                                              
+      307 +         context["free_cells_by_storage"] =                   
+          +free_cells_by_storage                                         
+      308 +                                                              
+      309 +         # Cancel URL - return to wine detail or bottle list  
+      310 +         next_url = self.request.GET.get("next")              
+      311 +         if next_url == "list":                               
+      312 +             context["cancel_url"] =                          
+          +reverse_lazy("bottle-list")                                   
+      313 +         else:                                                
+      314 +             context["cancel_url"] = reverse_lazy(            
+      315 +                 "wine-detail", kwargs={"pk": item.wine.pk}   
+      316 +             )                                                
+      317 +                                                              
+      318 +         return context                                       
+      319 +                                                              
+      320 +     def form_valid(self, form):                              
+      321 +         item = self.get_object()                             
+      322 +         item.storage = form.cleaned_data["storage"]          
+      323 +         item.row = form.cleaned_data["row"]                  
+      324 +         item.column = form.cleaned_data["column"]            
+      325 +         item.price = form.cleaned_data["price"]              
+      326 +         item.is_gift = form.cleaned_data["is_gift"]          
+      327 +         item.gift_from = form.cleaned_data["gift_from"]      
+      328 +         item.occasion = form.cleaned_data["occasion"]        
+      329 +         item.save()                                          
+      330 +                                                              
+      331 +         next_url = self.request.GET.get("next")              
+      332 +         if next_url == "list":                               
+      333 +             self.success_url = reverse_lazy("bottle-list")   
+      334 +         else:                                                
+      335 +             self.success_url = reverse_lazy("wine-detail",   
+          +kwargs={"pk": item.wine.pk})                                  
+      336 +                                                              
+      337 +         return super().form_valid(form)                      
+      338 +                                                              
+      339 +                                                              
+      340   from django.http import JsonResponse                         
+      341   from django.views.decorators.http import require_POST        
+      342   from django.contrib.auth.decorators import login_required    
+
+● Read(wine_cellar/conf/urls.py)
+  ⎿  Read 146 lines
+
+● Update(wine_cellar/conf/urls.py)
+  ⎿  Added 2 lines                                                       
+      28       StorageItemAddView,                                       
+      29       StorageItemDeleteView,                                    
+      30       StorageItemHistoryView,                                   
+      31 +     StorageItemListView,                                      
+      32 +     StorageItemUpdateView,                                    
+      33       StorageListView,                                          
+      34       StorageUpdateView,                                        
+      35       move_bottle,                                              
+
+● Update(wine_cellar/conf/urls.py)
+  ⎿  Added 2 lines                                                       
+      92       path(                                                     
+      93           "stock/delete/<int:pk>/",                             
+          StorageItemDeleteView.as_view(), name="stock-delete"           
+      94       ),                                                        
+      95 +     path("bottles/", StorageItemListView.as_view(),           
+         +name="bottle-list"),                                           
+      96 +     path("bottle/edit/<int:pk>/",                             
+         +StorageItemUpdateView.as_view(), name="bottle-edit"),          
+      97       path("wine/add/", WineCreateView.as_view(),               
+          name="wine-add"),                                              
+      98       path("wine/add/<str:code>/", WineCreateView.as_view(),    
+          name="wine-add"),                                              
+      99       path("wine/extract-vision/", extract_wine_vision_ajax,    
+          name="wine-extract-vision"),                                   
+
+● Read(wine_cellar/apps/wine/templates/wine_list.html)
+  ⎿  Read 81 lines
+
+● Write(wine_cellar/apps/storage/templates/bottle_list.html)
+  ⎿  Wrote 130 lines to wine_cellar/apps/storage/templates/bottle_list.html
+     {% extends 'base.html' %}
+     {% load static i18n %}
+     {% block extra_js %}
+         {{ block.super }}
+         <script src="{% static 'tom_select.js' %}" type="module" 
+     defer></script>
+     {% endblock extra_js %}
+     {% block header %}
+         <h1 class="header__title">{% translate 'All Bottles' %}</h1>
+     {% endblock header %}
+     {% block content %}
+     … +120 lines (ctrl+o to expand)
+
+● Write(wine_cellar/apps/storage/templates/bottle_edit.html)
+  ⎿  Wrote 65 lines to wine_cellar/apps/storage/templates/bottle_edit.html
+     {% extends 'base.html' %}
+     {% load static i18n storage_tags %}
+     {% block extra_js %}
+         {{ block.super }}
+         <script src="{% static 'tom_select.js' %}" type="module" 
+     defer></script>
+         <script src="{% static 'stock_add.js' %}" defer></script>
+     {% endblock extra_js %}
+     {% block title %}
+         {% translate "Edit Bottle" %}
+     {% endblock title %}
+     … +55 lines (ctrl+o to expand)
+
+● Update(wine_cellar/apps/wine/templates/wine_detail.html)
+  ⎿  Added 2 lines, removed 1 line                                       
+      182                                       <td>{{                   
+           item.occasion|default_if_none:"" }}</td>                      
+      183                                       <td>                     
+      184                                           <a                   
+           class="pure-button" href="{% url 'bottle-note-add' item.pk    
+           %}" title="{% translate 'Add note' %}"><i class="fa-regular   
+           fa-note-sticky"></i></a>                                      
+      185 -                                        <a class="pure-button"
+          - href="{% url 'stock-delete' item.pk %}"                      
+          -><i class="fa-regular fa-trash-can"></i></a>                  
+      185 +                                        <a class="pure-button"
+          + href="{% url 'bottle-edit' item.pk %}"                       
+          + title="{% translate 'Edit bottle' %}"                        
+          +><i class="fa-regular fa-pen-to-square"></i></a>              
+      186 +                                         <a                   
+          +class="pure-button" href="{% url 'stock-delete' item.pk %}"   
+          +title="{% translate 'Remove bottle' %}"><i class="fa-regular  
+          +fa-trash-can"></i></a>                                        
+      187                                       </td>                    
+      188                                   </tr>                        
+      189                                   {% if item.notes.all %}      
+
+● Read(wine_cellar/templates/base.html)
+  ⎿  Read 237 lines
+
+● Update(wine_cellar/templates/base.html)
+  ⎿  Added 3 lines                                                       
+      62                                       <li                       
+          class="pure-menu-item">                                        
+      63                                           <a href="{% url       
+          'storage-list' %}" class="pure-menu-link">{% translate         
+          "Storage" %}</a>                                               
+      64                                       </li>                     
+      65 +                                     <li                       
+         +class="pure-menu-item">                                        
+      66 +                                         <a href="{% url       
+         +'bottle-list' %}" class="pure-menu-link">{% translate          
+         +"Bottles" %}</a>                                               
+      67 +                                     </li>                     
+      68                                       <li class="pure-menu-item 
+           pure-menu-has-children pure-menu-allow-hover">                
+      69                                           <a href="#"           
+          class="pure-menu-link">{% translate "More" %}</a>              
+      70                                           <ul                   
+          class="pure-menu-children">                                    
+
+● Update(wine_cellar/templates/base.html)
+  ⎿  Added 3 lines                                                       
+      135                                       <li                      
+           class="pure-menu-item">                                       
+      136                                           <a href="{% url      
+           'storage-list' %}" class="pure-menu-link">{% translate        
+           "Storage" %}</a>                                              
+      137                                       </li>                    
+      138 +                                     <li                      
+          +class="pure-menu-item">                                       
+      139 +                                         <a href="{% url      
+          +'bottle-list' %}" class="pure-menu-link">{% translate         
+          +"Bottles" %}</a>                                              
+      140 +                                     </li>                    
+      141                                       <li                      
+           class="pure-menu-item pure-menu-has-children                  
+           pure-menu-allow-hover">                                       
+      142                                           <a href="#"          
+           class="pure-menu-link">{% translate "More" %} ▾</a>           
+      143                                           <ul                  
+           class="pure-menu-children">                                   
+
+● Bash(python -c "from wine_cellar.apps.storage.views import
+      StorageItemListView, StorageItemUpdateView; from
+      wine_cellar.apps.storage.filters import StorageItemFilter…)
+  ⎿  Error: Exit code 127
+     /bin/bash: line 1: python: command not found
+
+● Bash(python3 -c "from wine_cellar.apps.storage.views import
+      StorageItemListView, StorageItemUpdateView; from
+      wine_cellar.apps.storage.filters import StorageItemFilte…)
+  ⎿  Error: Exit code 1
+     Traceback (most recent call last):
+       File "<string>", line 1, in <module>
+       File "/home/jonhall145/wine/wine_cellar/__init__.py", line 1, in <module>
+         from .conf.celery import celery_app
+       File "/home/jonhall145/wine/wine_cellar/conf/celery.py", line 3, in 
+     <module>
+         from celery import Celery
+     ModuleNotFoundError: No module named 'celery'
+
+● Bash(make lint 2>&1 | head -50)
+  ⎿ EXIT_STATUS=0; \                                                       
+    venv/bin/isort --diff -c wine_cellar tests ||  EXIT_STATUS=$?; \
+    venv/bin/flake8 wine_cellar tests --exclude migrations,settings ||  EXI
+    … +67 lines (ctrl+o to expand)
+
+
+● Update(wine_cellar/apps/storage/views.py)
+  ⎿  Added 5 lines, removed 1 line                                       
+       7   from django_filters.views import FilterView                   
+       8                                                                 
+       9   from wine_cellar.apps.storage.filters import                  
+          StorageItemFilter                                              
+      10 -from wine_cellar.apps.storage.forms import                     
+         -StockAddForm, StorageForm, StorageItemEditForm                 
+      10 +from wine_cellar.apps.storage.forms import (                   
+      11 +     StockAddForm,                                             
+      12 +     StorageForm,                                              
+      13 +     StorageItemEditForm,                                      
+      14 + )                                                             
+      15   from wine_cellar.apps.storage.models import Storage,          
+          StorageItem                                                    
+      16   from wine_cellar.apps.wine.models import Wine                 
+      17                                                                 
+
+● Update(wine_cellar/apps/storage/views.py)
+  ⎿  Added 3 lines, removed 2 lines                                      
+      341           return super().form_valid(form)                      
+      342                                                                
+      343                                                                
+      344 + import json                                                  
+      345 +                                                              
+      346 + from django.contrib.auth.decorators import login_required    
+      347   from django.http import JsonResponse                         
+      348   from django.views.decorators.http import require_POST        
+      349 - from django.contrib.auth.decorators import login_required    
+      350 - import json                                                  
+      349                                                                
+      350                                                                
+      351   @login_required                                              
+
+● Bash(venv/bin/isort --diff -c wine_cellar/apps/storage/views.py
+      wine_cellar/apps/storage/filters.py wine_cellar/apps/storage/forms.py
+      2>&1)
+  ⎿  (No content)
+
+● Bash(venv/bin/flake8 wine_cellar/apps/storage/views.py
+      wine_cellar/apps/storage/filters.py wine_cellar/apps/storage/forms.py
+      2>&1)
+  ⎿  Error: Exit code 1
+     wine_cellar/apps/storage/views.py:344:1: E402 module level import not at top
+      of file
+     wine_cellar/apps/storage/views.py:346:1: E402 module level import not at top
+      of file
+     wine_cellar/apps/storage/views.py:347:1: E402 module level import not at top
+      of file
+     wine_cellar/apps/storage/views.py:348:1: E402 module level import not at top
+      of file
+     wine_cellar/apps/storage/views.py:460:89: E501 line too long (93 > 88 
+     characters)
+
+● Update(wine_cellar/apps/storage/views.py)
+  ⎿  Added 5 lines                                                       
+       1 + import json                                                   
+       2 +                                                               
+       3 + from django.contrib.auth.decorators import login_required     
+       4   from django.forms import model_to_dict                        
+       5 + from django.http import JsonResponse                          
+       6   from django.shortcuts import get_object_or_404, redirect      
+       7   from django.urls import reverse_lazy                          
+       8   from django.utils.translation import gettext_lazy as _        
+       9 + from django.views.decorators.http import require_POST         
+      10   from django.views.generic import DeleteView, DetailView,      
+          FormView, ListView                                             
+      11   from django.views.generic.list import MultipleObjectMixin     
+      12   from django_filters.views import FilterView                   
+
+● Update(wine_cellar/apps/storage/views.py)
+  ⎿  Removed 7 lines                                                     
+      346           return super().form_valid(form)                      
+      347                                                                
+      348                                                                
+      349 - import json                                                  
+      350 -                                                              
+      351 - from django.contrib.auth.decorators import login_required    
+      352 - from django.http import JsonResponse                         
+      353 - from django.views.decorators.http import require_POST        
+      354 -                                                              
+      355 -                                                              
+      349   @login_required                                              
+      350   def storage_grid_data(request):                              
+      351       """API endpoint to get storage grid data for React       
+           component."""                                                 
+
+● Bash(venv/bin/flake8 wine_cellar/apps/storage/views.py
+      wine_cellar/apps/storage/filters.py wine_cellar/apps/storage/forms.py
+      2>&1)
+  ⎿  Error: Exit code 1
+     wine_cellar/apps/storage/views.py:458:89: E501 line too long (93 > 88 
+     characters)
+
+● Read(wine_cellar/apps/storage/views.py)
+  ⎿  Read 10 lines
+
+● Bash(make pytest 2>&1 | tail -30)
+  ⎿ FAILED tests/hardware/test_views.py::TestDeviceSettingsView::test_regis
+    ter_device
+    FAILED tests/hardware/test_views.py::TestDeviceSettingsView::test_regis
+    … +56 lines (ctrl+o to expand)
+
+
+
+● Bash(venv/bin/python manage.py check 2>&1)
+  ⎿  System check identified no issues (0 silenced).
+
+● Bash(./run_local.sh &)
+  ⎿  Running in the background (↓ to manage)
+  ⎿  You've hit your limit · resets 6pm (UTC)
+     /upgrade to increase your usage limit.
+
+✻ Crunched for 11m 8s
+
+
+
