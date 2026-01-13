@@ -114,7 +114,13 @@ start_server() {
     # Save the PID manually since --daemon doesn't work with bash wrapper
     echo $! > /tmp/wine_cellar_wrapper.pid
     
-    sleep 3
+    # Wait for gunicorn to start and create PID file
+    for i in {1..10}; do
+        if [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null; then
+            break
+        fi
+        sleep 1
+    done
     
     # Check if PID file was created by gunicorn
     if [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null; then
