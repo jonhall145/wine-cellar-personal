@@ -2,6 +2,23 @@
 
 Thank you for your interest in contributing to Wine Cellar!
 
+## Code of Conduct
+
+Be respectful and inclusive. We welcome contributors of all backgrounds and experience levels. Harassment, discrimination, or toxic behavior will not be tolerated.
+
+## How to Contribute
+
+### Reporting Issues
+
+1. **Search existing issues** to avoid duplicates
+2. **Use a clear title** that describes the problem
+3. **Provide details**: steps to reproduce, expected vs actual behavior, screenshots
+4. **Include environment info**: browser, OS, Python/Node versions
+
+### Suggesting Features
+
+Open an issue with the `enhancement` label, describing the use case and benefit.
+
 ## Development Setup
 
 1. **Clone the repository**
@@ -126,12 +143,28 @@ wine_cellar/
 └── react/          # React components
 ```
 
+## Translations
+
+Wine Cellar supports internationalization. To contribute translations:
+
+1. Extract translatable strings:
+   ```bash
+   make po
+   ```
+
+2. Edit `.po` files in `locale/<lang>/LC_MESSAGES/`
+
+3. Compile translations:
+   ```bash
+   make mo
+   ```
+
 ## Getting Help
 
-- Check existing [issues](https://github.com/your-username/wine-cellar/issues)
-- Read the [documentation](docs/)
-- Open a new issue for bugs or feature requests
+- Check existing [issues](https://github.com/the-broke-sommeliers/wine-cellar/issues)
+- Open a [GitHub Discussion](https://github.com/the-broke-sommeliers/wine-cellar/discussions)
+- Read the [documentation](https://the-broke-sommeliers.github.io/wine-cellar/)
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the AGPL-3.0 license.
+By contributing, you agree that your contributions will be licensed under the [AGPL-3.0 License](LICENSE).

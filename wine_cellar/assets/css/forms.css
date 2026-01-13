@@ -567,3 +567,54 @@ p.form-hint {
     min-width: 100%;
   }
 }
+
+/* Spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  vertical-align: middle;
+}
+
+.spinner--sm {
+  width: 0.875em;
+  height: 0.875em;
+  border-width: 2px;
+}
+
+/* Button loading state */
+.button--loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.button--loading .spinner {
+  margin-right: var(--spacing-xs);
+}
+
+/* Form submission loading overlay */
+.form--loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.form--loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

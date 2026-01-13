@@ -65,4 +65,5 @@ class StorageItem(UserContentModel):
             models.Index(
                 fields=["storage", "row", "column"], name="storageitem_position_idx"
             ),
+            models.Index(fields=["wine", "deleted"], name="storageitem_wine_del_idx"),
         ]

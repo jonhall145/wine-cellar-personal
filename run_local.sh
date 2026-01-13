@@ -30,6 +30,9 @@ set -a
 source .env.dev
 set +a
 
+# Ensure DEBUG is on for development (overrides default False in settings.py)
+export DJANGO_DEBUG=True
+
 # Run migrations
 echo ""
 echo "Running migrations..."

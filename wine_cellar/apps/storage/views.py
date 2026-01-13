@@ -228,7 +228,11 @@ class StorageItemHistoryView(ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        qs = super().get_queryset().order_by("-created")
+        qs = (
+            super().get_queryset()
+            .select_related("wine", "storage")
+            .order_by("-created")
+        )
         return qs.filter(user=self.request.user, deleted=True)
 
 

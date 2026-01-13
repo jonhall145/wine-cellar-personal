@@ -33,12 +33,13 @@
         {% endif %}
     </div>
     <div class="wine-card__stock">
-        {% if wine.total_stock == 0 %}
+        {% firstof wine.stock_count wine.total_stock as stock %}
+        {% if stock == 0 %}
             <span class="stock-badge stock-badge--out"><i class="fa-solid fa-xmark"></i> {% translate "Out" %}</span>
-        {% elif wine.total_stock <= 2 %}
-            <span class="stock-badge stock-badge--low"><i class="fa-solid fa-arrow-down"></i> {{ wine.total_stock }}</span>
+        {% elif stock <= 2 %}
+            <span class="stock-badge stock-badge--low"><i class="fa-solid fa-arrow-down"></i> {{ stock }}</span>
         {% else %}
-            <span class="stock-badge stock-badge--plenty"><i class="fa-solid fa-check"></i> {{ wine.total_stock }}</span>
+            <span class="stock-badge stock-badge--plenty"><i class="fa-solid fa-check"></i> {{ stock }}</span>
         {% endif %}
     </div>
     <div class="wine-card__actions">

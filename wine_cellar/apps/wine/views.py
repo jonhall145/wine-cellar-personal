@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib.auth.decorators import login_not_required, login_required
 from django.db import connections, transaction
-from django.db.models import Avg, Q, Sum
+from django.db.models import Avg, Count, Max, Min, Q, Sum
 from django.db.models.functions import Coalesce
 from django.forms import model_to_dict
 from django.http import JsonResponse
@@ -32,37 +32,52 @@ class HomePageView(TemplateView):
     template_name = "homepage.html"
 
     def get_context_data(self, **kwargs):
+        from datetime import date, timedelta
+
+        from wine_cellar.apps.wine.models import DrinkRecord, ReorderReminder, Wishlist
+
         context = super().get_context_data(**kwargs)
-        wines = Wine.objects.filter(user=self.request.user).count()
-        wines_in_stock = (
-            Wine.objects.filter(storageitem__isnull=False, storageitem__deleted=False)
-            .filter(user=self.request.user)
-            .distinct()
-            .count()
+        user = self.request.user
+
+        # Consolidate Wine stats into single query
+        wine_stats = Wine.objects.filter(user=user).aggregate(
+            total_wines=Count("id"),
+            wines_in_stock=Count(
+                "id",
+                filter=Q(storageitem__deleted=False),
+                distinct=True
+            ),
+            countries=Count("country", distinct=True),
+            oldest_vintage=Min("vintage", filter=Q(vintage__isnull=False)),
+            youngest_vintage=Max("vintage", filter=Q(vintage__isnull=False)),
+            overdue_count=Count(
+                "id",
+                filter=Q(
+                    drink_by__isnull=False,
+                    drink_by__lt=date.today(),
+                    storageitem__deleted=False
+                ),
+                distinct=True
+            ),
+            upcoming_count=Count(
+                "id",
+                filter=Q(
+                    drink_by__isnull=False,
+                    drink_by__lte=date.today() + timedelta(days=180),
+                    drink_by__gte=date.today(),
+                    storageitem__deleted=False
+                ),
+                distinct=True
+            ),
         )
-        countries = (
-            Wine.objects.filter(user=self.request.user)
-            .values_list("country")
-            .distinct()
-            .count()
-        )
-        oldest = "-"
-        youngest = "-"
-        try:
-            oldest = (
-                Wine.objects.filter(user=self.request.user)
-                .filter(vintage__isnull=False)
-                .earliest("vintage")
-                .vintage
-            )
-            youngest = (
-                Wine.objects.filter(user=self.request.user)
-                .filter(vintage__isnull=False)
-                .latest("vintage")
-                .vintage
-            )
-        except Wine.DoesNotExist:
-            pass
+
+        wines = wine_stats["total_wines"]
+        wines_in_stock = wine_stats["wines_in_stock"]
+        countries = wine_stats["countries"]
+        oldest = wine_stats["oldest_vintage"] or "-"
+        youngest = wine_stats["youngest_vintage"] or "-"
+        overdue_count = wine_stats["overdue_count"]
+        upcoming_count = wine_stats["upcoming_count"]
         total_value = StorageItem.objects.aggregate(
             total=Sum(
                 Coalesce("price", "wine__price"),
@@ -89,40 +104,16 @@ class HomePageView(TemplateView):
             }
         )
 
-        # Dashboard widget data
-        from datetime import date, timedelta
-
-        from wine_cellar.apps.wine.models import DrinkRecord, ReorderReminder, Wishlist
-
-        # Alerts
-        overdue_count = (
-            Wine.objects.filter(
-                user=self.request.user,
-                drink_by__isnull=False,
-                drink_by__lt=date.today(),
-                storageitem__deleted=False,
-            )
-            .distinct()
-            .count()
-        )
-
-        upcoming_count = (
-            Wine.objects.filter(
-                user=self.request.user,
-                drink_by__isnull=False,
-                drink_by__lte=date.today() + timedelta(days=180),
-                drink_by__gte=date.today(),
-                storageitem__deleted=False,
-            )
-            .distinct()
-            .count()
-        )
-
         # Low stock reminders
         reminders = ReorderReminder.objects.filter(
             user=self.request.user, is_active=True
+        ).annotate(
+            current_stock=Count(
+                "wine__storageitem",
+                filter=Q(wine__storageitem__deleted=False)
+            )
         )
-        low_stock_count = sum(1 for r in reminders if r.wine.total_stock <= r.min_stock)
+        low_stock_count = sum(1 for r in reminders if r.current_stock <= r.min_stock)
 
         # Recent drinks
         recent_drinks = (
@@ -136,16 +127,19 @@ class HomePageView(TemplateView):
             user=self.request.user, purchased=False
         ).order_by("-priority")[:3]
 
-        # Stats
-        total_consumed = DrinkRecord.objects.filter(user=self.request.user).count()
-        total_bottles = StorageItem.objects.filter(
-            user=self.request.user, deleted=False
-        ).count()
+        # Stats - consolidate into single query per model
+        drink_stats = DrinkRecord.objects.filter(user=user).aggregate(
+            total_consumed=Count("id"),
+            avg_rating=Avg("rating", filter=Q(rating__isnull=False))
+        )
+        total_consumed = drink_stats["total_consumed"]
+        avg_rating = (
+            round(drink_stats["avg_rating"], 1) if drink_stats["avg_rating"] else None
+        )
 
-        avg_rating = None
-        rated = DrinkRecord.objects.filter(user=self.request.user, rating__isnull=False)
-        if rated.exists():
-            avg_rating = round(sum(r.rating for r in rated) / rated.count(), 1)
+        total_bottles = StorageItem.objects.filter(
+            user=user, deleted=False
+        ).count()
 
         # Pending hardware position reviews (gracefully handle if hardware not set up)
         pending_reviews_count = 0
@@ -588,7 +582,15 @@ class WineDetailView(DetailView):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(user=self.request.user)
+        return qs.prefetch_related(
+            "grapes", "attributes", "food_pairings", "wineimage_set",
+            "vineyard", "source"
+        ).annotate(
+            stock_count=Count(
+                "storageitem",
+                filter=Q(storageitem__deleted=False)
+            )
+        ).filter(user=self.request.user)
 
 
 class WineListView(FilterView):
@@ -609,6 +611,10 @@ class WineListView(FilterView):
             effective_price=Coalesce(
                 Avg("storageitem__price"),
                 "price",
+            ),
+            stock_count=Count(
+                "storageitem",
+                filter=Q(storageitem__deleted=False)
             )
         )
         return qs.filter(user=self.request.user)
@@ -623,7 +629,7 @@ class WineScannedView(TemplateView):
 
     def dispatch(self, request, *args, **kwargs):
         code = self.kwargs["code"]
-        wine = Wine.objects.filter(barcode=code).filter(user=self.request.user).first()
+        wine = Wine.objects.filter(barcode=code, user=self.request.user).first()
         if wine:
             return redirect(reverse("wine-detail", kwargs={"pk": wine.pk}))
 
@@ -838,21 +844,23 @@ class CellarValueView(TemplateView):
         total_value = storage_items.aggregate(
             total=Coalesce(Sum("price"), Decimal("0.00"))
         )["total"]
+        total_bottles = storage_items.count()
 
-        # Value by country
+        # Value by country and type - single iteration
         wines_by_country = {}
+        wines_by_type = {}
         for item in storage_items.select_related("wine"):
             country = item.wine.country_name if item.wine.country else "Unknown"
+            wine_type = item.wine.get_type if item.wine.wine_type else "Unknown"
+
+            # Country stats
             if country not in wines_by_country:
                 wines_by_country[country] = {"count": 0, "value": Decimal("0.00")}
             wines_by_country[country]["count"] += 1
             if item.price:
                 wines_by_country[country]["value"] += item.price
 
-        # Value by type
-        wines_by_type = {}
-        for item in storage_items.select_related("wine"):
-            wine_type = item.wine.get_type if item.wine.wine_type else "Unknown"
+            # Type stats (same loop)
             if wine_type not in wines_by_type:
                 wines_by_type[wine_type] = {"count": 0, "value": Decimal("0.00")}
             wines_by_type[wine_type]["count"] += 1
@@ -862,7 +870,7 @@ class CellarValueView(TemplateView):
         context.update(
             {
                 "total_value": number_format(total_value, use_l10n=True),
-                "total_bottles": storage_items.count(),
+                "total_bottles": total_bottles,
                 "currency": currency,
                 "by_country": wines_by_country,
                 "by_type": wines_by_type,
@@ -988,12 +996,13 @@ class ConsumptionStatsView(TemplateView):
             country = record.wine.country_name if record.wine.country else "Unknown"
             by_country[country] += 1
 
-        # Average rating over time
-        rated_records = records.filter(rating__isnull=False).order_by("date_consumed")
-        avg_rating = None
-        if rated_records.exists():
-            total_rating = sum(r.rating for r in rated_records)
-            avg_rating = round(total_rating / rated_records.count(), 1)
+        # Average rating
+        avg_rating_result = records.filter(rating__isnull=False).aggregate(
+            avg=Avg("rating")
+        )
+        avg_rating = (
+            round(avg_rating_result["avg"], 1) if avg_rating_result["avg"] else None
+        )
 
         # Top rated wines
         top_rated = records.filter(rating__isnull=False).order_by("-rating")[:5]
@@ -1022,17 +1031,21 @@ class ReorderRemindersView(TemplateView):
 
         reminders = ReorderReminder.objects.filter(
             user=user, is_active=True
-        ).select_related("wine")
+        ).select_related("wine").annotate(
+            current_stock=Count(
+                "wine__storageitem",
+                filter=Q(wine__storageitem__deleted=False)
+            )
+        )
 
         # Find wines that need reordering
         needs_reorder = []
         for reminder in reminders:
-            current_stock = reminder.wine.total_stock
-            if current_stock <= reminder.min_stock:
+            if reminder.current_stock <= reminder.min_stock:
                 needs_reorder.append(
                     {
                         "wine": reminder.wine,
-                        "current_stock": current_stock,
+                        "current_stock": reminder.current_stock,
                         "min_stock": reminder.min_stock,
                         "reminder": reminder,
                     }

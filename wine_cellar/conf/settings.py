@@ -31,7 +31,8 @@ SECRET_KEY = os.environ.get(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DJANGO_DEBUG", "True") == "True"
+# Default to False for safety - set DJANGO_DEBUG=True explicitly for development
+DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
 
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
@@ -69,6 +70,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "django.middleware.gzip.GZipMiddleware",  # Compress responses for faster transfers
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -177,6 +179,17 @@ STATIC_ROOT = ROOT_DIR / "staticfiles"  # Where collectstatic gathers all static
 STATICFILES_DIRS = [
     BASE_DIR / "static",  # wine_cellar/static/ - where webpack builds to
 ]
+
+# WhiteNoise configuration for efficient static file serving
+# Compresses and caches static files automatically
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

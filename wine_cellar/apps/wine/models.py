@@ -381,6 +381,9 @@ class Wine(UserContentModel):
             models.Index(fields=["user", "wine_type"], name="wine_user_type_idx"),
             models.Index(fields=["name"], name="wine_name_idx"),
             models.Index(fields=["barcode"], name="wine_barcode_idx"),
+            models.Index(fields=["user", "vintage"], name="wine_user_vintage_idx"),
+            models.Index(fields=["user", "drink_by"], name="wine_user_drinkby_idx"),
+            models.Index(fields=["user", "created"], name="wine_user_created_idx"),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -450,6 +453,11 @@ class DrinkRecord(UserContentModel):
         verbose_name = _("Drink Record")
         verbose_name_plural = _("Drink Records")
         ordering = ["-date_consumed"]
+        indexes = [
+            models.Index(
+                fields=["user", "date_consumed"], name="drinkrecord_user_date_idx"
+            ),
+        ]
 
 
 class Wishlist(UserContentModel):

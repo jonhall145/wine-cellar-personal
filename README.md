@@ -1,6 +1,9 @@
 # Wine Cellar
 
 [![Coverage Status](https://coveralls.io/repos/github/the-broke-sommeliers/wine-cellar/badge.svg?branch=main)](https://coveralls.io/github/the-broke-sommeliers/wine-cellar?branch=main)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Django 5.2](https://img.shields.io/badge/django-5.2-green.svg)](https://www.djangoproject.com/)
 
 **Wine Cellar** is a self-hosted wine management app built with Django, designed for wine enthusiasts to track wines, store tasting notes, rate wines, and manage inventory. Whether you're a casual drinker or a connoisseur, this app helps organize your collection.
 
@@ -24,10 +27,95 @@ barcode.
 - **Self-hosted**: Full control over your data.
 - **Drink By Reminder**: Email reminder to drink a bottle before it goes off.
 
-## Documentations
+## Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/the-broke-sommeliers/wine-cellar.git
+cd wine-cellar
+
+# Install dependencies and set up database
+make install
+
+# Load sample data (optional)
+make fixtures
+
+# Start development server
+make server
+# Visit http://localhost:8003
+```
+
+For production deployment, see the [deployment guide](docs/deployment.md).
+
+## Documentation
 
 Find the full documentation [here](https://the-broke-sommeliers.github.io/wine-cellar/)
 
+- [Setup Guide](docs/setup.md)
+- [Deployment](docs/deployment.md)
+- [Environment Variables](docs/environment.md)
+- [Architecture](docs/architecture.md)
+- [API Reference](docs/api.md)
+- [Backup & Restore](docs/backup.md)
+
 ## Development
 
-This projects uses [Conventinal Commits](https://www.conventionalcommits.org/en/v1.0.0/) for all commit messages.
+This project uses [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for all commit messages.
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `make install` | Install dependencies and set up database |
+| `make server` | Start dev server on port 8003 |
+| `make watch` | Dev server with frontend hot reload |
+| `make pytest` | Run backend tests |
+| `make lint` | Run all linters |
+| `make fixtures` | Load sample data |
+
+## FAQ
+
+**Q: Can I run this on a Raspberry Pi?**
+A: Yes! Wine Cellar runs well on Raspberry Pi 4 with 4GB+ RAM.
+
+**Q: How do I enable user registration?**
+A: Set `ENABLE_SIGNUP=True` in your environment file.
+
+**Q: What database should I use?**
+A: SQLite works for development. Use PostgreSQL for production.
+
+**Q: Can I import wines from Vivino or other apps?**
+A: Not directly, but you can use the barcode scanner to quickly add wines.
+
+**Q: Is there a mobile app?**
+A: No dedicated app, but the web interface is mobile-responsive with camera-based barcode scanning.
+
+## Troubleshooting
+
+### Server won't start
+- Check if port 8003 is already in use: `lsof -i :8003`
+- Ensure virtual environment is activated: `source venv/bin/activate`
+
+### Database errors
+- Run migrations: `python manage.py migrate`
+- Check database connection in `.env.dev`
+
+### Frontend not loading
+- Rebuild assets: `npm run build`
+- Clear browser cache
+
+### Barcode scanner not working
+- Camera requires HTTPS on mobile (use `./run_https.sh`)
+- Check browser permissions for camera access
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
+
+## License
+
+This project is licensed under the [AGPL-3.0 License](LICENSE).

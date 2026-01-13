@@ -219,10 +219,11 @@ const Scanner = () => {
       <section className="form__scanner__capture">
         <button
           type="button"
-          className="pure-button pure-button-primary"
+          className={`pure-button pure-button-primary ${isAnalyzing ? 'button--loading' : ''}`}
           onClick={captureAndAnalyze}
           disabled={isAnalyzing}
         >
+          {isAnalyzing && <span className="spinner spinner--sm" aria-hidden="true" />}
           {isAnalyzing ? translated.analyzing : translated.captureButton}
         </button>
         {analyzeError && (
