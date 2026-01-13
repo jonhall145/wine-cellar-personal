@@ -3,8 +3,21 @@ set -e
 
 # Wine Cellar - HTTPS Development Server
 # Uses django-extensions runserver_plus with SSL
+# Usage: ./run_https.sh [--collect-static]
 
 cd "$(dirname "$0")"
+
+COLLECT_STATIC=false
+
+# Parse arguments
+for arg in "$@"; do
+    case $arg in
+        --collect-static|-s)
+            COLLECT_STATIC=true
+            shift
+            ;;
+    esac
+done
 
 # Activate virtual environment
 source venv/bin/activate
@@ -45,6 +58,16 @@ echo "  1. Navigate to the URL in your mobile browser"
 echo "  2. Accept the security warning"
 echo "  3. Camera access will then work"
 echo ""
+
+# Collect static files (optional - slow due to compression)
+if [ "$COLLECT_STATIC" = true ]; then
+    echo "Collecting static files..."
+    python manage.py collectstatic --noinput
+    echo ""
+else
+    echo "Skipping collectstatic (use --collect-static or -s to enable)"
+    echo ""
+fi
 
 PORT="${PORT:-8000}"
 python manage.py runserver_plus 0.0.0.0:$PORT --cert-file ssl/server.crt --key-file ssl/server.key

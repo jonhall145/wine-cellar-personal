@@ -2,7 +2,19 @@
 set -e
 
 # Wine Cellar - Local Development Server
-# Usage: ./run_local.sh
+# Usage: ./run_local.sh [--collect-static]
+
+COLLECT_STATIC=false
+
+# Parse arguments
+for arg in "$@"; do
+    case $arg in
+        --collect-static|-s)
+            COLLECT_STATIC=true
+            shift
+            ;;
+    esac
+done
 
 echo "=========================================="
 echo "Wine Cellar - Development Server"
@@ -55,10 +67,15 @@ else:
     print(f'Superuser "{username}" already exists')
 PYEOF
 
-# Collect static files
-echo ""
-echo "Collecting static files..."
-python manage.py collectstatic --noinput
+# Collect static files (optional - slow due to compression)
+if [ "$COLLECT_STATIC" = true ]; then
+    echo ""
+    echo "Collecting static files..."
+    python manage.py collectstatic --noinput
+else
+    echo ""
+    echo "Skipping collectstatic (use --collect-static or -s to enable)"
+fi
 
 # Get external IP if available
 EXTERNAL_IP=$(curl -s http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip -H "Metadata-Flavor: Google" 2>/dev/null || echo "")
