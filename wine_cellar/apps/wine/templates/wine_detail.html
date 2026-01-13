@@ -22,6 +22,7 @@
                         <div class="image wine-detail__image" id="wine-image-wrapper">
                             <img id="wine-image"
                                  src="{{ wine.image_thumbnail }}"
+                                 loading="lazy"
                                  height="225"
                                  width="auto"
                                  alt="{% translate 'Picture of a wine bottle' %}">
@@ -145,11 +146,13 @@
             <div class="pure-u-1 pure-u-md-3-8 m-auto">
                 <div class="d-flex j-between mb-12">
                     <p class="stock__count">
-                        {% blocktranslate count counter=wine.total_stock %}
+                        {% with stock=wine.stock_count|default:wine.total_stock|default:0 %}
+                        {% blocktranslate count counter=stock %}
                     {{ counter }} bottle
                     {% plural %}
                     {{ counter }} bottles
                     {% endblocktranslate %}
+                        {% endwith %}
                     </p>
                     <div>
                         <a href="{% url 'stock-add' wine.pk %}"
