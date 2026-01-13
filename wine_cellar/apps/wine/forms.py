@@ -165,10 +165,16 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
                         .first()
                     )
                     if image_obj:
-                        self.initial[field_name] = image_obj.thumbnail
+                        self.initial[field_name] = image_obj.image
+                        # Use thumbnail for preview if available, else full image
+                        preview_url = (
+                            image_obj.thumbnail.url
+                            if image_obj.thumbnail
+                            else image_obj.image.url
+                        )
                         self.fields[field_name].widget.attrs[
                             "data-existing-url"
-                        ] = image_obj.thumbnail.url
+                        ] = preview_url
 
     class Meta:
         abstract = True
@@ -294,7 +300,9 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         max_digits=6,
         decimal_places=2,
         localize=True,
-        help_text=_("Enter the recommended retail price if different from purchase price."),
+        help_text=_(
+            "Enter the recommended retail price if different from purchase price."
+        ),
     )
     barcode = forms.CharField(
         max_length=100,
@@ -360,7 +368,9 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         max_digits=6,
         decimal_places=2,
         label=_("Bottle Price"),
-        help_text=_("Price paid for this specific bottle (if different from wine price)."),
+        help_text=_(
+            "Price paid for this specific bottle (if different from wine price)."
+        ),
         localize=True,
     )
     form_step = forms.IntegerField(
@@ -401,7 +411,9 @@ class WineEditForm(WineBaseForm):
         # Size is now a simple FK to Size model, get its name (the code)
         size_obj = initial.get("size")
         if size_obj:
-            self.initial["size"] = size_obj.name if hasattr(size_obj, "name") else size_obj
+            self.initial["size"] = (
+                size_obj.name if hasattr(size_obj, "name") else size_obj
+            )
 
         self.fields["category"].widget.attrs.update(
             {
@@ -522,7 +534,8 @@ class WishlistForm(forms.Form):
         max_length=250,
         required=False,
         widget=forms.Select(
-            choices=[("", "---------")] + [(c.alpha_2, c.name) for c in pycountry.countries],
+            choices=[("", "---------")]
+            + [(c.alpha_2, c.name) for c in pycountry.countries],
         ),
         help_text=_("Country of origin."),
     )

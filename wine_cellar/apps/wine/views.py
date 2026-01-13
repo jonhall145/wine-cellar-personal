@@ -43,9 +43,7 @@ class HomePageView(TemplateView):
         wine_stats = Wine.objects.filter(user=user).aggregate(
             total_wines=Count("id"),
             wines_in_stock=Count(
-                "id",
-                filter=Q(storageitem__deleted=False),
-                distinct=True
+                "id", filter=Q(storageitem__deleted=False), distinct=True
             ),
             countries=Count("country", distinct=True),
             oldest_vintage=Min("vintage", filter=Q(vintage__isnull=False)),
@@ -55,9 +53,9 @@ class HomePageView(TemplateView):
                 filter=Q(
                     drink_by__isnull=False,
                     drink_by__lt=date.today(),
-                    storageitem__deleted=False
+                    storageitem__deleted=False,
                 ),
-                distinct=True
+                distinct=True,
             ),
             upcoming_count=Count(
                 "id",
@@ -65,9 +63,9 @@ class HomePageView(TemplateView):
                     drink_by__isnull=False,
                     drink_by__lte=date.today() + timedelta(days=180),
                     drink_by__gte=date.today(),
-                    storageitem__deleted=False
+                    storageitem__deleted=False,
                 ),
-                distinct=True
+                distinct=True,
             ),
         )
 
@@ -109,8 +107,7 @@ class HomePageView(TemplateView):
             user=self.request.user, is_active=True
         ).annotate(
             current_stock=Count(
-                "wine__storageitem",
-                filter=Q(wine__storageitem__deleted=False)
+                "wine__storageitem", filter=Q(wine__storageitem__deleted=False)
             )
         )
         low_stock_count = sum(1 for r in reminders if r.current_stock <= r.min_stock)
@@ -130,16 +127,14 @@ class HomePageView(TemplateView):
         # Stats - consolidate into single query per model
         drink_stats = DrinkRecord.objects.filter(user=user).aggregate(
             total_consumed=Count("id"),
-            avg_rating=Avg("rating", filter=Q(rating__isnull=False))
+            avg_rating=Avg("rating", filter=Q(rating__isnull=False)),
         )
         total_consumed = drink_stats["total_consumed"]
         avg_rating = (
             round(drink_stats["avg_rating"], 1) if drink_stats["avg_rating"] else None
         )
 
-        total_bottles = StorageItem.objects.filter(
-            user=user, deleted=False
-        ).count()
+        total_bottles = StorageItem.objects.filter(user=user, deleted=False).count()
 
         # Pending hardware position reviews (gracefully handle if hardware not set up)
         pending_reviews_count = 0
@@ -565,13 +560,23 @@ class WineUpdateView(FormView):
             image = cleaned_data.get(form_field)
             existing_image = WineImage.objects.filter(
                 wine=wine, user=user, image_type=image_type
-            )
-            if image is False or not hasattr(image, "instance"):
-                if existing_image.exists():
-                    existing_image.first().image.delete()
+            ).first()
+
+            # image is False: user checked "clear" checkbox - delete existing
+            # image is None: no action taken - preserve existing
+            # image has "instance" attr: existing file unchanged - preserve
+            # image is new file (InMemoryUploadedFile): replace existing
+            if image is False:
+                # User explicitly cleared the image
+                if existing_image:
+                    existing_image.image.delete()
                     existing_image.delete()
-            if image and not hasattr(image, "instance"):
-                WineImage.objects.get_or_create(
+            elif image and not hasattr(image, "instance"):
+                # User uploaded a new image - delete old and create new
+                if existing_image:
+                    existing_image.image.delete()
+                    existing_image.delete()
+                WineImage.objects.create(
                     image=image, wine=wine, user=user, image_type=image_type
                 )
 
@@ -582,15 +587,20 @@ class WineDetailView(DetailView):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.prefetch_related(
-            "grapes", "attributes", "food_pairings", "wineimage_set",
-            "vineyard", "source"
-        ).annotate(
-            stock_count=Count(
-                "storageitem",
-                filter=Q(storageitem__deleted=False)
+        return (
+            qs.prefetch_related(
+                "grapes",
+                "attributes",
+                "food_pairings",
+                "wineimage_set",
+                "vineyard",
+                "source",
             )
-        ).filter(user=self.request.user)
+            .annotate(
+                stock_count=Count("storageitem", filter=Q(storageitem__deleted=False))
+            )
+            .filter(user=self.request.user)
+        )
 
 
 class WineListView(FilterView):
@@ -612,10 +622,7 @@ class WineListView(FilterView):
                 Avg("storageitem__price"),
                 "price",
             ),
-            stock_count=Count(
-                "storageitem",
-                filter=Q(storageitem__deleted=False)
-            )
+            stock_count=Count("storageitem", filter=Q(storageitem__deleted=False)),
         )
         return qs.filter(user=self.request.user)
 
@@ -1029,12 +1036,13 @@ class ReorderRemindersView(TemplateView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
 
-        reminders = ReorderReminder.objects.filter(
-            user=user, is_active=True
-        ).select_related("wine").annotate(
-            current_stock=Count(
-                "wine__storageitem",
-                filter=Q(wine__storageitem__deleted=False)
+        reminders = (
+            ReorderReminder.objects.filter(user=user, is_active=True)
+            .select_related("wine")
+            .annotate(
+                current_stock=Count(
+                    "wine__storageitem", filter=Q(wine__storageitem__deleted=False)
+                )
             )
         )
 
