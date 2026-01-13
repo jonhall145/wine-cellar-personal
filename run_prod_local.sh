@@ -98,6 +98,7 @@ PYEOF
         set +a
         exec venv/bin/gunicorn wine_cellar.conf.wsgi:application \
             --bind 0.0.0.0:80 \
+            --worker-class gevent \
             --workers 2 \
             --timeout 120 \
             --pid '$PIDFILE'
