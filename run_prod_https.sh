@@ -103,7 +103,7 @@ start_server() {
         set +a
         exec venv/bin/gunicorn wine_cellar.conf.wsgi:application \
             --bind 0.0.0.0:$PORT \
-            --workers 3 \
+            --workers 2 \
             --timeout 120 \
             --certfile ssl/server.crt \
             --keyfile ssl/server.key \
