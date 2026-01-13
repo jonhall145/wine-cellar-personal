@@ -56,13 +56,44 @@ interface TooltipProps {
 }
 
 const Tooltip: React.FC<TooltipProps> = ({ wine, position }) => {
+    const tooltipRef = React.useRef<HTMLDivElement>(null);
+    const [adjustedPosition, setAdjustedPosition] = React.useState({ x: position.x, y: position.y });
+
+    React.useLayoutEffect(() => {
+        if (tooltipRef.current) {
+            const tooltip = tooltipRef.current;
+            const rect = tooltip.getBoundingClientRect();
+            const padding = 10;
+
+            let x = position.x + padding;
+            let y = position.y + padding;
+
+            // Adjust if tooltip would go off right edge
+            if (x + rect.width > window.innerWidth - padding) {
+                x = position.x - rect.width - padding;
+            }
+
+            // Adjust if tooltip would go off bottom edge
+            if (y + rect.height > window.innerHeight - padding) {
+                y = position.y - rect.height - padding;
+            }
+
+            // Ensure tooltip doesn't go off left or top edge
+            x = Math.max(padding, x);
+            y = Math.max(padding, y);
+
+            setAdjustedPosition({ x, y });
+        }
+    }, [position.x, position.y]);
+
     return (
-        <div 
+        <div
+            ref={tooltipRef}
             className="storage-grid__tooltip"
             style={{
                 position: 'fixed',
-                left: position.x + 10,
-                top: position.y + 10,
+                left: adjustedPosition.x,
+                top: adjustedPosition.y,
                 zIndex: 1000,
             }}
         >
@@ -149,7 +180,11 @@ const GridCell: React.FC<GridCellProps> = ({
     );
 };
 
-const StorageGrid: React.FC = () => {
+interface StorageGridProps {
+    initialStorageId?: number;
+}
+
+const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
     const [data, setData] = useState<AllStoragesData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -170,7 +205,10 @@ const StorageGrid: React.FC = () => {
     
     const fetchStorageData = async () => {
         try {
-            const response = await fetch('/api/storage/grid-data/');
+            const url = initialStorageId 
+                ? `/api/storage/grid-data/?storage_id=${initialStorageId}`
+                : '/api/storage/grid-data/';
+            const response = await fetch(url);
             if (!response.ok) throw new Error('Failed to load storage data');
             const json = await response.json();
             setData(json);
@@ -529,10 +567,11 @@ const StorageGrid: React.FC = () => {
 const initStorageGrid = () => {
     const container = document.getElementById('storage-grid-container');
     if (container) {
-        // Get CSRF token from cookie or page
-        const csrfInput = container.querySelector<HTMLInputElement>('[name=csrfmiddlewaretoken]');
+        // Get initial storage ID from data attribute
+        const storageIdAttr = container.getAttribute('data-storage-id');
+        const initialStorageId = storageIdAttr ? parseInt(storageIdAttr, 10) : undefined;
         const root = createRoot(container);
-        root.render(<StorageGrid />);
+        root.render(<StorageGrid initialStorageId={initialStorageId} />);
     }
 };
 
