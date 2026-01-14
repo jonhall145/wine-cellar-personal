@@ -164,6 +164,14 @@ module.exports = {
           from: './node_modules/zxing-wasm/dist/reader/zxing_reader.wasm',
           to: '[name][ext]',
         },
+        {
+          from: './node_modules/leaflet/dist/*.map',
+          to: '[name][ext]',
+        },
+        {
+          from: './node_modules/leaflet.markercluster/dist/*.map',
+          to: '[name][ext]',
+        },
       ],
     }),
   ],

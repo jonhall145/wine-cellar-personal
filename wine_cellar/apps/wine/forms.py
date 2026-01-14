@@ -28,8 +28,6 @@ from wine_cellar.apps.wine.models import (
 from wine_cellar.apps.wine.widgets import NoFilenameClearableFileInput
 
 image_fields_map = {
-    "image_front": ImageType.FRONT,
-    "image_back": ImageType.BACK,
     "image_front_label": ImageType.LABEL_FRONT,
     "image_back_label": ImageType.LABEL_BACK,
 }
@@ -323,16 +321,6 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         validators=[MinValueValidator(0), MaxValueValidator(10)],
         help_text=_("Rate this wine on a scale from 0 to 10."),
     )
-    image_front = ImageField(
-        widget=NoFilenameClearableFileInput,
-        required=False,
-        help_text=_("Upload a photo of the front of the wine bottle."),
-    )
-    image_back = ImageField(
-        widget=NoFilenameClearableFileInput,
-        required=False,
-        help_text=_("Upload a photo of the back of the wine bottle."),
-    )
     image_front_label = ImageField(
         widget=NoFilenameClearableFileInput,
         required=False,
@@ -408,12 +396,18 @@ class WineEditForm(WineBaseForm):
         source = [s.pk for s in initial["source"]]
         vineyard = [v.pk for v in initial["vineyard"]]
         country = initial["country"]
-        # Size is now a simple FK to Size model, get its name (the code)
-        size_obj = initial.get("size")
-        if size_obj:
-            self.initial["size"] = (
-                size_obj.name if hasattr(size_obj, "name") else size_obj
-            )
+        # Size is a FK to Size model - model_to_dict returns the PK
+        size_pk = initial.get("size")
+        if size_pk:
+            from wine_cellar.apps.wine.models import Size
+
+            try:
+                size_instance = Size.objects.get(pk=size_pk)
+                self.initial["size"] = size_instance.name
+            except (Size.DoesNotExist, TypeError):
+                # TypeError handles case where size_pk is already a Size object
+                if hasattr(size_pk, "name"):
+                    self.initial["size"] = size_pk.name
 
         self.fields["category"].widget.attrs.update(
             {

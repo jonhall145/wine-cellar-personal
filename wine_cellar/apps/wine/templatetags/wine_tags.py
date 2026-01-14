@@ -28,6 +28,12 @@ WINE_TYPE_LABELS = {
 }
 
 
+@register.filter
+def wine_type_css(wine_type: str) -> str:
+    """Return CSS class suffix for wine type (red, white, rose, etc.)."""
+    return WINE_TYPE_CLASSES.get(wine_type, "")
+
+
 @register.simple_tag
 def wine_type_badge(wine_type: str) -> str:
     """Render a colored badge for the wine type."""

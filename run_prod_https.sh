@@ -24,7 +24,8 @@ show_help() {
     echo "  help     - Show this help message"
     echo ""
     echo "Environment variables:"
-    echo "  PORT     - Port to listen on (default: 443)"
+    echo "  PORT         - Port to listen on (default: 8000)"
+    echo "  BUILD_STATIC - Set to 1 to rebuild static assets (default: 0)"
     echo ""
 }
 
@@ -83,10 +84,12 @@ start_server() {
     echo "Running migrations..."
     python manage.py migrate --no-input
     
-    # Collect static files
-    echo ""
-    echo "Collecting static files..."
-    python manage.py collectstatic --no-input
+    # Collect static files (optional, skipped by default)
+    if [ "${BUILD_STATIC:-0}" = "1" ]; then
+        echo ""
+        echo "Collecting static files..."
+        python manage.py collectstatic --no-input
+    fi
     
     # Get external IP
     EXTERNAL_IP=$(curl -s http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip -H "Metadata-Flavor: Google" 2>/dev/null || echo "your-server-ip")
@@ -103,8 +106,8 @@ start_server() {
         set +a
         exec venv/bin/gunicorn wine_cellar.conf.wsgi:application \
             --bind 0.0.0.0:$PORT \
-            --worker-class gevent \
-            --workers 2 \
+            --worker-class sync \
+            --workers 4 \
             --timeout 120 \
             --certfile ssl/server.crt \
             --keyfile ssl/server.key \

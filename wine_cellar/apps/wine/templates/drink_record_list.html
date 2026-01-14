@@ -19,6 +19,7 @@
                             <th>{% translate "Shared With" %}</th>
                             <th>{% translate "Occasion" %}</th>
                             <th>{% translate "Notes" %}</th>
+                            <th>{% translate "Actions" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -30,6 +31,14 @@
                                 <td>{{ record.shared_with|default_if_none:"-" }}</td>
                                 <td>{{ record.occasion|default_if_none:"-" }}</td>
                                 <td>{{ record.tasting_notes|default_if_none:"-"|truncatewords:20 }}</td>
+                                <td>
+                                    <a href="{% url 'drink-record-edit' record.pk %}" class="pure-button pure-button-small" title="{% translate 'Edit' %}">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </a>
+                                    <a href="{% url 'drink-record-delete' record.pk %}" class="pure-button pure-button-small button__danger" title="{% translate 'Delete' %}">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </a>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>

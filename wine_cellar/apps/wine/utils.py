@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import TYPE_CHECKING
 
@@ -7,21 +8,16 @@ from PIL import ExifTags, Image
 if TYPE_CHECKING:
     from wine_cellar.apps.wine.models import WineImage
 
+logger = logging.getLogger(__name__)
+
 
 def user_directory_path(instance: "WineImage", filename: str) -> str:
     """Generate upload path for user files."""
     return f"user_{instance.user.pk}/{filename}"
 
 
-def make_thumbnail(instance: "WineImage", height: int = 225) -> str:
-    """
-    Creates a proportional thumbnail with given height.
-    Returns the path to the thumbnail file.
-    """
-    image_path = instance.image.name
-    full_path = os.path.join(settings.MEDIA_ROOT, image_path)
-    img = Image.open(full_path)
-
+def correct_image_orientation(img: Image.Image) -> Image.Image:
+    """Apply EXIF orientation correction to image."""
     try:
         for orientation in ExifTags.TAGS.keys():
             if ExifTags.TAGS[orientation] == "Orientation":
@@ -38,14 +34,72 @@ def make_thumbnail(instance: "WineImage", height: int = 225) -> str:
     except (AttributeError, KeyError, IndexError):
         # Image has no EXIF or orientation info
         pass
+    return img
 
-    aspect = img.width / img.height
-    width = int(height * aspect)
 
-    img.thumbnail((width, height), Image.LANCZOS)
+def make_thumbnail(instance: "WineImage", height: int = 225) -> str:
+    """
+    Creates a smart thumbnail with label detection, falling back to
+    proportional scaling if detection fails.
+
+    Returns the path to the thumbnail file.
+    """
+    image_path = instance.image.name
+    full_path = os.path.join(settings.MEDIA_ROOT, image_path)
+    img = Image.open(full_path)
+
+    # Convert to RGB if necessary (handles RGBA, P mode, etc.)
+    if img.mode not in ("RGB", "L"):
+        img = img.convert("RGB")
+
+    # Correct EXIF orientation first
+    img = correct_image_orientation(img)
+
+    # Store original format before any processing
+    original_format = img.format
+
+    # Attempt smart label detection
+    try:
+        from wine_cellar.apps.wine.label_detection import (
+            detect_and_crop_label,
+            enhance_detection_for_difficult_images,
+        )
+
+        result_img, success = detect_and_crop_label(img, target_height=height)
+
+        # If initial detection failed, try with enhanced image
+        if not success:
+            enhanced_img = enhance_detection_for_difficult_images(img)
+            result_img, success = detect_and_crop_label(
+                enhanced_img,
+                target_height=height,
+            )
+
+            # If still failed, use simple scaling as final fallback
+            if not success:
+                logger.info("Using simple scaling fallback")
+                aspect = img.width / img.height
+                width = int(height * aspect)
+                result_img = img.copy()
+                result_img.thumbnail((width, height), Image.LANCZOS)
+
+    except ImportError:
+        # OpenCV not installed - use simple scaling
+        logger.warning("OpenCV not available, using simple scaling")
+        aspect = img.width / img.height
+        width = int(height * aspect)
+        result_img = img.copy()
+        result_img.thumbnail((width, height), Image.LANCZOS)
+
+    # Save thumbnail
     base, ext = os.path.splitext(image_path)
     name = f"{base}_thumb{ext}"
     thumb_full_path = os.path.join(settings.MEDIA_ROOT, name)
 
-    img.save(thumb_full_path, format=img.format, quality=100)
+    # Determine format (handle JPEG extension variations)
+    save_format = original_format
+    if save_format is None or save_format.upper() == "MPO":
+        save_format = "JPEG" if ext.lower() in (".jpg", ".jpeg") else "PNG"
+
+    result_img.save(thumb_full_path, format=save_format, quality=95)
     return name

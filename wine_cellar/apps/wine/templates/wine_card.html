@@ -1,6 +1,6 @@
 {% load static i18n wine_tags %}
 <li class="wine-card">
-    <div class="wine-card__image-wrapper">
+    <div class="wine-card__image-wrapper wine-card__image-wrapper--{{ wine.wine_type|wine_type_css }}">
         <img src="{{ wine.image_thumbnail }}"
              class="wine-card__img"
              height="200"

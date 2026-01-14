@@ -56,8 +56,6 @@ class Category(models.TextChoices):
 
 
 class ImageType(models.TextChoices):
-    FRONT = "FR", _("Front")
-    BACK = "BA", _("Back")
     LABEL_FRONT = "LF", _("Label Front")
     LABEL_BACK = "LB", _("Label Back")
 
@@ -340,7 +338,7 @@ class Wine(UserContentModel):
 
     @property
     def image_thumbnail(self):
-        i = self.wineimage_set.filter(image_type=ImageType.FRONT)
+        i = self.wineimage_set.filter(image_type=ImageType.LABEL_FRONT)
         if not i:
             return static(settings.DEFAULT_WINE_IMAGE)
         front = i.first()
@@ -351,10 +349,9 @@ class Wine(UserContentModel):
 
     @property
     def image_thumbnails(self):
+        """Return all images: thumbnails and full images for front and back labels."""
         images = {img.image_type: img for img in self.wineimage_set.all()}
         order = [
-            ImageType.FRONT,
-            ImageType.BACK,
             ImageType.LABEL_FRONT,
             ImageType.LABEL_BACK,
         ]
@@ -362,8 +359,11 @@ class Wine(UserContentModel):
         for image_type in order:
             image = images.get(image_type)
             if image:
-                src = image.thumbnail.url if image.thumbnail else image.image.url
-                result.append(src)
+                # Add thumbnail if it exists
+                if image.thumbnail:
+                    result.append(image.thumbnail.url)
+                # Always add the full image
+                result.append(image.image.url)
         return result
 
     @property
@@ -419,7 +419,7 @@ class WineImage(models.Model):
     image_type = models.CharField(
         max_length=3,
         choices=ImageType,
-        default=ImageType.FRONT,
+        default=ImageType.LABEL_FRONT,
         verbose_name=_("Image Type"),
     )
 

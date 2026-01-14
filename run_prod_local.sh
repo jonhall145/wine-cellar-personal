@@ -20,6 +20,9 @@ show_help() {
     echo "  logs     - Show server logs"
     echo "  help     - Show this help message"
     echo ""
+    echo "Environment variables:"
+    echo "  BUILD_STATIC - Set to 1 to rebuild static assets (default: 0)"
+    echo ""
 }
 
 check_requirements() {
@@ -61,10 +64,12 @@ start_server() {
     echo "Running migrations..."
     python manage.py migrate --no-input
     
-    # Collect static files
-    echo ""
-    echo "Collecting static files..."
-    python manage.py collectstatic --no-input
+    # Collect static files (optional, skipped by default)
+    if [ "${BUILD_STATIC:-0}" = "1" ]; then
+        echo ""
+        echo "Collecting static files..."
+        python manage.py collectstatic --no-input
+    fi
     
     # Create superuser if needed
     echo ""
@@ -98,8 +103,8 @@ PYEOF
         set +a
         exec venv/bin/gunicorn wine_cellar.conf.wsgi:application \
             --bind 0.0.0.0:80 \
-            --worker-class gevent \
-            --workers 2 \
+            --worker-class sync \
+            --workers 4 \
             --timeout 120 \
             --pid '$PIDFILE'
     " >> "$LOGFILE" 2>&1 &

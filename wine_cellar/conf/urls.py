@@ -18,8 +18,16 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.contrib.auth.decorators import login_not_required
+from django.urls import include, path, re_path
 from django.views.i18n import JavaScriptCatalog
+from django.views.static import serve
+
+
+@login_not_required
+def serve_media(request, path):
+    """Serve media files without requiring login."""
+    return serve(request, path, document_root=settings.MEDIA_ROOT)
 
 from wine_cellar.apps.storage.views import (
     StorageCreateView,
@@ -42,6 +50,8 @@ from wine_cellar.apps.wine.views import (
     ConsumptionStatsView,
     DrinkingWindowAlertsView,
     DrinkRecordCreateView,
+    DrinkRecordDeleteView,
+    DrinkRecordEditView,
     DrinkRecordListView,
     HomePageView,
     LabelScanView,
@@ -109,6 +119,16 @@ urlpatterns = [
     path("wine/scan-barcode/", scan_barcode_ajax, name="wine-scan-barcode"),
     path("wines/map/", WineMapView.as_view(), name="wine-map"),
     path("drink-history/", DrinkRecordListView.as_view(), name="drink-history"),
+    path(
+        "drink-history/edit/<int:pk>/",
+        DrinkRecordEditView.as_view(),
+        name="drink-record-edit",
+    ),
+    path(
+        "drink-history/delete/<int:pk>/",
+        DrinkRecordDeleteView.as_view(),
+        name="drink-record-delete",
+    ),
     path("wishlist/", WishlistListView.as_view(), name="wishlist-list"),
     path("wishlist/add/", WishlistCreateView.as_view(), name="wishlist-add"),
     path(
@@ -145,5 +165,7 @@ urlpatterns = [
     path("jsi18n/", JavaScriptCatalog.as_view(), name="javascript-catalog"),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve media files (in production, consider using nginx instead)
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', serve_media),
+]

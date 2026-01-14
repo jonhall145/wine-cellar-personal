@@ -774,6 +774,60 @@ class DrinkRecordListView(TemplateView):
         return context
 
 
+class DrinkRecordEditView(FormView):
+    template_name = "drink_record_edit.html"
+
+    def get_form_class(self):
+        from wine_cellar.apps.wine.forms import DrinkRecordForm
+
+        return DrinkRecordForm
+
+    def get_object(self):
+        from wine_cellar.apps.wine.models import DrinkRecord
+
+        return get_object_or_404(
+            DrinkRecord, pk=self.kwargs["pk"], user=self.request.user
+        )
+
+    def get_initial(self):
+        record = self.get_object()
+        return {
+            "date_consumed": record.date_consumed,
+            "tasting_notes": record.tasting_notes,
+            "rating": record.rating,
+            "shared_with": record.shared_with,
+            "occasion": record.occasion,
+        }
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        record = self.get_object()
+        context["record"] = record
+        context["wine"] = record.wine
+        return context
+
+    def form_valid(self, form):
+        record = self.get_object()
+        record.date_consumed = form.cleaned_data["date_consumed"]
+        record.tasting_notes = form.cleaned_data.get("tasting_notes")
+        record.rating = form.cleaned_data.get("rating")
+        record.shared_with = form.cleaned_data.get("shared_with")
+        record.occasion = form.cleaned_data.get("occasion")
+        record.save()
+        self.success_url = reverse_lazy("drink-history")
+        return super().form_valid(form)
+
+
+class DrinkRecordDeleteView(DeleteView):
+    template_name = "drink_record_confirm_delete.html"
+    success_url = reverse_lazy("drink-history")
+
+    def get_queryset(self):
+        from wine_cellar.apps.wine.models import DrinkRecord
+
+        return DrinkRecord.objects.filter(user=self.request.user)
+
+
 class WishlistListView(TemplateView):
     template_name = "wishlist_list.html"
 

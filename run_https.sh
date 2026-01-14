@@ -29,6 +29,9 @@ if [ -f .env.dev ]; then
     set +a
 fi
 
+# Ensure DEBUG is on for development (overrides default False in settings.py)
+export DJANGO_DEBUG=True
+
 # Check SSL certificates exist
 if [ ! -f ssl/server.crt ] || [ ! -f ssl/server.key ]; then
     echo "SSL certificates not found. Generating..."
