@@ -293,6 +293,71 @@ Potential improvements:
 - Scheduled jobs (drink-by reminders)
 - Scalable worker architecture
 
+## Image Processing
+
+### Thumbnail Generation
+
+Wine Cellar uses **smart label detection** to generate optimized thumbnails:
+
+```
+Original Image
+      │
+      ▼
+EXIF Orientation Correction
+      │
+      ▼
+Smart Label Detection (OpenCV)
+├── CLAHE contrast enhancement
+├── Bilateral filtering
+├── Morphological gradient
+├── Otsu's thresholding
+├── Contour detection
+└── Perspective transform
+      │
+      ▼
+Fallback (if detection fails)
+├── Enhanced detection (increased contrast)
+└── Simple proportional scaling
+      │
+      ▼
+Thumbnail Saved (225px height, 95% quality)
+```
+
+**Management Command**: `python manage.py regenerate_thumbnails`
+
+### AI Vision Extraction
+
+Wine label scanning uses Claude AI for data extraction:
+
+```
+Camera Capture (React)
+      │
+      ▼
+Session Storage (base64)
+      │
+      ▼
+WineVisionExtractor Service
+      │
+      ▼
+Claude Haiku 4.5 API
+├── Image resized (max 1568px)
+├── Structured prompt
+└── Field extraction
+      │
+      ▼
+Extracted Data
+├── Name, Type, Vintage
+├── Country, Region
+├── Grapes, ABV, Volume
+└── Confidence score
+      │
+      ▼
+Form Pre-fill
+```
+
+**Model**: Claude Haiku 4.5 (`claude-haiku-4-5`)
+**Fallback**: Regex extraction if API unavailable
+
 ## Future Considerations
 
 - **API layer**: REST or GraphQL for mobile apps

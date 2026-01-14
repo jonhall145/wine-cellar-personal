@@ -244,11 +244,10 @@ Documentation site built with MkDocs Material theme.
 
 ## Known Limitations
 
-1. Single FIXME comment in `wine_cellar/apps/wine/views.py`: "hacky workaround to increase form_step field"
-2. Production setup noted as "under development" in deployment docs
-3. Email backend requires manual SMTP configuration
-4. No automated backup system documented
-5. Limited API documentation (primarily template-based)
+1. Production setup noted as "under development" in deployment docs
+2. Email backend requires manual SMTP configuration
+3. No automated backup system documented
+4. Limited API documentation (primarily template-based)
 
 ## Project Maintenance
 
@@ -292,4 +291,4 @@ See `CLAUDE.md` for Claude-specific capabilities including:
 
 ---
 
-*This summary was generated on 2025-12-27 and reflects the state of the project at version 0.3.0-rc.0.*
+*This summary was last updated on 2026-01-14.*

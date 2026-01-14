@@ -159,11 +159,11 @@ If the Anthropic API is unavailable:
 
 ### Claude Vision API Pricing
 
-Using **Claude 3.5 Sonnet** (recommended for accuracy):
+Using **Claude Haiku 4.5** (optimized for speed and cost):
 
-- **Cost per scan**: ~$0.003-$0.005
-- **50 scans/month**: ~$0.15-$0.25
-- **Annual cost**: ~$1.80-$3.00
+- **Cost per scan**: ~$0.001-$0.003
+- **50 scans/month**: ~$0.05-$0.15
+- **Annual cost**: ~$0.60-$1.80
 
 Extremely affordable for personal use!
 
@@ -275,7 +275,7 @@ def _process_field_value(self, field: str, value: str) -> Any:
 ### Future Enhancements
 
 Planned improvements:
-- [ ] Multi-label scanning (front + back)
+- [x] Multi-label scanning (front + back) - **Implemented**: Wine detail view now displays thumbnail, front, and back images
 - [ ] Batch scanning multiple bottles
 - [ ] Offline OCR support (Tesseract)
 - [ ] Barcode + vision hybrid approach
@@ -340,7 +340,7 @@ A: Yes, Claude AI supports multiple languages, though accuracy may vary.
 A: Only the label image is sent. The extracted data stays in your Wine Cellar instance.
 
 **Q: Can I scan the back label too?**
-A: Currently, only one image per scan. Future versions may support multiple images.
+A: Yes! The wine detail view displays thumbnail, front label, and back label images. You can upload multiple images when adding or editing a wine.
 
 ---
 
@@ -353,4 +353,4 @@ A: Currently, only one image per scan. Future versions may support multiple imag
 
 ---
 
-*Last updated: 2026-01-06*
+*Last updated: 2026-01-14*
