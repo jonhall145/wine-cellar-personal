@@ -58,13 +58,17 @@
   box-sizing: border-box;
   margin-inline: auto;
   margin-block-end: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   img {
-    height: 225px;
-    width: auto;
+    max-height: 225px;
     max-width: 100%;
+    width: auto;
+    height: auto;
     border-radius: var(--border-radius);
-    object-fit: cover;
+    object-fit: contain;
   }
 }
 
