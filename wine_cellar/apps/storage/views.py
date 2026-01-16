@@ -142,11 +142,26 @@ class StorageItemAddView(FormView):
     template_name = "stock_add.html"
     form_class = StockAddForm
 
+    def get_wine(self):
+        if not hasattr(self, "_wine"):
+            self._wine = get_object_or_404(
+                Wine, pk=self.kwargs["pk"], user=self.request.user
+            )
+        return self._wine
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         if "user" not in kwargs:
             kwargs["user"] = self.request.user
         return kwargs
+
+    def get_initial(self):
+        initial = super().get_initial()
+        wine = self.get_wine()
+        # Pre-populate rating from wine's default rating
+        if wine.rating is not None:
+            initial["rating"] = wine.rating
+        return initial
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -172,7 +187,7 @@ class StorageItemAddView(FormView):
         return context
 
     def form_valid(self, form):
-        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], user=self.request.user)
+        wine = self.get_wine()
         self.process_form_data(wine, self.request.user, form.cleaned_data)
         self.success_url = reverse_lazy("wine-detail", kwargs={"pk": wine.pk})
         return super().form_valid(form)
@@ -374,6 +389,8 @@ def storage_grid_data(request):
         items = []
         for item in storage.items.filter(deleted=False).select_related("wine"):
             wine = item.wine
+            # Use bottle's rating, fall back to wine's rating
+            rating = item.rating if item.rating is not None else wine.rating
             items.append(
                 {
                     "row": item.row,
@@ -387,6 +404,7 @@ def storage_grid_data(request):
                         ),
                         "country": wine.country or "",
                         "item_id": item.pk,
+                        "rating": rating,
                     },
                 }
             )

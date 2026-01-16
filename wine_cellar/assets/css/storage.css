@@ -161,10 +161,21 @@
 .storage-grid__bottle {
   color: white;
   font-size: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 
-.storage-grid__bottle i {
+.storage-grid__bottle > i:first-child {
   transform: rotate(-45deg);
+}
+
+.storage-grid__rating {
+  display: flex;
+  gap: 1px;
+  font-size: 8px;
+  color: #f6ad55;
 }
 
 /* Tooltip */

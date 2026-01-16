@@ -29,6 +29,7 @@ interface WineInfo {
     wine_type: string;
     country: string;
     item_id: number;
+    rating: number | null;
 }
 
 interface CellData {
@@ -105,6 +106,20 @@ const Tooltip: React.FC<TooltipProps> = ({ wine, position }) => {
     );
 };
 
+// Render star rating for grid cells
+const RatingStars: React.FC<{ rating: number | null; maxRating?: number }> = ({ rating, maxRating = 3 }) => {
+    if (rating === null || rating === undefined) return null;
+    
+    const stars = Math.min(rating, maxRating);
+    return (
+        <span className="storage-grid__rating">
+            {Array.from({ length: stars }, (_, i) => (
+                <i key={i} className="fa-solid fa-star" />
+            ))}
+        </span>
+    );
+};
+
 interface GridCellProps {
     cell: CellData;
     isSelected: boolean;
@@ -174,6 +189,7 @@ const GridCell: React.FC<GridCellProps> = ({
             {hasWine && (
                 <div className="storage-grid__bottle">
                     <i className="fa-solid fa-wine-bottle" />
+                    <RatingStars rating={cell.wine!.rating} />
                 </div>
             )}
         </div>
@@ -418,6 +434,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                                     {cell.wine && (
                                         <div className="storage-grid__bottle">
                                             <i className="fa-solid fa-wine-bottle" />
+                                            <RatingStars rating={cell.wine.rating} />
                                         </div>
                                     )}
                                 </div>

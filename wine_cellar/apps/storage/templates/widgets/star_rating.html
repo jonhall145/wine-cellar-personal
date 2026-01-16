@@ -1,0 +1,29 @@
+{% load i18n %}
+<div class="star-rating-input" data-max="{{ widget.max_rating }}">
+    {% for option in widget.optgroups %}
+        {% for choice in option.1 %}
+            {% if choice.value == "" or choice.value == None %}
+                <input type="radio"
+                       name="{{ widget.name }}"
+                       id="{{ choice.attrs.id }}"
+                       value=""
+                       {% if choice.selected %}checked{% endif %}
+                       class="star-rating-input__radio star-rating-input__radio--clear">
+                <label for="{{ choice.attrs.id }}" class="star-rating-input__clear" title="{% translate 'Clear rating' %}">
+                    <i class="fa-solid fa-xmark"></i>
+                </label>
+            {% else %}
+                <input type="radio"
+                       name="{{ widget.name }}"
+                       id="{{ choice.attrs.id }}"
+                       value="{{ choice.value }}"
+                       {% if choice.selected %}checked{% endif %}
+                       class="star-rating-input__radio">
+                <label for="{{ choice.attrs.id }}" class="star-rating-input__star" title="{{ choice.value }} {% translate 'star' %}{% if choice.value != 1 %}s{% endif %}">
+                    <i class="fa-regular fa-star star-rating-input__icon"></i>
+                    <i class="fa-solid fa-star star-rating-input__icon star-rating-input__icon--filled"></i>
+                </label>
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+</div>

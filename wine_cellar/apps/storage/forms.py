@@ -7,6 +7,22 @@ from wine_cellar.apps.storage.models import Storage
 from wine_cellar.apps.user.views import get_user_settings
 
 
+class StarRatingWidget(forms.RadioSelect):
+    """A widget that renders star icons for rating selection (0-3 stars)."""
+
+    template_name = "widgets/star_rating.html"
+
+    def __init__(self, attrs=None, max_rating=3):
+        self.max_rating = max_rating
+        choices = [(i, str(i)) for i in range(max_rating + 1)]
+        super().__init__(attrs=attrs, choices=choices)
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        context["widget"]["max_rating"] = self.max_rating
+        return context
+
+
 class StorageForm(forms.Form):
     name = forms.CharField(
         max_length=100,
@@ -198,9 +214,12 @@ class StorageItemEditForm(forms.Form):
         required=False,
         help_text=_("Enter a special occasion this bottle is reserved for."),
     )
-    rating = forms.IntegerField(
+    rating = forms.TypedChoiceField(
         required=False,
-        validators=[MinValueValidator(0), MaxValueValidator(3)],
+        coerce=lambda x: int(x) if x else None,
+        empty_value=None,
+        choices=[(None, "-")] + [(i, str(i)) for i in range(4)],
+        widget=StarRatingWidget(max_rating=3),
         help_text=_("Rate this bottle from 0 to 3 stars."),
     )
 
