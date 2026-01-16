@@ -222,11 +222,27 @@ class Wine(UserContentModel):
     drink_by = models.DateField(
         blank=True, null=True, db_index=True, verbose_name=_("Drink By")
     )
+    # New drinking window fields - 0 means "now", otherwise a year
+    drink_from = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name=_("Drink From"),
+        help_text=_("Year to start drinking, or 0 for 'now'"),
+    )
+    drink_to = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        db_index=True,
+        verbose_name=_("Drink Until"),
+        help_text=_("Year to drink by, or 0 for 'now'"),
+    )
     comment = models.CharField(max_length=250, blank=True, verbose_name=_("Comment"))
     rating = models.PositiveIntegerField(
         null=True,
-        validators=[MinValueValidator(0), MaxValueValidator(10)],
-        verbose_name=_("Rating"),
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(3)],
+        verbose_name=_("Default Rating"),
+        help_text=_("Default star rating (0-3) for bottles of this wine."),
     )
     country = models.CharField(
         max_length=3,
@@ -338,10 +354,9 @@ class Wine(UserContentModel):
 
     @property
     def image_thumbnail(self):
-        i = self.wineimage_set.filter(image_type=ImageType.LABEL_FRONT)
-        if not i:
+        front = self.wineimage_set.filter(image_type=ImageType.LABEL_FRONT).first()
+        if not front:
             return static(settings.DEFAULT_WINE_IMAGE)
-        front = i.first()
         if front.thumbnail:
             return front.thumbnail.url
         # return normal image as fallback
@@ -383,6 +398,7 @@ class Wine(UserContentModel):
             models.Index(fields=["barcode"], name="wine_barcode_idx"),
             models.Index(fields=["user", "vintage"], name="wine_user_vintage_idx"),
             models.Index(fields=["user", "drink_by"], name="wine_user_drinkby_idx"),
+            models.Index(fields=["user", "drink_to"], name="wine_user_drinkto_idx"),
             models.Index(fields=["user", "created"], name="wine_user_created_idx"),
         ]
         constraints = [
@@ -439,8 +455,9 @@ class DrinkRecord(UserContentModel):
     rating = models.PositiveIntegerField(
         null=True,
         blank=True,
-        validators=[MinValueValidator(0), MaxValueValidator(10)],
+        validators=[MinValueValidator(0), MaxValueValidator(3)],
         verbose_name=_("Rating"),
+        help_text=_("Star rating (0-3) for this drinking experience."),
     )
     shared_with = models.CharField(
         max_length=250, null=True, blank=True, verbose_name=_("Shared With")

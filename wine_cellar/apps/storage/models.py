@@ -1,3 +1,4 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -55,6 +56,13 @@ class StorageItem(UserContentModel):
     )
     occasion = models.CharField(
         max_length=100, null=True, blank=True, verbose_name=_("Occasion")
+    )
+    rating = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(3)],
+        verbose_name=_("Rating"),
+        help_text=_("Star rating (0-3) for this specific bottle."),
     )
 
     class Meta:

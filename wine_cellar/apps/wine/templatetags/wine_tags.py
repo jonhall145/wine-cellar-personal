@@ -52,80 +52,94 @@ def wine_type_badge(wine_type: str) -> str:
 
 
 @register.simple_tag
-def rating_stars(rating, max_rating=10):
-    """Render star rating display (converts 10-point scale to 5 stars)."""
+def rating_stars(rating, max_rating=3):
+    """Render star rating display (0-3 star scale)."""
     if rating is None:
         return mark_safe('<span class="rating-stars rating-stars--empty">—</span>')
 
-    # Convert 10-point rating to 5-star scale
-    stars = (float(rating) / max_rating) * 5
-    full_stars = int(stars)
-    has_half = (stars - full_stars) >= 0.5
-    empty_stars = 5 - full_stars - (1 if has_half else 0)
+    # Ensure rating is within bounds
+    stars = min(int(rating), max_rating)
 
     html = '<span class="rating-stars">'
 
     # Full stars
-    for _i in range(full_stars):
+    for _i in range(stars):
         html += (
             '<i class="fa-solid fa-star rating-stars__star '
             'rating-stars__star--filled"></i>'
         )
 
-    # Half star
-    if has_half:
-        html += (
-            '<i class="fa-solid fa-star-half-stroke rating-stars__star '
-            'rating-stars__star--filled"></i>'
-        )
-
     # Empty stars
-    for _j in range(empty_stars):
+    for _j in range(max_rating - stars):
         html += '<i class="fa-regular fa-star rating-stars__star"></i>'
 
-    html += '</span>'
+    html += "</span>"
 
     return mark_safe(html)
 
 
 @register.simple_tag
-def drink_window_indicator(vintage, drink_by):
-    """Show whether a wine is ready to drink, too young, or past its prime."""
-    if not vintage or not drink_by:
+def drink_window_indicator(drink_from, drink_to):
+    """Show whether a wine is ready to drink, too young, or past its prime.
+
+    Args:
+        drink_from: Year to start drinking, or 0 for "now", or None
+        drink_to: Year to drink by, or 0 for "now", or None
+    """
+    # Need at least one value to show anything
+    if drink_from is None and drink_to is None:
         return ""
 
     current_year = date.today().year
 
-    try:
-        drink_by_year = int(drink_by)
-    except (ValueError, TypeError):
-        return ""
+    # Convert 0 ("now") to current year
+    start_year = current_year if drink_from == 0 else drink_from
+    end_year = current_year if drink_to == 0 else drink_to
 
-    # Estimate optimal drinking window (typically 2-3 years before drink_by)
-    optimal_start = drink_by_year - 3
+    # If only drink_to is set, assume it's ready now
+    if start_year is None:
+        start_year = current_year
 
-    if current_year < optimal_start:
+    # If only drink_from is set, no end date
+    if end_year is None:
+        if current_year < start_year:
+            years_to_wait = start_year - current_year
+            return mark_safe(
+                f'<span class="drink-window drink-window--young">'
+                f'<i class="fa-solid fa-hourglass-start drink-window__icon"></i>'
+                f"{years_to_wait}+ years"
+                f"</span>"
+            )
+        else:
+            return mark_safe(
+                '<span class="drink-window drink-window--ready">'
+                '<i class="fa-solid fa-check-circle drink-window__icon"></i>'
+                "Ready"
+                "</span>"
+            )
+
+    if current_year < start_year:
         # Too young
-        years_to_wait = optimal_start - current_year
+        years_to_wait = start_year - current_year
         return mark_safe(
             f'<span class="drink-window drink-window--young">'
             f'<i class="fa-solid fa-hourglass-start drink-window__icon"></i>'
-            f'{years_to_wait}+ years'
-            f'</span>'
+            f"{years_to_wait}+ years"
+            f"</span>"
         )
-    elif current_year <= drink_by_year:
+    elif current_year <= end_year:
         # Ready to drink
         return mark_safe(
             '<span class="drink-window drink-window--ready">'
             '<i class="fa-solid fa-check-circle drink-window__icon"></i>'
-            'Ready'
-            '</span>'
+            "Ready"
+            "</span>"
         )
     else:
         # Past prime
         return mark_safe(
             '<span class="drink-window drink-window--prime">'
             '<i class="fa-solid fa-exclamation-triangle drink-window__icon"></i>'
-            'Past prime'
-            '</span>'
+            "Past prime"
+            "</span>"
         )

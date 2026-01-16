@@ -186,6 +186,7 @@ class StorageItemAddView(FormView):
         is_gift = cleaned_data.get("is_gift", False)
         gift_from = cleaned_data.get("gift_from")
         occasion = cleaned_data.get("occasion")
+        rating = cleaned_data.get("rating")
 
         StorageItem.objects.create(
             storage=storage,
@@ -197,6 +198,7 @@ class StorageItemAddView(FormView):
             is_gift=is_gift,
             gift_from=gift_from,
             occasion=occasion,
+            rating=rating,
         )
 
 
@@ -229,7 +231,8 @@ class StorageItemHistoryView(ListView):
 
     def get_queryset(self):
         qs = (
-            super().get_queryset()
+            super()
+            .get_queryset()
             .select_related("wine", "storage")
             .order_by("-created")
         )
@@ -287,6 +290,7 @@ class StorageItemUpdateView(FormView):
                 "is_gift": item.is_gift,
                 "gift_from": item.gift_from,
                 "occasion": item.occasion,
+                "rating": item.rating,
             }
         )
         return initial
@@ -339,6 +343,7 @@ class StorageItemUpdateView(FormView):
         item.is_gift = form.cleaned_data["is_gift"]
         item.gift_from = form.cleaned_data["gift_from"]
         item.occasion = form.cleaned_data["occasion"]
+        item.rating = form.cleaned_data["rating"]
         item.save()
 
         next_url = self.request.GET.get("next")

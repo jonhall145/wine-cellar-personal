@@ -1,4 +1,3 @@
-import datetime
 from http import HTTPStatus
 
 import pytest
@@ -152,7 +151,7 @@ def test_wine_create_post_unauthenticated(client):
 @pytest.mark.django_db
 def test_wine_create_post_with_barcode(client, user):
     client.force_login(user)
-    
+
     data = {
         "name": "Merlot",
         "wine_type": "RE",
@@ -185,9 +184,9 @@ def test_wine_create_post_with_barcode(client, user):
 
 
 @pytest.mark.django_db
-def test_wine_create_post_with_drink_by(client, user):
+def test_wine_create_post_with_drinking_window(client, user):
     client.force_login(user)
-    
+
     data = {
         "name": "Merlot",
         "wine_type": "RE",
@@ -195,7 +194,8 @@ def test_wine_create_post_with_drink_by(client, user):
         "abv": 13.0,
         "size": "ST",
         "vintage": 2002,
-        "drink_by": "2003-02-25",
+        "drink_from": 2025,
+        "drink_to": 2030,
         "country": "DE",
         "form_step": 4,
     }
@@ -218,13 +218,15 @@ def test_wine_create_post_with_drink_by(client, user):
     assert wine.size.name == "ST"
     assert wine.vintage == data["vintage"]
     assert wine.barcode == "12345"
-    assert wine.drink_by == datetime.date(day=25, month=2, year=2003)
+    assert wine.drink_from == 2025
+    assert wine.drink_to == 2030
 
 
 @pytest.mark.django_db
-def test_wine_create_post_with_invalid_drink_by(client, user):
+def test_wine_create_post_with_drinking_window_now(client, user):
+    """Test creating wine with 'now' (0) for drink_from."""
     client.force_login(user)
-    
+
     data = {
         "name": "Merlot",
         "wine_type": "RE",
@@ -232,7 +234,8 @@ def test_wine_create_post_with_invalid_drink_by(client, user):
         "abv": 13.0,
         "size": "ST",
         "vintage": 2002,
-        "drink_by": "02-02-2000",
+        "drink_from": 0,  # "Now"
+        "drink_to": 2030,
         "country": "DE",
         "form_step": 4,
     }
@@ -244,14 +247,17 @@ def test_wine_create_post_with_invalid_drink_by(client, user):
         reverse("wine-add", kwargs={"code": 12345}), data=initial, follow=True
     )
     assert r.status_code == HTTPStatus.OK
-    assert r.context_data["form"].errors
+    assert Wine.objects.exists()
+    wine = Wine.objects.first()
+    assert wine.drink_from == 0
+    assert wine.drink_to == 2030
 
 
 @pytest.mark.django_db
 def test_wine_create_post_single_page(client, user):
     """Test creating wine with single-page form (no steps)."""
     client.force_login(user)
-    
+
     data = {
         "name": "Merlot",
         "wine_type": "RE",
@@ -260,7 +266,7 @@ def test_wine_create_post_single_page(client, user):
         "category": "DR",
         "abv": 13.0,
         "vintage": 2002,
-        "rating": 5,
+        "rating": 2,
         "comment": "Good wine",
     }
     assert not Wine.objects.exists()
@@ -286,7 +292,7 @@ def test_wine_create_post_single_page(client, user):
 @pytest.mark.django_db
 def test_wine_create_post_invalid_step(client, user):
     client.force_login(user)
-    
+
     data = {
         "name": "Merlot",
         "wine_type": "RE",
@@ -309,7 +315,7 @@ def test_wine_create_post_invalid_step(client, user):
 @pytest.mark.django_db
 def test_wine_create_post_valid(client, user):
     client.force_login(user)
-    
+
     data = {
         "name": "Merlot",
         "wine_type": "RE",
@@ -338,7 +344,7 @@ def test_wine_create_post_valid(client, user):
 def test_wine_create_post_single_grape_valid(client, user, grape_factory):
     grape1 = grape_factory()
     grape_factory()
-    
+
     client.force_login(user)
     data = {
         "name": "Wine Single Grape",
@@ -371,7 +377,7 @@ def test_wine_create_post_single_grape_valid(client, user, grape_factory):
 def test_wine_create_post_multiple_grape_valid(client, user, grape_factory):
     grape1 = grape_factory()
     grape2 = grape_factory()
-    
+
     client.force_login(user)
     data = {
         "name": "Wine Single Grape",
@@ -402,7 +408,7 @@ def test_wine_create_post_multiple_grape_valid(client, user, grape_factory):
 
 @pytest.mark.django_db
 def test_wine_create_post_new_grape_valid(client, user, grape_factory):
-    
+
     client.force_login(user)
     data = {
         "name": "Wine Single Grape",
@@ -434,7 +440,7 @@ def test_wine_create_post_new_grape_valid(client, user, grape_factory):
 @pytest.mark.django_db
 def test_wine_create_post_invalid_grape(client, user, grape_factory):
     client.force_login(user)
-    
+
     data = {
         "name": "Wine Single Grape",
         "wine_type": "RE",
@@ -477,7 +483,7 @@ def test_wine_create_post_invalid_grape(client, user, grape_factory):
 def test_wine_create_post_new_grape_multiple_valid(client, user, grape_factory):
     grape1 = grape_factory()
     grape2 = grape_factory()
-    
+
     client.force_login(user)
     data = {
         "name": "Wine Single Grape",
@@ -523,7 +529,7 @@ def test_wine_create_post_all_valid_fields(
     source = source_factory()
     vineyard = vineyard_factory()
     attribute = attribute_factory()
-    
+
     client.force_login(user)
     data = {
         "name": "Wine All",
@@ -580,7 +586,7 @@ def test_wine_update_valid_fields(
     source = source_factory()
     vineyard = vineyard_factory()
     attribute = attribute_factory()
-    
+
     client.force_login(user)
     data = {
         "name": wine.name,

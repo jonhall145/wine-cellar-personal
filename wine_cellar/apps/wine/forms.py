@@ -7,7 +7,7 @@ from django.conf import settings
 from django.core import validators
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db.models import Q
-from django.forms import DateField, ImageField
+from django.forms import ImageField
 from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.storage.models import Storage
@@ -144,6 +144,15 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
             "Enter the price of the bottle in %(currency)s."
         ) % {"currency": settings.CURRENCY_SYMBOLS[user_settings.currency]}
 
+        # Set up drinking window year choices
+        current_year = datetime.now().year
+        year_choices = [("", "---------"), (0, _("Now"))]
+        year_choices += [
+            (y, str(y)) for y in range(current_year - 5, current_year + 51)
+        ]
+        self.fields["drink_from"].choices = year_choices
+        self.fields["drink_to"].choices = year_choices
+
         # Configure storage field for user's storages
         if "storage" in self.fields:
             self.fields["storage"].queryset = Storage.objects.filter(user=user)
@@ -259,11 +268,19 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
             " natural, retsina or organic."
         ),
     )
-    drink_by = DateField(
+    drink_from = forms.TypedChoiceField(
         required=False,
-        help_text=_("Select the date this wine should be drunk by."),
-        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
-        localize=True,
+        coerce=lambda x: int(x) if x else None,
+        empty_value=None,
+        label=_("Drink From"),
+        help_text=_("When this wine is ready to drink."),
+    )
+    drink_to = forms.TypedChoiceField(
+        required=False,
+        coerce=lambda x: int(x) if x else None,
+        empty_value=None,
+        label=_("Drink Until"),
+        help_text=_("When this wine should be drunk by."),
     )
     food_pairings = OpenMultipleChoiceField(
         required=False,
@@ -318,8 +335,8 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
     )
     rating = forms.IntegerField(
         required=False,
-        validators=[MinValueValidator(0), MaxValueValidator(10)],
-        help_text=_("Rate this wine on a scale from 0 to 10."),
+        validators=[MinValueValidator(0), MaxValueValidator(3)],
+        help_text=_("Rate this wine from 0 to 3 stars."),
     )
     image_front_label = ImageField(
         widget=NoFilenameClearableFileInput,
@@ -498,8 +515,8 @@ class DrinkRecordForm(forms.Form):
     )
     rating = forms.IntegerField(
         required=False,
-        validators=[MinValueValidator(0), MaxValueValidator(10)],
-        help_text=_("Rate this wine on a scale from 0 to 10."),
+        validators=[MinValueValidator(0), MaxValueValidator(3)],
+        help_text=_("Rate this wine from 0 to 3 stars."),
     )
     shared_with = forms.CharField(
         max_length=250,

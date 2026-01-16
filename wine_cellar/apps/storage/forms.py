@@ -1,5 +1,6 @@
 from django import forms
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.storage.models import Storage
@@ -81,6 +82,11 @@ class StockAddForm(forms.Form):
         max_length=100,
         required=False,
         help_text=_("Enter a special occasion this bottle is reserved for."),
+    )
+    rating = forms.IntegerField(
+        required=False,
+        validators=[MinValueValidator(0), MaxValueValidator(3)],
+        help_text=_("Rate this bottle from 0 to 3 stars."),
     )
 
     def clean_row(self):
@@ -191,6 +197,11 @@ class StorageItemEditForm(forms.Form):
         max_length=100,
         required=False,
         help_text=_("Enter a special occasion this bottle is reserved for."),
+    )
+    rating = forms.IntegerField(
+        required=False,
+        validators=[MinValueValidator(0), MaxValueValidator(3)],
+        help_text=_("Rate this bottle from 0 to 3 stars."),
     )
 
     def clean_row(self):
