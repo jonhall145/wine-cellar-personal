@@ -218,8 +218,7 @@ class StorageItemEditForm(forms.Form):
         required=False,
         coerce=lambda x: int(x) if x else None,
         empty_value=None,
-        choices=[(None, "-")] + [(i, str(i)) for i in range(4)],
-        widget=StarRatingWidget(max_rating=3),
+        choices=[("", "-")] + [(i, f"{i} ★" if i else "0") for i in range(4)],
         help_text=_("Rate this bottle from 0 to 3 stars."),
     )
 
