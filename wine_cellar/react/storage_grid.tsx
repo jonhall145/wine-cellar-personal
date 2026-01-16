@@ -102,6 +102,13 @@ const Tooltip: React.FC<TooltipProps> = ({ wine, position }) => {
             {wine.vintage && <div className="tooltip__vintage">{wine.vintage}</div>}
             {wine.wine_type && <div className="tooltip__type">{wine.wine_type}</div>}
             {wine.country && <div className="tooltip__country">{wine.country}</div>}
+            {wine.rating !== null && wine.rating !== undefined && (
+                <div className="tooltip__rating">
+                    {Array.from({ length: wine.rating }, (_, i) => (
+                        <i key={i} className="fa-solid fa-star" />
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

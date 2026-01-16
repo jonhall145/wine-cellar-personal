@@ -207,6 +207,12 @@
   font-size: var(--font-xs);
 }
 
+.tooltip__rating {
+  margin-top: var(--spacing-xs);
+  color: #f6ad55;
+  font-size: var(--font-sm);
+}
+
 .storage-grid__instructions {
   margin-top: var(--spacing-lg);
   padding: var(--spacing-md);
