@@ -1,4 +1,3 @@
-
 interface FreeCells {
     [storageId: string]: {
         [rows: string]: number[]
@@ -23,12 +22,16 @@ function updateStorageCells() {
 
     const storageData = document.getElementById('storage-data')!
     const freeCells: FreeCells = JSON.parse(storageData.dataset.attributes || '{}')
+    
+    // Store initial values from Django form
+    const initialRow = rowSelect?.dataset.initialValue || rowSelect?.value || ''
+    const initialColumn = columnSelect?.dataset.initialValue || columnSelect?.value || ''
 
     if (storageSelect) {
-        storageSelect.addEventListener('change', updateRows)
+        storageSelect.addEventListener('change', () => updateRows())
     }
     if (rowSelect) {
-        rowSelect.addEventListener('change', updateColumns)
+        rowSelect.addEventListener('change', () => updateColumns())
     }
     if (columnSelect) {
         columnSelect.addEventListener('change', updateSubmit)
@@ -39,70 +42,100 @@ function updateStorageCells() {
         columnSelect.disabled = disable
         if (disable) {
             // @ts-ignore
-            rowSelect.tomselect.disable()
+            rowSelect.tomselect?.disable()
             // @ts-ignore
-            columnSelect.tomselect.disable()
+            columnSelect.tomselect?.disable()
         } else {
             // @ts-ignore
-            rowSelect.tomselect.enable()
+            rowSelect.tomselect?.enable()
             // @ts-ignore
-            columnSelect.tomselect.enable()
+            columnSelect.tomselect?.enable()
         }
-        submitButton.disabled = !submit
+        if (submitButton) {
+            submitButton.disabled = !submit
+        }
     }
 
-    function populateSelect(select: HTMLSelectElement, options: number[]) {
+    function populateSelect(select: HTMLSelectElement, options: number[], selectedValue?: string) {
         select.innerHTML = ''
         options.forEach(function (val) {
             const opt = document.createElement('option')
             opt.value = String(val)
             opt.textContent = String(val)
+            if (selectedValue && String(val) === selectedValue) {
+                opt.selected = true
+            }
             select.appendChild(opt)
         })
         // @ts-ignore
-        select.tomselect.clear(true)
-        // @ts-ignore
-        select.tomselect.clearOptions()
-        options.forEach(function (val) {
+        if (select.tomselect) {
             // @ts-ignore
-            select.tomselect.addOption({ value: val, text: val })
-        })
-        // @ts-ignore
-        select.tomselect.refreshOptions(false)
+            select.tomselect.clear(true)
+            // @ts-ignore
+            select.tomselect.clearOptions()
+            options.forEach(function (val) {
+                // @ts-ignore
+                select.tomselect.addOption({ value: val, text: val })
+            })
+            // @ts-ignore
+            select.tomselect.refreshOptions(false)
+            if (selectedValue && options.includes(Number(selectedValue))) {
+                // @ts-ignore
+                select.tomselect.setValue(selectedValue, true)
+            }
+        }
     }
 
     function updateSubmit() {
-        submitButton.disabled = columnSelect.value === ''
+        if (submitButton) {
+            submitButton.disabled = columnSelect.value === ''
+        }
     }   
 
-    function updateColumns() {
+    function updateColumns(restoreValue?: string) {
         const storageId = storageSelect.value
         const rowId = rowSelect.value
-        const columns = freeCells[storageId][rowId]
+        const storageCells = freeCells[storageId]
+        if (!storageCells || !storageCells[rowId]) {
+            populateSelect(columnSelect, [])
+            toggleFields(false, false)
+            return
+        }
+        const columns = storageCells[rowId]
         if (columns.length > 0) {
-            populateSelect(columnSelect, columns)
+            populateSelect(columnSelect, columns, restoreValue)
             hideWarning()
         } else {
             showWarning()
             populateSelect(columnSelect, [])
         }
-        toggleFields(false, false)
+        toggleFields(false, columnSelect.value !== '')
     }
 
-    function updateRows() {
+    function updateRows(restoreRow?: string, restoreColumn?: string) {
         const storageId = storageSelect.value
         const rows = freeCells[storageId]
-        const unlimitedShelf = Object.keys(rows).length === 0
+        const unlimitedShelf = !rows || Object.keys(rows).length === 0
         if (!unlimitedShelf) {
             const rowKeys = Object.keys(rows).map(Number)
-            populateSelect(rowSelect, rowKeys)
-            populateSelect(columnSelect, [])
-            toggleFields(false, false)
+            populateSelect(rowSelect, rowKeys, restoreRow)
+            // After populating rows, update columns with restored value
+            if (rowSelect.value) {
+                updateColumns(restoreColumn)
+            } else {
+                populateSelect(columnSelect, [])
+                toggleFields(false, false)
+            }
         } else {
             populateSelect(rowSelect, [])
             populateSelect(columnSelect, [])
             toggleFields(true, true)
         }
+    }
+
+    // Initialize rows if storage is already selected, restoring initial values
+    if (storageSelect && storageSelect.value) {
+        updateRows(initialRow, initialColumn)
     }
 }
 
