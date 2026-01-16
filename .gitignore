@@ -6,7 +6,6 @@ venv/
 *.pyc
 node_modules/
 static/
-staticfiles/
 build/
 *.egg-info/
 media/

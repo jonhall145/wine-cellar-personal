@@ -181,13 +181,13 @@ STATICFILES_DIRS = [
 ]
 
 # WhiteNoise configuration for efficient static file serving
-# Compresses and caches static files automatically
+# Uses gzip-only compression (faster than gzip+brotli)
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "wine_cellar.storage.GzipOnlyManifestStaticFilesStorage",
     },
 }
 
