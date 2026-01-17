@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 import pytest
 from django.core import mail
 from django.utils import timezone
@@ -12,12 +10,15 @@ from wine_cellar.apps.wine.tasks import drink_by_reminder
 
 @pytest.mark.django_db
 def test_drink_by_reminder(user, wine_factory):
-    date = timezone.now().date() + timedelta(days=14)
-    wine = wine_factory(drink_by=date, user=user)
-    wine_1 = wine_factory(drink_by=timezone.now().date(), user=user)
+    """Test that reminder is sent for wines with drink_to matching current year."""
+    current_year = timezone.now().year
+    # Wine with drink_to this year should trigger reminder
+    wine = wine_factory(drink_to=current_year, user=user)
+    # Wine with drink_to next year should not trigger reminder
+    wine_1 = wine_factory(drink_to=current_year + 1, user=user)
     storage = user.storage_set.first()
-    StorageItem.objects.create(wine=wine, storage=storage)
-    StorageItem.objects.create(wine=wine_1, storage=storage)
+    StorageItem.objects.create(wine=wine, storage=storage, user=user)
+    StorageItem.objects.create(wine=wine_1, storage=storage, user=user)
     drink_by_reminder()
     assert Wine.objects.count() == 2
     assert len(mail.outbox) == 1
@@ -28,12 +29,12 @@ def test_drink_by_reminder_not_send_if_notifications_disabled(user, wine_factory
     user_settings = get_user_settings(user)
     user_settings.notifications = False
     user_settings.save()
-    date = timezone.now().date() + timedelta(days=14)
-    wine = wine_factory(drink_by=date, user=user)
-    wine_1 = wine_factory(drink_by=timezone.now().date(), user=user)
+    current_year = timezone.now().year
+    wine = wine_factory(drink_to=current_year, user=user)
+    wine_1 = wine_factory(drink_to=current_year + 1, user=user)
     storage = user.storage_set.first()
-    StorageItem.objects.create(wine=wine, storage=storage)
-    StorageItem.objects.create(wine=wine_1, storage=storage)
+    StorageItem.objects.create(wine=wine, storage=storage, user=user)
+    StorageItem.objects.create(wine=wine_1, storage=storage, user=user)
     drink_by_reminder()
     assert Wine.objects.count() == 2
     assert len(mail.outbox) == 0
@@ -41,14 +42,16 @@ def test_drink_by_reminder_not_send_if_notifications_disabled(user, wine_factory
 
 @pytest.mark.django_db
 def test_drink_by_reminder_not_send_for_other_user(user, user_factory, wine_factory):
-    date = timezone.now().date() + timedelta(days=14)
+    current_year = timezone.now().year
     user1 = user_factory(email="user1@example.org")
-    wine = wine_factory(drink_by=date, user=user1)
-    wine_1 = wine_factory(drink_by=timezone.now().date(), user=user)
+    # user1 has wine with drink_to this year
+    wine = wine_factory(drink_to=current_year, user=user1)
+    # main user has wine with drink_to next year (no reminder)
+    wine_1 = wine_factory(drink_to=current_year + 1, user=user)
     storage = user.storage_set.first()
     storage_1 = user1.storage_set.first()
-    StorageItem.objects.create(wine=wine, storage=storage_1)
-    StorageItem.objects.create(wine=wine_1, storage=storage)
+    StorageItem.objects.create(wine=wine, storage=storage_1, user=user1)
+    StorageItem.objects.create(wine=wine_1, storage=storage, user=user)
     drink_by_reminder()
     assert Wine.objects.count() == 2
     assert len(mail.outbox) == 1

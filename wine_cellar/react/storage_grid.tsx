@@ -51,6 +51,23 @@ interface AllStoragesData {
     current_storage_id: number;
 }
 
+// Convert wine type display string to CSS class suffix
+const getWineTypeClass = (wineType: string | null | undefined): string => {
+    if (!wineType) return '';
+    const typeMap: Record<string, string> = {
+        'red': 'red',
+        'white': 'white',
+        'rose': 'rose',
+        'rosé': 'rose',
+        'sparkling': 'sparkling',
+        'dessert': 'dessert',
+        'fortified': 'fortified',
+        'orange': 'orange',
+    };
+    const normalized = wineType.toLowerCase();
+    return typeMap[normalized] || '';
+};
+
 interface TooltipProps {
     wine: WineInfo;
     position: { x: number; y: number };
@@ -177,7 +194,11 @@ const GridCell: React.FC<GridCellProps> = ({
     };
     
     let className = 'storage-grid__cell';
-    if (hasWine) className += ' storage-grid__cell--filled';
+    if (hasWine) {
+        className += ' storage-grid__cell--filled';
+        const wineTypeClass = getWineTypeClass(cell.wine?.wine_type);
+        if (wineTypeClass) className += ` storage-grid__cell--${wineTypeClass}`;
+    }
     if (isSelected) className += ' storage-grid__cell--selected';
     if (isDragOver) className += ' storage-grid__cell--drag-over';
     
@@ -429,10 +450,12 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                                 selectedBottle?.cell.column === cell.column && 
                                 selectedBottle?.storageId === storage.id;
                             
+                            const wineTypeClass = cell.wine ? getWineTypeClass(cell.wine.wine_type) : '';
+
                             return (
                                 <div
                                     key={`${rowIdx}-${colIdx}`}
-                                    className={`storage-grid__cell${cell.wine ? ' storage-grid__cell--filled' : ''}${isSelectedForMove ? ' storage-grid__cell--selected-for-move' : ''}${!isSource && !cell.wine && selectedBottle ? ' storage-grid__cell--drop-target' : ''}`}
+                                    className={`storage-grid__cell${cell.wine ? ' storage-grid__cell--filled' : ''}${wineTypeClass ? ` storage-grid__cell--${wineTypeClass}` : ''}${isSelectedForMove ? ' storage-grid__cell--selected-for-move' : ''}${!isSource && !cell.wine && selectedBottle ? ' storage-grid__cell--drop-target' : ''}`}
                                     onClick={() => handleMoveModeClick(cell, storage.id, isSource)}
                                     onMouseEnter={(e) => cell.wine && handleMouseEnter(cell.wine, e)}
                                     onMouseLeave={handleMouseLeave}

@@ -12,6 +12,52 @@
     {% if scanned_image %}
         {% include 'extraction_badges.html' %}
     {% endif %}
+    {% if scanned_front_image or scanned_back_image %}
+    <style>
+        .scanned-image-notice {
+            margin: 8px 0 16px 0;
+            padding: 12px;
+            background: #e8f4f8;
+            border-radius: 6px;
+            border-left: 4px solid #17a2b8;
+        }
+        .scanned-image-preview {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .scanned-preview-thumb {
+            max-width: 80px;
+            max-height: 80px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .scanned-image-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .badge-info {
+            background: #17a2b8;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        .badge-info i {
+            margin-right: 4px;
+        }
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 0.85em;
+        }
+        .scanned-image-notice.hidden {
+            display: none;
+        }
+    </style>
+    {% endif %}
 {% endblock extra_head %}
 {% block title %}
     {% translate "Add Wine" %}
@@ -48,12 +94,13 @@
                         <div class="pure-u-1 pure-u-md-1-3">
                             <img src="data:image/jpeg;base64,{{ scanned_image }}"
                                  alt="{% translate 'Scanned wine label' %}"
-                                 style="max-width: 100%; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                 class="scanned-label-img"
+                                 width="200"
+                                 height="300">
                         </div>
-                        <div class="pure-u-1 pure-u-md-2-3"
-                             style="padding-left: 1em;">
+                        <div class="pure-u-1 pure-u-md-2-3 extraction-info-container">
                             <div class="extraction-info">
-                                <h3 style="margin-top: 0;">
+                                <h3>
                                     {% translate "Auto-filled from Label" %}
                                     {% if confidence == 'high' %}
                                         <span class="badge badge-success">✓ {% translate "High Confidence" %}</span>
@@ -103,14 +150,57 @@
                         {% translate "Upload images and click 'Auto-fill from Images' to extract wine details using AI vision." %}
                     </div>
                     {% include 'forms/form_field.html' with field=form.image_front_label %}
-                    {% include 'forms/form_field.html' with field=form.image_back_label %}
+                    {% if scanned_front_image %}
+                    <div class="scanned-image-notice" id="scanned-front-notice">
+                        <div class="scanned-image-preview">
+                            <img src="data:image/jpeg;base64,{{ scanned_front_image }}"
+                                 alt="{% translate 'Scanned front label' %}"
+                                 class="scanned-preview-thumb"
+                                 width="60"
+                                 height="60">
+                            <div class="scanned-image-info">
+                                <span class="badge badge-info">
+                                    <i class="fa-solid fa-camera"></i>
+                                    {% translate "Using scanned image" %}
+                                </span>
+                                <button type="button" class="pure-button button__tertiary btn-sm clear-scanned-image" data-target="front">
+                                    <i class="fa-solid fa-times"></i> {% translate "Clear" %}
+                                </button>
+                            </div>
+                        </div>
+                        <input type="hidden" name="use_scanned_front" id="use_scanned_front" value="1">
+                    </div>
+                    {% endif %}
 
-                    <div class="pure-controls" style="margin-top: 12px;">
+                    {% include 'forms/form_field.html' with field=form.image_back_label %}
+                    {% if scanned_back_image %}
+                    <div class="scanned-image-notice" id="scanned-back-notice">
+                        <div class="scanned-image-preview">
+                            <img src="data:image/jpeg;base64,{{ scanned_back_image }}"
+                                 alt="{% translate 'Scanned back label' %}"
+                                 class="scanned-preview-thumb"
+                                 width="60"
+                                 height="60">
+                            <div class="scanned-image-info">
+                                <span class="badge badge-info">
+                                    <i class="fa-solid fa-camera"></i>
+                                    {% translate "Using scanned image" %}
+                                </span>
+                                <button type="button" class="pure-button button__tertiary btn-sm clear-scanned-image" data-target="back">
+                                    <i class="fa-solid fa-times"></i> {% translate "Clear" %}
+                                </button>
+                            </div>
+                        </div>
+                        <input type="hidden" name="use_scanned_back" id="use_scanned_back" value="1">
+                    </div>
+                    {% endif %}
+
+                    <div class="pure-controls pure-controls--spaced">
                         <button type="button" name="extract_vision" class="pure-button button__secondary">
                             <i class="fa fa-magic" aria-hidden="true"></i>
                             {% translate "Auto-fill from Images" %}
                         </button>
-                        <span class="form-hint" style="display: inline-block; margin-left: 8px;">
+                        <span class="form-hint form-hint--inline">
                             {% translate "Extract wine details from uploaded images" %}
                         </span>
                     </div>

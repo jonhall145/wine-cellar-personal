@@ -211,11 +211,11 @@ def test_user_cant_add_stock_to_other_users_storage(
     assert r.status_code == HTTPStatus.OK
     assert r.context["form"].errors
     assert other_storage.used_slots == 0
+    # Trying to add stock to another user's wine returns 404 (regardless of storage)
     r = client.post(
         reverse("stock-add", kwargs={"pk": other_wine.pk}), data=data, follow=True
     )
-    assert r.status_code == HTTPStatus.OK
-    assert r.context["form"].errors
+    assert r.status_code == HTTPStatus.NOT_FOUND
     assert other_storage.used_slots == 0
     assert StorageItem.objects.count() == 0
     data = {

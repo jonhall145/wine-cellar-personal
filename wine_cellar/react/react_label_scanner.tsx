@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client';
 // @ts-ignore
 import django from 'django';
 
+// Compression settings
+const MAX_DIMENSION = 2048; // Max width or height in pixels
+const JPEG_QUALITY = 0.85; // 85% quality
+
 const translated = {
     captureButton: django.gettext('Capture Photo'),
     retakeButton: django.gettext('Retake'),
@@ -129,11 +133,29 @@ const LabelScanner: React.FC = () => {
             const context = canvas.getContext('2d');
 
             if (context) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                context.drawImage(video, 0, 0);
+                // Calculate dimensions, scaling down if necessary
+                let width = video.videoWidth;
+                let height = video.videoHeight;
 
-                const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+                if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+                    if (width > height) {
+                        height = Math.round((height * MAX_DIMENSION) / width);
+                        width = MAX_DIMENSION;
+                    } else {
+                        width = Math.round((width * MAX_DIMENSION) / height);
+                        height = MAX_DIMENSION;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                // Use high-quality image smoothing for better downscaling
+                context.imageSmoothingEnabled = true;
+                context.imageSmoothingQuality = 'high';
+                context.drawImage(video, 0, 0, width, height);
+
+                const imageDataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
                 setCurrentCapture(imageDataUrl);
 
                 // Stop the camera stream temporarily

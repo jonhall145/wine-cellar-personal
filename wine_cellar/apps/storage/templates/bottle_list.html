@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static i18n %}
+{% load static i18n wine_tags %}
 {% block extra_js %}
     {{ block.super }}
     <script src="{% static 'tom_select.js' %}" type="module" defer></script>
@@ -67,6 +67,7 @@
                                 <th>{% translate "Wine" %}</th>
                                 <th>{% translate "Storage" %}</th>
                                 <th>{% translate "Position" %}</th>
+                                <th>{% translate "Rating" %}</th>
                                 <th>{% translate "Gift" %}</th>
                                 <th>{% translate "Occasion" %}</th>
                                 <th>{% translate "Actions" %}</th>
@@ -85,6 +86,15 @@
                                     <td>
                                         {% if bottle.row %}
                                             {{ bottle.row }}, {{ bottle.column }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if bottle.rating is not None %}
+                                            {% rating_stars bottle.rating %}
+                                        {% elif bottle.wine.rating is not None %}
+                                            {% rating_stars bottle.wine.rating %} <span class="text--gray" title="{% translate 'Inherited from wine' %}">({% translate "wine" %})</span>
                                         {% else %}
                                             -
                                         {% endif %}

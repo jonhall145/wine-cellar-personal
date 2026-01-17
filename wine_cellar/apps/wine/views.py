@@ -1,7 +1,10 @@
+import base64
 from decimal import Decimal
+from io import BytesIO
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_not_required, login_required
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import connections, transaction
 from django.db.models import Avg, Count, Max, Min, Q, Sum
 from django.db.models.functions import Coalesce
@@ -28,11 +31,36 @@ FINAL_FORM_STEP = 4
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
 
 
+def base64_to_uploaded_file(base64_data: str, filename: str) -> InMemoryUploadedFile:
+    """Convert base64 string to Django InMemoryUploadedFile.
+
+    Args:
+        base64_data: Base64-encoded image data (without data URL prefix)
+        filename: Desired filename for the uploaded file
+
+    Returns:
+        InMemoryUploadedFile suitable for use with Django image fields
+    """
+    # Decode base64 to bytes
+    image_bytes = base64.b64decode(base64_data)
+    image_io = BytesIO(image_bytes)
+
+    # Create InMemoryUploadedFile
+    return InMemoryUploadedFile(
+        file=image_io,
+        field_name=None,
+        name=filename,
+        content_type="image/jpeg",
+        size=len(image_bytes),
+        charset=None,
+    )
+
+
 class HomePageView(TemplateView):
     template_name = "homepage.html"
 
     def get_context_data(self, **kwargs):
-        from datetime import date, timedelta
+        from datetime import date
 
         from wine_cellar.apps.wine.models import DrinkRecord, ReorderReminder, Wishlist
 
@@ -51,8 +79,9 @@ class HomePageView(TemplateView):
             overdue_count=Count(
                 "id",
                 filter=Q(
-                    drink_by__isnull=False,
-                    drink_by__lt=date.today(),
+                    drink_to__isnull=False,
+                    drink_to__gt=0,  # Not "now"
+                    drink_to__lt=date.today().year,
                     storageitem__deleted=False,
                 ),
                 distinct=True,
@@ -60,9 +89,10 @@ class HomePageView(TemplateView):
             upcoming_count=Count(
                 "id",
                 filter=Q(
-                    drink_by__isnull=False,
-                    drink_by__lte=date.today() + timedelta(days=180),
-                    drink_by__gte=date.today(),
+                    drink_to__isnull=False,
+                    drink_to__gt=0,  # Not "now"
+                    drink_to__gte=date.today().year,
+                    drink_to__lte=date.today().year + 1,  # This year or next
                     storageitem__deleted=False,
                 ),
                 distinct=True,
@@ -315,6 +345,17 @@ class WineCreateView(FormView):
             context["extracted_fields"] = extraction_result.get("extracted_fields", [])
             context["confidence"] = extraction_result.get("confidence", "low")
 
+        # Pass scanned front/back images for automatic attachment
+        scanned_label = self.request.session.get("scanned_label")
+        if scanned_label:
+            image_data = scanned_label.get("data")
+            if isinstance(image_data, list):
+                # Index 0 = barcode, index 1 = front label, index 2 = back label
+                if len(image_data) > 1:
+                    context["scanned_front_image"] = image_data[1]
+                if len(image_data) > 2:
+                    context["scanned_back_image"] = image_data[2]
+
         return context
 
     def post(self, request, *args, **kwargs):
@@ -393,6 +434,35 @@ class WineCreateView(FormView):
         return super().post(request, *args, **kwargs)
 
     def form_valid(self, form):
+        # Use scanned images if available and user hasn't uploaded/cleared them
+        scanned_label = self.request.session.get("scanned_label")
+        if scanned_label:
+            image_data = scanned_label.get("data")
+            if isinstance(image_data, list):
+                # Check hidden inputs for user intent
+                use_scanned_front = self.request.POST.get("use_scanned_front", "0")
+                use_scanned_back = self.request.POST.get("use_scanned_back", "0")
+
+                # Front label: use scanned if available and user wants it
+                if (
+                    use_scanned_front == "1"
+                    and len(image_data) > 1
+                    and not form.cleaned_data.get("image_front_label")
+                ):
+                    form.cleaned_data["image_front_label"] = base64_to_uploaded_file(
+                        image_data[1], "scanned_front_label.jpg"
+                    )
+
+                # Back label: use scanned if available and user wants it
+                if (
+                    use_scanned_back == "1"
+                    and len(image_data) > 2
+                    and not form.cleaned_data.get("image_back_label")
+                ):
+                    form.cleaned_data["image_back_label"] = base64_to_uploaded_file(
+                        image_data[2], "scanned_back_label.jpg"
+                    )
+
         self.process_form_data(self.request.user, form.cleaned_data)
 
         # Clear scanned label data from session after successful save
@@ -430,7 +500,8 @@ class WineCreateView(FormView):
         vintage = cleaned_data["vintage"]
         wine_type = cleaned_data["wine_type"]
         attributes = cleaned_data["attributes"]
-        drink_by = cleaned_data["drink_by"]
+        drink_from = cleaned_data["drink_from"]
+        drink_to = cleaned_data["drink_to"]
 
         wine = Wine(
             abv=abv,
@@ -442,7 +513,8 @@ class WineCreateView(FormView):
             barcode=barcode,
             user=user,
             vintage=vintage,
-            drink_by=drink_by,
+            drink_from=drink_from,
+            drink_to=drink_to,
             wine_type=wine_type,
             comment=comment,
             rating=rating,
@@ -530,7 +602,8 @@ class WineUpdateView(FormView):
         name = cleaned_data["name"]
         rating = cleaned_data["rating"]
         vintage = cleaned_data["vintage"]
-        drink_by = cleaned_data["drink_by"]
+        drink_from = cleaned_data["drink_from"]
+        drink_to = cleaned_data["drink_to"]
         wine_type = cleaned_data["wine_type"]
         attributes = cleaned_data["attributes"]
 
@@ -544,7 +617,8 @@ class WineUpdateView(FormView):
         wine.barcode = barcode
         wine.rating = rating
         wine.vintage = vintage
-        wine.drink_by = drink_by
+        wine.drink_from = drink_from
+        wine.drink_to = drink_to
         wine.wine_type = wine_type
         wine.price = price
         wine.rrp = rrp
@@ -977,7 +1051,7 @@ class DrinkingWindowAlertsView(TemplateView):
     template_name = "drinking_window_alerts.html"
 
     def get_context_data(self, **kwargs):
-        from datetime import date, timedelta
+        from datetime import date
 
         from wine_cellar.apps.wine.models import DrinkingWindowAlert
 
@@ -988,24 +1062,28 @@ class DrinkingWindowAlertsView(TemplateView):
             user=self.request.user, is_read=False
         ).select_related("wine")
 
-        # Also find wines approaching drink_by date (within 6 months)
+        current_year = date.today().year
+
+        # Find wines approaching end of drinking window (this year or next)
         upcoming_wines = (
             Wine.objects.filter(
                 user=self.request.user,
-                drink_by__isnull=False,
-                drink_by__lte=date.today() + timedelta(days=180),
-                drink_by__gte=date.today(),
+                drink_to__isnull=False,
+                drink_to__gt=0,  # Not "now"
+                drink_to__gte=current_year,
+                drink_to__lte=current_year + 1,
             )
             .filter(storageitem__deleted=False)
             .distinct()
         )
 
-        # Wines past drink_by
+        # Wines past drinking window
         overdue_wines = (
             Wine.objects.filter(
                 user=self.request.user,
-                drink_by__isnull=False,
-                drink_by__lt=date.today(),
+                drink_to__isnull=False,
+                drink_to__gt=0,  # Not "now"
+                drink_to__lt=current_year,
             )
             .filter(storageitem__deleted=False)
             .distinct()

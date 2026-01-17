@@ -28,7 +28,7 @@
             <div class="pure-u-1-1 wine-card__vintage-row">
                 <span class="text--gray">Vintage</span>
                 <p>{{ wine.vintage }}</p>
-                {% drink_window_indicator wine.vintage wine.drink_by %}
+                {% drink_window_indicator wine.drink_from wine.drink_to %}
             </div>
         {% endif %}
     </div>

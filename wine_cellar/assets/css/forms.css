@@ -618,3 +618,34 @@ p.form-hint {
   align-items: center;
   justify-content: center;
 }
+
+/* Scanned label preview */
+.scanned-label-img {
+  max-width: 100%;
+  border-radius: var(--border-radius-sm);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.extraction-info-container {
+  padding-left: var(--spacing-md);
+}
+
+.extraction-info h3 {
+  margin-top: 0;
+}
+
+.pure-controls--spaced {
+  margin-top: var(--spacing-md);
+}
+
+.form-hint--inline {
+  display: inline-block;
+  margin-left: var(--spacing-sm);
+}
+
+.scanned-preview-thumb {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: var(--border-radius-sm);
+}

@@ -10,13 +10,13 @@
     <div class="pure-g">
         <div class="pure-u-1">
             {% if overdue_wines %}
-                <h2 class="text--danger">{% translate "Past Drink-By Date" %}</h2>
+                <h2 class="text--danger">{% translate "Past Drinking Window" %}</h2>
                 <table class="pure-table pure-table-horizontal pure-table-striped mb-12">
                     <thead>
                         <tr>
                             <th>{% translate "Wine" %}</th>
                             <th>{% translate "Vintage" %}</th>
-                            <th>{% translate "Drink By" %}</th>
+                            <th>{% translate "Drink Until" %}</th>
                             <th>{% translate "Bottles" %}</th>
                         </tr>
                     </thead>
@@ -25,7 +25,7 @@
                             <tr>
                                 <td><a href="{% url 'wine-detail' wine.pk %}">{{ wine.name }}</a></td>
                                 <td>{{ wine.vintage|default_if_none:"-" }}</td>
-                                <td>{{ wine.drink_by }}</td>
+                                <td>{{ wine.drink_to }}</td>
                                 <td>{{ wine.total_stock }}</td>
                             </tr>
                         {% endfor %}
@@ -34,13 +34,13 @@
             {% endif %}
 
             {% if upcoming_wines %}
-                <h2>{% translate "Approaching Drink-By Date (within 6 months)" %}</h2>
+                <h2>{% translate "Approaching End of Drinking Window" %}</h2>
                 <table class="pure-table pure-table-horizontal pure-table-striped mb-12">
                     <thead>
                         <tr>
                             <th>{% translate "Wine" %}</th>
                             <th>{% translate "Vintage" %}</th>
-                            <th>{% translate "Drink By" %}</th>
+                            <th>{% translate "Drink Until" %}</th>
                             <th>{% translate "Bottles" %}</th>
                         </tr>
                     </thead>
@@ -49,7 +49,7 @@
                             <tr>
                                 <td><a href="{% url 'wine-detail' wine.pk %}">{{ wine.name }}</a></td>
                                 <td>{{ wine.vintage|default_if_none:"-" }}</td>
-                                <td>{{ wine.drink_by }}</td>
+                                <td>{{ wine.drink_to }}</td>
                                 <td>{{ wine.total_stock }}</td>
                             </tr>
                         {% endfor %}

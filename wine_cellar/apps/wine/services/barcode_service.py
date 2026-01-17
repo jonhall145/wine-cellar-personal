@@ -25,12 +25,12 @@ class BarcodeScanner:
 
                 self._pyzbar_available = True
             except ImportError:
-                logger.warning(
-                    "pyzbar not available. Install with: pip install pyzbar"
-                )
+                logger.warning("pyzbar not available. Install with: pip install pyzbar")
                 self._pyzbar_available = False
             except Exception as e:
-                logger.warning(f"pyzbar import error (libzbar may not be installed): {e}")
+                logger.warning(
+                    f"pyzbar import error (libzbar may not be installed): {e}"
+                )
                 self._pyzbar_available = False
         return self._pyzbar_available
 
@@ -72,11 +72,15 @@ class BarcodeScanner:
                     try:
                         barcode_data = barcode.data.decode("utf-8")
                         barcode_type = barcode.type
-                        logger.info(f"Found barcode: {barcode_data} (type: {barcode_type})")
+                        logger.info(
+                            f"Found barcode: {barcode_data} (type: {barcode_type})"
+                        )
                         barcodes.add(barcode_data)
                     except UnicodeDecodeError:
                         # Skip barcodes with non-UTF-8 data
-                        logger.warning(f"Skipping barcode with non-UTF-8 data: {barcode.data}")
+                        logger.warning(
+                            f"Skipping barcode with non-UTF-8 data: {barcode.data}"
+                        )
                         continue
 
                 # Also try original image (sometimes color helps with certain barcodes)
@@ -88,7 +92,9 @@ class BarcodeScanner:
                             barcodes.add(barcode_data)
                         except UnicodeDecodeError:
                             # Skip barcodes with non-UTF-8 data
-                            logger.warning(f"Skipping barcode with non-UTF-8 data: {barcode.data}")
+                            logger.warning(
+                                f"Skipping barcode with non-UTF-8 data: {barcode.data}"
+                            )
                             continue
 
             except Exception as e:
@@ -128,9 +134,7 @@ class BarcodeScanner:
 
         return None
 
-    def scan_and_match(
-        self, base64_images: list[str], user
-    ) -> dict:
+    def scan_and_match(self, base64_images: list[str], user) -> dict:
         """
         Scan images for barcodes and try to match against existing wines.
 
@@ -195,12 +199,10 @@ class BarcodeScanner:
             data["country"] = wine.country
         if wine.subregion:
             data["subregion"] = wine.subregion
-        if wine.vineyard:
-            data["vineyard"] = wine.vineyard
         if wine.abv:
             data["abv"] = float(wine.abv)
         if wine.size:
-            data["size"] = wine.size
+            data["size"] = wine.size.name
         if wine.category:
             data["category"] = wine.category
         if wine.price:
@@ -216,5 +218,9 @@ class BarcodeScanner:
         attributes = list(wine.attributes.values_list("name", flat=True))
         if attributes:
             data["attributes"] = attributes
+
+        vineyards = list(wine.vineyard.values_list("name", flat=True))
+        if vineyards:
+            data["vineyard"] = vineyards
 
         return data

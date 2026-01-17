@@ -111,3 +111,4 @@ make fixtures   # Load sample data
 4. **The jsi18n endpoint requires authentication** - script tag is conditionally loaded
 5. **Map tiles require internet access** - expect fetch errors in isolated environments
 6. **Only update jonhall145 repos** - Do not create PRs to upstream repos (the-broke-sommeliers). Only push to origin (jonhall145)
+7. **Avoid full rebuilds for tests** - Tests should not require a full frontend rebuild as this is slow and causes timeout issues. Use `make pytest` directly for backend tests.

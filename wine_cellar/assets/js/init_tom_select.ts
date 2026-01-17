@@ -23,6 +23,8 @@ function initTomSelect (): void {
           create({value: 'tom_new_opt' + input, text: input })
           return true
         }
+        // Enable search if create is true, so users can type
+        delete config.controlInput
       }
     }
     // Enable search if data-search="true" is set

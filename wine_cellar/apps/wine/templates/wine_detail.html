@@ -90,10 +90,17 @@
                         <th>{% translate "Vintage" %}</th>
                         <td>{{ wine.vintage }}</td>
                     </tr>
+                    {% if wine.drink_from or wine.drink_to %}
                     <tr>
-                        <th>{% translate "Drink By" %}</th>
-                        <td>{{ wine.drink_by }} {% drink_window_indicator wine.vintage wine.drink_by %}</td>
+                        <th>{% translate "Drinking Window" %}</th>
+                        <td>
+                            {% if wine.drink_from == 0 %}{% translate "Now" %}{% elif wine.drink_from %}{{ wine.drink_from }}{% endif %}
+                            {% if wine.drink_from and wine.drink_to %}–{% endif %}
+                            {% if wine.drink_to == 0 %}{% translate "Now" %}{% elif wine.drink_to %}{{ wine.drink_to }}{% endif %}
+                            {% drink_window_indicator wine.drink_from wine.drink_to %}
+                        </td>
                     </tr>
+                    {% endif %}
                     <tr>
                         <th>{% translate "Grapes" %}</th>
                         <td>{{ wine.get_grapes | linebreaksbr }}</td>

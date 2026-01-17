@@ -5,11 +5,58 @@
 document.addEventListener('DOMContentLoaded', function() {
     const extractButton = document.querySelector('button[name="extract_vision"]');
     const form = document.querySelector('.wine-form');
-    
+
     if (!extractButton || !form) return;
-    
+
     // Store file references to prevent "file changed" errors
     const storedFiles = {};
+
+    // Initialize scanned image clear buttons
+    initScannedImageHandlers();
+
+    function initScannedImageHandlers() {
+        // Handle "Clear" button clicks for scanned images
+        document.querySelectorAll('.clear-scanned-image').forEach(button => {
+            button.addEventListener('click', function() {
+                const target = this.dataset.target; // 'front' or 'back'
+                const notice = document.getElementById(`scanned-${target}-notice`);
+                const hiddenInput = document.getElementById(`use_scanned_${target}`);
+
+                if (notice) {
+                    notice.classList.add('hidden');
+                }
+                if (hiddenInput) {
+                    hiddenInput.value = '0';
+                }
+            });
+        });
+
+        // Hide scanned image notice when user uploads their own image
+        const frontInput = form.querySelector('input[name="image_front_label"]');
+        const backInput = form.querySelector('input[name="image_back_label"]');
+
+        if (frontInput) {
+            frontInput.addEventListener('change', function() {
+                if (this.files && this.files.length > 0) {
+                    const notice = document.getElementById('scanned-front-notice');
+                    const hiddenInput = document.getElementById('use_scanned_front');
+                    if (notice) notice.classList.add('hidden');
+                    if (hiddenInput) hiddenInput.value = '0';
+                }
+            });
+        }
+
+        if (backInput) {
+            backInput.addEventListener('change', function() {
+                if (this.files && this.files.length > 0) {
+                    const notice = document.getElementById('scanned-back-notice');
+                    const hiddenInput = document.getElementById('use_scanned_back');
+                    if (notice) notice.classList.add('hidden');
+                    if (hiddenInput) hiddenInput.value = '0';
+                }
+            });
+        }
+    }
     
     extractButton.addEventListener('click', function(e) {
         e.preventDefault();
