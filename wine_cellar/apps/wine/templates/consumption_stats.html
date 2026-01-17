@@ -12,7 +12,7 @@
             <div class="stats-summary mb-12">
                 <h2>{% translate "Total Wines Consumed" %}: {{ total_consumed }}</h2>
                 {% if avg_rating %}
-                    <p>{% translate "Average Rating" %}: {{ avg_rating }}/10</p>
+                    <p>{% translate "Average Rating" %}: {{ avg_rating }}/3</p>
                 {% endif %}
             </div>
 
@@ -106,7 +106,7 @@
                                 {% for record in top_rated %}
                                     <tr>
                                         <td><a href="{% url 'wine-detail' record.wine.pk %}">{{ record.wine.name }}</a></td>
-                                        <td>{{ record.rating }}/10</td>
+                                        <td>{{ record.rating }}/3</td>
                                         <td>{{ record.date_consumed }}</td>
                                     </tr>
                                 {% endfor %}

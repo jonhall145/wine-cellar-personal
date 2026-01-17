@@ -184,25 +184,25 @@
 }
 
 .storage-grid__cell--sparkling {
-  background-color: var(--wine-sparkling, #ffd700);
-  border-color: #d4b300;
+  background-color: var(--wine-sparkling, #4a90d9);
+  border-color: #3a7bc8;
 }
 
 .storage-grid__cell--sparkling:hover {
-  background-color: #e6c200;
+  background-color: #5a9fe8;
 }
 
 .storage-grid__cell--sparkling .storage-grid__bottle {
-  color: #4a4a4a;
+  color: #ffffff;
 }
 
 .storage-grid__cell--dessert {
-  background-color: var(--wine-dessert, #d4a574);
-  border-color: #b8885a;
+  background-color: var(--wine-dessert, #9a9a9a);
+  border-color: #7a7a7a;
 }
 
 .storage-grid__cell--dessert:hover {
-  background-color: #c69560;
+  background-color: #aaaaaa;
 }
 
 .storage-grid__cell--dessert .storage-grid__bottle {

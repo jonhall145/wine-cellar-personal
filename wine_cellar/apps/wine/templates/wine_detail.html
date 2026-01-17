@@ -139,7 +139,7 @@
                         <th>{% translate "Rating" %}</th>
                         <td>
                             {% if wine.rating %}
-                                {% rating_stars wine.rating %} <span class="text--gray">({{ wine.rating }}/10)</span>
+                                {% rating_stars wine.rating %}
                             {% else %}
                                 {% translate "No rating yet" %}
                             {% endif %}
