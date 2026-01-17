@@ -1,3 +1,5 @@
+from datetime import date
+
 import django_filters
 import pycountry
 from django.db.models import Count, Q
@@ -23,7 +25,8 @@ def get_country_choices_with_favourites(user=None):
         most_frequent = (
             Wine.objects.filter(
                 user=user, storageitem__isnull=False, storageitem__deleted=False
-            ).values("country")
+            )
+            .values("country")
             .annotate(count=Count("id"))
             .order_by("-count")
             .first()
@@ -62,6 +65,25 @@ class WineFilter(django_filters.FilterSet):
         choices=[],
         label=_("Country"),
     )
+    rating = ChoiceFilter(
+        method="filter_rating",
+        label=_("Minimum Rating"),
+        choices=(
+            (1, _("1+ Star")),
+            (2, _("2+ Stars")),
+            (3, _("3 Stars")),
+        ),
+    )
+    ready_to_drink = ChoiceFilter(
+        method="filter_ready_to_drink",
+        label=_("Ready to Drink"),
+        choices=(
+            (0, _("No")),
+            (1, _("Yes")),
+        ),
+        empty_label=None,
+        null_label=None,
+    )
     order = OrderingFilter(
         choices=(
             ("-created", _("Recently Added")),
@@ -70,7 +92,7 @@ class WineFilter(django_filters.FilterSet):
             ("name", _("Name Ascending")),
             ("-vintage", _("Youngest First")),
             ("vintage", _("Oldest First")),
-            ("drink_by", _("Drink By")),
+            ("drink_to", _("Drink Until")),
             ("-effective_price", _("Highest Price (Avg)")),
             ("effective_price", _("Lowest Price (Avg)")),
         ),
@@ -87,12 +109,40 @@ class WineFilter(django_filters.FilterSet):
         else:
             return queryset
 
+    def filter_rating(self, queryset, name, value):
+        if value:
+            return queryset.filter(rating__gte=int(value))
+        return queryset
+
+    def filter_ready_to_drink(self, queryset, name, value):
+        current_year = date.today().year
+        if value == "1":
+            # Ready to drink: drink_from is 0 (now) or <= current year
+            # AND drink_to is null or 0 (now) or >= current year
+            return queryset.filter(
+                Q(drink_from__isnull=True)
+                | Q(drink_from=0)
+                | Q(drink_from__lte=current_year)
+            ).filter(
+                Q(drink_to__isnull=True) | Q(drink_to=0) | Q(drink_to__gte=current_year)
+            )
+        elif value == "0":
+            # Not ready: drink_from is set and > current year
+            # OR drink_to is set and < current year (past its prime)
+            return queryset.filter(
+                Q(drink_from__gt=current_year)
+                | Q(drink_to__lt=current_year, drink_to__gt=0)
+            )
+        return queryset
+
     class Meta:
         form = WineFilterForm
         model = Wine
         fields = [
             "name",
             "wine_type",
+            "rating",
+            "ready_to_drink",
             "attributes",
             "category",
             "vintage",
