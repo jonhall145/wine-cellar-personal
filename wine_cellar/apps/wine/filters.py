@@ -16,12 +16,23 @@ DEFAULT_FAVOURITES = ["GB", "PT", "FR"]
 def get_country_choices_with_favourites(user=None):
     """
     Build country choices with favourites at the top.
+    Only includes countries that have wines in stock.
     Favourites: UK, Portugal, France + most frequent from user's cellar.
     """
     favourites = list(DEFAULT_FAVOURITES)
 
-    # Get most frequent country from user's wines in stock
+    # Get countries that have wines in stock
+    countries_in_stock = set()
     if user and user.is_authenticated:
+        countries_in_stock = set(
+            Wine.objects.filter(
+                user=user, storageitem__isnull=False, storageitem__deleted=False
+            )
+            .values_list("country", flat=True)
+            .distinct()
+        )
+
+        # Get most frequent country from user's wines in stock
         most_frequent = (
             Wine.objects.filter(
                 user=user, storageitem__isnull=False, storageitem__deleted=False
@@ -34,21 +45,24 @@ def get_country_choices_with_favourites(user=None):
         if most_frequent and most_frequent["country"] not in favourites:
             favourites.insert(0, most_frequent["country"])
 
-    # Build choices list
+    # Build choices list - only include countries with stock
     all_countries = {c.alpha_2: c.name for c in pycountry.countries}
     favourite_choices = []
     other_choices = []
 
     for code in favourites:
-        if code in all_countries:
+        if code in all_countries and code in countries_in_stock:
             favourite_choices.append((code, all_countries[code]))
 
     for code, name in sorted(all_countries.items(), key=lambda x: x[1]):
-        if code not in favourites:
+        if code not in favourites and code in countries_in_stock:
             other_choices.append((code, name))
 
-    # Return favourites first, then separator, then rest
-    choices = favourite_choices + [("", "─" * 20)] + other_choices
+    # Return favourites first, then separator (if both sections have items), then rest
+    if favourite_choices and other_choices:
+        choices = favourite_choices + [("", "─" * 20)] + other_choices
+    else:
+        choices = favourite_choices + other_choices
     return choices
 
 

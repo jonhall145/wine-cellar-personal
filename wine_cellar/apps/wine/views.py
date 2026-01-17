@@ -350,11 +350,11 @@ class WineCreateView(FormView):
         if scanned_label:
             image_data = scanned_label.get("data")
             if isinstance(image_data, list):
-                # Index 0 = barcode, index 1 = front label, index 2 = back label
+                # Index 0 = barcode, index 1 = back label, index 2 = front label
                 if len(image_data) > 1:
-                    context["scanned_front_image"] = image_data[1]
+                    context["scanned_back_image"] = image_data[1]
                 if len(image_data) > 2:
-                    context["scanned_back_image"] = image_data[2]
+                    context["scanned_front_image"] = image_data[2]
 
         return context
 
@@ -443,24 +443,24 @@ class WineCreateView(FormView):
                 use_scanned_front = self.request.POST.get("use_scanned_front", "0")
                 use_scanned_back = self.request.POST.get("use_scanned_back", "0")
 
-                # Front label: use scanned if available and user wants it
-                if (
-                    use_scanned_front == "1"
-                    and len(image_data) > 1
-                    and not form.cleaned_data.get("image_front_label")
-                ):
-                    form.cleaned_data["image_front_label"] = base64_to_uploaded_file(
-                        image_data[1], "scanned_front_label.jpg"
-                    )
-
-                # Back label: use scanned if available and user wants it
+                # Back label: use scanned if available and user wants it (index 1)
                 if (
                     use_scanned_back == "1"
-                    and len(image_data) > 2
+                    and len(image_data) > 1
                     and not form.cleaned_data.get("image_back_label")
                 ):
                     form.cleaned_data["image_back_label"] = base64_to_uploaded_file(
-                        image_data[2], "scanned_back_label.jpg"
+                        image_data[1], "scanned_back_label.jpg"
+                    )
+
+                # Front label: use scanned if available and user wants it (index 2)
+                if (
+                    use_scanned_front == "1"
+                    and len(image_data) > 2
+                    and not form.cleaned_data.get("image_front_label")
+                ):
+                    form.cleaned_data["image_front_label"] = base64_to_uploaded_file(
+                        image_data[2], "scanned_front_label.jpg"
                     )
 
         self.process_form_data(self.request.user, form.cleaned_data)

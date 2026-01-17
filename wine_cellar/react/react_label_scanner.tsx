@@ -23,8 +23,8 @@ const translated = {
     unknownErrorHint: django.gettext('An error occurred while accessing the camera.'),
     retryButton: django.gettext('Try Again'),
     instructionsBarcode: django.gettext('1/3: Position the barcode in the frame and tap to capture'),
-    instructionsFront: django.gettext('2/3: Position the front label in the frame and tap to capture'),
-    instructionsBack: django.gettext('3/3: Position the back label in the frame and tap to capture'),
+    instructionsBack: django.gettext('2/3: Position the back label in the frame and tap to capture'),
+    instructionsFront: django.gettext('3/3: Position the front label in the frame and tap to capture'),
 };
 
 interface CameraErrorProps {
@@ -73,8 +73,8 @@ const LabelScanner: React.FC = () => {
 
     const stepInstructions = [
         translated.instructionsBarcode,
-        translated.instructionsFront,
         translated.instructionsBack,
+        translated.instructionsFront,
     ];
 
     const startCamera = useCallback(async () => {

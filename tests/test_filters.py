@@ -1,4 +1,5 @@
 """Tests for wine filters."""
+
 import pytest
 
 from wine_cellar.apps.wine.filters import (
@@ -10,21 +11,30 @@ from wine_cellar.apps.wine.filters import (
 class TestGetCountryChoicesWithFavourites:
     """Tests for get_country_choices_with_favourites function."""
 
-    def test_returns_list_with_favourites_first(self):
+    def test_returns_empty_list_without_user(self):
+        """With no user, no countries should be returned."""
         choices = get_country_choices_with_favourites(user=None)
-        # Should have favourites at the top
-        assert len(choices) > 10
-        # GB, PT, FR should be in the first few
-        first_codes = [c[0] for c in choices[:5]]
-        assert "GB" in first_codes
-        assert "PT" in first_codes
-        assert "FR" in first_codes
+        assert choices == []
 
-    def test_includes_separator(self):
-        choices = get_country_choices_with_favourites(user=None)
-        # Should have a separator (empty code with dashes)
-        separators = [c for c in choices if c[0] == "" and "─" in c[1]]
-        assert len(separators) == 1
+    @pytest.mark.django_db
+    def test_returns_only_countries_with_stock(self, wine, storage, storage_item):
+        """Only countries with wines in stock should appear."""
+        choices = get_country_choices_with_favourites(user=wine.user)
+        codes = [c[0] for c in choices if c[0]]  # Exclude separator
+        assert wine.country in codes
+        # Should not have hundreds of countries, only those with stock
+        assert len(codes) <= 10
+
+    @pytest.mark.django_db
+    def test_favourites_appear_first_if_in_stock(self, wine, storage, storage_item):
+        """Favourite countries with stock appear before others."""
+        # Set wine to a favourite country
+        wine.country = "FR"
+        wine.save()
+        choices = get_country_choices_with_favourites(user=wine.user)
+        if choices:
+            first_code = choices[0][0]
+            assert first_code == "FR"
 
 
 @pytest.mark.django_db
