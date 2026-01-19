@@ -99,14 +99,3 @@ lint-py:
 	$(VIRTUAL_ENV)/bin/isort $(ARGUMENTS) --filter-files || EXIT_STATUS=$$?; \
 	$(VIRTUAL_ENV)/bin/flake8 $(ARGUMENTS) || EXIT_STATUS=$$?; \
 	exit $${EXIT_STATUS}
-
-.PHONY: po
-po:
-	$(VIRTUAL_ENV)/bin/python manage.py makemessages --all --no-obsolete -d django --extension html,email,py --ignore 'venv/*' --ignore 'build/*'
-	$(VIRTUAL_ENV)/bin/python manage.py makemessages --all --no-obsolete -d djangojs --ignore 'venv/*' --ignore 'node_modules/*' --ignore 'build/*'
-	msgen locale/en_GB/LC_MESSAGES/django.po -o locale/en_GB/LC_MESSAGES/django.po
-	msgen locale/en_GB/LC_MESSAGES/djangojs.po -o locale/en_GB/LC_MESSAGES/djangojs.po
-
-.PHONY: mo
-mo:
-	$(VIRTUAL_ENV)/bin/python manage.py compilemessages

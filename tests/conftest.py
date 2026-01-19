@@ -8,9 +8,6 @@ from pytest_factoryboy import register
 from wine_cellar.apps.hardware.tests.factories import (
     HardwareDeviceFactory,
     OfflineOperationFactory,
-    PositionChangeReviewFactory,
-    RackSnapshotFactory,
-    RackVisionConfigFactory,
 )
 from wine_cellar.apps.storage.tests.factories import StorageFactory, StorageItemFactory
 from wine_cellar.apps.user.tests.factories import UserFactory
@@ -39,10 +36,7 @@ register(StorageItemFactory)
 
 # Hardware factories
 register(HardwareDeviceFactory)
-register(PositionChangeReviewFactory)
-register(RackSnapshotFactory)
 register(OfflineOperationFactory)
-register(RackVisionConfigFactory)
 
 
 @pytest.fixture

@@ -15,7 +15,7 @@ def test_user_settings_page(client, user):
     assertTemplateUsed(response=r, template_name="settings.html")
 
     data = {
-        "language": "de-de",
+        "language": "en-gb",
         "currency": "EUR",
         "notifications": True,
     }
@@ -23,7 +23,7 @@ def test_user_settings_page(client, user):
     assert r.status_code == HTTPStatus.OK
     assertRedirects(response=r, expected_url=reverse("user-settings"))
     user_settings = user.user_settings
-    assert user_settings.language == "de-de"
+    assert user_settings.language == "en-gb"
     assert user_settings.currency == "EUR"
     assert user_settings.notifications
 

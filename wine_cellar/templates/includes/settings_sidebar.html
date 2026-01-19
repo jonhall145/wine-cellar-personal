@@ -18,14 +18,8 @@
 
         <h4 class="settings-sidebar__heading">{% translate "Hardware" %}</h4>
         <ul class="pure-menu-list">
-            <li class="pure-menu-item{% if request.resolver_match.url_name == 'rack-config' %} pure-menu-selected{% endif %}">
-                <a href="{% url 'hardware:rack-config' %}" class="pure-menu-link">{% translate "Vision Rack Setup" %}</a>
-            </li>
             <li class="pure-menu-item{% if request.resolver_match.url_name == 'device-settings' %} pure-menu-selected{% endif %}">
                 <a href="{% url 'hardware:device-settings' %}" class="pure-menu-link">{% translate "Devices" %}</a>
-            </li>
-            <li class="pure-menu-item{% if request.resolver_match.url_name == 'position-reviews' %} pure-menu-selected{% endif %}">
-                <a href="{% url 'hardware:position-reviews' %}" class="pure-menu-link">{% translate "Position Reviews" %}</a>
             </li>
         </ul>
     </div>

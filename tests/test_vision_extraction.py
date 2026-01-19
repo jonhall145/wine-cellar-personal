@@ -71,9 +71,7 @@ class TestExtractWineVisionAjax:
         image_file = create_test_image_file()
 
         # Mock the barcode scanner to return our test barcode
-        with patch(
-            "wine_cellar.apps.wine.views.BarcodeScanner"
-        ) as MockScanner:
+        with patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner:
             mock_scanner = MagicMock()
             mock_scanner.scan_and_match.return_value = {
                 "matched": True,
@@ -112,11 +110,10 @@ class TestExtractWineVisionAjax:
         image_file = create_test_image_file()
 
         # Mock both barcode scanner (no match) and vision extractor
-        with patch(
-            "wine_cellar.apps.wine.views.BarcodeScanner"
-        ) as MockScanner, patch(
-            "wine_cellar.apps.wine.views.WineVisionExtractor"
-        ) as MockVision:
+        with (
+            patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner,
+            patch("wine_cellar.apps.wine.views.WineVisionExtractor") as MockVision,
+        ):
             # Barcode scanner returns no match
             mock_scanner = MagicMock()
             mock_scanner.scan_and_match.return_value = {
@@ -164,11 +161,10 @@ class TestExtractWineVisionAjax:
         image_file = create_test_image_file()
 
         # Mock barcode scanner (barcode found but no match) and vision extractor
-        with patch(
-            "wine_cellar.apps.wine.views.BarcodeScanner"
-        ) as MockScanner, patch(
-            "wine_cellar.apps.wine.views.WineVisionExtractor"
-        ) as MockVision:
+        with (
+            patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner,
+            patch("wine_cellar.apps.wine.views.WineVisionExtractor") as MockVision,
+        ):
             # Barcode scanner finds barcode but no match
             mock_scanner = MagicMock()
             mock_scanner.scan_and_match.return_value = {
@@ -214,11 +210,10 @@ class TestExtractWineVisionAjax:
         image_front = create_test_image_file()
         image_back = create_test_image_file()
 
-        with patch(
-            "wine_cellar.apps.wine.views.BarcodeScanner"
-        ) as MockScanner, patch(
-            "wine_cellar.apps.wine.views.WineVisionExtractor"
-        ) as MockVision:
+        with (
+            patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner,
+            patch("wine_cellar.apps.wine.views.WineVisionExtractor") as MockVision,
+        ):
             mock_scanner = MagicMock()
             mock_scanner.scan_and_match.return_value = {
                 "matched": False,
@@ -260,11 +255,10 @@ class TestExtractWineVisionAjax:
 
         image_file = create_test_image_file()
 
-        with patch(
-            "wine_cellar.apps.wine.views.BarcodeScanner"
-        ) as MockScanner, patch(
-            "wine_cellar.apps.wine.views.WineVisionExtractor"
-        ) as MockVision:
+        with (
+            patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner,
+            patch("wine_cellar.apps.wine.views.WineVisionExtractor") as MockVision,
+        ):
             mock_scanner = MagicMock()
             mock_scanner.scan_and_match.return_value = {
                 "matched": False,
@@ -303,9 +297,7 @@ class TestExtractWineVisionAjax:
 
         image_file = create_test_image_file()
 
-        with patch(
-            "wine_cellar.apps.wine.views.BarcodeScanner"
-        ) as MockScanner:
+        with patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner:
             MockScanner.side_effect = Exception("Test exception")
 
             response = client.post(
@@ -321,13 +313,16 @@ class TestExtractWineVisionAjax:
     @pytest.mark.django_db
     def test_file_size_validation_rejects_large_files(self, client, user):
         """Test that files larger than MAX_IMAGE_SIZE are rejected."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
         client.force_login(user)
         url = reverse("wine-extract-vision")
 
-        # Create a mock file that is larger than MAX_IMAGE_SIZE
-        large_file = MagicMock()
-        large_file.size = MAX_IMAGE_SIZE + 1  # Just over the limit
-        large_file.read.return_value = b"fake data"
+        # Create a file that is larger than MAX_IMAGE_SIZE
+        large_content = b"0" * (MAX_IMAGE_SIZE + 1)
+        large_file = SimpleUploadedFile(
+            "large.jpg", large_content, content_type="image/jpeg"
+        )
 
         # Patch the request.FILES to return our mock file
         response = client.post(
@@ -351,11 +346,10 @@ class TestExtractWineVisionAjax:
         # Create a small test image (well under 10MB)
         image_file = create_test_image_file()
 
-        with patch(
-            "wine_cellar.apps.wine.views.BarcodeScanner"
-        ) as MockScanner, patch(
-            "wine_cellar.apps.wine.views.WineVisionExtractor"
-        ) as MockVision:
+        with (
+            patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner,
+            patch("wine_cellar.apps.wine.views.WineVisionExtractor") as MockVision,
+        ):
             mock_scanner = MagicMock()
             mock_scanner.scan_and_match.return_value = {
                 "matched": False,
@@ -382,4 +376,3 @@ class TestExtractWineVisionAjax:
 
         # Should succeed since the file is small
         assert response.status_code == HTTPStatus.OK
-

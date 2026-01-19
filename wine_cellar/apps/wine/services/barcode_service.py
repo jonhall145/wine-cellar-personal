@@ -7,6 +7,11 @@ from typing import Optional
 
 from PIL import Image
 
+try:
+    from pyzbar import pyzbar
+except ImportError:
+    pyzbar = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -20,17 +25,10 @@ class BarcodeScanner:
     def _check_pyzbar(self) -> bool:
         """Check if pyzbar is available."""
         if self._pyzbar_available is None:
-            try:
-                from pyzbar import pyzbar  # noqa: F401
-
+            if pyzbar is not None:
                 self._pyzbar_available = True
-            except ImportError:
+            else:
                 logger.warning("pyzbar not available. Install with: pip install pyzbar")
-                self._pyzbar_available = False
-            except Exception as e:
-                logger.warning(
-                    f"pyzbar import error (libzbar may not be installed): {e}"
-                )
                 self._pyzbar_available = False
         return self._pyzbar_available
 
@@ -46,8 +44,6 @@ class BarcodeScanner:
         """
         if not self._check_pyzbar():
             return []
-
-        from pyzbar import pyzbar
 
         barcodes = set()
 

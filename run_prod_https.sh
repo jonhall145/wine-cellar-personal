@@ -5,8 +5,8 @@ set -e
 # Uses Gunicorn with SSL certificates
 
 PIDFILE="/tmp/wine_cellar_gunicorn_https.pid"
-LOGFILE="gunicorn.log"
-PORT="${PORT:-8000}"
+LOGFILE="gunicorn_https.log"
+PORT="${PORT:-443}"
 
 cd "$(dirname "$0")"
 
@@ -24,21 +24,35 @@ show_help() {
     echo "  help     - Show this help message"
     echo ""
     echo "Environment variables:"
-    echo "  PORT         - Port to listen on (default: 8000)"
+    echo "  PORT         - Port to listen on (default: 443)"
     echo "  BUILD_STATIC - Set to 1 to rebuild static assets (default: 0)"
+    echo ""
+    echo "Note: Requires sudo to bind to port 443"
     echo ""
 }
 
 check_requirements() {
+    # Check if running as root/sudo (required for port 443)
+    if [ "${PORT:-443}" -le 1024 ] && [ "$EUID" -ne 0 ]; then
+        echo "Error: This script requires sudo to bind to port ${PORT:-443}"
+        echo "Run: sudo ./run_prod_https.sh $1"
+        exit 1
+    fi
+
     if [ ! -d "venv" ]; then
         echo "Error: Virtual environment not found."
         echo "Run: python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt"
         exit 1
     fi
-    
-    if [ ! -f ".env.prod.local" ]; then
-        echo "Error: .env.prod.local not found."
-        echo "Create it with production settings."
+
+    # Check for .env.prod or .env.prod.local
+    if [ -f ".env.prod" ]; then
+        ENV_FILE=".env.prod"
+    elif [ -f ".env.prod.local" ]; then
+        ENV_FILE=".env.prod.local"
+    else
+        echo "Error: Neither .env.prod nor .env.prod.local found."
+        echo "Create one with production settings."
         exit 1
     fi
     
@@ -47,15 +61,23 @@ check_requirements() {
         echo "SSL certificates not found. Generating..."
         mkdir -p ssl
         
-        # Get external IP
+        # Get external IP and Nord Meshnet info
         EXTERNAL_IP=$(curl -s http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip -H "Metadata-Flavor: Google" 2>/dev/null || curl -s ifconfig.me 2>/dev/null || echo "localhost")
-        
+        MESHNET_IP=$(ip addr show nord-tun 2>/dev/null | grep -oP '(?<=inet\s)\d+(\.\d+){3}' || echo "")
+        MESHNET_HOSTNAME=$(nordvpn meshnet peer list 2>/dev/null | grep "This device:" -A 1 | grep "Hostname:" | awk '{print $2}' || echo "")
+
+        # Build subjectAltName with available addresses
+        SAN="DNS:localhost,IP:127.0.0.1,IP:0.0.0.0,IP:$EXTERNAL_IP"
+        [ -n "$MESHNET_IP" ] && SAN="$SAN,IP:$MESHNET_IP"
+        [ -n "$MESHNET_HOSTNAME" ] && SAN="$SAN,DNS:$MESHNET_HOSTNAME"
+
         openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
             -keyout ssl/server.key \
             -out ssl/server.crt \
             -subj "/C=US/ST=State/L=City/O=WineCellar/CN=$EXTERNAL_IP" \
-            -addext "subjectAltName=DNS:localhost,IP:127.0.0.1,IP:0.0.0.0,IP:$EXTERNAL_IP"
+            -addext "subjectAltName=$SAN"
         echo "SSL certificates generated for $EXTERNAL_IP"
+        [ -n "$MESHNET_HOSTNAME" ] && echo "  - Meshnet: $MESHNET_HOSTNAME ($MESHNET_IP)"
     fi
 }
 
@@ -75,8 +97,9 @@ start_server() {
     source venv/bin/activate
     
     # Load environment variables
+    echo "Using environment file: $ENV_FILE"
     set -a
-    source .env.prod.local
+    source "$ENV_FILE"
     set +a
     
     # Run migrations
@@ -91,8 +114,9 @@ start_server() {
         python manage.py collectstatic --no-input
     fi
     
-    # Get external IP
+    # Get external IP and Meshnet info
     EXTERNAL_IP=$(curl -s http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip -H "Metadata-Flavor: Google" 2>/dev/null || echo "your-server-ip")
+    MESHNET_HOSTNAME=$(nordvpn meshnet peer list 2>/dev/null | grep "This device:" -A 1 | grep "Hostname:" | awk '{print $2}' || echo "")
 
     echo ""
     echo "Starting Gunicorn with HTTPS on port $PORT..."
@@ -132,8 +156,25 @@ start_server() {
         echo "Server started successfully!"
         echo "=========================================="
         echo ""
-        echo "Access your site at: https://${EXTERNAL_IP}:${PORT}"
-        echo "Admin panel at: https://${EXTERNAL_IP}:${PORT}/admin/"
+        if [ "$PORT" = "443" ]; then
+            echo "Access your site at: https://${EXTERNAL_IP}"
+            echo "Admin panel at: https://${EXTERNAL_IP}/admin/"
+            if [ -n "$MESHNET_HOSTNAME" ]; then
+                echo ""
+                echo "Nord Meshnet access:"
+                echo "  https://${MESHNET_HOSTNAME}"
+                echo "  https://${MESHNET_HOSTNAME}/admin/"
+            fi
+        else
+            echo "Access your site at: https://${EXTERNAL_IP}:${PORT}"
+            echo "Admin panel at: https://${EXTERNAL_IP}:${PORT}/admin/"
+            if [ -n "$MESHNET_HOSTNAME" ]; then
+                echo ""
+                echo "Nord Meshnet access:"
+                echo "  https://${MESHNET_HOSTNAME}:${PORT}"
+                echo "  https://${MESHNET_HOSTNAME}:${PORT}/admin/"
+            fi
+        fi
         echo ""
         echo "NOTE: Accept the self-signed certificate warning in your browser."
         echo ""

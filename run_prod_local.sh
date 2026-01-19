@@ -26,15 +26,27 @@ show_help() {
 }
 
 check_requirements() {
+    # Check if running as root/sudo (required for port 80)
+    if [ "$EUID" -ne 0 ]; then
+        echo "Error: This script requires sudo to bind to port 80"
+        echo "Run: sudo ./run_prod_local.sh $1"
+        exit 1
+    fi
+
     if [ ! -d "venv" ]; then
         echo "Error: Virtual environment not found."
         echo "Run: python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt"
         exit 1
     fi
-    
-    if [ ! -f ".env.prod.local" ]; then
-        echo "Error: .env.prod.local not found."
-        echo "Create it with production settings."
+
+    # Check for .env.prod or .env.prod.local
+    if [ -f ".env.prod" ]; then
+        ENV_FILE=".env.prod"
+    elif [ -f ".env.prod.local" ]; then
+        ENV_FILE=".env.prod.local"
+    else
+        echo "Error: Neither .env.prod nor .env.prod.local found."
+        echo "Create one with production settings."
         exit 1
     fi
 }
@@ -55,8 +67,9 @@ start_server() {
     source venv/bin/activate
     
     # Load environment variables
+    echo "Using environment file: $ENV_FILE"
     set -a
-    source .env.prod.local
+    source "$ENV_FILE"
     set +a
     
     # Run migrations
@@ -88,8 +101,9 @@ else:
     print(f'Superuser "{username}" already exists')
 PYEOF
 
-    # Get external IP
+    # Get external IP and Meshnet info
     EXTERNAL_IP=$(curl -s http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip -H "Metadata-Flavor: Google" 2>/dev/null || echo "your-server-ip")
+    MESHNET_HOSTNAME=$(nordvpn meshnet peer list 2>/dev/null | grep "This device:" -A 1 | grep "Hostname:" | awk '{print $2}' || echo "")
 
     echo ""
     echo "Starting Gunicorn..."
@@ -123,6 +137,12 @@ PYEOF
         echo ""
         echo "Access your site at: http://${EXTERNAL_IP}"
         echo "Admin panel at: http://${EXTERNAL_IP}/admin/"
+        if [ -n "$MESHNET_HOSTNAME" ]; then
+            echo ""
+            echo "Nord Meshnet access:"
+            echo "  http://${MESHNET_HOSTNAME}"
+            echo "  http://${MESHNET_HOSTNAME}/admin/"
+        fi
         echo ""
         echo "PID: $(cat $PIDFILE)"
         echo "Logs: $LOGFILE"

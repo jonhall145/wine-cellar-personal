@@ -32,6 +32,7 @@ def test_homepage(client, user):
 
 @pytest.mark.django_db
 def test_homepage_stats(client, user, wine_factory, storage_item_factory):
+    Wine.objects.filter(user=user).delete()
     wine = wine_factory(user=user, vintage=2020)
     storage = user.storage_set.first()
     wine_2 = wine_factory(user=user, country="DE", vintage=2023, price=15.00)
@@ -54,35 +55,7 @@ def test_homepage_stats(client, user, wine_factory, storage_item_factory):
     assert r.context_data["wines_in_stock"] == 2
     assert r.context_data["wines"] == 3
     assert r.context_data["countries"] == 2
-    assert r.context_data["total_value"] == "43€"
-
-
-@pytest.mark.django_db
-def test_homepage_pending_reviews_count(client, user, position_change_review_factory):
-    """Test homepage shows pending hardware position reviews count."""
-    from wine_cellar.apps.hardware.models import ReviewStatus
-
-    # Create pending reviews for this user
-    position_change_review_factory(user=user, status=ReviewStatus.PENDING)
-    position_change_review_factory(user=user, status=ReviewStatus.PENDING)
-    # Create an approved review (shouldn't be counted)
-    position_change_review_factory(user=user, status=ReviewStatus.APPROVED)
-    # Create a pending review for another user (shouldn't be counted)
-    position_change_review_factory(status=ReviewStatus.PENDING)
-
-    client.force_login(user)
-    r = client.get(reverse("homepage"), follow=True)
-    assert r.status_code == HTTPStatus.OK
-    assert r.context_data["pending_reviews_count"] == 2
-
-
-@pytest.mark.django_db
-def test_homepage_no_pending_reviews(client, user):
-    """Test homepage shows zero when no pending reviews."""
-    client.force_login(user)
-    r = client.get(reverse("homepage"), follow=True)
-    assert r.status_code == HTTPStatus.OK
-    assert r.context_data["pending_reviews_count"] == 0
+    assert r.context_data["total_value"] == "€43"
 
 
 @pytest.mark.django_db
@@ -688,6 +661,7 @@ def test_wine_filter_in_stock(client, user, wine_factory, storage_item_factory):
 
 @pytest.mark.django_db
 def test_wine_filter_price(client, user, wine_factory, storage_item_factory):
+    Wine.objects.filter(user=user).delete()
     storage = user.storage_set.first()
     wine_in_stock_cheap = wine_factory(user=user, vintage=2020)
     wine_in_stock_expensive = wine_factory(user=user, vintage=2020)

@@ -7,26 +7,25 @@ syncs them when connectivity is restored.
 
 import json
 import sqlite3
-import time
 import threading
-from typing import Optional, List, Dict, Any, Callable
-from dataclasses import dataclass, asdict
+import time
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-import base64
+from typing import Any, Callable, Dict, List, Optional
 
 
 class OperationType(Enum):
     """Types of queued operations."""
+
     ADD_WINE = "add_wine"
     REMOVE_WINE = "remove_wine"
     UPDATE_WINE = "update_wine"
-    POSITION_CHANGE = "position_change"
-    RACK_SNAPSHOT = "rack_snapshot"
 
 
 class OperationStatus(Enum):
     """Operation sync status."""
+
     PENDING = "pending"
     SYNCING = "syncing"
     COMPLETED = "completed"
@@ -36,6 +35,7 @@ class OperationStatus(Enum):
 @dataclass
 class QueuedOperation:
     """Queued operation data."""
+
     id: Optional[int] = None
     operation_type: str = ""
     data: Dict[str, Any] = None
@@ -73,7 +73,8 @@ class OfflineQueue:
     def _init_db(self) -> None:
         """Initialize database schema."""
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute("""
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS operations (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     operation_type TEXT NOT NULL,
@@ -84,11 +85,14 @@ class OfflineQueue:
                     retry_count INTEGER NOT NULL DEFAULT 0,
                     last_error TEXT DEFAULT ''
                 )
-            """)
-            conn.execute("""
+            """
+            )
+            conn.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_status
                 ON operations(status)
-            """)
+            """
+            )
             conn.commit()
 
     def add(self, operation: QueuedOperation) -> int:
@@ -102,19 +106,25 @@ class OfflineQueue:
             Operation ID
         """
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 INSERT INTO operations
-                (operation_type, data, image_data, created_at, status, retry_count, last_error)
+                (
+                    operation_type, data, image_data, created_at,
+                    status, retry_count, last_error
+                )
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                operation.operation_type,
-                json.dumps(operation.data),
-                operation.image_data,
-                operation.created_at,
-                operation.status,
-                operation.retry_count,
-                operation.last_error,
-            ))
+            """,
+                (
+                    operation.operation_type,
+                    json.dumps(operation.data),
+                    operation.image_data,
+                    operation.created_at,
+                    operation.status,
+                    operation.retry_count,
+                    operation.last_error,
+                ),
+            )
             conn.commit()
             return cursor.lastrowid
 
@@ -130,12 +140,15 @@ class OfflineQueue:
         """
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT * FROM operations
                 WHERE status = 'pending'
                 ORDER BY created_at ASC
                 LIMIT ?
-            """, (limit,)).fetchall()
+            """,
+                (limit,),
+            ).fetchall()
 
         return [self._row_to_operation(row) for row in rows]
 
@@ -148,34 +161,39 @@ class OfflineQueue:
                     "SELECT * FROM operations ORDER BY created_at ASC"
                 ).fetchall()
             else:
-                rows = conn.execute("""
+                rows = conn.execute(
+                    """
                     SELECT * FROM operations
                     WHERE status != 'completed'
                     ORDER BY created_at ASC
-                """).fetchall()
+                """
+                ).fetchall()
 
         return [self._row_to_operation(row) for row in rows]
 
     def update_status(
-        self,
-        operation_id: int,
-        status: OperationStatus,
-        error: str = ""
+        self, operation_id: int, status: OperationStatus, error: str = ""
     ) -> None:
         """Update operation status."""
         with sqlite3.connect(self.db_path) as conn:
             if status == OperationStatus.FAILED:
-                conn.execute("""
+                conn.execute(
+                    """
                     UPDATE operations
                     SET status = ?, last_error = ?, retry_count = retry_count + 1
                     WHERE id = ?
-                """, (status.value, error, operation_id))
+                """,
+                    (status.value, error, operation_id),
+                )
             else:
-                conn.execute("""
+                conn.execute(
+                    """
                     UPDATE operations
                     SET status = ?, last_error = ?
                     WHERE id = ?
-                """, (status.value, error, operation_id))
+                """,
+                    (status.value, error, operation_id),
+                )
             conn.commit()
 
     def mark_syncing(self, operation_id: int) -> None:
@@ -198,11 +216,14 @@ class OfflineQueue:
             Number of operations reset
         """
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 UPDATE operations
                 SET status = 'pending'
                 WHERE status = 'failed' AND retry_count < ?
-            """, (max_retries,))
+            """,
+                (max_retries,),
+            )
             conn.commit()
             return cursor.rowcount
 
@@ -218,19 +239,24 @@ class OfflineQueue:
         """
         cutoff = time.time() - (older_than_hours * 3600)
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 DELETE FROM operations
                 WHERE status = 'completed' AND created_at < ?
-            """, (cutoff,))
+            """,
+                (cutoff,),
+            )
             conn.commit()
             return cursor.rowcount
 
     def count_pending(self) -> int:
         """Get count of pending operations."""
         with sqlite3.connect(self.db_path) as conn:
-            row = conn.execute("""
+            row = conn.execute(
+                """
                 SELECT COUNT(*) FROM operations WHERE status = 'pending'
-            """).fetchone()
+            """
+            ).fetchone()
             return row[0] if row else 0
 
     def _row_to_operation(self, row: sqlite3.Row) -> QueuedOperation:
@@ -258,7 +284,7 @@ class SyncManager:
     def __init__(
         self,
         queue: OfflineQueue,
-        api_client: 'APIClient',  # Forward reference
+        api_client: Any,
         check_interval: float = 30.0,
         max_retries: int = 3,
     ):
@@ -375,10 +401,6 @@ class SyncManager:
             self._sync_remove_wine(op)
         elif op_type == OperationType.UPDATE_WINE.value:
             self._sync_update_wine(op)
-        elif op_type == OperationType.POSITION_CHANGE.value:
-            self._sync_position_change(op)
-        elif op_type == OperationType.RACK_SNAPSHOT.value:
-            self._sync_rack_snapshot(op)
         else:
             raise ValueError(f"Unknown operation type: {op_type}")
 
@@ -406,34 +428,14 @@ class SyncManager:
     def _sync_update_wine(self, op: QueuedOperation) -> None:
         """Sync update wine operation."""
         from .api_client import Wine
+
         wine = Wine.from_dict(op.data.get("wine", {}))
         if wine.id:
             self.api_client.update_wine(wine)
 
-    def _sync_position_change(self, op: QueuedOperation) -> None:
-        """Sync position change report."""
-        data = op.data
-        self.api_client.report_position_change(
-            rack_id=data.get("rack_id"),
-            row=data.get("row"),
-            col=data.get("col"),
-            change_type=data.get("change_type"),
-            wine_id=data.get("wine_id"),
-            confidence=data.get("confidence", 0.0),
-            image=op.image_data,
-        )
-
-    def _sync_rack_snapshot(self, op: QueuedOperation) -> None:
-        """Sync rack snapshot."""
-        data = op.data
-        self.api_client.upload_rack_snapshot(
-            rack_id=data.get("rack_id"),
-            image=op.image_data,
-            grid_state=data.get("grid_state"),
-        )
-
 
 # Convenience functions for queuing operations
+
 
 def queue_add_wine(
     queue: OfflineQueue,
@@ -450,7 +452,7 @@ def queue_add_wine(
             "rack_id": rack_id,
             "row": row,
             "col": col,
-        }
+        },
     )
     return queue.add(op)
 
@@ -468,50 +470,6 @@ def queue_remove_wine(
             "rack_id": rack_id,
             "row": row,
             "col": col,
-        }
-    )
-    return queue.add(op)
-
-
-def queue_position_change(
-    queue: OfflineQueue,
-    rack_id: int,
-    row: int,
-    col: int,
-    change_type: str,
-    wine_id: Optional[int] = None,
-    confidence: float = 0.0,
-    image: Optional[bytes] = None,
-) -> int:
-    """Queue position change report."""
-    op = QueuedOperation(
-        operation_type=OperationType.POSITION_CHANGE.value,
-        data={
-            "rack_id": rack_id,
-            "row": row,
-            "col": col,
-            "change_type": change_type,
-            "wine_id": wine_id,
-            "confidence": confidence,
         },
-        image_data=image,
-    )
-    return queue.add(op)
-
-
-def queue_rack_snapshot(
-    queue: OfflineQueue,
-    rack_id: int,
-    image: bytes,
-    grid_state: Optional[Dict] = None,
-) -> int:
-    """Queue rack snapshot."""
-    op = QueuedOperation(
-        operation_type=OperationType.RACK_SNAPSHOT.value,
-        data={
-            "rack_id": rack_id,
-            "grid_state": grid_state,
-        },
-        image_data=image,
     )
     return queue.add(op)

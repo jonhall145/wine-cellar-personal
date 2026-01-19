@@ -4,24 +4,22 @@ API client for wine cellar server communication.
 Handles all HTTP communication with the Django server including:
 - Wine CRUD operations
 - Storage position updates
-- Label image uploads
 - Barcode lookups
+- Offline operation syncing
 """
 
 import json
-import time
-from typing import Optional, Dict, Any, List, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
-import urllib.request
+import ssl
 import urllib.error
 import urllib.parse
-import ssl
-import base64
+import urllib.request
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 
 class APIError(Exception):
     """API request error."""
+
     def __init__(self, message: str, status_code: int = 0, response: str = ""):
         super().__init__(message)
         self.status_code = status_code
@@ -30,12 +28,14 @@ class APIError(Exception):
 
 class ConnectionError(APIError):
     """Server connection error."""
+
     pass
 
 
 @dataclass
 class ServerConfig:
     """Server configuration."""
+
     host: str = "localhost"
     port: int = 8000
     use_https: bool = True
@@ -50,6 +50,7 @@ class ServerConfig:
 @dataclass
 class Wine:
     """Wine data transfer object."""
+
     id: Optional[int] = None
     name: str = ""
     vintage: Optional[int] = None
@@ -84,7 +85,7 @@ class Wine:
         return data
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Wine':
+    def from_dict(cls, data: Dict[str, Any]) -> "Wine":
         """Create from API response."""
         return cls(
             id=data.get("id"),
@@ -104,6 +105,7 @@ class Wine:
 @dataclass
 class StoragePosition:
     """Storage position data."""
+
     id: Optional[int] = None
     rack_id: int = 0
     row: int = 0
@@ -121,7 +123,7 @@ class StoragePosition:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'StoragePosition':
+    def from_dict(cls, data: Dict[str, Any]) -> "StoragePosition":
         wine_data = data.get("wine")
         return cls(
             id=data.get("id"),
@@ -167,7 +169,10 @@ class APIClient:
     def base_url(self) -> str:
         """Get base URL for API requests."""
         protocol = "https" if self.config.use_https else "http"
-        return f"{protocol}://{self.config.host}:{self.config.port}{self.config.api_prefix}"
+        host = self.config.host
+        port = self.config.port
+        prefix = self.config.api_prefix
+        return f"{protocol}://{host}:{port}{prefix}"
 
     def _request(
         self,
@@ -217,7 +222,7 @@ class APIClient:
             with urllib.request.urlopen(
                 request,
                 timeout=self.config.timeout,
-                context=self._ssl_context if self.config.use_https else None
+                context=self._ssl_context if self.config.use_https else None,
             ) as response:
                 response_data = response.read().decode("utf-8")
                 if response_data:
@@ -236,9 +241,7 @@ class APIClient:
             except Exception:
                 pass
             raise APIError(
-                f"HTTP {e.code}: {e.reason}",
-                status_code=e.code,
-                response=response_body
+                f"HTTP {e.code}: {e.reason}", status_code=e.code, response=response_body
             )
 
         except json.JSONDecodeError as e:
@@ -248,10 +251,7 @@ class APIClient:
             raise APIError(f"Request error: {e}")
 
     def _encode_multipart(
-        self,
-        data: Dict[str, Any],
-        files: Dict[str, bytes],
-        boundary: str
+        self, data: Dict[str, Any], files: Dict[str, bytes], boundary: str
     ) -> bytes:
         """Encode multipart form data."""
         lines = []
@@ -264,9 +264,10 @@ class APIClient:
 
         for name, content in files.items():
             lines.append(f"--{boundary}".encode())
-            lines.append(
-                f'Content-Disposition: form-data; name="{name}"; filename="{name}.jpg"'.encode()
+            disposition = (
+                f'Content-Disposition: form-data; name="{name}"; filename="{name}.jpg"'
             )
+            lines.append(disposition.encode())
             lines.append(b"Content-Type: image/jpeg")
             lines.append(b"")
             lines.append(content)
@@ -302,10 +303,14 @@ class APIClient:
         password = password or self.config.password
 
         try:
-            response = self._request("POST", "/auth/login/", {
-                "username": username,
-                "password": password,
-            })
+            response = self._request(
+                "POST",
+                "/auth/login/",
+                {
+                    "username": username,
+                    "password": password,
+                },
+            )
             self._token = response.get("token", "")
             return bool(self._token)
         except APIError:
@@ -361,34 +366,6 @@ class APIClient:
         response = self._request("PUT", f"/wines/{wine.id}/", wine.to_dict())
         return Wine.from_dict(response)
 
-    def create_wine_from_labels(
-        self,
-        front_image: bytes,
-        back_image: Optional[bytes] = None,
-        barcode: str = ""
-    ) -> Wine:
-        """
-        Create wine from label images using AI extraction.
-
-        Args:
-            front_image: Front label JPEG bytes
-            back_image: Back label JPEG bytes (optional)
-            barcode: Barcode if available
-
-        Returns:
-            Created wine
-        """
-        files = {"front_label": front_image}
-        if back_image:
-            files["back_label"] = back_image
-
-        data = {}
-        if barcode:
-            data["barcode"] = barcode
-
-        response = self._request("POST", "/wines/from-labels/", data, files)
-        return Wine.from_dict(response)
-
     # Storage operations
 
     def get_rack_positions(self, rack_id: int) -> List[StoragePosition]:
@@ -396,12 +373,13 @@ class APIClient:
         response = self._request("GET", f"/storage/racks/{rack_id}/positions/")
         return [StoragePosition.from_dict(p) for p in response.get("positions", [])]
 
-    def get_position(self, rack_id: int, row: int, col: int) -> Optional[StoragePosition]:
+    def get_position(
+        self, rack_id: int, row: int, col: int
+    ) -> Optional[StoragePosition]:
         """Get specific position."""
         try:
             response = self._request(
-                "GET",
-                f"/storage/racks/{rack_id}/positions/{row}/{col}/"
+                "GET", f"/storage/racks/{rack_id}/positions/{row}/{col}/"
             )
             return StoragePosition.from_dict(response)
         except APIError as e:
@@ -410,11 +388,7 @@ class APIClient:
             raise
 
     def add_wine_to_position(
-        self,
-        wine_id: int,
-        rack_id: int,
-        row: int,
-        col: int
+        self, wine_id: int, rack_id: int, row: int, col: int
     ) -> StoragePosition:
         """
         Add wine to storage position.
@@ -428,19 +402,20 @@ class APIClient:
         Returns:
             Updated position
         """
-        response = self._request("POST", "/storage/add/", {
-            "wine_id": wine_id,
-            "rack_id": rack_id,
-            "row": row,
-            "col": col,
-        })
+        response = self._request(
+            "POST",
+            "/storage/add/",
+            {
+                "wine_id": wine_id,
+                "rack_id": rack_id,
+                "row": row,
+                "col": col,
+            },
+        )
         return StoragePosition.from_dict(response)
 
     def remove_wine_from_position(
-        self,
-        rack_id: int,
-        row: int,
-        col: int
+        self, rack_id: int, row: int, col: int
     ) -> Optional[Wine]:
         """
         Remove wine from storage position.
@@ -453,94 +428,19 @@ class APIClient:
         Returns:
             Removed wine, or None if position was empty
         """
-        response = self._request("POST", "/storage/remove/", {
-            "rack_id": rack_id,
-            "row": row,
-            "col": col,
-        })
+        response = self._request(
+            "POST",
+            "/storage/remove/",
+            {
+                "rack_id": rack_id,
+                "row": row,
+                "col": col,
+            },
+        )
         wine_data = response.get("wine")
         return Wine.from_dict(wine_data) if wine_data else None
 
-    def find_empty_positions(self, rack_id: int) -> List[Tuple[int, int]]:
-        """Find empty positions in rack."""
-        positions = self.get_rack_positions(rack_id)
-        return [(p.row, p.col) for p in positions if p.is_empty]
-
     # Hardware API endpoints (for Pi integration)
-
-    def report_position_change(
-        self,
-        rack_id: int,
-        row: int,
-        col: int,
-        change_type: str,  # 'added' or 'removed'
-        wine_id: Optional[int] = None,
-        confidence: float = 0.0,
-        image: Optional[bytes] = None,
-    ) -> Dict[str, Any]:
-        """
-        Report detected position change for review.
-
-        Args:
-            rack_id: Rack ID
-            row: Row number
-            col: Column number
-            change_type: 'added' or 'removed'
-            wine_id: Wine ID if known
-            confidence: Detection confidence (0-1)
-            image: Snapshot image
-
-        Returns:
-            Response with review ID
-        """
-        data = {
-            "rack_id": rack_id,
-            "row": row,
-            "col": col,
-            "change_type": change_type,
-            "confidence": confidence,
-        }
-        if wine_id:
-            data["wine_id"] = wine_id
-
-        files = {}
-        if image:
-            files["image"] = image
-
-        return self._request("POST", "/hardware/position-change/", data, files)
-
-    def upload_rack_snapshot(
-        self,
-        rack_id: int,
-        image: bytes,
-        grid_state: Optional[Dict] = None
-    ) -> Dict[str, Any]:
-        """
-        Upload rack snapshot for daily reconciliation.
-
-        Args:
-            rack_id: Rack ID
-            image: Full rack image
-            grid_state: Detected grid state
-
-        Returns:
-            Response data
-        """
-        data = {"rack_id": rack_id}
-        if grid_state:
-            data["grid_state"] = json.dumps(grid_state)
-
-        return self._request(
-            "POST",
-            "/hardware/rack-snapshot/",
-            data,
-            {"image": image}
-        )
-
-    def get_pending_reviews(self) -> List[Dict[str, Any]]:
-        """Get position changes pending user review."""
-        response = self._request("GET", "/hardware/pending-reviews/")
-        return response.get("reviews", [])
 
     def sync_operations(self, operations: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -552,7 +452,7 @@ class APIClient:
         Returns:
             Sync results
         """
-        return self._request("POST", "/hardware/sync/", {"operations": operations})
+        return self._request("POST", "/sync/", {"operations": operations})
 
 
 def create_client(

@@ -23,6 +23,7 @@ from wine_cellar.apps.user.views import get_user_settings
 from wine_cellar.apps.wine.filters import WineFilter
 from wine_cellar.apps.wine.forms import WineEditForm, WineForm, image_fields_map
 from wine_cellar.apps.wine.models import Wine, WineImage
+from wine_cellar.apps.wine.services import BarcodeScanner, WineVisionExtractor
 
 # Form step constants - no longer used for multi-step, kept for compatibility
 FINAL_FORM_STEP = 4
@@ -69,7 +70,7 @@ class HomePageView(TemplateView):
 
         # Consolidate Wine stats into single query
         wine_stats = Wine.objects.filter(user=user).aggregate(
-            total_wines=Count("id"),
+            total_wines=Count("id", distinct=True),
             wines_in_stock=Count(
                 "id", filter=Q(storageitem__deleted=False), distinct=True
             ),
@@ -1386,8 +1387,6 @@ def extract_wine_vision_ajax(request):
         return JsonResponse({"error": "POST required"}, status=405)
 
     try:
-        from wine_cellar.apps.wine.services import BarcodeScanner, WineVisionExtractor
-
         # Collect uploaded images
         images = []
         image_fields = [
@@ -1494,8 +1493,6 @@ def scan_barcode_ajax(request):
         return JsonResponse({"error": "POST required"}, status=405)
 
     try:
-        from wine_cellar.apps.wine.services import BarcodeScanner
-
         # Parse JSON body
         try:
             data = json.loads(request.body)
