@@ -76,12 +76,54 @@ A test user exists for UI testing:
 
 ## Project Context
 
-See `agents.md` for comprehensive project documentation including:
-- Technology stack (Django, React, PostgreSQL)
-- Project structure
-- Development workflows
-- Database schema
-- Testing approach
+### Technology Stack
+
+**Backend:**
+- Django 5.2.9 with Python 3.11+
+- PostgreSQL 16 (production) / SQLite (development)
+- Celery 5.6.0 with django-celery-beat for background tasks
+
+**Frontend:**
+- React 19.2.3 with TypeScript
+- Leaflet for map visualization
+- Barcode scanner components
+- Webpack 5 build system
+
+**Key Dependencies:**
+- django-allauth for authentication
+- pytest for testing
+- Whitenoise for static file serving
+- Gunicorn for production serving
+
+### Project Structure
+
+```
+wine_cellar/
+├── apps/
+│   ├── wine/       # Wine tracking and management
+│   ├── storage/    # Inventory and storage locations
+│   └── user/       # User management and settings
+├── templates/      # Django templates
+├── react/          # React components (barcode scanner, maps)
+├── assets/         # CSS, JS source files
+└── conf/           # Django settings
+
+tests/              # Pytest test suite
+docs/               # MkDocs documentation
+fixtures/           # Sample data (grapes, wines, stock)
+```
+
+### Database Models
+
+**Wine:** Core wine information (name, vintage, country, type, rating, ABV, images)
+**StorageItem:** Inventory tracking with pricing and location
+**Shelf:** Physical storage locations
+**UserSettings:** Per-user preferences (currency, date format)
+
+For detailed documentation, see:
+- [Architecture](docs/architecture.md)
+- [Models](docs/models.md)
+- [API Reference](docs/api.md)
 
 ## Development Commands
 

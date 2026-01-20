@@ -49,14 +49,15 @@ For production deployment, see the [deployment guide](docs/deployment.md).
 
 ## Documentation
 
-Find the full documentation [here](https://the-broke-sommeliers.github.io/wine-cellar/)
+Find the full documentation in the [docs/](docs/) directory or online at [the-broke-sommeliers.github.io/wine-cellar](https://the-broke-sommeliers.github.io/wine-cellar/)
 
-- [Setup Guide](docs/setup.md)
-- [Deployment](docs/deployment.md)
-- [Environment Variables](docs/environment.md)
-- [Architecture](docs/architecture.md)
-- [API Reference](docs/api.md)
-- [Backup & Restore](docs/backup.md)
+**Quick Links:**
+- [Setup Guide](docs/setup.md) - Installation and getting started
+- [Deployment Guide](docs/deployment.md) - Development and production deployment
+- [Environment Variables](docs/environment.md) - Configuration reference
+- [Architecture](docs/architecture.md) - System design and structure
+- [Testing](docs/testing.md) - Running tests and coverage
+- [Backup & Restore](docs/backup.md) - Data backup procedures
 
 ## Development
 
