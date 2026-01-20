@@ -19,10 +19,11 @@ CHECK_PYZBAR_PATH = (
 def create_unicode_error_barcode_mock():
     """Helper to create a barcode mock that raises UnicodeDecodeError."""
     mock_barcode = MagicMock()
-    mock_barcode.data = b'\xff\xfe'  # Invalid UTF-8
-    mock_barcode.data.decode.side_effect = UnicodeDecodeError(
-        'utf-8', b'\xff\xfe', 0, 2, 'invalid start byte'
+    mock_data = MagicMock()
+    mock_data.decode.side_effect = UnicodeDecodeError(
+        "utf-8", b"\xff\xfe", 0, 2, "invalid start byte"
     )
+    mock_barcode.data = mock_data
     mock_barcode.type = "EAN13"
     return mock_barcode
 
@@ -115,9 +116,7 @@ class TestBarcodeScanner:
     ):
         """Test that barcode lookup only finds wines for the correct user."""
         other_user = user_factory()
-        wine_factory(
-            user=other_user, barcode="1234567890123", name="Other User Wine"
-        )
+        wine_factory(user=other_user, barcode="1234567890123", name="Other User Wine")
 
         scanner = BarcodeScanner()
         result = scanner.find_wine_by_barcode("1234567890123", user)
@@ -219,9 +218,7 @@ class TestBarcodeScanner:
         assert set(result["grapes"]) == {"Merlot", "Cabernet"}
 
     @pytest.mark.django_db
-    def test_wine_to_dict_with_attributes(
-        self, user, wine_factory, attribute_factory
-    ):
+    def test_wine_to_dict_with_attributes(self, user, wine_factory, attribute_factory):
         """Test _wine_to_dict includes attribute names."""
         attr1 = attribute_factory(name="Organic")
         attr2 = attribute_factory(name="Vegan")
