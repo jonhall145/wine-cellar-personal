@@ -28,9 +28,10 @@ const translated = {
     'An error occurred while accessing the camera. Please try again.'
   ),
   retryButton: django.gettext('Try Again'),
-  captureButton: django.gettext('Capture & Analyze'),
+  captureButton: django.gettext('Force Scan'),
   analyzing: django.gettext('Analyzing...'),
   noBarcodeFound: django.gettext('No barcode found in image'),
+  manualEntry: django.gettext('Enter Manually'),
 }
 
 type CameraErrorType = 'permission' | 'https' | 'notfound' | 'unknown' | null
@@ -216,16 +217,24 @@ const Scanner = () => {
           <div className="overlay-element bottom-right" />
         </div>
       </section>
-      <section className="form__scanner__capture">
+      <section className="form__scanner__capture" style={{ position: 'relative', zIndex: 10, paddingBottom: '2rem' }}>
         <button
           type="button"
           className={`pure-button pure-button-primary ${isAnalyzing ? 'button--loading' : ''}`}
           onClick={captureAndAnalyze}
           disabled={isAnalyzing}
+          style={{ marginBottom: '1rem', width: '100%', minHeight: '44px' }}
         >
           {isAnalyzing && <span className="spinner spinner--sm" aria-hidden="true" />}
-          {isAnalyzing ? translated.analyzing : translated.captureButton}
+          {isAnalyzing ? translated.analyzing : (translated.captureButton || 'Force Scan')}
         </button>
+        <a 
+          href="/wine/add/" 
+          className="pure-button button__secondary"
+          style={{ width: '100%', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+        >
+          {translated.manualEntry || 'Enter Manually'}
+        </a>
         {analyzeError && (
           <p className="form-error" role="alert">{analyzeError}</p>
         )}
