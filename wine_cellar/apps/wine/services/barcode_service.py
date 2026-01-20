@@ -105,6 +105,63 @@ class BarcodeScanner:
 
         return list(barcodes)
 
+    def get_wine_object_by_barcode(self, barcode: str, user):
+        """
+        Find a wine object in the database by barcode with robust matching.
+
+        Handles:
+        - Whitespace stripping (input and DB)
+        - Leading zero variations (UPC-A vs EAN-13)
+
+        Args:
+            barcode: Barcode string to search for
+            user: The user to search wines for
+
+        Returns:
+            Wine model instance if found, None otherwise
+        """
+        from django.db.models import Q
+
+        from wine_cellar.apps.wine.models import Wine
+
+        if not barcode:
+            return None
+
+        barcode_clean = barcode.strip()
+
+        # Potential variants to check
+        variants = {barcode_clean}
+        if len(barcode_clean) == 12:
+            variants.add(f"0{barcode_clean}")
+        elif len(barcode_clean) == 13 and barcode_clean.startswith("0"):
+            variants.add(barcode_clean[1:])
+
+        try:
+            # 1. Try exact matches on variants
+            query = Q()
+            for variant in variants:
+                query |= Q(barcode=variant)
+
+            # Try finding exact matches first
+            wine = Wine.objects.filter(query, user=user).first()
+            if wine:
+                return wine
+
+            # 2. If failure, try lax whitespace match
+            # (This handles the case where DB has " 123 ")
+            # We use the longest variant for safety to avoid matching partials too
+            # aggressively
+            search_term = max(variants, key=len)
+            wines = Wine.objects.filter(user=user, barcode__icontains=search_term)
+            for wine in wines:
+                if wine.barcode and wine.barcode.strip() in variants:
+                    return wine
+
+        except Exception as e:
+            logger.error(f"Error finding wine object by barcode: {e}")
+
+        return None
+
     def find_wine_by_barcode(self, barcode: str, user) -> Optional[dict]:
         """
         Find a wine in the database by barcode.
@@ -116,17 +173,11 @@ class BarcodeScanner:
         Returns:
             Wine data dict if found, None otherwise
         """
-        from wine_cellar.apps.wine.models import Wine
+        wine = self.get_wine_object_by_barcode(barcode, user)
 
-        try:
-            wine = Wine.objects.filter(user=user, barcode=barcode).first()
-
-            if wine:
-                logger.info(f"Found existing wine with barcode {barcode}: {wine.name}")
-                return self._wine_to_dict(wine)
-
-        except Exception as e:
-            logger.error(f"Error finding wine by barcode: {e}")
+        if wine:
+            logger.info(f"Found existing wine with barcode {barcode}: {wine.name}")
+            return self._wine_to_dict(wine)
 
         return None
 

@@ -419,3 +419,4 @@ sentry-sdk>=1.40.0         # Error tracking (optional)
 - Run full test suite after each phase
 - Deploy security changes first before any features
 - Consider feature flags for larger changes
+- [Implemented 2026-01-20] Robust barcode scanning (whitespace/leading zero handling) added to `BarcodeScanner`.
