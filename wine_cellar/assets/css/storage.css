@@ -197,16 +197,16 @@
 }
 
 .storage-grid__cell--dessert {
-  background-color: var(--wine-dessert, #9a9a9a);
-  border-color: #7a7a7a;
+  background-color: var(--wine-dessert, #d4a574);
+  border-color: #b8895f;
 }
 
 .storage-grid__cell--dessert:hover {
-  background-color: #aaaaaa;
+  background-color: #c9956a;
 }
 
 .storage-grid__cell--dessert .storage-grid__bottle {
-  color: #4a4a4a;
+  color: #ffffff;
 }
 
 .storage-grid__cell--fortified {

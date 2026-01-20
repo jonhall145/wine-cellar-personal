@@ -2,7 +2,6 @@
 
 from django.db import migrations, models
 
-
 # Mapping from numeric liters to size codes
 SIZE_LITERS_TO_CODE = {
     0.1875: "PI",

@@ -16,18 +16,11 @@ Including another URLconf
 """
 
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth.decorators import login_not_required
 from django.urls import include, path, re_path
 from django.views.i18n import JavaScriptCatalog
 from django.views.static import serve
-
-
-@login_not_required
-def serve_media(request, path):
-    """Serve media files without requiring login."""
-    return serve(request, path, document_root=settings.MEDIA_ROOT)
 
 from wine_cellar.apps.storage.views import (
     StorageCreateView,
@@ -74,6 +67,13 @@ from wine_cellar.apps.wine.views import (
     health_check,
     scan_barcode_ajax,
 )
+
+
+@login_not_required
+def serve_media(request, path):
+    """Serve media files without requiring login."""
+    return serve(request, path, document_root=settings.MEDIA_ROOT)
+
 
 urlpatterns = [
     path("admin/", admin.site.urls),

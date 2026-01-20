@@ -146,7 +146,9 @@ def detect_label_contour(image: "NDArray[np.uint8]") -> Optional["NDArray[np.int
     return None
 
 
-def add_margin(image: "NDArray[np.uint8]", margin: int = MARGIN_PX) -> "NDArray[np.uint8]":
+def add_margin(
+    image: "NDArray[np.uint8]", margin: int = MARGIN_PX
+) -> "NDArray[np.uint8]":
     """
     Add a white margin around the cropped image.
     """

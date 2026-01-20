@@ -60,6 +60,8 @@ class Command(BaseCommand):
 
         self.stdout.write("")
         if dry_run:
-            self.stdout.write(self.style.SUCCESS(f"Dry run complete. {total} images would be processed."))
+            msg = f"Dry run complete. {total} images would be processed."
+            self.stdout.write(self.style.SUCCESS(msg))
         else:
-            self.stdout.write(self.style.SUCCESS(f"Done! {success_count} succeeded, {error_count} failed."))
+            msg = f"Done! {success_count} succeeded, {error_count} failed."
+            self.stdout.write(self.style.SUCCESS(msg))

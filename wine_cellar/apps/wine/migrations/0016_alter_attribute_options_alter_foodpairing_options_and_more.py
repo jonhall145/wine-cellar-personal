@@ -2,9 +2,10 @@
 
 import django.core.validators
 import django.db.models.deletion
-import wine_cellar.apps.wine.utils
 from django.conf import settings
 from django.db import migrations, models
+
+import wine_cellar.apps.wine.utils
 
 
 class Migration(migrations.Migration):

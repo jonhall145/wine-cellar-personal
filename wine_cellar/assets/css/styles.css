@@ -32,7 +32,7 @@
   --wine-red: #8b1a32;
   --wine-white: #f5e6a3;
   --wine-rose: #ffb6c1;
-  --wine-sparkling: #ffd700;
+  --wine-sparkling: #4a90d9;
   --wine-dessert: #d4a574;
   --wine-fortified: #8b4513;
   --wine-orange: #ff8c00;
@@ -243,7 +243,7 @@ a:hover {
 
 .wine-type-badge--sparkling {
   background: var(--wine-sparkling);
-  color: #5a4a00;
+  color: white;
 }
 
 .wine-type-badge--dessert {

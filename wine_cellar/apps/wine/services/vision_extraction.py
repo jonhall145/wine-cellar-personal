@@ -18,7 +18,9 @@ MAX_IMAGE_DIMENSION = 1568  # Recommended max for good quality/speed balance
 MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024  # 5MB max per image
 
 
-def resize_image_for_api(base64_image: str, max_dimension: int = MAX_IMAGE_DIMENSION) -> str:
+def resize_image_for_api(
+    base64_image: str, max_dimension: int = MAX_IMAGE_DIMENSION
+) -> str:
     """
     Resize an image if it exceeds the maximum dimensions.
 
@@ -59,7 +61,9 @@ def resize_image_for_api(base64_image: str, max_dimension: int = MAX_IMAGE_DIMEN
 
             # Resize with high quality
             img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            logger.info(f"Resized image from {width}x{height} to {new_width}x{new_height}")
+            logger.info(
+                f"Resized image from {width}x{height} to {new_width}x{new_height}"
+            )
 
         # Save to bytes with quality optimization
         output = io.BytesIO()
