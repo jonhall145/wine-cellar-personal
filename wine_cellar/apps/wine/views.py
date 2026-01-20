@@ -68,9 +68,11 @@ class HomePageView(TemplateView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
 
-        # Consolidate Wine stats into single query
+        # Get total wines count separately to avoid JOIN issues
+        wines = Wine.objects.filter(user=user).count()
+
+        # Get other wine stats
         wine_stats = Wine.objects.filter(user=user).aggregate(
-            total_wines=Count("id", distinct=True),
             wines_in_stock=Count(
                 "id", filter=Q(storageitem__deleted=False), distinct=True
             ),
@@ -100,7 +102,6 @@ class HomePageView(TemplateView):
             ),
         )
 
-        wines = wine_stats["total_wines"]
         wines_in_stock = wine_stats["wines_in_stock"]
         countries = wine_stats["countries"]
         oldest = wine_stats["oldest_vintage"] or "-"
