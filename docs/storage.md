@@ -90,8 +90,9 @@ The structured storage grid view provides a visual representation of your storag
 
 Wine names in the grid tooltips are clickable links:
 
-- **Hover** over any cell to see the tooltip with wine information
-- **Click** the wine name in the tooltip to navigate to the wine detail page
+- **Desktop**: Hover over any cell to see the tooltip with wine information
+- **Mobile**: Tap any cell to show the tooltip with wine information
+- **Click/Tap** the wine name in the tooltip to navigate to the wine detail page
 - The link does not interfere with drag-and-drop functionality
-- Works on both desktop (hover) and mobile (tap)
+- Fully responsive on both desktop and mobile devices
 

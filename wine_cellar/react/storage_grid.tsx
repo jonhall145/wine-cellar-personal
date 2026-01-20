@@ -200,7 +200,18 @@ const GridCell: React.FC<GridCellProps> = ({
             onMouseEnter(cell.wine, e);
         }
     };
-    
+
+    const handleTouch = (e: React.TouchEvent) => {
+        if (cell.wine && e.touches.length > 0) {
+            const touch = e.touches[0];
+            const mouseEvent = {
+                clientX: touch.clientX,
+                clientY: touch.clientY,
+            } as React.MouseEvent;
+            onMouseEnter(cell.wine, mouseEvent);
+        }
+    };
+
     let className = 'storage-grid__cell';
     if (hasWine) {
         className += ' storage-grid__cell--filled';
@@ -220,6 +231,8 @@ const GridCell: React.FC<GridCellProps> = ({
             onDrop={handleDrop}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={onMouseLeave}
+            onTouchStart={handleTouch}
+            onTouchEnd={onMouseLeave}
             title={hasWine ? cell.wine!.name : `Empty (${cell.row}, ${cell.column})`}
         >
             {hasWine && (
@@ -467,6 +480,13 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                                     onClick={() => handleMoveModeClick(cell, storage.id, isSource)}
                                     onMouseEnter={(e) => cell.wine && handleMouseEnter(cell.wine, e)}
                                     onMouseLeave={handleMouseLeave}
+                                    onTouchStart={(e) => {
+                                        if (cell.wine && e.touches.length > 0) {
+                                            const touch = e.touches[0];
+                                            handleMouseEnter(cell.wine, { clientX: touch.clientX, clientY: touch.clientY } as React.MouseEvent);
+                                        }
+                                    }}
+                                    onTouchEnd={handleMouseLeave}
                                     title={cell.wine ? cell.wine.name : `Empty (${cell.row}, ${cell.column})`}
                                 >
                                     {cell.wine && (
