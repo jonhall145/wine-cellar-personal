@@ -209,6 +209,11 @@ const GridCell: React.FC<GridCellProps> = ({
                 clientY: touch.clientY,
             } as React.MouseEvent;
             onMouseEnter(cell.wine, mouseEvent);
+            // Prevent cell click from firing immediately
+            e.preventDefault();
+        } else {
+            // Tapping empty cell should close tooltip
+            onMouseLeave();
         }
     };
 
@@ -232,7 +237,6 @@ const GridCell: React.FC<GridCellProps> = ({
             onMouseEnter={handleMouseEnter}
             onMouseLeave={onMouseLeave}
             onTouchStart={handleTouch}
-            onTouchEnd={onMouseLeave}
             title={hasWine ? cell.wine!.name : `Empty (${cell.row}, ${cell.column})`}
         >
             {hasWine && (
@@ -403,7 +407,21 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
             return () => clearTimeout(timer);
         }
     }, [message]);
-    
+
+    // Close tooltip when tapping outside on mobile
+    React.useEffect(() => {
+        const handleDocumentTouch = (e: TouchEvent) => {
+            // If tooltip is open and user taps outside grid cells, close it
+            const target = e.target as HTMLElement;
+            if (tooltip && !target.closest('.storage-grid__cell') && !target.closest('.storage-grid__tooltip')) {
+                setTooltip(null);
+            }
+        };
+
+        document.addEventListener('touchstart', handleDocumentTouch);
+        return () => document.removeEventListener('touchstart', handleDocumentTouch);
+    }, [tooltip]);
+
     if (loading) return <div className="storage-grid__loading">{translated.loading}</div>;
     if (error) return <div className="storage-grid__error">Error: {error}</div>;
     if (!data) return <div className="storage-grid__empty">{translated.noStorageData}</div>;
@@ -484,9 +502,9 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                                         if (cell.wine && e.touches.length > 0) {
                                             const touch = e.touches[0];
                                             handleMouseEnter(cell.wine, { clientX: touch.clientX, clientY: touch.clientY } as React.MouseEvent);
+                                            e.stopPropagation();
                                         }
                                     }}
-                                    onTouchEnd={handleMouseLeave}
                                     title={cell.wine ? cell.wine.name : `Empty (${cell.row}, ${cell.column})`}
                                 >
                                     {cell.wine && (
