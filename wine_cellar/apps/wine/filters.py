@@ -81,12 +81,14 @@ class WineFilter(django_filters.FilterSet):
     )
     rating = ChoiceFilter(
         method="filter_rating",
-        label=_("Minimum Rating"),
+        label=_("Rating"),
         choices=(
-            (1, _("1+ Star")),
-            (2, _("2+ Stars")),
+            (0, _("0 Stars")),
+            (1, _("1 Star")),
+            (2, _("2 Stars")),
             (3, _("3 Stars")),
         ),
+        empty_label=_("Any"),
     )
     ready_to_drink = ChoiceFilter(
         method="filter_ready_to_drink",
@@ -95,8 +97,7 @@ class WineFilter(django_filters.FilterSet):
             (0, _("No")),
             (1, _("Yes")),
         ),
-        empty_label=None,
-        null_label=None,
+        empty_label=_("Any"),
     )
     order = OrderingFilter(
         choices=(
@@ -125,10 +126,13 @@ class WineFilter(django_filters.FilterSet):
 
     def filter_rating(self, queryset, name, value):
         if value:
-            return queryset.filter(rating__gte=int(value))
+            return queryset.filter(rating=int(value))
         return queryset
 
     def filter_ready_to_drink(self, queryset, name, value):
+        if not value:  # "Any" option selected
+            return queryset
+
         current_year = date.today().year
         if value == "1":
             # Ready to drink: drink_from is 0 (now) or <= current year

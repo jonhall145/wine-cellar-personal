@@ -260,6 +260,9 @@
                     </ul>
                     {% include 'forms/form_field.html' with field=form.column %}
                     {% include 'forms/form_field.html' with field=form.bottle_price %}
+                    {% include 'forms/form_field.html' with field=form.is_gift %}
+                    {% include 'forms/form_field.html' with field=form.gift_from %}
+                    {% include 'forms/form_field.html' with field=form.occasion %}
                 </fieldset>
                 {{ form.form_step }}
                 <div class="pure-controls">

@@ -378,6 +378,23 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         ),
         localize=True,
     )
+    is_gift = forms.BooleanField(
+        required=False,
+        label=_("Is Gift"),
+        help_text=_("Check if this bottle was received as a gift."),
+    )
+    gift_from = forms.CharField(
+        max_length=100,
+        required=False,
+        label=_("Gift From"),
+        help_text=_("Enter who gave you this bottle."),
+    )
+    occasion = forms.CharField(
+        max_length=100,
+        required=False,
+        label=_("Occasion"),
+        help_text=_("Enter a special occasion this bottle is reserved for."),
+    )
     form_step = forms.IntegerField(
         widget=forms.HiddenInput(),
         label="",

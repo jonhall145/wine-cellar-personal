@@ -122,10 +122,14 @@ class HomePageView(TemplateView):
         formatted_price = number_format(total_value, use_l10n=True)
         total_value = f"{currency}{formatted_price}"
 
+        # Calculate bottles in stock
+        bottles_in_stock = StorageItem.objects.filter(user=user, deleted=False).count()
+
         context.update(
             {
                 "wines": wines,
                 "wines_in_stock": wines_in_stock,
+                "bottles_in_stock": bottles_in_stock,
                 "countries": countries,
                 "oldest": oldest,
                 "youngest": youngest,
@@ -543,6 +547,9 @@ class WineCreateView(FormView):
             row = cleaned_data.get("row")
             column = cleaned_data.get("column")
             bottle_price = cleaned_data.get("bottle_price") or price
+            is_gift = cleaned_data.get("is_gift", False)
+            gift_from = cleaned_data.get("gift_from")
+            occasion = cleaned_data.get("occasion")
             StorageItem.objects.create(
                 storage=storage,
                 wine=wine,
@@ -550,6 +557,9 @@ class WineCreateView(FormView):
                 column=column,
                 user=user,
                 price=bottle_price,
+                is_gift=is_gift,
+                gift_from=gift_from,
+                occasion=occasion,
             )
 
         return wine

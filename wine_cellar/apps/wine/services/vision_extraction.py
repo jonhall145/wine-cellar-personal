@@ -135,6 +135,136 @@ class WineVisionExtractor:
         4500: "RE",  # Rehoboam
     }
 
+    # Wine region to country mappings for inference
+    REGION_COUNTRY_MAP = {
+        # France
+        "bordeaux": "FR",
+        "burgundy": "FR",
+        "champagne": "FR",
+        "rhône": "FR",
+        "rhone": "FR",
+        "loire": "FR",
+        "alsace": "FR",
+        "provence": "FR",
+        "languedoc": "FR",
+        "roussillon": "FR",
+        "beaujolais": "FR",
+        "jura": "FR",
+        "savoie": "FR",
+        "châteauneuf": "FR",
+        "saint-emilion": "FR",
+        "pomerol": "FR",
+        "medoc": "FR",
+        "sauternes": "FR",
+        "chablis": "FR",
+        "côte": "FR",
+        "cote": "FR",
+        # Italy
+        "tuscany": "IT",
+        "toscana": "IT",
+        "piedmont": "IT",
+        "piemonte": "IT",
+        "veneto": "IT",
+        "sicily": "IT",
+        "sicilia": "IT",
+        "puglia": "IT",
+        "chianti": "IT",
+        "barolo": "IT",
+        "barbaresco": "IT",
+        "brunello": "IT",
+        "valpolicella": "IT",
+        "soave": "IT",
+        "prosecco": "IT",
+        # Spain
+        "rioja": "ES",
+        "ribera del duero": "ES",
+        "priorat": "ES",
+        "rías baixas": "ES",
+        "rias baixas": "ES",
+        "jerez": "ES",
+        "sherry": "ES",
+        "penedès": "ES",
+        "rueda": "ES",
+        "toro": "ES",
+        "navarra": "ES",
+        "catalunya": "ES",
+        # Portugal
+        "douro": "PT",
+        "dão": "PT",
+        "dao": "PT",
+        "alentejo": "PT",
+        "vinho verde": "PT",
+        "porto": "PT",
+        "port": "PT",
+        "madeira": "PT",
+        # Germany
+        "mosel": "DE",
+        "rheingau": "DE",
+        "pfalz": "DE",
+        "rheinhessen": "DE",
+        "baden": "DE",
+        "franken": "DE",
+        "nahe": "DE",
+        # USA
+        "napa": "US",
+        "sonoma": "US",
+        "paso robles": "US",
+        "willamette": "US",
+        "finger lakes": "US",
+        "columbia valley": "US",
+        "walla walla": "US",
+        # Australia
+        "barossa": "AU",
+        "adelaide": "AU",
+        "margaret river": "AU",
+        "hunter valley": "AU",
+        "yarra valley": "AU",
+        "mclaren vale": "AU",
+        # New Zealand
+        "marlborough": "NZ",
+        "hawke's bay": "NZ",
+        "central otago": "NZ",
+        # South Africa
+        "stellenbosch": "ZA",
+        "paarl": "ZA",
+        "constantia": "ZA",
+        # Chile
+        "maipo": "CL",
+        "colchagua": "CL",
+        "casablanca": "CL",
+        # Argentina
+        "mendoza": "AR",
+        "salta": "AR",
+        "patagonia": "AR",
+        # Austria
+        "niederösterreich": "AT",
+        "burgenland": "AT",
+        "steiermark": "AT",
+        # England/UK
+        "surrey": "GB",
+        "sussex": "GB",
+        "kent": "GB",
+        "hampshire": "GB",
+    }
+
+    # Appellation to country mappings
+    APPELLATION_COUNTRY_MAP = {
+        "aoc": "FR",
+        "aop": "FR",
+        "igp": "FR",
+        "vin de france": "FR",
+        "doc": "IT",
+        "docg": "IT",
+        "igt": "IT",
+        "do": "ES",
+        "doca": "ES",
+        "vino de españa": "ES",
+        "qmp": "DE",
+        "qualitätswein": "DE",
+        "ava": "US",
+        "american viticultural area": "US",
+    }
+
     def __init__(self):
         """Initialize the extractor."""
         self.api_key = settings.ANTHROPIC_API_KEY
@@ -301,7 +431,12 @@ Please extract the following information if visible in ANY of the images:
 1. **Wine Name**: The main name/title of the wine
 2. **Wine Type**: red, white, rosé, sparkling, dessert, fortified, or orange
 3. **Vintage**: The year (4-digit number between 1900-2030)
-4. **Country**: The country of origin (ISO alpha-2 code, e.g., FR, IT, ES, US)
+4. **Country**: The country of origin. Look for:
+   - "Product of..." or "Produit de..." text
+   - Country names anywhere on the label
+   - Appellation indicators (AOC/AOP=France, DOC/DOCG=Italy, DO=Spain, etc.)
+   - Region names that indicate country (Bordeaux=France, Rioja=Spain, Tuscany=Italy)
+   Return as country name or ISO code
 5. **Region/Subregion**: Geographic region (e.g., "Bordeaux", "Tuscany", "Napa Valley")
 6. **Grapes/Varieties**: List of grape varieties (e.g., Cabernet Sauvignon, Merlot)
 7. **Vineyard/Producer**: The winery or producer name
@@ -384,6 +519,13 @@ CONFIDENCE: [high/medium/low]
             if conf_value in ["high", "medium", "low"]:
                 confidence = conf_value
 
+        # Try to infer country from region if not found
+        if "country" not in data and "subregion" in data:
+            inferred_country = self._infer_country_from_region(data)
+            if inferred_country:
+                data["country"] = inferred_country
+                extracted_fields.append("country")
+
         return {
             "data": data,
             "confidence": confidence,
@@ -419,17 +561,29 @@ CONFIDENCE: [high/medium/low]
             return None
 
         elif field == "country":
-            # Try to get ISO alpha-2 code
-            # If already a 2-letter code
+            # Strategy 1: Already a 2-letter ISO code
             if len(value) == 2 and value.isalpha():
                 return value.upper()
 
-            # Try to find country by name
+            # Strategy 2: Direct country name lookup
             try:
                 country = pycountry.countries.search_fuzzy(value)[0]
                 return country.alpha_2
             except (LookupError, AttributeError):
-                return None
+                pass
+
+            # Strategy 3: Check for region-to-country mapping
+            value_lower = value.lower()
+            for region, country_code in self.REGION_COUNTRY_MAP.items():
+                if region in value_lower:
+                    return country_code
+
+            # Strategy 4: Check for appellation indicators
+            for appellation, country_code in self.APPELLATION_COUNTRY_MAP.items():
+                if appellation in value_lower:
+                    return country_code
+
+            return None
 
         elif field == "grapes":
             # Split by comma and clean
@@ -481,6 +635,32 @@ CONFIDENCE: [high/medium/low]
             return None
 
         return value
+
+    def _infer_country_from_region(self, extracted_data: dict) -> str | None:
+        """
+        Infer country from subregion if country wasn't extracted.
+
+        Args:
+            extracted_data: Dictionary of extracted wine data
+
+        Returns:
+            ISO alpha-2 country code or None
+        """
+        if "country" in extracted_data:
+            return None  # Already have country
+
+        subregion = extracted_data.get("subregion", "")
+        if not subregion:
+            return None
+
+        subregion_lower = subregion.lower()
+
+        # Check region mappings
+        for region, country_code in self.REGION_COUNTRY_MAP.items():
+            if region in subregion_lower:
+                return country_code
+
+        return None
 
     def _fallback_regex_extraction(self, text: str) -> dict:
         """
