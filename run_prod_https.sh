@@ -126,7 +126,7 @@ start_server() {
     nohup bash -c "
         source venv/bin/activate
         set -a
-        source .env.prod.local
+        source $ENV_FILE
         set +a
         exec venv/bin/gunicorn wine_cellar.conf.wsgi:application \
             --bind 0.0.0.0:$PORT \

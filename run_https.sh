@@ -32,6 +32,19 @@ fi
 # Ensure DEBUG is on for development (overrides default False in settings.py)
 export DJANGO_DEBUG=True
 
+# Detect meshnet IP (typically in 100.64.0.0/10 range)
+MESHNET_IP=$(ip -4 addr show | grep -oP '(?<=inet\s)100\.\d+\.\d+\.\d+' | head -n1)
+LOCAL_IP=$(hostname -I | awk '{print $1}')
+
+# Build Subject Alternative Names
+SAN="DNS:localhost,IP:127.0.0.1,IP:0.0.0.0"
+if [ -n "$LOCAL_IP" ]; then
+    SAN="$SAN,IP:$LOCAL_IP"
+fi
+if [ -n "$MESHNET_IP" ]; then
+    SAN="$SAN,IP:$MESHNET_IP"
+fi
+
 # Check SSL certificates exist
 if [ ! -f ssl/server.crt ] || [ ! -f ssl/server.key ]; then
     echo "SSL certificates not found. Generating..."
@@ -40,8 +53,10 @@ if [ ! -f ssl/server.crt ] || [ ! -f ssl/server.key ]; then
         -keyout ssl/server.key \
         -out ssl/server.crt \
         -subj "/C=US/ST=State/L=City/O=WineCellar/CN=localhost" \
-        -addext "subjectAltName=DNS:localhost,IP:127.0.0.1,IP:0.0.0.0"
-    echo "SSL certificates generated."
+        -addext "subjectAltName=$SAN"
+    echo "SSL certificates generated with SANs: $SAN"
+else
+    echo "Existing SSL certificates found."
 fi
 
 echo "=========================================="
@@ -50,8 +65,14 @@ echo "=========================================="
 echo ""
 echo "Starting HTTPS server..."
 echo ""
-echo "Access at: https://localhost:8000"
-echo "           https://$(hostname -I | awk '{print $1}'):8000"
+echo "Access at:"
+echo "  Local:   https://localhost:8000"
+if [ -n "$LOCAL_IP" ]; then
+    echo "  LAN:     https://$LOCAL_IP:8000"
+fi
+if [ -n "$MESHNET_IP" ]; then
+    echo "  Meshnet: https://$MESHNET_IP:8000"
+fi
 echo ""
 echo "NOTE: You will need to accept the self-signed certificate"
 echo "      in your browser the first time you connect."
