@@ -269,7 +269,7 @@
   padding: var(--spacing-md) var(--spacing-md);
   border-radius: var(--border-radius-sm);
   font-size: var(--font-sm);
-  pointer-events: none;
+  pointer-events: auto;
   max-width: 250px;
   box-shadow: var(--container-box-shadow-lg);
 }
