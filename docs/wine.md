@@ -25,9 +25,48 @@ You might have:
 
 This separation allows you to:
 
-- Keep clean records of your cellar contents  
-- Manage bottles individually  
+- Keep clean records of your cellar contents
+- Manage bottles individually
 - Track vintages, tasting notes, and inventory history
+
+---
+
+## Recording Wine Consumption
+
+### Drink Records
+
+When you consume a bottle, you can create a **Drink Record** to track:
+
+- **Date consumed** - When you drank the wine
+- **Tasting notes** - Your detailed impressions
+- **Rating** - How you rated this particular drinking experience (0-3 stars)
+- **Shared with** - People you shared the bottle with
+- **Occasion** - The special event or occasion
+- **Specific bottle** - Which exact bottle was consumed (optional)
+
+### Bottle Selection
+
+When recording a drink, you can optionally select which specific bottle from your inventory was consumed:
+
+1. Navigate to the wine detail page
+2. Click "Record a Drink"
+3. Select a bottle from the dropdown (shows storage location)
+4. Fill in your tasting notes and other details
+5. Submit the form
+
+**What happens:**
+- The drink record is created with a reference to the specific bottle
+- The bottle is automatically marked as consumed (deleted)
+- Your stock count decreases automatically
+- The bottle remains in your history for reference
+
+**Benefits:**
+- Links tasting experiences to specific bottles
+- Automatic inventory management
+- Track which bottles from different purchases or storage locations you've consumed
+- Better history and record-keeping
+
+**Note:** Selecting a bottle is optional. You can still record a drink without linking it to a specific bottle in inventory.
 
 ---
 

@@ -72,3 +72,26 @@ This is perfect for users who want to know exactly where each bottle is stored.
 | Dom Pérignon 2012 | 1 | 3 |
 | Penfolds Grange 2014 | 2 | 1 |
 
+---
+
+## Grid View Features
+
+### Visual Grid Display
+
+The structured storage grid view provides a visual representation of your storage layout:
+
+- **50x50px cells** - Each cell represents a slot in your grid
+- **Color-coded** - Cells are colored according to wine type (red, white, rosé, etc.)
+- **Star ratings** - Bottle-specific ratings displayed as stars
+- **Drag-and-drop** - Move bottles between slots by dragging
+- **Interactive tooltips** - Hover over cells to see wine details
+
+### Clickable Wine Names
+
+Wine names in the grid tooltips are clickable links:
+
+- **Hover** over any cell to see the tooltip with wine information
+- **Click** the wine name in the tooltip to navigate to the wine detail page
+- The link does not interfere with drag-and-drop functionality
+- Works on both desktop (hover) and mobile (tap)
+

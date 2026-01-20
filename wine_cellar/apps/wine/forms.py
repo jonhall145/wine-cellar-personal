@@ -10,7 +10,7 @@ from django.db.models import Q
 from django.forms import ImageField
 from django.utils.translation import gettext_lazy as _
 
-from wine_cellar.apps.storage.models import Storage
+from wine_cellar.apps.storage.models import Storage, StorageItem
 from wine_cellar.apps.user.views import get_user_settings
 from wine_cellar.apps.wine.fields import OpenMultipleChoiceField
 from wine_cellar.apps.wine.models import (
@@ -521,6 +521,40 @@ class WineFilterForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
 
 
 class DrinkRecordForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        self.wine = kwargs.pop("wine", None)
+        self.user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+
+        # Set up bottle selection queryset
+        if self.wine and self.user:
+            available_bottles = (
+                StorageItem.objects.filter(
+                    wine=self.wine, user=self.user, deleted=False
+                )
+                .select_related("storage")
+                .order_by("storage__name", "row", "column")
+            )
+
+            self.fields["storage_item"].queryset = available_bottles
+
+            # Update help text with count
+            count = available_bottles.count()
+            if count == 0:
+                self.fields["storage_item"].help_text = _(
+                    "No bottles available in storage for this wine."
+                )
+            else:
+                self.fields["storage_item"].help_text = _(
+                    "Select which bottle you consumed (%(count)d available)."
+                ) % {"count": count}
+
+    storage_item = forms.ModelChoiceField(
+        queryset=StorageItem.objects.none(),
+        required=False,
+        label=_("Bottle"),
+        help_text=_("Select which bottle you consumed (optional)."),
+    )
     date_consumed = forms.DateField(
         widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
         help_text=_("When did you drink this wine?"),
@@ -545,6 +579,20 @@ class DrinkRecordForm(forms.Form):
         required=False,
         help_text=_("What was the occasion?"),
     )
+
+    def clean_storage_item(self):
+        """Validate bottle selection."""
+        bottle = self.cleaned_data.get("storage_item")
+
+        # Check bottle not already deleted
+        if bottle and bottle.deleted:
+            raise forms.ValidationError(_("This bottle has already been consumed."))
+
+        # Check bottle belongs to the correct wine
+        if bottle and self.wine and bottle.wine != self.wine:
+            raise forms.ValidationError(_("Invalid bottle selection."))
+
+        return bottle
 
 
 class WishlistForm(forms.Form):

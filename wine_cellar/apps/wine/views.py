@@ -722,7 +722,10 @@ class WineScannedView(TemplateView):
 
     def dispatch(self, request, *args, **kwargs):
         code = self.kwargs["code"]
-        wine = Wine.objects.filter(barcode=code, user=self.request.user).first()
+        # Use robust barcode matching from service
+        scanner = BarcodeScanner()
+        wine = scanner.get_wine_object_by_barcode(code, self.request.user)
+
         if wine:
             return redirect(reverse("wine-detail", kwargs={"pk": wine.pk}))
 
@@ -823,6 +826,13 @@ class DrinkRecordCreateView(FormView):
 
         return DrinkRecordForm
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], user=self.request.user)
+        kwargs["wine"] = wine
+        kwargs["user"] = self.request.user
+        return kwargs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["wine"] = get_object_or_404(
@@ -834,6 +844,9 @@ class DrinkRecordCreateView(FormView):
         from wine_cellar.apps.wine.models import DrinkRecord
 
         wine = get_object_or_404(Wine, pk=self.kwargs["pk"], user=self.request.user)
+        storage_item = form.cleaned_data.get("storage_item")
+
+        # Create drink record
         DrinkRecord.objects.create(
             wine=wine,
             user=self.request.user,
@@ -842,7 +855,14 @@ class DrinkRecordCreateView(FormView):
             rating=form.cleaned_data.get("rating"),
             shared_with=form.cleaned_data.get("shared_with"),
             occasion=form.cleaned_data.get("occasion"),
+            storage_item=storage_item,
         )
+
+        # Mark bottle as consumed if selected
+        if storage_item:
+            storage_item.deleted = True
+            storage_item.save(update_fields=["deleted"])
+
         self.success_url = reverse_lazy("wine-detail", kwargs={"pk": wine.pk})
         return super().form_valid(form)
 

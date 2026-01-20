@@ -238,23 +238,24 @@ Tracks where wines were purchased or acquired.
 
 ### DrinkRecord
 
-**Location**: `wine_cellar/apps/wine/models.py:425`
+**Location**: `wine_cellar/apps/wine/models.py:447`
 
-Records when and how a bottle was consumed.
+Records when and how a bottle was consumed, optionally linking to a specific bottle.
 
 **Fields**:
 | Field | Type | Description | Constraints |
 |-------|------|-------------|-------------|
 | `wine` | ForeignKey | Wine consumed | CASCADE, required |
+| `storage_item` | ForeignKey | Specific bottle consumed | SET_NULL, optional, related_name='drink_records' |
 | `date_consumed` | DateField | Consumption date | Required |
 | `tasting_notes` | TextField | Detailed tasting notes | Optional |
-| `rating` | PositiveIntegerField | Rating for this tasting | Optional, 0-10 range |
+| `rating` | PositiveIntegerField | Rating for this tasting | Optional, 0-3 range |
 | `shared_with` | CharField(250) | People shared with | Optional |
 | `occasion` | CharField(100) | Special occasion | Optional |
 
 **Ordering**: By `date_consumed` descending (most recent first)
 
-**Purpose**: Tracks drinking history and allows retrospective tasting notes separate from the wine's general rating.
+**Purpose**: Tracks drinking history and allows retrospective tasting notes separate from the wine's general rating. The optional `storage_item` field links the drink record to a specific bottle, enabling better inventory tracking. When a bottle is selected during drink recording, it is automatically marked as deleted.
 
 ---
 
@@ -383,7 +384,7 @@ rack = Storage(name="Main Rack", location="Cellar", rows=4, columns=6)
 
 ### StorageItem
 
-**Location**: `wine_cellar/apps/storage/models.py:45`
+**Location**: `wine_cellar/apps/storage/models.py:46`
 
 Represents an individual bottle stored in a location. This is the actual inventory item.
 
@@ -399,6 +400,10 @@ Represents an individual bottle stored in a location. This is the actual invento
 | `is_gift` | BooleanField | Received as gift | Default False |
 | `gift_from` | CharField(100) | Gift giver name | Optional |
 | `occasion` | CharField(100) | Gift occasion | Optional |
+| `rating` | PositiveIntegerField | Rating for this specific bottle | Optional, 0-3 range |
+
+**Methods**:
+- `__str__()`: Returns formatted string: "Wine Name - Storage Name (Row X, Col Y)" or "...  (Unassigned)" if no position
 
 **Usage**:
 - Each `StorageItem` represents one physical bottle
@@ -406,10 +411,12 @@ Represents an individual bottle stored in a location. This is the actual invento
 - `deleted=True` marks consumed or removed bottles (soft delete for history)
 - `row` and `column` only used for structured storage
 - Individual pricing allows tracking of bottles bought at different times/prices
+- Individual ratings allow rating specific bottles separately from the wine template
 
 **Related via**:
 - `storage.items.all()` - All items in a storage location
 - `wine.storageitem_set.all()` - All bottles of a specific wine
+- `drink_records` - DrinkRecord instances that reference this bottle
 
 ---
 

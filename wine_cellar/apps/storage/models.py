@@ -75,3 +75,11 @@ class StorageItem(UserContentModel):
             ),
             models.Index(fields=["wine", "deleted"], name="storageitem_wine_del_idx"),
         ]
+
+    def __str__(self):
+        location = (
+            f"Row {self.row}, Col {self.column}"
+            if self.row and self.column
+            else "Unassigned"
+        )
+        return f"{self.wine.name} - {self.storage.name} ({location})"

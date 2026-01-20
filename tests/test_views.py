@@ -703,3 +703,87 @@ def test_wine_filter_price(client, user, wine_factory, storage_item_factory):
         wine_in_stock_middle,
         wine_in_stock_expensive,
     ]
+
+
+@pytest.mark.django_db
+def test_drink_record_with_bottle_selection_marks_deleted(
+    client, user, wine_factory, storage_item_factory
+):
+    """Test recording a drink with bottle selection marks bottle as deleted."""
+    from wine_cellar.apps.wine.models import DrinkRecord
+
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(
+        wine=wine, storage=storage, user=user, row=2, column=3, deleted=False
+    )
+
+    client.force_login(user)
+    response = client.post(
+        reverse("drink-record-add", kwargs={"pk": wine.pk}),
+        {
+            "date_consumed": "2024-01-15",
+            "storage_item": bottle.pk,
+            "rating": 3,
+        },
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+
+    # Verify drink record created with bottle reference
+    drink_record = DrinkRecord.objects.filter(wine=wine, user=user).first()
+    assert drink_record is not None
+    assert drink_record.storage_item == bottle
+
+    # Verify bottle marked as deleted
+    bottle.refresh_from_db()
+    assert bottle.deleted is True
+
+    # Verify stock count decreased
+    assert wine.total_stock == 0
+
+
+@pytest.mark.django_db
+def test_drink_record_without_bottle_still_works(client, user, wine_factory):
+    """Test recording a drink without bottle selection works normally."""
+    from wine_cellar.apps.wine.models import DrinkRecord
+
+    wine = wine_factory(user=user)
+
+    client.force_login(user)
+    response = client.post(
+        reverse("drink-record-add", kwargs={"pk": wine.pk}),
+        {"date_consumed": "2024-01-15", "rating": 2},
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+    drink_record = DrinkRecord.objects.filter(wine=wine, user=user).first()
+    assert drink_record is not None
+    assert drink_record.storage_item is None
+
+
+@pytest.mark.django_db
+def test_form_shows_only_available_bottles(
+    client, user, wine_factory, storage_item_factory
+):
+    """Test form only shows non-deleted bottles for the specific wine."""
+    wine = wine_factory(user=user)
+    wine2 = wine_factory(user=user)
+    storage = user.storage_set.first()
+
+    bottle1 = storage_item_factory(wine=wine, storage=storage, user=user, deleted=False)
+    storage_item_factory(
+        wine=wine, storage=storage, user=user, deleted=True
+    )  # Should be excluded (deleted)
+    storage_item_factory(
+        wine=wine2, storage=storage, user=user, deleted=False
+    )  # Should be excluded (different wine)
+
+    client.force_login(user)
+    response = client.get(reverse("drink-record-add", kwargs={"pk": wine.pk}))
+
+    form = response.context["form"]
+    available_bottles = list(form.fields["storage_item"].queryset)
+
+    assert len(available_bottles) == 1
+    assert bottle1 in available_bottles

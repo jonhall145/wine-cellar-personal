@@ -465,6 +465,15 @@ class DrinkRecord(UserContentModel):
     occasion = models.CharField(
         max_length=100, null=True, blank=True, verbose_name=_("Occasion")
     )
+    storage_item = models.ForeignKey(
+        "storage.StorageItem",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="drink_records",
+        verbose_name=_("Bottle"),
+        help_text=_("The specific bottle consumed (optional)."),
+    )
 
     class Meta:
         verbose_name = _("Drink Record")

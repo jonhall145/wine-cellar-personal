@@ -115,7 +115,15 @@ const Tooltip: React.FC<TooltipProps> = ({ wine, position }) => {
                 zIndex: 1000,
             }}
         >
-            <div className="tooltip__name">{wine.name}</div>
+            <a
+                href={`/wine/${wine.id}/`}
+                className="tooltip__name tooltip__name--link"
+                onClick={(e) => {
+                    e.stopPropagation();
+                }}
+            >
+                {wine.name}
+            </a>
             {wine.vintage && <div className="tooltip__vintage">{wine.vintage}</div>}
             {wine.wine_type && <div className="tooltip__type">{wine.wine_type}</div>}
             {wine.country && <div className="tooltip__country">{wine.country}</div>}
