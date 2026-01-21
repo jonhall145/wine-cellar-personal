@@ -683,7 +683,9 @@ class WineDetailView(DetailView):
                 "source",
             )
             .annotate(
-                stock_count=Count("storageitem", filter=Q(storageitem__deleted=False))
+                stock_count=Count(
+                    "storageitem", filter=Q(storageitem__deleted=False), distinct=True
+                )
             )
             .filter(user=self.request.user)
         )
@@ -708,7 +710,9 @@ class WineListView(FilterView):
                 Avg("storageitem__price"),
                 "price",
             ),
-            stock_count=Count("storageitem", filter=Q(storageitem__deleted=False)),
+            stock_count=Count(
+                "storageitem", filter=Q(storageitem__deleted=False), distinct=True
+            ),
         )
         return qs.filter(user=self.request.user).distinct()
 
