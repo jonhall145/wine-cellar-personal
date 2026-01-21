@@ -15,6 +15,7 @@ function initTomSelect (): void {
       maxItems: 1,
       // disable search by default
       controlInput: '',
+      allowEmptyOption: true,
     }
     if (rawConfig) {
       config = JSON.parse(rawConfig)
