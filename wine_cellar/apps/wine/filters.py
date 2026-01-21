@@ -94,25 +94,24 @@ class WineFilter(django_filters.FilterSet):
         method="filter_ready_to_drink",
         label=_("Ready to Drink"),
         choices=(
+            ("", _("Any")),
             (0, _("No")),
             (1, _("Yes")),
         ),
-        empty_label=_("Any"),
     )
     has_window = ChoiceFilter(
         method="filter_has_window",
         label=_("Has Drink Window"),
         choices=(
+            ("", _("Any")),
             (0, _("No")),
             (1, _("Yes")),
         ),
-        empty_label=_("Any"),
     )
     is_cold = ChoiceFilter(
         method="filter_is_cold",
         label=_("Cold Storage"),
-        choices=((0, _("No")), (1, _("Yes"))),
-        empty_label=_("Any"),
+        choices=(("", _("Any")), (0, _("No")), (1, _("Yes"))),
     )
     order = OrderingFilter(
         choices=(
