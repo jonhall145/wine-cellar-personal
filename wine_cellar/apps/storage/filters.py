@@ -19,15 +19,13 @@ class StorageItemFilter(django_filters.FilterSet):
         label=_("Storage"),
     )
     is_gift = ChoiceFilter(
-        choices=((True, _("Yes")), (False, _("No"))),
+        choices=(("", _("All")), (True, _("Yes")), (False, _("No"))),
         label=_("Is Gift"),
-        empty_label=_("All"),
     )
     has_occasion = ChoiceFilter(
         method="filter_has_occasion",
-        choices=(("1", _("Yes")), ("0", _("No"))),
+        choices=(("", _("All")), ("1", _("Yes")), ("0", _("No"))),
         label=_("Has Occasion"),
-        empty_label=_("All"),
     )
     order = OrderingFilter(
         choices=(

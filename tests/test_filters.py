@@ -12,15 +12,16 @@ class TestGetCountryChoicesWithFavourites:
     """Tests for get_country_choices_with_favourites function."""
 
     def test_returns_empty_list_without_user(self):
-        """With no user, no countries should be returned."""
+        """With no user, no countries should be returned (only 'Any' option)."""
         choices = get_country_choices_with_favourites(user=None)
-        assert choices == []
+        assert len(choices) == 1
+        assert choices[0][0] == ""
 
     @pytest.mark.django_db
     def test_returns_only_countries_with_stock(self, wine, storage, storage_item):
         """Only countries with wines in stock should appear."""
         choices = get_country_choices_with_favourites(user=wine.user)
-        codes = [c[0] for c in choices if c[0]]  # Exclude separator
+        codes = [c[0] for c in choices if c[0]]  # Exclude separator and empty 'Any'
         assert wine.country in codes
         # Should not have hundreds of countries, only those with stock
         assert len(codes) <= 10
@@ -32,8 +33,9 @@ class TestGetCountryChoicesWithFavourites:
         wine.country = "FR"
         wine.save()
         choices = get_country_choices_with_favourites(user=wine.user)
-        if choices:
-            first_code = choices[0][0]
+        # First choice is 'Any', second should be the favourite
+        if len(choices) > 1:
+            first_code = choices[1][0]
             assert first_code == "FR"
 
 

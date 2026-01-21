@@ -58,11 +58,12 @@ def get_country_choices_with_favourites(user=None):
         if code not in favourites and code in countries_in_stock:
             other_choices.append((code, name))
 
-    # Return favourites first, then separator (if both sections have items), then rest
+    # Return Any first, then favourites, then separator, then rest
+    any_choice = [("", _("Any"))]
     if favourite_choices and other_choices:
-        choices = favourite_choices + [("", "─" * 20)] + other_choices
+        choices = any_choice + favourite_choices + [("---", "─" * 20)] + other_choices
     else:
-        choices = favourite_choices + other_choices
+        choices = any_choice + favourite_choices + other_choices
     return choices
 
 
@@ -83,12 +84,12 @@ class WineFilter(django_filters.FilterSet):
         method="filter_rating",
         label=_("Rating"),
         choices=(
+            ("", _("Any")),
             (0, _("0 Stars")),
             (1, _("1 Star")),
             (2, _("2 Stars")),
             (3, _("3 Stars")),
         ),
-        empty_label=_("Any"),
     )
     ready_to_drink = ChoiceFilter(
         method="filter_ready_to_drink",
