@@ -15,12 +15,5 @@
                 <a href="{% url 'socialaccount_connections' %}" class="pure-menu-link">{% translate "Social Accounts" %}</a>
             </li>
         </ul>
-
-        <h4 class="settings-sidebar__heading">{% translate "Hardware" %}</h4>
-        <ul class="pure-menu-list">
-            <li class="pure-menu-item{% if request.resolver_match.url_name == 'device-settings' %} pure-menu-selected{% endif %}">
-                <a href="{% url 'hardware:device-settings' %}" class="pure-menu-link">{% translate "Devices" %}</a>
-            </li>
-        </ul>
     </div>
 </div>

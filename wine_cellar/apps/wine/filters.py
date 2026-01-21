@@ -96,7 +96,14 @@ class WineFilter(django_filters.FilterSet):
         choices=(
             (0, _("No")),
             (1, _("Yes")),
+            (2, _("Has Window")),
         ),
+        empty_label=_("Any"),
+    )
+    is_cold = ChoiceFilter(
+        method="filter_is_cold",
+        label=_("Cold Storage"),
+        choices=((0, _("No")), (1, _("Yes"))),
         empty_label=_("Any"),
     )
     order = OrderingFilter(
@@ -151,6 +158,22 @@ class WineFilter(django_filters.FilterSet):
                 Q(drink_from__gt=current_year)
                 | Q(drink_to__lt=current_year, drink_to__gt=0)
             )
+        elif value == "2":
+            # Has any drink window set (drink_from OR drink_to is not null)
+            return queryset.filter(
+                Q(drink_from__isnull=False) | Q(drink_to__isnull=False)
+            )
+        return queryset
+
+    def filter_is_cold(self, queryset, name, value):
+        if value == "1":
+            return queryset.filter(
+                storageitem__deleted=False, storageitem__storage__is_cold=True
+            ).distinct()
+        elif value == "0":
+            return queryset.filter(
+                storageitem__deleted=False, storageitem__storage__is_cold=False
+            ).distinct()
         return queryset
 
     class Meta:
@@ -161,6 +184,7 @@ class WineFilter(django_filters.FilterSet):
             "wine_type",
             "rating",
             "ready_to_drink",
+            "is_cold",
             "attributes",
             "category",
             "vintage",

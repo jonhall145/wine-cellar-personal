@@ -18,16 +18,23 @@
                             <th>{% translate "Location" %}</th>
                             <th>{% translate "Used Slots" %}</th>
                             <th>{% translate "Total Slots" %}</th>
+                            <th>{% translate "Order" %}</th>
                             <th></th>
                         </tr>
                         {% for item in storages %}
                             <tr>
                                 <td>
                                     <a href="{% url 'storage-detail' item.pk %}">{{ item.name }}</a>
+                                    {% if item.is_cold %}<i class="fa-solid fa-snowflake" title="{% translate 'Cold Storage' %}"></i>{% endif %}
+                                    {% if item.is_default %}<i class="fa-solid fa-star" title="{% translate 'Default Storage' %}"></i>{% endif %}
                                 </td>
                                 <td>{{ item.location|default_if_none:"" }}</td>
                                 <td>{{ item.used_slots|default_if_none:"" }}</td>
                                 <td>{{ item.total_slots|default_if_none:"" }}</td>
+                                <td>
+                                    <a class="pure-button" href="{% url 'storage-move-up' item.pk %}" title="{% translate 'Move Up' %}"><i class="fa-solid fa-arrow-up"></i></a>
+                                    <a class="pure-button" href="{% url 'storage-move-down' item.pk %}" title="{% translate 'Move Down' %}"><i class="fa-solid fa-arrow-down"></i></a>
+                                </td>
                                 <td>
                                     <a class="pure-button" href="{% url 'storage-delete' item.pk %}"><i class="fa-regular fa-trash-can"></i></a>
                                 </td>

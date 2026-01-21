@@ -172,6 +172,10 @@ module.exports = {
           from: './node_modules/leaflet.markercluster/dist/*.map',
           to: '[name][ext]',
         },
+        {
+          from: './wine_cellar/react/maps/country.json',
+          to: 'maps/[name][ext]',
+        },
       ],
     }),
   ],

@@ -577,3 +577,79 @@ class ReorderReminder(UserContentModel):
                 name="unique_reorder_reminder",
             )
         ]
+
+
+class VisionExtractionLog(UserContentModel):
+    """Log of vision extraction attempts for analysis and improvement."""
+
+    image_count = models.PositiveIntegerField(
+        verbose_name=_("Image Count"),
+        help_text=_("Number of images sent for extraction"),
+    )
+    raw_response = models.TextField(
+        verbose_name=_("Raw Response"),
+        help_text=_("Raw response from the vision API"),
+    )
+    extracted_data = models.JSONField(
+        verbose_name=_("Extracted Data"),
+        help_text=_("Parsed extraction result as JSON"),
+    )
+    confidence = models.CharField(
+        max_length=10,
+        verbose_name=_("Confidence"),
+        help_text=_("Confidence level: high, medium, or low"),
+    )
+    extracted_fields = models.JSONField(
+        verbose_name=_("Extracted Fields"),
+        help_text=_("List of fields that were successfully extracted"),
+    )
+    wine = models.ForeignKey(
+        Wine,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        verbose_name=_("Wine"),
+        help_text=_("Wine created from this extraction (if any)"),
+    )
+    user_corrections = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name=_("User Corrections"),
+        help_text=_("Fields that the user corrected after extraction"),
+    )
+    was_successful = models.BooleanField(
+        default=False,
+        verbose_name=_("Successful"),
+        help_text=_("Whether the extraction led to a wine being created"),
+    )
+    errors = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name=_("Errors"),
+        help_text=_("Any errors during extraction"),
+    )
+    model_used = models.CharField(
+        max_length=50,
+        default="claude-haiku-4-5",
+        verbose_name=_("Model Used"),
+        help_text=_("AI model used for extraction"),
+    )
+    processing_time_ms = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Processing Time (ms)"),
+        help_text=_("Time taken for the extraction in milliseconds"),
+    )
+
+    class Meta:
+        verbose_name = _("Vision Extraction Log")
+        verbose_name_plural = _("Vision Extraction Logs")
+        ordering = ["-created"]
+        indexes = [
+            models.Index(fields=["user", "created"], name="visionlog_user_created_idx"),
+            models.Index(fields=["confidence"], name="visionlog_confidence_idx"),
+            models.Index(fields=["was_successful"], name="visionlog_success_idx"),
+        ]
+
+    def __str__(self):
+        return f"Extraction {self.pk} ({self.confidence}) - {self.created}"

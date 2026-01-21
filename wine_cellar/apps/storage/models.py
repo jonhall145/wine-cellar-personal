@@ -15,10 +15,21 @@ class Storage(UserContentModel):
     columns = models.PositiveIntegerField(
         default=0, verbose_name=_("Number of Columns")
     )
+    is_cold = models.BooleanField(default=False, verbose_name=_("Cold Storage"))
+    order = models.PositiveIntegerField(default=0, verbose_name=_("Display Order"))
+    is_default = models.BooleanField(default=False, verbose_name=_("Default Storage"))
 
     class Meta:
         verbose_name = _("Storage")
         verbose_name_plural = _("Storages")
+
+    def save(self, *args, **kwargs):
+        if self.is_default:
+            # Ensure only one default storage per user
+            Storage.objects.filter(user=self.user, is_default=True).update(
+                is_default=False
+            )
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

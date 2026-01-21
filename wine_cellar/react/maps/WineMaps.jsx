@@ -1,9 +1,8 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import BaseMap from './Map'
 import MarkerClusterLayer from './MarkerClusterLayer'
 import GeoJsonMarker from './GeoJsonMarker'
 import { ItemPopup } from './ItemPopup'
-import * as countries from './country.json'
 
 /**
  * Creates a Map component.
@@ -39,6 +38,24 @@ export const Map = React.forwardRef(function Map({ id, title, ...props }, ref) {
  * @returns {JSX.Element} - The rendered map component with markers.
  */
 export const MapWithMarkers = ({ wines, withoutPopup, children, ...props }) => {
+  const [countries, setCountries] = useState(null)
+
+  useEffect(() => {
+    fetch('/static/maps/country.json')
+      .then(response => response.json())
+      .then(data => setCountries(data))
+      .catch(err => console.error('Failed to load country data:', err))
+  }, [])
+
+  if (!countries) {
+    return (
+      <Map {...props}>
+        <div style={{ textAlign: 'center', padding: '20px' }}>Loading map data...</div>
+        {children}
+      </Map>
+    )
+  }
+
   const markers = wines.map((wine, index) => {
     const feature = Object.assign({}, countries[wine.country])
     if (!feature) {

@@ -4,6 +4,7 @@ import base64
 import io
 import logging
 import re
+import time
 from typing import Any
 
 import pycountry
@@ -11,6 +12,50 @@ from django.conf import settings
 from PIL import Image
 
 logger = logging.getLogger(__name__)
+
+
+def log_extraction(
+    user,
+    image_count: int,
+    raw_response: str,
+    extracted_data: dict,
+    confidence: str,
+    extracted_fields: list,
+    errors: list | None = None,
+    model_used: str = "claude-haiku-4-5",
+    processing_time_ms: int | None = None,
+):
+    """
+    Log a vision extraction attempt for analysis.
+
+    Args:
+        user: The user who initiated the extraction
+        image_count: Number of images sent for extraction
+        raw_response: Raw response from the vision API
+        extracted_data: Parsed extraction result
+        confidence: Confidence level (high, medium, low)
+        extracted_fields: List of fields that were successfully extracted
+        errors: Any errors during extraction
+        model_used: AI model used for extraction
+        processing_time_ms: Time taken for the extraction in milliseconds
+    """
+    try:
+        from wine_cellar.apps.wine.models import VisionExtractionLog
+
+        VisionExtractionLog.objects.create(
+            user=user,
+            image_count=image_count,
+            raw_response=raw_response,
+            extracted_data=extracted_data,
+            confidence=confidence,
+            extracted_fields=extracted_fields,
+            errors=errors,
+            model_used=model_used,
+            processing_time_ms=processing_time_ms,
+        )
+    except Exception as e:
+        logger.warning(f"Failed to log vision extraction: {e}")
+
 
 # Maximum image dimensions for Claude Vision API
 # Claude supports up to 8000x8000 but recommends smaller for performance
@@ -269,13 +314,14 @@ class WineVisionExtractor:
         """Initialize the extractor."""
         self.api_key = settings.ANTHROPIC_API_KEY
 
-    def extract_from_images(self, base64_images: list[str]) -> dict:
+    def extract_from_images(self, base64_images: list[str], user=None) -> dict:
         """
         Main extraction method supporting multiple images.
 
         Args:
             base64_images: List of base64-encoded image data
                 (barcode, front label, back label)
+            user: Optional user for logging the extraction
 
         Returns:
             dict with keys:
@@ -292,6 +338,8 @@ class WineVisionExtractor:
             "errors": [],
             "extracted_fields": [],
         }
+
+        start_time = time.time()
 
         if not self.api_key:
             logger.warning(
@@ -317,20 +365,37 @@ class WineVisionExtractor:
             logger.exception("Error during vision extraction")
             result["errors"].append(f"Extraction error: {str(e)}")
 
+        # Calculate processing time
+        processing_time_ms = int((time.time() - start_time) * 1000)
+
+        # Log the extraction if user is provided
+        if user:
+            log_extraction(
+                user=user,
+                image_count=len(base64_images),
+                raw_response=result.get("raw_text", ""),
+                extracted_data=result.get("data", {}),
+                confidence=result.get("confidence", "low"),
+                extracted_fields=result.get("extracted_fields", []),
+                errors=result.get("errors") if result.get("errors") else None,
+                processing_time_ms=processing_time_ms,
+            )
+
         return result
 
-    def extract_from_image(self, base64_image: str) -> dict:
+    def extract_from_image(self, base64_image: str, user=None) -> dict:
         """
         Legacy single-image extraction method.
 
         Args:
             base64_image: Base64-encoded image data
+            user: Optional user for logging the extraction
 
         Returns:
             dict with extraction results
         """
         # Delegate to multi-image method with single image
-        return self.extract_from_images([base64_image])
+        return self.extract_from_images([base64_image], user=user)
 
     def _call_claude_vision(self, base64_images: list[str]) -> dict:
         """

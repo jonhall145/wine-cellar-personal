@@ -221,5 +221,29 @@
     target="_blank">Github <span class="visually-hidden">(opens in new tab)</span></a>
             </p>
         </footer>
+        <script>
+            // Mobile dropdown toggle for touch devices
+            document.querySelectorAll('.pure-menu-has-children').forEach(function(dropdown) {
+                dropdown.addEventListener('click', function(e) {
+                    if (window.innerWidth < 768) {
+                        var link = dropdown.querySelector(':scope > .pure-menu-link');
+                        if (e.target === link || link.contains(e.target)) {
+                            e.preventDefault();
+                            dropdown.classList.toggle('menu-open');
+                        }
+                    }
+                });
+            });
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (window.innerWidth < 768) {
+                    document.querySelectorAll('.pure-menu-has-children.menu-open').forEach(function(dropdown) {
+                        if (!dropdown.contains(e.target)) {
+                            dropdown.classList.remove('menu-open');
+                        }
+                    });
+                }
+            });
+        </script>
     </body>
 </html>

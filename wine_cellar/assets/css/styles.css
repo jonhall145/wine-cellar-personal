@@ -657,7 +657,8 @@ a:hover {
 }
 
 .pure-menu-has-children:hover > .pure-menu-children,
-.pure-menu-allow-hover:hover > .pure-menu-children {
+.pure-menu-allow-hover:hover > .pure-menu-children,
+.pure-menu-has-children.menu-open > .pure-menu-children {
   display: block;
 }
 
@@ -712,3 +713,19 @@ a:hover {
 /* Margin utilities */
 .mt-12 { margin-top: var(--spacing-lg); }
 .mb-12 { margin-bottom: var(--spacing-lg); }
+
+/* Mobile touch targets */
+@media screen and (max-width: 48em) {
+  .pure-form input,
+  .pure-form select,
+  .pure-form button,
+  .pure-form textarea {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .pure-button {
+    min-height: 44px;
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+}

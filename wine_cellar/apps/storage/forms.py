@@ -46,6 +46,14 @@ class StorageForm(forms.Form):
         required=False,
         help_text=_("Enter the number of columns in the storage."),
     )
+    is_cold = forms.BooleanField(
+        required=False,
+        help_text=_("Check if this is a cold storage location (refrigerated)."),
+    )
+    is_default = forms.BooleanField(
+        required=False,
+        help_text=_("Check to make this the default storage for new bottles."),
+    )
 
 
 class StockAddForm(forms.Form):

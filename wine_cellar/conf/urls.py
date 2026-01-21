@@ -35,6 +35,8 @@ from wine_cellar.apps.storage.views import (
     StorageUpdateView,
     move_bottle,
     storage_grid_data,
+    storage_move_down,
+    storage_move_up,
 )
 from wine_cellar.apps.user.views import UserSettingsView
 from wine_cellar.apps.wine.views import (
@@ -95,6 +97,8 @@ urlpatterns = [
         "storage/delete/<int:pk>/", StorageDeleteView.as_view(), name="storage-delete"
     ),
     path("storage/edit/<int:pk>/", StorageUpdateView.as_view(), name="storage-edit"),
+    path("storage/move-up/<int:pk>/", storage_move_up, name="storage-move-up"),
+    path("storage/move-down/<int:pk>/", storage_move_down, name="storage-move-down"),
     path("storage/history/", StorageItemHistoryView.as_view(), name="storage-history"),
     path("api/storage/grid-data/", storage_grid_data, name="storage-grid-data"),
     path("api/storage/move-bottle/", move_bottle, name="storage-move-bottle"),
@@ -167,5 +171,5 @@ urlpatterns = [
 
 # Serve media files (in production, consider using nginx instead)
 urlpatterns += [
-    re_path(r'^media/(?P<path>.*)$', serve_media),
+    re_path(r"^media/(?P<path>.*)$", serve_media),
 ]

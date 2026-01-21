@@ -28,7 +28,7 @@ class StorageListView(ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        qs = super().get_queryset().order_by("created")
+        qs = super().get_queryset().order_by("order", "created")
         return qs.filter(user=self.request.user)
 
 
@@ -66,6 +66,11 @@ class StorageCreateView(FormView):
         name = cleaned_data["name"]
         rows = cleaned_data["rows"] or 0
         columns = cleaned_data["columns"] or 0
+        is_cold = cleaned_data.get("is_cold", False)
+        is_default = cleaned_data.get("is_default", False)
+
+        # Get max order for this user
+        max_order = Storage.objects.filter(user=user).count()
 
         Storage.objects.create(
             location=location,
@@ -73,6 +78,9 @@ class StorageCreateView(FormView):
             name=name,
             rows=rows,
             columns=columns,
+            is_cold=is_cold,
+            is_default=is_default,
+            order=max_order,
             user=user,
         )
 
@@ -105,12 +113,16 @@ class StorageUpdateView(FormView):
         name = cleaned_data["name"]
         rows = cleaned_data["rows"]
         columns = cleaned_data["columns"]
+        is_cold = cleaned_data.get("is_cold", False)
+        is_default = cleaned_data.get("is_default", False)
 
         storage.location = location
         storage.description = description
         storage.name = name
         storage.rows = rows
         storage.columns = columns
+        storage.is_cold = is_cold
+        storage.is_default = is_default
         storage.user = user
         storage.save()
 
@@ -492,3 +504,35 @@ def move_bottle(request):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+@login_required
+def storage_move_up(request, pk):
+    """Move a storage up in the display order."""
+    storage = get_object_or_404(Storage, pk=pk, user=request.user)
+    prev_storage = (
+        Storage.objects.filter(user=request.user, order__lt=storage.order)
+        .order_by("-order")
+        .first()
+    )
+    if prev_storage:
+        storage.order, prev_storage.order = prev_storage.order, storage.order
+        storage.save(update_fields=["order"])
+        prev_storage.save(update_fields=["order"])
+    return redirect("storage-list")
+
+
+@login_required
+def storage_move_down(request, pk):
+    """Move a storage down in the display order."""
+    storage = get_object_or_404(Storage, pk=pk, user=request.user)
+    next_storage = (
+        Storage.objects.filter(user=request.user, order__gt=storage.order)
+        .order_by("order")
+        .first()
+    )
+    if next_storage:
+        storage.order, next_storage.order = next_storage.order, storage.order
+        storage.save(update_fields=["order"])
+        next_storage.save(update_fields=["order"])
+    return redirect("storage-list")

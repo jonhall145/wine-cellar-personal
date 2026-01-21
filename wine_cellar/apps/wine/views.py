@@ -710,7 +710,7 @@ class WineListView(FilterView):
             ),
             stock_count=Count("storageitem", filter=Q(storageitem__deleted=False)),
         )
-        return qs.filter(user=self.request.user)
+        return qs.filter(user=self.request.user).distinct()
 
 
 class WineScanView(TemplateView):
