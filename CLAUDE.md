@@ -154,3 +154,56 @@ make fixtures   # Load sample data
 5. **Map tiles require internet access** - expect fetch errors in isolated environments
 6. **Only update jonhall145 repos** - Do not create PRs to upstream repos (the-broke-sommeliers). Only push to origin (jonhall145)
 7. **Avoid full rebuilds for tests** - Tests should not require a full frontend rebuild as this is slow and causes timeout issues. Use `make pytest` directly for backend tests.
+
+## Lessons Learned
+
+These patterns are derived from previous development sessions to improve accuracy and efficiency.
+
+### Mobile-First Development
+
+The user is a **mobile-first user**. Always:
+- Test UI changes on mobile viewports
+- Verify touch interactions work (not just click events)
+- Check that dropdowns/selects are usable on mobile (especially TomSelect)
+- Remember HTTPS is required for camera/barcode scanning on mobile
+
+### Common Pitfalls
+
+**TomSelect Dropdowns:**
+- "Any/All" options must have `allowEmptyOption: true` in TomSelect config
+- Mobile Safari has issues with empty-value options - test thoroughly
+- Filter dropdowns should always include an "Any" choice as the default
+
+**Aggregate Queries:**
+- Be careful with JOINs in Django querysets that include `.annotate()` - they can cause count/sum values to be multiplied (e.g., "wine count squared" bug)
+- Use `.distinct()` or subqueries when combining filters with aggregates
+- Verify bottle counts vs wine counts when filtering
+
+**Static Files & CSS:**
+- Changes to CSS/JS require `make watch` or `npm run build` to be visible
+- Production requires `collectstatic` - use `./run_prod_https.sh` which handles this
+- Check browser cache / use incognito when CSS changes aren't visible
+
+### Deployment Checklist
+
+For production deployment to meshnet:
+1. Run `make lint` - fix any issues before deploying
+2. Run `make pytest` - ensure tests pass
+3. Static files are collected automatically by prod scripts
+4. HTTPS is required for camera access - use `./run_prod_https.sh`
+
+### Common Fix Patterns
+
+| Issue | Likely Cause | Solution |
+|-------|--------------|----------|
+| Filter "Any" not selectable on mobile | TomSelect config | Add `allowEmptyOption: true` |
+| Wrong count when filtering | JOIN with aggregate | Use `.distinct()` or subquery |
+| CSS changes not visible | Browser cache | Hard refresh / incognito |
+| Camera not working | Not HTTPS | Use HTTPS server script |
+| 500 error on forms | Missing form field | Check model changes vs form fields |
+
+### Workflow Preferences
+
+- **Commit style**: Short, lowercase messages describing the change
+- **Stage-commit-push**: User often requests these as a single action
+- **Lint before commit**: Always run `make lint` and fix issues before committing
