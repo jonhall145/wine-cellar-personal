@@ -327,9 +327,7 @@ class TestBarcodeScanner:
             with patch(IMAGE_PATH) as mock_image_class:
                 # Mock the Image.open to return a mock image
                 mock_image = MagicMock()
-                mock_gray_image = MagicMock()
                 mock_image.mode = "RGB"
-                mock_image.convert.return_value = mock_gray_image
                 mock_image_class.open.return_value = mock_image
 
                 # Mock barcode detection
@@ -340,8 +338,8 @@ class TestBarcodeScanner:
 
                 result = scanner.scan_images_for_barcodes([base64_image])
 
-                # Verify that close was called on both images
-                mock_gray_image.close.assert_called_once()
+                # Verify that close was called on the PIL image
+                # (grayscale conversion now done via OpenCV, not PIL)
                 mock_image.close.assert_called_once()
                 assert "1234567890123" in result
 
@@ -362,9 +360,7 @@ class TestBarcodeScanner:
             with patch(IMAGE_PATH) as mock_image_class:
                 # Mock the Image.open to return a mock image
                 mock_image = MagicMock()
-                mock_gray_image = MagicMock()
                 mock_image.mode = "RGB"
-                mock_image.convert.return_value = mock_gray_image
                 mock_image_class.open.return_value = mock_image
 
                 # Make pyzbar.decode raise an exception
@@ -373,8 +369,8 @@ class TestBarcodeScanner:
                 # Should not raise exception due to try/except
                 result = scanner.scan_images_for_barcodes([base64_image])
 
-                # Verify close was still called on both images despite the error
-                mock_gray_image.close.assert_called_once()
+                # Verify close was still called on PIL image despite the error
+                # (grayscale conversion now done via OpenCV, not PIL)
                 mock_image.close.assert_called_once()
                 assert result == []
 

@@ -32,9 +32,25 @@ const translated = {
   analyzing: django.gettext('Analyzing...'),
   noBarcodeFound: django.gettext('No barcode found in image'),
   manualEntry: django.gettext('Enter Manually'),
+  initializingCamera: django.gettext('Initializing camera...'),
+  scannerTip: django.gettext('Hold steady and fill frame with barcode'),
 }
 
 type CameraErrorType = 'permission' | 'https' | 'notfound' | 'unknown' | null
+
+// Get Font Awesome icon class for error type
+const getErrorIcon = (errorType: CameraErrorType): string => {
+  switch (errorType) {
+    case 'permission':
+      return 'fa-video-slash'
+    case 'https':
+      return 'fa-lock'
+    case 'notfound':
+      return 'fa-camera'
+    default:
+      return 'fa-triangle-exclamation'
+  }
+}
 
 const CameraError = ({ errorType, onRetry }: { errorType: CameraErrorType; onRetry: () => void }) => {
   let title = translated.unknownError
@@ -51,9 +67,14 @@ const CameraError = ({ errorType, onRetry }: { errorType: CameraErrorType; onRet
     message = translated.noCameraFoundHint
   }
 
+  const iconClass = getErrorIcon(errorType)
+  const isNotFound = errorType === 'notfound'
+
   return (
-    <div className="camera-error">
-      <div className="camera-error__icon">⚠️</div>
+    <div className="camera-error" role="alert" aria-live="assertive">
+      <div className={`camera-error__icon-container camera-error__icon-container--${errorType || 'unknown'}`}>
+        <i className={`fa-solid ${iconClass}${isNotFound ? ' camera-error__icon--crossed' : ''}`} aria-hidden="true"></i>
+      </div>
       <h3 className="camera-error__title">{title}</h3>
       <p className="camera-error__message">{message}</p>
       {errorType !== 'https' && (
@@ -65,12 +86,99 @@ const CameraError = ({ errorType, onRetry }: { errorType: CameraErrorType; onRet
   )
 }
 
+// Camera loading component shown during initialization
+const CameraLoader = () => (
+  <div className="camera-loader" role="status" aria-live="polite">
+    <div className="camera-loader__icon-container">
+      <i className="fa-solid fa-camera" aria-hidden="true"></i>
+    </div>
+    <div className="camera-loader__spinner" aria-hidden="true"></div>
+    <p className="camera-loader__text">{translated.initializingCamera}</p>
+  </div>
+)
+
+/**
+ * Preprocess an image for better barcode detection.
+ * Creates multiple versions with different contrast/grayscale settings.
+ */
+const preprocessImage = (
+  video: HTMLVideoElement,
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D
+): string[] => {
+  const images: string[] = []
+  const width = video.videoWidth
+  const height = video.videoHeight
+
+  canvas.width = width
+  canvas.height = height
+
+  // 1. Original image
+  ctx.drawImage(video, 0, 0)
+  images.push(canvas.toDataURL('image/png'))
+
+  // Get image data for processing
+  const imageData = ctx.getImageData(0, 0, width, height)
+  const data = imageData.data
+
+  // 2. Grayscale + contrast enhanced
+  const grayData = ctx.createImageData(width, height)
+  let min = 255, max = 0
+
+  // First pass: convert to grayscale and find min/max
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+    grayData.data[i] = gray
+    grayData.data[i + 1] = gray
+    grayData.data[i + 2] = gray
+    grayData.data[i + 3] = 255
+    if (gray < min) min = gray
+    if (gray > max) max = gray
+  }
+
+  // Second pass: contrast stretching and slight enhancement
+  const range = max - min || 1
+  const contrastFactor = 1.2
+  for (let i = 0; i < grayData.data.length; i += 4) {
+    // Normalize to 0-255
+    let val = ((grayData.data[i] - min) / range) * 255
+    // Increase contrast around midpoint
+    val = ((val - 128) * contrastFactor) + 128
+    val = Math.max(0, Math.min(255, val))
+    grayData.data[i] = val
+    grayData.data[i + 1] = val
+    grayData.data[i + 2] = val
+  }
+
+  ctx.putImageData(grayData, 0, 0)
+  images.push(canvas.toDataURL('image/png'))
+
+  // 3. High contrast version (1.5x)
+  const highContrastFactor = 1.5
+  for (let i = 0; i < grayData.data.length; i += 4) {
+    let val = grayData.data[i]
+    val = ((val - 128) * highContrastFactor) + 128
+    val = Math.max(0, Math.min(255, val))
+    grayData.data[i] = val
+    grayData.data[i + 1] = val
+    grayData.data[i + 2] = val
+  }
+
+  ctx.putImageData(grayData, 0, 0)
+  images.push(canvas.toDataURL('image/png'))
+
+  return images
+}
+
 const Scanner = () => {
   const [selectedFormat, setSelectedFormat] = useState('any')
   const [cameraError, setCameraError] = useState<CameraErrorType>(null)
   const [retryKey, setRetryKey] = useState(0)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
+  const [isInitializing, setIsInitializing] = useState(true)
+  const [scanSuccess, setScanSuccess] = useState(false)
+  const [statusMessage, setStatusMessage] = useState<string>('')
   const scannerRef = useRef<HTMLDivElement>(null)
   const defaultFormats = ['ean_13', 'ean_8', 'upc_a', 'code_39', 'itf']
 
@@ -79,18 +187,52 @@ const Scanner = () => {
     const isSecureContext = window.isSecureContext
     if (!isSecureContext) {
       setCameraError('https')
+      setIsInitializing(false)
     }
   }, [])
 
+  // Monitor video element for camera ready state
+  useEffect(() => {
+    if (cameraError) return
+
+    const checkVideoReady = () => {
+      if (!scannerRef.current) return
+      const video = scannerRef.current.querySelector('video')
+      if (video && video.videoWidth > 0 && video.videoHeight > 0) {
+        setIsInitializing(false)
+        setStatusMessage(translated.scannerTip)
+      }
+    }
+
+    const interval = setInterval(checkVideoReady, 100)
+    // Timeout after 10 seconds
+    const timeout = setTimeout(() => {
+      if (isInitializing) {
+        setIsInitializing(false)
+      }
+    }, 10000)
+
+    return () => {
+      clearInterval(interval)
+      clearTimeout(timeout)
+    }
+  }, [cameraError, isInitializing, retryKey])
+
   const handleCapture = (barcodes: DetectedBarcode[]) => {
     if (barcodes.length > 0) {
-      window.location.href = '/wine/scan/' + barcodes[0].rawValue
+      setScanSuccess(true)
+      setStatusMessage(`Barcode found: ${barcodes[0].rawValue}`)
+      // Brief delay to show success animation
+      setTimeout(() => {
+        window.location.href = '/wine/scan/' + barcodes[0].rawValue
+      }, 300)
     }
   }
 
   const handleError = (error: unknown) => {
     console.error('Camera error:', error)
-    
+    setIsInitializing(false)
+
     if (error instanceof Error) {
       const errorName = error.name
       const errorMessage = error.message.toLowerCase()
@@ -113,12 +255,13 @@ const Scanner = () => {
 
   const handleRetry = () => {
     setCameraError(null)
+    setIsInitializing(true)
     setRetryKey((prev) => prev + 1)
   }
 
   const captureAndAnalyze = useCallback(async () => {
     if (!scannerRef.current) return
-    
+
     // Find the video element within the scanner
     const video = scannerRef.current.querySelector('video')
     if (!video || video.videoWidth === 0) {
@@ -128,47 +271,51 @@ const Scanner = () => {
 
     setIsAnalyzing(true)
     setAnalyzeError(null)
+    setStatusMessage(translated.analyzing)
 
     try {
       // Create a canvas and draw the current video frame
       const canvas = document.createElement('canvas')
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
       const ctx = canvas.getContext('2d')
       if (!ctx) {
         throw new Error('Could not get canvas context')
       }
-      ctx.drawImage(video, 0, 0)
 
-      // Convert to base64
-      const imageData = canvas.toDataURL('image/png')
+      // Generate preprocessed image versions
+      const images = preprocessImage(video, canvas, ctx)
 
       // Get CSRF token
       const csrfToken = document.querySelector<HTMLInputElement>('[name=csrfmiddlewaretoken]')?.value
         || document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content
         || ''
 
-      // Send to server for analysis
+      // Send multiple images to server for analysis
       const response = await fetch('/wine/scan-barcode/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRFToken': csrfToken,
         },
-        body: JSON.stringify({ image: imageData }),
+        body: JSON.stringify({ images }),
       })
 
       const result = await response.json()
 
       if (result.success && result.barcode) {
-        // Barcode found - redirect to scanned wine page
-        window.location.href = '/wine/scan/' + result.barcode
+        // Barcode found - show success and redirect
+        setScanSuccess(true)
+        setStatusMessage(`Barcode found: ${result.barcode}`)
+        setTimeout(() => {
+          window.location.href = '/wine/scan/' + result.barcode
+        }, 300)
       } else {
         setAnalyzeError(translated.noBarcodeFound)
+        setStatusMessage('')
       }
     } catch (error) {
       console.error('Error analyzing image:', error)
       setAnalyzeError(error instanceof Error ? error.message : 'Analysis failed')
+      setStatusMessage('')
     } finally {
       setIsAnalyzing(false)
     }
@@ -179,7 +326,11 @@ const Scanner = () => {
   }
 
   return (
-    <>
+    <div
+      role="application"
+      aria-label="Barcode Scanner"
+      aria-describedby="scanner-status"
+    >
       <section className="form__scanner__details">
         <details>
           <summary>{translated.advanced}</summary>
@@ -187,6 +338,7 @@ const Scanner = () => {
           <select
             value={selectedFormat}
             onChange={(e) => setSelectedFormat(e.target.value)}
+            aria-label="Barcode format"
           >
             <option value="">{django.gettext('All')}</option>
             <option value="code_39">Code 39</option>
@@ -200,36 +352,55 @@ const Scanner = () => {
           </select>
         </details>
       </section>
-      <section className="form__scanner" ref={scannerRef}>
+      <section
+        className={`form__scanner ${scanSuccess ? 'form__scanner--success' : ''}`}
+        ref={scannerRef}
+      >
+        {isInitializing && <CameraLoader />}
         <BarcodeScanner
           key={retryKey}
           onCapture={handleCapture}
           onError={handleError}
           options={{
             formats: selectedFormat ? [selectedFormat] : defaultFormats,
-            delay: 100,
+            delay: 200,  // Increased from 100 for better detection
           }}
         />
-        <div className="overlay">
+        <div className="overlay" aria-hidden="true">
           <div className="overlay-element top-left" />
           <div className="overlay-element top-right" />
           <div className="overlay-element bottom-left" />
           <div className="overlay-element bottom-right" />
+          <div className="overlay__scan-line" />
         </div>
       </section>
+      {/* Screen reader status announcer */}
+      <div id="scanner-status" className="sr-only" aria-live="polite">
+        {statusMessage}
+      </div>
+      {!isInitializing && statusMessage && !analyzeError && (
+        <p className="scanner-tip" aria-hidden="true">
+          <i className="fa-solid fa-lightbulb" aria-hidden="true"></i> {statusMessage}
+        </p>
+      )}
       <section className="form__scanner__capture" style={{ position: 'relative', zIndex: 10, paddingBottom: '2rem' }}>
         <button
           type="button"
           className={`pure-button pure-button-primary ${isAnalyzing ? 'button--loading' : ''}`}
           onClick={captureAndAnalyze}
-          disabled={isAnalyzing}
+          disabled={isAnalyzing || isInitializing}
+          aria-busy={isAnalyzing}
+          aria-describedby="capture-button-desc"
           style={{ marginBottom: '1rem', width: '100%', minHeight: '44px' }}
         >
           {isAnalyzing && <span className="spinner spinner--sm" aria-hidden="true" />}
           {isAnalyzing ? translated.analyzing : (translated.captureButton || 'Force Scan')}
         </button>
-        <a 
-          href="/wine/add/" 
+        <span id="capture-button-desc" className="sr-only">
+          Captures current camera frame and analyzes it for barcodes
+        </span>
+        <a
+          href="/wine/add/"
           className="pure-button button__secondary"
           style={{ width: '100%', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
         >
@@ -239,7 +410,7 @@ const Scanner = () => {
           <p className="form-error" role="alert">{analyzeError}</p>
         )}
       </section>
-    </>
+    </div>
   )
 }
 

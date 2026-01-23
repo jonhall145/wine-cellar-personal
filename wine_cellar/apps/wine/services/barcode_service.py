@@ -5,6 +5,8 @@ import io
 import logging
 from typing import Optional
 
+import cv2
+import numpy as np
 from PIL import Image
 
 try:
@@ -32,9 +34,52 @@ class BarcodeScanner:
                 self._pyzbar_available = False
         return self._pyzbar_available
 
+    def _preprocess_image(self, img: np.ndarray) -> list[np.ndarray]:
+        """
+        Generate multiple preprocessed versions of an image for barcode detection.
+
+        Args:
+            img: OpenCV image (BGR or grayscale)
+
+        Returns:
+            List of preprocessed images to try for barcode detection
+        """
+        versions = []
+
+        # Convert to grayscale if needed
+        if len(img.shape) == 3:
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = img.copy()
+
+        # 1. Simple grayscale
+        versions.append(gray)
+
+        # 2. CLAHE (Contrast Limited Adaptive Histogram Equalization)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        clahe_img = clahe.apply(gray)
+        versions.append(clahe_img)
+
+        # 3. Adaptive thresholding
+        adaptive = cv2.adaptiveThreshold(
+            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+        )
+        versions.append(adaptive)
+
+        # 4. Otsu's binary thresholding
+        _, otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        versions.append(otsu)
+
+        # 5. Sharpened image
+        kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
+        sharpened = cv2.filter2D(gray, -1, kernel)
+        versions.append(sharpened)
+
+        return versions
+
     def scan_images_for_barcodes(self, base64_images: list[str]) -> list[str]:
         """
-        Scan multiple images for barcodes.
+        Scan multiple images for barcodes using various preprocessing techniques.
 
         Args:
             base64_images: List of base64-encoded image data
@@ -48,22 +93,21 @@ class BarcodeScanner:
         barcodes = set()
 
         for base64_image in base64_images:
-            image = None
-            gray_image = None
+            pil_image = None
             try:
                 # Decode base64 to image
                 image_data = base64.b64decode(base64_image)
-                image = Image.open(io.BytesIO(image_data))
+                pil_image = Image.open(io.BytesIO(image_data))
 
-                # Convert to grayscale for better detection
-                if image.mode != "L":
-                    gray_image = image.convert("L")
-                else:
-                    gray_image = image
+                # Convert PIL Image to OpenCV format
+                if pil_image.mode == "RGBA":
+                    pil_image = pil_image.convert("RGB")
+                cv_image = np.array(pil_image)
+                if len(cv_image.shape) == 3:
+                    cv_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2BGR)
 
-                # Decode barcodes
-                decoded_barcodes = pyzbar.decode(gray_image)
-
+                # Try original image first (color can help with some barcodes)
+                decoded_barcodes = pyzbar.decode(cv_image)
                 for barcode in decoded_barcodes:
                     try:
                         barcode_data = barcode.data.decode("utf-8")
@@ -73,35 +117,42 @@ class BarcodeScanner:
                         )
                         barcodes.add(barcode_data)
                     except UnicodeDecodeError:
-                        # Skip barcodes with non-UTF-8 data
                         logger.warning(
                             f"Skipping barcode with non-UTF-8 data: {barcode.data}"
                         )
                         continue
 
-                # Also try original image (sometimes color helps with certain barcodes)
-                if image.mode != "L":
-                    decoded_barcodes = pyzbar.decode(image)
-                    for barcode in decoded_barcodes:
-                        try:
-                            barcode_data = barcode.data.decode("utf-8")
-                            barcodes.add(barcode_data)
-                        except UnicodeDecodeError:
-                            # Skip barcodes with non-UTF-8 data
-                            logger.warning(
-                                f"Skipping barcode with non-UTF-8 data: {barcode.data}"
-                            )
-                            continue
+                # If no barcodes found, try preprocessed versions
+                if not barcodes:
+                    preprocessed_versions = self._preprocess_image(cv_image)
+                    for i, processed_img in enumerate(preprocessed_versions):
+                        decoded_barcodes = pyzbar.decode(processed_img)
+                        for barcode in decoded_barcodes:
+                            try:
+                                barcode_data = barcode.data.decode("utf-8")
+                                barcode_type = barcode.type
+                                logger.info(
+                                    f"Found barcode with preprocessing #{i}: "
+                                    f"{barcode_data} (type: {barcode_type})"
+                                )
+                                barcodes.add(barcode_data)
+                            except UnicodeDecodeError:
+                                logger.warning(
+                                    f"Skipping barcode with non-UTF-8 data: "
+                                    f"{barcode.data}"
+                                )
+                                continue
+                        # Stop if we found barcodes
+                        if barcodes:
+                            break
 
             except Exception as e:
                 logger.warning(f"Error scanning image for barcodes: {e}")
                 continue
             finally:
                 # Explicitly close PIL Image objects to free resources
-                if gray_image is not None and gray_image is not image:
-                    gray_image.close()
-                if image is not None:
-                    image.close()
+                if pil_image is not None:
+                    pil_image.close()
 
         return list(barcodes)
 

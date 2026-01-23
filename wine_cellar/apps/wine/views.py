@@ -1515,10 +1515,14 @@ def extract_wine_vision_ajax(request):
 @login_required
 def scan_barcode_ajax(request):
     """
-    AJAX endpoint for server-side barcode scanning from a captured image.
+    AJAX endpoint for server-side barcode scanning from captured images.
 
-    This endpoint uses pyzbar to scan barcodes from a base64-encoded image.
+    This endpoint uses pyzbar to scan barcodes from base64-encoded images.
     Returns detected barcodes without AI processing.
+
+    Accepts both formats:
+    - Single image: { "image": "base64..." }
+    - Multiple images: { "images": ["base64...", ...] }
 
     Rate limited to 30 requests per minute per user.
     """
@@ -1531,20 +1535,28 @@ def scan_barcode_ajax(request):
         # Parse JSON body
         try:
             data = json.loads(request.body)
-            image_data = data.get("image")
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON"}, status=400)
 
-        if not image_data:
+        # Accept both single image and array of images
+        images = data.get("images", [])
+        single_image = data.get("image")
+        if single_image:
+            images.append(single_image)
+
+        if not images:
             return JsonResponse({"error": "No image data provided"}, status=400)
 
         # Remove data URL prefix if present (e.g., "data:image/png;base64,")
-        if "," in image_data:
-            image_data = image_data.split(",", 1)[1]
+        cleaned_images = []
+        for img in images:
+            if "," in img:
+                img = img.split(",", 1)[1]
+            cleaned_images.append(img)
 
-        # Scan the image for barcodes
+        # Scan the images for barcodes
         barcode_scanner = BarcodeScanner()
-        barcodes = barcode_scanner.scan_images_for_barcodes([image_data])
+        barcodes = barcode_scanner.scan_images_for_barcodes(cleaned_images)
 
         if barcodes:
             return JsonResponse(
