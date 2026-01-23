@@ -149,86 +149,86 @@
 
 /* Wine type color variants */
 .storage-grid__cell--red {
-  background-color: var(--wine-red, #8b1a32);
-  border-color: #5a1020;
+  background-color: var(--wine-red);
+  border-color: var(--wine-red-dark);
 }
 
 .storage-grid__cell--red:hover {
-  background-color: #5a1020;
+  background-color: var(--wine-red-dark);
 }
 
 .storage-grid__cell--white {
-  background-color: var(--wine-white, #f5e6a3);
-  border-color: #d4c580;
+  background-color: var(--wine-white);
+  border-color: var(--wine-white-dark);
 }
 
 .storage-grid__cell--white:hover {
-  background-color: #e8d88f;
+  background-color: var(--wine-white-dark);
 }
 
 .storage-grid__cell--white .storage-grid__bottle {
-  color: #4a4a4a;
+  color: var(--gray-700);
 }
 
 .storage-grid__cell--rose {
-  background-color: var(--wine-rose, #ffb6c1);
-  border-color: #e8959f;
+  background-color: var(--wine-rose);
+  border-color: var(--wine-rose-dark);
 }
 
 .storage-grid__cell--rose:hover {
-  background-color: #f5a3af;
+  background-color: var(--wine-rose-dark);
 }
 
 .storage-grid__cell--rose .storage-grid__bottle {
-  color: #4a4a4a;
+  color: var(--gray-700);
 }
 
 .storage-grid__cell--sparkling {
-  background-color: var(--wine-sparkling, #4a90d9);
-  border-color: #3a7bc8;
+  background-color: var(--wine-sparkling);
+  border-color: var(--wine-sparkling-dark);
 }
 
 .storage-grid__cell--sparkling:hover {
-  background-color: #5a9fe8;
+  background-color: var(--wine-sparkling-dark);
 }
 
 .storage-grid__cell--sparkling .storage-grid__bottle {
-  color: #ffffff;
+  color: var(--white);
 }
 
 .storage-grid__cell--dessert {
-  background-color: var(--wine-dessert, #d4a574);
-  border-color: #b8895f;
+  background-color: var(--wine-dessert);
+  border-color: var(--wine-dessert-dark);
 }
 
 .storage-grid__cell--dessert:hover {
-  background-color: #c9956a;
+  background-color: var(--wine-dessert-dark);
 }
 
 .storage-grid__cell--dessert .storage-grid__bottle {
-  color: #ffffff;
+  color: var(--white);
 }
 
 .storage-grid__cell--fortified {
-  background-color: var(--wine-fortified, #8b4513);
-  border-color: #6b350f;
+  background-color: var(--wine-fortified);
+  border-color: var(--wine-fortified-dark);
 }
 
 .storage-grid__cell--fortified:hover {
-  background-color: #6b350f;
+  background-color: var(--wine-fortified-dark);
 }
 
 .storage-grid__cell--orange {
-  background-color: var(--wine-orange, #ff8c00);
-  border-color: #d47500;
+  background-color: var(--wine-orange);
+  border-color: var(--wine-orange-dark);
 }
 
 .storage-grid__cell--orange:hover {
-  background-color: #e67e00;
+  background-color: var(--wine-orange-dark);
 }
 
 .storage-grid__cell--orange .storage-grid__bottle {
-  color: #4a4a4a;
+  color: var(--gray-700);
 }
 
 .storage-grid__cell--selected {

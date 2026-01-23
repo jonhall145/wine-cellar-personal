@@ -12,52 +12,6 @@
     {% if scanned_image %}
         {% include 'extraction_badges.html' %}
     {% endif %}
-    {% if scanned_front_image or scanned_back_image %}
-    <style>
-        .scanned-image-notice {
-            margin: 8px 0 16px 0;
-            padding: 12px;
-            background: #e8f4f8;
-            border-radius: 6px;
-            border-left: 4px solid #17a2b8;
-        }
-        .scanned-image-preview {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        .scanned-preview-thumb {
-            max-width: 80px;
-            max-height: 80px;
-            border-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .scanned-image-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        .badge-info {
-            background: #17a2b8;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 0.85em;
-        }
-        .badge-info i {
-            margin-right: 4px;
-        }
-        .btn-sm {
-            padding: 4px 8px;
-            font-size: 0.85em;
-        }
-        .scanned-image-notice.hidden {
-            display: none;
-        }
-    </style>
-    {% endif %}
 {% endblock extra_head %}
 {% block title %}
     {% translate "Add Wine" %}

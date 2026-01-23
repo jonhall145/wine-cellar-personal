@@ -5,97 +5,20 @@ import { BarcodeScanner, DetectedBarcode } from 'react-barcode-scanner'
 import django from 'django'
 
 import { BarcodeDetector, prepareZXingModule } from 'barcode-detector/ponyfill'
+import { CameraError, CameraErrorType } from './components/CameraError'
+import { CameraLoader } from './components/CameraLoader'
 
 const translated = {
   advanced: django.gettext('Advanced'),
   helptext: django.gettext(
     "Choose the type of barcode you want to scan, sometimes this can help if scanning doesn't work."
   ),
-  cameraError: django.gettext('Camera access denied'),
-  cameraErrorHint: django.gettext(
-    'Please allow camera access in your browser settings, or ensure you are using HTTPS.'
-  ),
-  httpsRequired: django.gettext('HTTPS required'),
-  httpsRequiredHint: django.gettext(
-    'Camera access requires a secure connection (HTTPS). Please access this page via HTTPS.'
-  ),
-  noCameraFound: django.gettext('No camera found'),
-  noCameraFoundHint: django.gettext(
-    'No camera was detected on this device. Please ensure a camera is connected.'
-  ),
-  unknownError: django.gettext('Scanner error'),
-  unknownErrorHint: django.gettext(
-    'An error occurred while accessing the camera. Please try again.'
-  ),
-  retryButton: django.gettext('Try Again'),
   captureButton: django.gettext('Force Scan'),
   analyzing: django.gettext('Analyzing...'),
   noBarcodeFound: django.gettext('No barcode found in image'),
   manualEntry: django.gettext('Enter Manually'),
-  initializingCamera: django.gettext('Initializing camera...'),
   scannerTip: django.gettext('Hold steady and fill frame with barcode'),
 }
-
-type CameraErrorType = 'permission' | 'https' | 'notfound' | 'unknown' | null
-
-// Get Font Awesome icon class for error type
-const getErrorIcon = (errorType: CameraErrorType): string => {
-  switch (errorType) {
-    case 'permission':
-      return 'fa-video-slash'
-    case 'https':
-      return 'fa-lock'
-    case 'notfound':
-      return 'fa-camera'
-    default:
-      return 'fa-triangle-exclamation'
-  }
-}
-
-const CameraError = ({ errorType, onRetry }: { errorType: CameraErrorType; onRetry: () => void }) => {
-  let title = translated.unknownError
-  let message = translated.unknownErrorHint
-
-  if (errorType === 'permission') {
-    title = translated.cameraError
-    message = translated.cameraErrorHint
-  } else if (errorType === 'https') {
-    title = translated.httpsRequired
-    message = translated.httpsRequiredHint
-  } else if (errorType === 'notfound') {
-    title = translated.noCameraFound
-    message = translated.noCameraFoundHint
-  }
-
-  const iconClass = getErrorIcon(errorType)
-  const isNotFound = errorType === 'notfound'
-
-  return (
-    <div className="camera-error" role="alert" aria-live="assertive">
-      <div className={`camera-error__icon-container camera-error__icon-container--${errorType || 'unknown'}`}>
-        <i className={`fa-solid ${iconClass}${isNotFound ? ' camera-error__icon--crossed' : ''}`} aria-hidden="true"></i>
-      </div>
-      <h3 className="camera-error__title">{title}</h3>
-      <p className="camera-error__message">{message}</p>
-      {errorType !== 'https' && (
-        <button className="camera-error__retry" onClick={onRetry}>
-          {translated.retryButton}
-        </button>
-      )}
-    </div>
-  )
-}
-
-// Camera loading component shown during initialization
-const CameraLoader = () => (
-  <div className="camera-loader" role="status" aria-live="polite">
-    <div className="camera-loader__icon-container">
-      <i className="fa-solid fa-camera" aria-hidden="true"></i>
-    </div>
-    <div className="camera-loader__spinner" aria-hidden="true"></div>
-    <p className="camera-loader__text">{translated.initializingCamera}</p>
-  </div>
-)
 
 /**
  * Preprocess an image for better barcode detection.
@@ -222,6 +145,10 @@ const Scanner = () => {
     if (barcodes.length > 0) {
       setScanSuccess(true)
       setStatusMessage(`Barcode found: ${barcodes[0].rawValue}`)
+      // Haptic feedback on successful scan
+      if ('vibrate' in navigator) {
+        navigator.vibrate(200)
+      }
       // Brief delay to show success animation
       setTimeout(() => {
         window.location.href = '/wine/scan/' + barcodes[0].rawValue
@@ -305,6 +232,10 @@ const Scanner = () => {
         // Barcode found - show success and redirect
         setScanSuccess(true)
         setStatusMessage(`Barcode found: ${result.barcode}`)
+        // Haptic feedback on successful scan
+        if ('vibrate' in navigator) {
+          navigator.vibrate(200)
+        }
         setTimeout(() => {
           window.location.href = '/wine/scan/' + result.barcode
         }, 300)

@@ -21,7 +21,11 @@ module.exports = {
         './node_modules/@fortawesome/fontawesome-free/css/solid.css',
         './wine_cellar/assets/js/theme_toggle.ts',
         './wine_cellar/assets/js/form_loading.ts',
+        './wine_cellar/assets/js/dropdown_toggle.ts',
       ],
+    },
+    storage_view_toggle: {
+      import: ['./wine_cellar/assets/js/storage_view_toggle.ts'],
     },
     tom_select: {
       import: ['./wine_cellar/assets/js/init_tom_select.ts'],

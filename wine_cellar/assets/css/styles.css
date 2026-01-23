@@ -28,7 +28,7 @@
   --darker-gray: #2d3748;
   --border-color: #e2e8f0;
   
-  /* Wine type colors */
+  /* Wine type colors - primary */
   --wine-red: #8b1a32;
   --wine-white: #f5e6a3;
   --wine-rose: #ffb6c1;
@@ -36,6 +36,15 @@
   --wine-dessert: #d4a574;
   --wine-fortified: #8b4513;
   --wine-orange: #ff8c00;
+
+  /* Wine type colors - darker variants (for borders/hover) */
+  --wine-red-dark: #5a1020;
+  --wine-white-dark: #d4c580;
+  --wine-rose-dark: #e8959f;
+  --wine-sparkling-dark: #3a7bc8;
+  --wine-dessert-dark: #b8895f;
+  --wine-fortified-dark: #6b350f;
+  --wine-orange-dark: #d47500;
   
   /* Status colors */
   --status-ready: #019603;
@@ -44,6 +53,13 @@
   --status-danger: #c53030;
   --status-warning: #d69e2e;
   --status-success: #019603;
+
+  /* Extended color palette for UI components */
+  --yellow-500: #d69e2e;
+  --yellow-600: #c48c1a;
+  --red-600: #c53030;
+  --orange-600: #dd6b20;
+  --gray-900: #1a1a1a;
 
   /* Alert colors */
   --alert-success-bg: #d4edda;
@@ -97,6 +113,17 @@
   --container-box-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
+
+  /* Breakpoints (for reference - CSS custom properties can't be used in media queries) */
+  /* --breakpoint-sm: 35.5em;  568px */
+  /* --breakpoint-md: 48em;    768px */
+  /* --breakpoint-lg: 64em;    1024px */
+
+  /* Z-index scale */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal: 1000;
+  --z-tooltip: 1100;
 }
 
 /* Dark mode */

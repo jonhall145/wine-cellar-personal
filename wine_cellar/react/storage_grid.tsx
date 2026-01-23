@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 // @ts-ignore
 import django from 'django';
@@ -431,8 +431,8 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
     
     if (!sourceStorage) return <div className="storage-grid__error">{translated.storageNotFound}</div>;
     
-    // Build grid helper
-    const buildGrid = (storage: StorageData): CellData[][] => {
+    // Build grid helper - memoized to prevent unnecessary recalculations
+    const buildGrid = useCallback((storage: StorageData): CellData[][] => {
         const grid: CellData[][] = [];
         for (let row = 1; row <= storage.rows; row++) {
             const rowCells: CellData[] = [];
@@ -447,10 +447,11 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
             grid.push(rowCells);
         }
         return grid;
-    };
-    
-    const sourceGrid = buildGrid(sourceStorage);
-    const targetGrid = targetStorage ? buildGrid(targetStorage) : [];
+    }, []);
+
+    // Memoize grid computations to prevent rebuilding on every render
+    const sourceGrid = useMemo(() => buildGrid(sourceStorage), [buildGrid, sourceStorage]);
+    const targetGrid = useMemo(() => targetStorage ? buildGrid(targetStorage) : [], [buildGrid, targetStorage]);
     
     // Render a single grid pane
     const renderGridPane = (storage: StorageData, grid: CellData[][], isSource: boolean) => (

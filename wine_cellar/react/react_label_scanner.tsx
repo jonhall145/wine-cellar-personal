@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 // @ts-ignore
 import django from 'django';
+import { CameraError, CameraErrorType } from './components/CameraError';
 
 // Compression settings
 const MAX_DIMENSION = 2048; // Max width or height in pixels
@@ -13,52 +14,9 @@ const translated = {
     usePhotoButton: django.gettext('Use This Photo'),
     nextPhotoButton: django.gettext('Next Photo'),
     submitAllButton: django.gettext('Process All Images'),
-    cameraError: django.gettext('Camera access denied'),
-    cameraErrorHint: django.gettext('Please allow camera access in your browser settings.'),
-    httpsRequired: django.gettext('HTTPS required'),
-    httpsRequiredHint: django.gettext('Camera access requires HTTPS.'),
-    noCameraFound: django.gettext('No camera found'),
-    noCameraFoundHint: django.gettext('No camera detected on this device.'),
-    unknownError: django.gettext('Scanner error'),
-    unknownErrorHint: django.gettext('An error occurred while accessing the camera.'),
-    retryButton: django.gettext('Try Again'),
     instructionsBarcode: django.gettext('1/3: Position the barcode in the frame and tap to capture'),
     instructionsBack: django.gettext('2/3: Position the back label in the frame and tap to capture'),
     instructionsFront: django.gettext('3/3: Position the front label in the frame and tap to capture'),
-};
-
-interface CameraErrorProps {
-    errorType: 'permission' | 'https' | 'notfound' | 'unknown';
-    onRetry: () => void;
-}
-
-const CameraError: React.FC<CameraErrorProps> = ({ errorType, onRetry }) => {
-    let title = translated.unknownError;
-    let message = translated.unknownErrorHint;
-
-    if (errorType === 'permission') {
-        title = translated.cameraError;
-        message = translated.cameraErrorHint;
-    } else if (errorType === 'https') {
-        title = translated.httpsRequired;
-        message = translated.httpsRequiredHint;
-    } else if (errorType === 'notfound') {
-        title = translated.noCameraFound;
-        message = translated.noCameraFoundHint;
-    }
-
-    return (
-        <div className="camera-error">
-            <div className="camera-error__icon">⚠️</div>
-            <h3 className="camera-error__title">{title}</h3>
-            <p className="camera-error__message">{message}</p>
-            {errorType !== 'https' && (
-                <button className="camera-error__retry" onClick={onRetry}>
-                    {translated.retryButton}
-                </button>
-            )}
-        </div>
-    );
 };
 
 const LabelScanner: React.FC = () => {
@@ -68,7 +26,7 @@ const LabelScanner: React.FC = () => {
     const [capturedImages, setCapturedImages] = useState<string[]>([]);
     const [currentStep, setCurrentStep] = useState<number>(0); // 0=barcode, 1=front, 2=back
     const [currentCapture, setCurrentCapture] = useState<string | null>(null);
-    const [cameraError, setCameraError] = useState<'permission' | 'https' | 'notfound' | 'unknown' | null>(null);
+    const [cameraError, setCameraError] = useState<CameraErrorType>(null);
     const [retryKey, setRetryKey] = useState(0);
 
     const stepInstructions = [
