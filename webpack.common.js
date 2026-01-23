@@ -64,6 +64,12 @@ module.exports = {
   externals: {
     django: 'django',
   },
+  cache: {
+    type: 'filesystem',
+    buildDependencies: {
+      config: [__filename],
+    },
+  },
   module: {
     rules: [
       {
@@ -71,6 +77,7 @@ module.exports = {
         exclude: /node_modules\/.*/, // exclude most dependencies
         loader: 'babel-loader',
         options: {
+          cacheDirectory: true,
           presets: ['@babel/preset-env', '@babel/preset-react'].map(
             require.resolve
           ),
@@ -82,7 +89,12 @@ module.exports = {
       },
       {
         test: /\.tsx?$/,
-        use: 'ts-loader',
+        use: {
+          loader: 'ts-loader',
+          options: {
+            transpileOnly: true,
+          },
+        },
         exclude: /node_modules/,
       },
       {
