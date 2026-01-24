@@ -422,16 +422,8 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
         return () => document.removeEventListener('touchstart', handleDocumentTouch);
     }, [tooltip]);
 
-    if (loading) return <div className="storage-grid__loading">{translated.loading}</div>;
-    if (error) return <div className="storage-grid__error">Error: {error}</div>;
-    if (!data) return <div className="storage-grid__empty">{translated.noStorageData}</div>;
-    
-    const sourceStorage = data.storages.find(s => s.id === sourceStorageId);
-    const targetStorage = data.storages.find(s => s.id === targetStorageId);
-    
-    if (!sourceStorage) return <div className="storage-grid__error">{translated.storageNotFound}</div>;
-    
     // Build grid helper - memoized to prevent unnecessary recalculations
+    // Must be defined before conditional returns to follow Rules of Hooks
     const buildGrid = useCallback((storage: StorageData): CellData[][] => {
         const grid: CellData[][] = [];
         for (let row = 1; row <= storage.rows; row++) {
@@ -449,9 +441,19 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
         return grid;
     }, []);
 
-    // Memoize grid computations to prevent rebuilding on every render
-    const sourceGrid = useMemo(() => buildGrid(sourceStorage), [buildGrid, sourceStorage]);
+    // Find storages (may be null/undefined if data not loaded yet)
+    const sourceStorage = data?.storages.find(s => s.id === sourceStorageId);
+    const targetStorage = data?.storages.find(s => s.id === targetStorageId);
+
+    // Memoize grid computations - hooks must be called unconditionally
+    const sourceGrid = useMemo(() => sourceStorage ? buildGrid(sourceStorage) : [], [buildGrid, sourceStorage]);
     const targetGrid = useMemo(() => targetStorage ? buildGrid(targetStorage) : [], [buildGrid, targetStorage]);
+
+    // Early returns after all hooks
+    if (loading) return <div className="storage-grid__loading">{translated.loading}</div>;
+    if (error) return <div className="storage-grid__error">Error: {error}</div>;
+    if (!data) return <div className="storage-grid__empty">{translated.noStorageData}</div>;
+    if (!sourceStorage) return <div className="storage-grid__error">{translated.storageNotFound}</div>;
     
     // Render a single grid pane
     const renderGridPane = (storage: StorageData, grid: CellData[][], isSource: boolean) => (
