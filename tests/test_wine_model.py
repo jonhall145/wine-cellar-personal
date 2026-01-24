@@ -50,7 +50,7 @@ def test_get_average_price_with_currency(user, wine_factory, storage_item_factor
 
     avg = Decimal("15.00")
     currency = settings.CURRENCY_SYMBOLS.get("EUR")
-    expected = f"{number_format(avg, use_l10n=True)}{currency}"
+    expected = f"{currency}{number_format(avg, use_l10n=True)}"
 
     assert wine.get_average_price_with_currency == expected
 
@@ -70,7 +70,7 @@ def test_get_average_ignores_null_prices(user, wine_factory, storage_item_factor
 
     avg = Decimal("20.00")
     currency = settings.CURRENCY_SYMBOLS.get("EUR")
-    expected = f"{number_format(avg, use_l10n=True)}{currency}"
+    expected = f"{currency}{number_format(avg, use_l10n=True)}"
     assert wine.get_average_price_with_currency == expected
 
 
@@ -94,5 +94,5 @@ def test_get_average_respects_user_currency(user, wine_factory, storage_item_fac
     us = UserSettings.objects.create(user=user, currency="USD")
     avg = Decimal("15.00")
     currency = settings.CURRENCY_SYMBOLS.get(us.currency)
-    expected = f"{number_format(avg, use_l10n=True)}{currency}"
+    expected = f"{currency}{number_format(avg, use_l10n=True)}"
     assert wine.get_average_price_with_currency == expected

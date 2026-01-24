@@ -295,7 +295,7 @@ class Wine(UserContentModel):
             getattr(user_settings, "currency", "EUR"), "€"
         )
         formatted_price = number_format(self.price, use_l10n=True)
-        return f"{formatted_price}{currency}"
+        return f"{currency}{formatted_price}"
 
     @property
     def get_rrp_with_currency(self):
@@ -304,7 +304,7 @@ class Wine(UserContentModel):
             getattr(user_settings, "currency", "EUR"), "€"
         )
         formatted_price = number_format(self.rrp, use_l10n=True)
-        return f"{formatted_price}{currency}"
+        return f"{currency}{formatted_price}"
 
     @property
     def get_average_price_with_currency(self):
@@ -320,7 +320,7 @@ class Wine(UserContentModel):
             return None
         avg_price = avg_price.quantize(Decimal("0.00"))
         formatted_price = number_format(avg_price, use_l10n=True)
-        return f"{formatted_price}{currency}"
+        return f"{currency}{formatted_price}"
 
     @property
     def get_food_pairings(self):
