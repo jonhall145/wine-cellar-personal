@@ -763,6 +763,36 @@ a:hover {
 .mt-12 { margin-top: var(--spacing-lg); }
 .mb-12 { margin-bottom: var(--spacing-lg); }
 
+/* Text alignment utilities */
+.text-right { text-align: right; }
+
+/* Filter button group */
+.filter-button-group {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+/* Per-page selector */
+.per-page-selector {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.per-page-selector__label {
+  font-size: var(--font-sm);
+  color: var(--text-color-gray);
+}
+
+.per-page-selector__select {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+}
+
 /* Mobile touch targets */
 @media screen and (max-width: 48em) {
   .pure-form input,

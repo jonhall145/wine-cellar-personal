@@ -22,16 +22,16 @@
                             <thead>
                                 <tr>
                                     <th>{% translate "Country" %}</th>
-                                    <th style="text-align: right;">{% translate "Bottles" %}</th>
-                                    <th style="text-align: right;">{% translate "Value" %}</th>
+                                    <th class="text-right">{% translate "Bottles" %}</th>
+                                    <th class="text-right">{% translate "Value" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for country, data in by_country.items %}
                                     <tr>
                                         <td>{{ country }}</td>
-                                        <td style="text-align: right;">{{ data.count }}</td>
-                                        <td style="text-align: right;">{{ currency }}{{ data.value }}</td>
+                                        <td class="text-right">{{ data.count }}</td>
+                                        <td class="text-right">{{ currency }}{{ data.value }}</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -48,16 +48,16 @@
                             <thead>
                                 <tr>
                                     <th>{% translate "Type" %}</th>
-                                    <th style="text-align: right;">{% translate "Bottles" %}</th>
-                                    <th style="text-align: right;">{% translate "Value" %}</th>
+                                    <th class="text-right">{% translate "Bottles" %}</th>
+                                    <th class="text-right">{% translate "Value" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for wine_type, data in by_type.items %}
                                     <tr>
                                         <td>{{ wine_type }}</td>
-                                        <td style="text-align: right;">{{ data.count }}</td>
-                                        <td style="text-align: right;">{{ currency }}{{ data.value }}</td>
+                                        <td class="text-right">{{ data.count }}</td>
+                                        <td class="text-right">{{ currency }}{{ data.value }}</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
