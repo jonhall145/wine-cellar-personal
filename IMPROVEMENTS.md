@@ -378,6 +378,25 @@ reminder_enabled = models.BooleanField(default=True)
 
 ---
 
+## User-Reported Issues (Bugs & UX)
+
+Issues collected from user testing sessions:
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| Currency displays as "X£" instead of "£X" | Fixed | Commit 06edecd |
+| Storage dropdowns don't respect reordered storage lists | Open | |
+| Country rarely autofills correctly (TomSelect issue?) | Open | |
+| Clear and filter buttons misaligned in wine filter page | Fixed | Commit 649b824 |
+| Maps should show wines in region, not just country | Open | Would require region data |
+| Star rating in wine add is free text, should be dropdown | Open | Like filter/bottle edit |
+| Option to display more wines per page | Fixed | Added pagination options |
+| Wines with no data should sort to end of date queries | Open | |
+| "More" button on left does nothing | Open | Investigate |
+| Map: outline/choropleth format | Fixed | Commit 7d16310 |
+
+---
+
 ## Implementation Timeline
 
 | Phase | Items | Effort |
