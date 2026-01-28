@@ -1,23 +1,52 @@
+# Database
 db.sqlite3
-.coverage
 test_db.sqlite3
+db.sqlite3.backup*
+
+# Python
 venv/
-.idea/
 *.pyc
-node_modules/
-static/
-build/
 *.egg-info/
+.coverage
+
+# Node
+node_modules/
+build/
+
+# Django
+staticfiles/
+wine_cellar/static/
 media/
-.env.dev
-.env.prod.local
 *.mo
-autopo.ooo
+
+# Environment files
+.env*
+!.env.example
+
+# IDE
+.idea/
 .vscode/
+
+# Logs
+*.log
 nohup.out
-gunicorn.log
+
+# SSL certificates (generated locally)
 ssl/
-*.png
-*.html
-*.js
+
+# Backups
+*.tar.gz
+*.backup*
+
+# AI assistants
 GEMINI.md
+.claude/
+
+# Temporary test files in root
+/*.png
+/*.html
+/*.js
+
+# Misc
+autopo.ooo
+unwrap_labels/
