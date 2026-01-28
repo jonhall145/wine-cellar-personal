@@ -419,7 +419,18 @@ class WineForm(WineBaseForm):
         self.set_tom_config(name="food_pairings", create=True)
         self.set_tom_config(name="source", create=True)
         self.set_tom_config(name="vineyard", create=True)
-        self.set_tom_config(name="country", max_items=1, max_options=-1, search=True)
+
+        # Include initial country value in TomSelect config to preserve it
+        # (TomSelect's clear() would otherwise wipe pre-filled values from label scan)
+        initial_country = self.initial.get("country")
+        country_items = [initial_country] if initial_country else []
+        self.set_tom_config(
+            name="country",
+            items=country_items,
+            max_items=1,
+            max_options=-1,
+            search=True,
+        )
 
 
 class WineEditForm(WineBaseForm):

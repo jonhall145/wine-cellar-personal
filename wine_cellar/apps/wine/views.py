@@ -3,6 +3,7 @@ from decimal import Decimal
 from io import BytesIO
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required, login_required
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import connections, transaction
@@ -470,13 +471,18 @@ class WineCreateView(FormView):
                         image_data[2], "scanned_front_label.jpg"
                     )
 
-        self.process_form_data(self.request.user, form.cleaned_data)
+        wine, created = self.process_form_data(self.request.user, form.cleaned_data)
 
         # Clear scanned label data from session after successful save
         if "scanned_label" in self.request.session:
             del self.request.session["scanned_label"]
         if "extraction_result" in self.request.session:
             del self.request.session["extraction_result"]
+
+        if not created:
+            messages.info(
+                self.request, "Wine already exists. Added bottle to your cellar."
+            )
 
         return super().form_valid(form)
 
@@ -510,25 +516,28 @@ class WineCreateView(FormView):
         drink_from = cleaned_data["drink_from"]
         drink_to = cleaned_data["drink_to"]
 
-        wine = Wine(
+        # Use get_or_create to handle duplicate wines gracefully
+        # Unique constraint fields: name, wine_type, abv, size, vintage, country, user
+        wine, created = Wine.objects.get_or_create(
+            name=name,
+            wine_type=wine_type,
             abv=abv,
             size=size,
-            category=category,
-            country=country,
-            subregion=subregion,
-            name=name,
-            barcode=barcode,
-            user=user,
             vintage=vintage,
-            drink_from=drink_from,
-            drink_to=drink_to,
-            wine_type=wine_type,
-            comment=comment,
-            rating=rating,
-            price=price,
-            rrp=rrp,
+            country=country,
+            user=user,
+            defaults={
+                "category": category,
+                "subregion": subregion,
+                "barcode": barcode,
+                "drink_from": drink_from,
+                "drink_to": drink_to,
+                "comment": comment,
+                "rating": rating,
+                "price": price,
+                "rrp": rrp,
+            },
         )
-        wine.save()
 
         wine.vineyard.set(vineyards)
         wine.grapes.set(grapes)
@@ -564,7 +573,7 @@ class WineCreateView(FormView):
                 occasion=occasion,
             )
 
-        return wine
+        return wine, created
 
 
 class WineUpdateView(FormView):

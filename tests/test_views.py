@@ -314,6 +314,42 @@ def test_wine_create_post_valid(client, user):
 
 
 @pytest.mark.django_db
+def test_wine_create_post_duplicate_handled_gracefully(client, user):
+    """Test that adding a duplicate wine doesn't cause a 500 error."""
+    client.force_login(user)
+
+    data = {
+        "name": "Duplicate Wine",
+        "wine_type": "RE",
+        "category": "DR",
+        "abv": 13.0,
+        "size": "ST",
+        "vintage": 2020,
+        "country": "FR",
+    }
+
+    # First submission should create the wine
+    r = client.post(reverse("wine-add"), data, follow=True)
+    assert r.status_code == HTTPStatus.OK
+    assert Wine.objects.count() == 1
+    first_wine = Wine.objects.first()
+
+    # Second submission with same data should NOT cause 500 error
+    r = client.post(reverse("wine-add"), data, follow=True)
+    assert r.status_code == HTTPStatus.OK  # Should be 200, not 500
+    assertRedirects(response=r, expected_url=reverse("wine-list"))
+
+    # Should still have only one wine (not duplicated)
+    assert Wine.objects.count() == 1
+    assert Wine.objects.first().pk == first_wine.pk
+
+    # Should have info message about wine already existing
+    messages = list(r.context["messages"])
+    assert len(messages) == 1
+    assert "already exists" in messages[0].message.lower()
+
+
+@pytest.mark.django_db
 def test_wine_create_post_single_grape_valid(client, user, grape_factory):
     grape1 = grape_factory()
     grape_factory()
