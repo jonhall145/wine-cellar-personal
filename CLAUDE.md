@@ -206,6 +206,7 @@ The user is a **mobile-first user**. Always:
 - "Any/All" options must have `allowEmptyOption: true` in TomSelect config
 - Mobile Safari has issues with empty-value options - test thoroughly
 - Filter dropdowns should always include an "Any" choice as the default
+- When using `items` to pre-select values, also set `clear=False` or they get wiped
 
 **Aggregate Queries:**
 - Be careful with JOINs in Django querysets that include `.annotate()` - they can cause count/sum values to be multiplied (e.g., "wine count squared" bug)
@@ -230,6 +231,7 @@ For production deployment to meshnet:
 | Issue | Likely Cause | Solution |
 |-------|--------------|----------|
 | Filter "Any" not selectable on mobile | TomSelect config | Add `allowEmptyOption: true` |
+| Pre-filled field value cleared | TomSelect `clear()` | Add `clear=False` to config |
 | Wrong count when filtering | JOIN with aggregate | Use `.distinct()` or subquery |
 | CSS changes not visible | Browser cache | Hard refresh / incognito |
 | Camera not working | Not HTTPS | Use HTTPS server script |

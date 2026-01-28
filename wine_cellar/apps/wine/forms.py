@@ -430,6 +430,7 @@ class WineForm(WineBaseForm):
             max_items=1,
             max_options=-1,
             search=True,
+            clear=False,  # Don't clear - preserves initial value from label scan
         )
 
 
