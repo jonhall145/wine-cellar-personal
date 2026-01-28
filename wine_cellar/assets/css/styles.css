@@ -700,6 +700,28 @@ a:hover {
   color: var(--primary);
 }
 
+/* Mobile dropdown in sidebar - use relative positioning */
+@media screen and (max-width: 47.99em) {
+  .menu__sm .pure-menu-has-children > .pure-menu-children {
+    position: relative;
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+    border-radius: 0;
+    min-width: auto;
+    margin-left: var(--spacing-md);
+  }
+
+  .menu__sm .pure-menu-children .pure-menu-link {
+    color: rgba(255, 255, 255, 0.9);
+    padding-left: var(--spacing-lg);
+  }
+
+  .menu__sm .pure-menu-children .pure-menu-link:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+  }
+}
+
 /* Text utilities */
 .text--danger { color: var(--status-danger); }
 .text--warning { color: var(--status-warning); }

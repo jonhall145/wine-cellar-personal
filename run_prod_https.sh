@@ -114,6 +114,23 @@ start_server() {
         python manage.py collectstatic --no-input
     fi
     
+    # Create superuser if needed
+    echo ""
+    echo "Ensuring superuser exists..."
+    python manage.py shell << PYEOF
+from django.contrib.auth import get_user_model
+import os
+User = get_user_model()
+username = os.environ.get('ADMIN_USER', 'admin')
+email = os.environ.get('ADMIN_USER_EMAIL', 'admin@example.org')
+password = os.environ.get('ADMIN_USER_PASSWORD', 'change_me')
+if not User.objects.filter(username=username).exists():
+    User.objects.create_superuser(username, email, password)
+    print(f'Superuser "{username}" created')
+else:
+    print(f'Superuser "{username}" already exists')
+PYEOF
+    
     # Get external IP and Meshnet info
     EXTERNAL_IP=$(curl -s http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip -H "Metadata-Flavor: Google" 2>/dev/null || echo "your-server-ip")
     MESHNET_HOSTNAME=$(nordvpn meshnet peer list 2>/dev/null | grep "This device:" -A 1 | grep "Hostname:" | awk '{print $2}' || echo "")

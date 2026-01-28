@@ -2,7 +2,7 @@ from datetime import date
 
 import django_filters
 import pycountry
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q
 from django.utils.translation import gettext_lazy as _
 from django_filters import ChoiceFilter, OrderingFilter
 
@@ -129,7 +129,24 @@ class WineFilter(django_filters.FilterSet):
         label=_("Sorting"),
         empty_label=None,
         null_label=None,
+        method="filter_order",
     )
+
+    def filter_order(self, queryset, name, value):
+        """Custom ordering that puts NULL vintages at the end."""
+        if not value:
+            return queryset
+
+        ordering = value[0] if isinstance(value, list) else value
+
+        # Handle vintage ordering with nulls_last
+        if ordering == "-vintage":
+            return queryset.order_by(F("vintage").desc(nulls_last=True))
+        elif ordering == "vintage":
+            return queryset.order_by(F("vintage").asc(nulls_last=True))
+        else:
+            # For other orderings, use default behavior
+            return queryset.order_by(ordering)
 
     def filter_stock(self, queryset, name, value):
         if value == "1":

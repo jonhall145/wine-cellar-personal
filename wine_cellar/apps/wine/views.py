@@ -243,12 +243,13 @@ class WineCreateView(FormView):
 
                 # Handle both single and multiple images
                 image_data = scanned_label.get("data")
+                user = self.request.user
                 if isinstance(image_data, list):
                     # Multiple images
-                    result = extractor.extract_from_images(image_data)
+                    result = extractor.extract_from_images(image_data, user=user)
                 else:
                     # Legacy single image (backwards compatibility)
-                    result = extractor.extract_from_image(image_data)
+                    result = extractor.extract_from_image(image_data, user=user)
 
                 # Store extraction metadata for template display
                 self.request.session["extraction_result"] = {
@@ -697,6 +698,25 @@ class WineListView(FilterView):
     context_object_name = "wines"
     filterset_class = WineFilter
     paginate_by = 10
+    per_page_options = [10, 25, 50, 100]
+
+    def get_paginate_by(self, queryset):
+        """Allow user to select number of items per page via URL parameter."""
+        per_page = self.request.GET.get("per_page")
+        if per_page:
+            try:
+                per_page = int(per_page)
+                if per_page in self.per_page_options:
+                    return per_page
+            except (ValueError, TypeError):
+                pass
+        return self.paginate_by
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["per_page_options"] = self.per_page_options
+        context["current_per_page"] = self.get_paginate_by(self.object_list)
+        return context
 
     def get_queryset(self):
         qs = (
@@ -754,7 +774,12 @@ class WineMapView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        wines = Wine.objects.filter(user=self.request.user)
+        # Only show wines that are currently in stock (have non-deleted storage items)
+        wines = Wine.objects.filter(
+            user=self.request.user,
+            storageitem__isnull=False,
+            storageitem__deleted=False,
+        ).distinct()
 
         context.update(
             {
@@ -1026,21 +1051,27 @@ class CellarValueView(TemplateView):
 
             # Country stats
             if country not in wines_by_country:
-                wines_by_country[country] = {"count": 0, "value": Decimal("0.00")}
+                wines_by_country[country] = {"count": 0, "value": Decimal("0")}
             wines_by_country[country]["count"] += 1
             if item.price:
                 wines_by_country[country]["value"] += item.price
 
             # Type stats (same loop)
             if wine_type not in wines_by_type:
-                wines_by_type[wine_type] = {"count": 0, "value": Decimal("0.00")}
+                wines_by_type[wine_type] = {"count": 0, "value": Decimal("0")}
             wines_by_type[wine_type]["count"] += 1
             if item.price:
                 wines_by_type[wine_type]["value"] += item.price
 
+        # Format values as integers (no pence)
+        for data in wines_by_country.values():
+            data["value"] = int(data["value"])
+        for data in wines_by_type.values():
+            data["value"] = int(data["value"])
+
         context.update(
             {
-                "total_value": number_format(total_value, use_l10n=True),
+                "total_value": int(total_value),
                 "total_bottles": total_bottles,
                 "currency": currency,
                 "by_country": wines_by_country,
@@ -1480,7 +1511,7 @@ def extract_wine_vision_ajax(request):
 
         # Step 2: No barcode match, use AI vision extraction
         extractor = WineVisionExtractor()
-        result = extractor.extract_from_images(images)
+        result = extractor.extract_from_images(images, user=request.user)
 
         # Include any barcodes found (even if no match) in the result
         response_data = {

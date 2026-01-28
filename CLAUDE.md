@@ -15,6 +15,17 @@ Claude has access to browser automation tools for inspecting and testing UI:
 
 - **Puppeteer** - Headless Chrome automation (globally installed)
 
+### CLI Testing Tools
+
+- **httpie** (`http`) - Human-friendly HTTP client for API testing
+- **jq** - JSON processor for parsing API responses
+- **litecli** - SQLite client with autocomplete
+- **pgcli** - PostgreSQL client with autocomplete
+- **toolong** (`tl`) - Terminal log viewer with live tail
+- **htop** - Interactive process viewer
+- **ncdu** - Disk usage analyzer
+- **imagemagick** (`convert`) - Image processing
+
 ### Usage Examples
 
 ```javascript
@@ -125,6 +136,27 @@ For detailed documentation, see:
 - [Models](docs/models.md)
 - [API Reference](docs/api.md)
 
+## Custom Skills (Slash Commands)
+
+These skills are available for common tasks:
+
+| Skill | Description |
+|-------|-------------|
+| `/server [cmd]` | Manage production server (start/stop/restart/status/deploy) |
+| `/test [cmd]` | Run tests (all/unit/ui/api/db/lint/quick) |
+| `/ui-check [page]` | Browser automation UI testing |
+| `/api-test [endpoint]` | API endpoint testing with httpie |
+| `/db-check [cmd]` | Database integrity and health checks |
+
+### Examples:
+```
+/server restart     # Restart production server
+/test all           # Run all tests in parallel
+/ui-check mobile    # Test mobile viewport rendering
+/api-test auth      # Test authentication flow
+/db-check stats     # Show database statistics
+```
+
 ## Development Commands
 
 ```bash
@@ -154,6 +186,7 @@ make fixtures   # Load sample data
 5. **Map tiles require internet access** - expect fetch errors in isolated environments
 6. **Only update jonhall145 repos** - Do not create PRs to upstream repos (the-broke-sommeliers). Only push to origin (jonhall145)
 7. **Avoid full rebuilds for tests** - Tests should not require a full frontend rebuild as this is slow and causes timeout issues. Use `make pytest` directly for backend tests.
+8. **Never change user passwords permanently** - If you need to reset a password for testing, always revert it back to the original before finishing. Do not leave changed passwords.
 
 ## Lessons Learned
 
@@ -207,3 +240,17 @@ For production deployment to meshnet:
 - **Commit style**: Short, lowercase messages describing the change
 - **Stage-commit-push**: User often requests these as a single action
 - **Lint before commit**: Always run `make lint` and fix issues before committing
+- **Save conversations**: Always save a copy of the conversation to `.claude/logs/` for later review
+
+### Conversation Logging
+
+At the end of each session or when significant work is completed, save a summary to:
+```
+.claude/logs/YYYY-MM-DD_summary.md
+```
+
+Include:
+- Date and brief description of work done
+- Key changes made (files modified, features added, bugs fixed)
+- Any issues encountered and how they were resolved
+- Pending tasks or follow-ups

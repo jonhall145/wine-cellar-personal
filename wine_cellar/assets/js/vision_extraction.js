@@ -168,23 +168,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (input) {
                     if (input.tagName === 'SELECT') {
                         // Handle select fields
-                        if (Array.isArray(data[apiField])) {
-                            // Multi-select (like TomSelect)
+                        const value = data[apiField];
+
+                        // Function to set TomSelect value with retry logic
+                        const setSelectValue = (attempts = 0) => {
                             if (input.tomselect) {
-                                input.tomselect.setValue(data[apiField]);
+                                // TomSelect is ready
+                                if (Array.isArray(value)) {
+                                    input.tomselect.setValue(value);
+                                } else {
+                                    // For country field, value should be ISO code like "FR"
+                                    input.tomselect.setValue(value);
+                                }
+                                console.log(`Set ${formField} to:`, value);
+                            } else if (attempts < 5) {
+                                // TomSelect not ready yet, retry after short delay
+                                setTimeout(() => setSelectValue(attempts + 1), 100);
                             } else {
-                                data[apiField].forEach(val => {
-                                    const option = Array.from(input.options).find(opt => opt.value === val);
-                                    if (option) option.selected = true;
-                                });
+                                // Fallback to native select
+                                if (Array.isArray(value)) {
+                                    value.forEach(val => {
+                                        const option = Array.from(input.options).find(opt => opt.value === val);
+                                        if (option) option.selected = true;
+                                    });
+                                } else {
+                                    input.value = value;
+                                }
+                                console.warn(`TomSelect not found for ${formField}, used native select`);
                             }
-                        } else {
-                            // Single select
-                            input.value = data[apiField];
-                            if (input.tomselect) {
-                                input.tomselect.setValue(data[apiField]);
-                            }
-                        }
+                        };
+
+                        setSelectValue();
                     } else {
                         // Handle text/number inputs
                         input.value = data[apiField];

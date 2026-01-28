@@ -13,6 +13,7 @@ function init() {
         <MapWithMarkers
           {...props.map}
           wines={props.wines}
+          countriesWithWines={props.countriesWithWines}
           id="display-point"
         />
       </React.StrictMode>

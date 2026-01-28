@@ -10,7 +10,7 @@
     <div class="pure-g">
         <div class="pure-u-1">
             <div class="cellar-value__summary mb-12">
-                <h2>{% translate "Total Value" %}: {{ total_value }}{{ currency }}</h2>
+                <h2>{% translate "Total Value" %}: {{ currency }}{{ total_value }}</h2>
                 <p>{% translate "Total Bottles" %}: {{ total_bottles }}</p>
             </div>
 
@@ -22,16 +22,16 @@
                             <thead>
                                 <tr>
                                     <th>{% translate "Country" %}</th>
-                                    <th>{% translate "Bottles" %}</th>
-                                    <th>{% translate "Value" %}</th>
+                                    <th style="text-align: right;">{% translate "Bottles" %}</th>
+                                    <th style="text-align: right;">{% translate "Value" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for country, data in by_country.items %}
                                     <tr>
                                         <td>{{ country }}</td>
-                                        <td>{{ data.count }}</td>
-                                        <td>{{ data.value }}{{ currency }}</td>
+                                        <td style="text-align: right;">{{ data.count }}</td>
+                                        <td style="text-align: right;">{{ currency }}{{ data.value }}</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -48,16 +48,16 @@
                             <thead>
                                 <tr>
                                     <th>{% translate "Type" %}</th>
-                                    <th>{% translate "Bottles" %}</th>
-                                    <th>{% translate "Value" %}</th>
+                                    <th style="text-align: right;">{% translate "Bottles" %}</th>
+                                    <th style="text-align: right;">{% translate "Value" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for wine_type, data in by_type.items %}
                                     <tr>
                                         <td>{{ wine_type }}</td>
-                                        <td>{{ data.count }}</td>
-                                        <td>{{ data.value }}{{ currency }}</td>
+                                        <td style="text-align: right;">{{ data.count }}</td>
+                                        <td style="text-align: right;">{{ currency }}{{ data.value }}</td>
                                     </tr>
                                 {% endfor %}
                             </tbody>

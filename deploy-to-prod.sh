@@ -134,22 +134,22 @@ success "Static files collected"
 
 # Step 5: Restart production server (unless build-only)
 if [ "$BUILD_ONLY" = false ]; then
-    log "Step 5/5: Restarting production server..."
+    log "Step 5/5: Starting/restarting production server..."
 
     # Check if production server is running
     if [ -f "/tmp/wine_cellar_gunicorn_https.pid" ] && kill -0 $(cat /tmp/wine_cellar_gunicorn_https.pid) 2>/dev/null; then
         echo "    Restarting HTTPS server..."
-        ./run_prod_https.sh restart
+        sudo ./run_prod_https.sh restart
+        success "HTTPS server restarted"
     elif [ -f "/tmp/wine_cellar_gunicorn.pid" ] && kill -0 $(cat /tmp/wine_cellar_gunicorn.pid) 2>/dev/null; then
         echo "    Restarting HTTP server..."
         ./run_prod_local.sh restart
+        success "HTTP server restarted"
     else
-        warn "No production server running. Start manually with:"
-        echo "    ./run_prod_https.sh start"
-        echo "    or"
-        echo "    ./run_prod_local.sh start"
+        echo "    No server running. Starting HTTPS server..."
+        sudo ./run_prod_https.sh start
+        success "HTTPS server started"
     fi
-    success "Server restarted"
 else
     warn "Step 5/5: Skipping server restart (--build-only flag)"
 fi

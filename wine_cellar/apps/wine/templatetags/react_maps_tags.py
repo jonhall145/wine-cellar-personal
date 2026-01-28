@@ -32,8 +32,14 @@ def react_map(wines):
         + 'target="_blank">OpenStreetMap</a>',
         "baseUrl": settings.MAP_BASEURL,
     }
-    wines = [wine_to_json(w) for w in wines]
-    attributes = {"map": map_settings, "wines": wines}
+    # Get unique country codes from wines currently in stock
+    countries_with_wines = list(set(w.country for w in wines if w.country))
+    wines_json = [wine_to_json(w) for w in wines]
+    attributes = {
+        "map": map_settings,
+        "wines": wines_json,
+        "countriesWithWines": countries_with_wines,
+    }
 
     return format_html(
         '<div id="wine_map" ' 'data-attributes="{attributes}"></div>',

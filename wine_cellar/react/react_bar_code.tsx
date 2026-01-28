@@ -16,7 +16,7 @@ const translated = {
   captureButton: django.gettext('Force Scan'),
   analyzing: django.gettext('Analyzing...'),
   noBarcodeFound: django.gettext('No barcode found in image'),
-  manualEntry: django.gettext('Enter Manually'),
+  labelScan: django.gettext('Capture Label Photos'),
   scannerTip: django.gettext('Hold steady and fill frame with barcode'),
 }
 
@@ -94,7 +94,7 @@ const preprocessImage = (
 }
 
 const Scanner = () => {
-  const [selectedFormat, setSelectedFormat] = useState('any')
+  const [selectedFormat, setSelectedFormat] = useState('')
   const [cameraError, setCameraError] = useState<CameraErrorType>(null)
   const [retryKey, setRetryKey] = useState(0)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -102,7 +102,9 @@ const Scanner = () => {
   const [isInitializing, setIsInitializing] = useState(true)
   const [scanSuccess, setScanSuccess] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string>('')
+  const [useBackCamera, setUseBackCamera] = useState(true)
   const scannerRef = useRef<HTMLDivElement>(null)
+  const hasDetectedRef = useRef(false)
   const defaultFormats = ['ean_13', 'ean_8', 'upc_a', 'code_39', 'itf']
 
   useEffect(() => {
@@ -142,18 +144,19 @@ const Scanner = () => {
   }, [cameraError, isInitializing, retryKey])
 
   const handleCapture = (barcodes: DetectedBarcode[]) => {
-    if (barcodes.length > 0) {
-      setScanSuccess(true)
-      setStatusMessage(`Barcode found: ${barcodes[0].rawValue}`)
-      // Haptic feedback on successful scan
-      if ('vibrate' in navigator) {
-        navigator.vibrate(200)
-      }
-      // Brief delay to show success animation
-      setTimeout(() => {
-        window.location.href = '/wine/scan/' + barcodes[0].rawValue
-      }, 300)
+    // Guard against multiple detections (ref check prevents race conditions from async state updates)
+    if (hasDetectedRef.current || barcodes.length === 0) return
+    hasDetectedRef.current = true
+    setScanSuccess(true)
+    setStatusMessage(`Barcode found: ${barcodes[0].rawValue}`)
+    // Haptic feedback on successful scan
+    if ('vibrate' in navigator) {
+      navigator.vibrate(200)
     }
+    // Brief delay to show success animation
+    setTimeout(() => {
+      window.location.href = '/wine/scan/' + barcodes[0].rawValue
+    }, 300)
   }
 
   const handleError = (error: unknown) => {
@@ -163,6 +166,14 @@ const Scanner = () => {
     if (error instanceof Error) {
       const errorName = error.name
       const errorMessage = error.message.toLowerCase()
+
+      // Handle OverconstrainedError - device doesn't have back camera
+      if (errorName === 'OverconstrainedError' || errorMessage.includes('overconstrained')) {
+        console.warn('Back camera not available, falling back to any camera')
+        setUseBackCamera(false)
+        setRetryKey((prev) => prev + 1)
+        return
+      }
 
       if (errorName === 'NotAllowedError' || errorMessage.includes('permission')) {
         setCameraError('permission')
@@ -187,7 +198,7 @@ const Scanner = () => {
   }
 
   const captureAndAnalyze = useCallback(async () => {
-    if (!scannerRef.current) return
+    if (!scannerRef.current || hasDetectedRef.current) return
 
     // Find the video element within the scanner
     const video = scannerRef.current.querySelector('video')
@@ -230,6 +241,7 @@ const Scanner = () => {
 
       if (result.success && result.barcode) {
         // Barcode found - show success and redirect
+        hasDetectedRef.current = true
         setScanSuccess(true)
         setStatusMessage(`Barcode found: ${result.barcode}`)
         // Haptic feedback on successful scan
@@ -290,11 +302,20 @@ const Scanner = () => {
         {isInitializing && <CameraLoader />}
         <BarcodeScanner
           key={retryKey}
+          paused={scanSuccess}
           onCapture={handleCapture}
           onError={handleError}
           options={{
             formats: selectedFormat ? [selectedFormat] : defaultFormats,
-            delay: 200,  // Increased from 100 for better detection
+            delay: 200,
+          }}
+          trackConstraints={useBackCamera ? {
+            facingMode: { exact: 'environment' },
+            width: { min: 1280, ideal: 1920 },
+            height: { min: 720, ideal: 1080 },
+          } : {
+            width: { min: 1280, ideal: 1920 },
+            height: { min: 720, ideal: 1080 },
           }}
         />
         <div className="overlay" aria-hidden="true">
@@ -331,11 +352,11 @@ const Scanner = () => {
           Captures current camera frame and analyzes it for barcodes
         </span>
         <a
-          href="/wine/add/"
+          href="/label-scan/"
           className="pure-button button__secondary"
           style={{ width: '100%', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
         >
-          {translated.manualEntry || 'Enter Manually'}
+          {translated.labelScan || 'Capture Label Photos'}
         </a>
         {analyzeError && (
           <p className="form-error" role="alert">{analyzeError}</p>

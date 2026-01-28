@@ -199,7 +199,7 @@ MEDIA_URL = "media/"
 # Default image for wines without photos
 DEFAULT_WINE_IMAGE = "images/bottle.svg"
 
-MAP_BASEURL = "https://tiles.openfreemap.org/styles/liberty"
+MAP_BASEURL = "https://tiles.openfreemap.org/styles/positron"
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 SITE_URL = os.environ.get("SITE_URL", "http://127.0.0.1:8000")

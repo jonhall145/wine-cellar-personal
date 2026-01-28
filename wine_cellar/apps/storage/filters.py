@@ -55,4 +55,6 @@ class StorageItemFilter(django_filters.FilterSet):
     def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
         super().__init__(data, queryset, request=request, prefix=prefix)
         if request and request.user.is_authenticated:
-            self.filters["storage"].queryset = Storage.objects.filter(user=request.user)
+            self.filters["storage"].queryset = Storage.objects.filter(
+                user=request.user
+            ).order_by("order", "created")

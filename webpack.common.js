@@ -192,6 +192,10 @@ module.exports = {
           from: './wine_cellar/react/maps/country.json',
           to: 'maps/[name][ext]',
         },
+        {
+          from: './wine_cellar/react/maps/countries-boundaries.json',
+          to: 'maps/[name][ext]',
+        },
       ],
     }),
   ],

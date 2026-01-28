@@ -27,13 +27,15 @@
                                     {% include "wine_filter_field.html" %}
                                 {% endfor %}
                             </fieldset>
-                            <a href="?"
-                               role="button"
-                               class="pure-button button__secondary"
-                               aria-label='{% translate "Clear all filters and reset the form" %}'>
-                                {% translate "Clear" %}
-                            </a>
-                            <button type="submit" class="pure-button button__primary">{% translate "Filter" %}</button>
+                            <div style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap;">
+                                <a href="?"
+                                   role="button"
+                                   class="pure-button button__secondary"
+                                   aria-label='{% translate "Clear all filters and reset the form" %}'>
+                                    {% translate "Clear" %}
+                                </a>
+                                <button type="submit" class="pure-button button__primary">{% translate "Filter" %}</button>
+                            </div>
                         </form>
                     </div>
                 </details>
@@ -52,14 +54,26 @@
                         {% include "wine_filter_field.html" %}
                     {% endfor %}
                 </fieldset>
-                <a href="?"
-                   role="button"
-                   class="pure-button button__secondary"
-                   aria-label='{% translate "Clear all filters and reset the form" %}'>{% translate "Clear" %}</a>
-                <button type="submit" class="pure-button button__primary">{% translate "Filter" %}</button>
+                <div style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap;">
+                    <a href="?"
+                       role="button"
+                       class="pure-button button__secondary"
+                       aria-label='{% translate "Clear all filters and reset the form" %}'>{% translate "Clear" %}</a>
+                    <button type="submit" class="pure-button button__primary">{% translate "Filter" %}</button>
+                </div>
             </form>
         </div>
         <div class="pure-u-1 pure-u-sm-15-24 pure-u-md-17-24">
+            {% if wines %}
+            <div class="per-page-selector" style="display: flex; justify-content: flex-end; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm);">
+                <label for="per-page" style="font-size: var(--font-sm); color: var(--text-color-gray);">{% translate "Per page:" %}</label>
+                <select id="per-page" onchange="window.location.href=this.value" style="padding: var(--spacing-xs) var(--spacing-sm); border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);">
+                    {% for option in per_page_options %}
+                        <option value="{% querystring per_page=option page=1 %}" {% if option == current_per_page %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
             <ul class="wine-card__list">
                 {% for wine in wines %}
                     {% include 'wine_card.html' with wine=wine %}

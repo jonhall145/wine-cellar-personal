@@ -155,7 +155,9 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
 
         # Configure storage field for user's storages
         if "storage" in self.fields:
-            self.fields["storage"].queryset = Storage.objects.filter(user=user)
+            self.fields["storage"].queryset = Storage.objects.filter(
+                user=user
+            ).order_by("order", "created")
 
         for field_name, image_type_code in image_fields_map.items():
             field = self.fields.get(field_name)
@@ -333,9 +335,11 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
             " related to this wine."
         ),
     )
-    rating = forms.IntegerField(
+    rating = forms.TypedChoiceField(
         required=False,
-        validators=[MinValueValidator(0), MaxValueValidator(3)],
+        coerce=lambda x: int(x) if x else None,
+        empty_value=None,
+        choices=[("", "-")] + [(i, f"{i} ★" if i else "0") for i in range(4)],
         help_text=_("Rate this wine from 0 to 3 stars."),
     )
     image_front_label = ImageField(
@@ -415,7 +419,7 @@ class WineForm(WineBaseForm):
         self.set_tom_config(name="food_pairings", create=True)
         self.set_tom_config(name="source", create=True)
         self.set_tom_config(name="vineyard", create=True)
-        self.set_tom_config(name="country", max_items=1, max_options=-1)
+        self.set_tom_config(name="country", max_items=1, max_options=-1, search=True)
 
 
 class WineEditForm(WineBaseForm):
@@ -564,9 +568,11 @@ class DrinkRecordForm(forms.Form):
         widget=forms.Textarea,
         help_text=_("Your tasting notes for this wine."),
     )
-    rating = forms.IntegerField(
+    rating = forms.TypedChoiceField(
         required=False,
-        validators=[MinValueValidator(0), MaxValueValidator(3)],
+        coerce=lambda x: int(x) if x else None,
+        empty_value=None,
+        choices=[("", "-")] + [(i, f"{i} ★" if i else "0") for i in range(4)],
         help_text=_("Rate this wine from 0 to 3 stars."),
     )
     shared_with = forms.CharField(

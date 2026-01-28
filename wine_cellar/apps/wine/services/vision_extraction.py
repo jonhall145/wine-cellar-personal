@@ -465,6 +465,7 @@ class WineVisionExtractor:
 
             # Parse the response
             response_text = response.content[0].text
+            logger.info(f"Vision API response:\n{response_text}")
 
             # Extract structured data from response
             extracted_data = self._parse_claude_response(response_text)
@@ -509,6 +510,9 @@ Please extract the following information if visible in ANY of the images:
 9. **Volume**: Bottle size in ml (e.g., 750, 375, 1500)
 10. **Sweetness**: dry, semi-dry, medium sweet, sweet, or feinherb
 11. **Barcode**: If visible in the barcode image
+12. **Label Bounds**: For each image containing a wine label, estimate the \
+bounding box of the main label as percentages of image dimensions (0-100). \
+Format: x1,y1,x2,y2 where (x1,y1) is top-left and (x2,y2) is bottom-right.
 
 Return your response in this exact format:
 
@@ -525,6 +529,8 @@ VOLUME: [ml as number or "not found"]
 SWEETNESS: [sweetness level or "not found"]
 BARCODE: [barcode or "not found"]
 CONFIDENCE: [high/medium/low]
+LABEL_BOUNDS_FRONT: [x1,y1,x2,y2 or "not found"]
+LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
 ```
 
 **Important**:
@@ -532,6 +538,7 @@ CONFIDENCE: [high/medium/low]
 - If you cannot read or find a field in any image, write "not found"
 - For grapes, use comma-separated list
 - For confidence: "high" if confident, "medium" if some unclear, "low" if hard to read
+- For label bounds, estimate the rectangular area containing the main label
 - Be precise and only extract what you can actually see on the labels
 """
 
@@ -561,6 +568,8 @@ CONFIDENCE: [high/medium/low]
             "volume": r"VOLUME:\s*(.+?)(?:\n|$)",
             "sweetness": r"SWEETNESS:\s*(.+?)(?:\n|$)",
             "barcode": r"BARCODE:\s*(.+?)(?:\n|$)",
+            "label_bounds_front": r"LABEL_BOUNDS_FRONT:\s*(.+?)(?:\n|$)",
+            "label_bounds_back": r"LABEL_BOUNDS_BACK:\s*(.+?)(?:\n|$)",
         }
 
         for field, pattern in patterns.items():
@@ -697,6 +706,34 @@ CONFIDENCE: [high/medium/low]
             # Only return if it looks like a barcode (numbers)
             if re.match(r"^\d+$", value):
                 return value
+            return None
+
+        elif field in ("label_bounds_front", "label_bounds_back"):
+            # Parse bounding box coordinates: x1,y1,x2,y2
+            # Values should be percentages (0-100)
+            bounds_match = re.match(
+                r"(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*"
+                r"(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)",
+                value,
+            )
+            if bounds_match:
+                try:
+                    x1 = float(bounds_match.group(1))
+                    y1 = float(bounds_match.group(2))
+                    x2 = float(bounds_match.group(3))
+                    y2 = float(bounds_match.group(4))
+                    # Validate ranges (0-100) and order (x1<x2, y1<y2)
+                    if (
+                        0 <= x1 <= 100
+                        and 0 <= y1 <= 100
+                        and 0 <= x2 <= 100
+                        and 0 <= y2 <= 100
+                        and x1 < x2
+                        and y1 < y2
+                    ):
+                        return {"x1": x1, "y1": y1, "x2": x2, "y2": y2}
+                except (ValueError, IndexError):
+                    pass
             return None
 
         return value

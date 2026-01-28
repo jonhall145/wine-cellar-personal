@@ -180,7 +180,9 @@ class StorageItemEditForm(forms.Form):
         self.user = kwargs.pop("user")
         self.instance = kwargs.pop("instance", None)
         super().__init__(*args, **kwargs)
-        self.fields["storage"].queryset = Storage.objects.filter(user=self.user)
+        self.fields["storage"].queryset = Storage.objects.filter(
+            user=self.user
+        ).order_by("order", "created")
         user_settings = get_user_settings(self.user)
         self.fields["price"].help_text = _(
             "Enter the price of the bottle in %(currency)s."
