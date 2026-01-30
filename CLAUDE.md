@@ -194,11 +194,21 @@ These patterns are derived from previous development sessions to improve accurac
 
 ### Mobile-First Development
 
-The user is a **mobile-first user**. Always:
-- Test UI changes on mobile viewports
-- Verify touch interactions work (not just click events)
-- Check that dropdowns/selects are usable on mobile (especially TomSelect)
-- Remember HTTPS is required for camera/barcode scanning on mobile
+This is a **mobile-first app**. Mobile testing is mandatory, not optional.
+
+**For ALL UI/CSS changes:**
+1. Always test on mobile viewport FIRST (390x844 or similar)
+2. Use Playwright to take screenshots and measure element sizes
+3. Verify buttons/controls are the same size when they should be (use `boundingBox()`)
+4. Check vertical alignment of side-by-side elements
+5. Ensure touch targets are adequate (minimum 44px)
+
+**Common mobile issues to check:**
+- Buttons using `<a>` vs `<button>` tags render differently - normalize with `display: inline-flex`
+- Flex containers need `align-items: center` for consistent vertical alignment
+- Touch interactions work (not just click events)
+- Dropdowns/selects are usable on mobile (especially TomSelect)
+- HTTPS is required for camera/barcode scanning on mobile
 
 ### Common Pitfalls
 
@@ -236,6 +246,8 @@ For production deployment to meshnet:
 | CSS changes not visible | Browser cache | Hard refresh / incognito |
 | Camera not working | Not HTTPS | Use HTTPS server script |
 | 500 error on forms | Missing form field | Check model changes vs form fields |
+| Buttons different sizes | `<a>` vs `<button>` display | Add `display: inline-flex` to button class |
+| Buttons not vertically aligned | Flex container missing alignment | Add `align-items: center` to parent |
 
 ### Workflow Preferences
 
