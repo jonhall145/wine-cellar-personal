@@ -769,8 +769,18 @@ a:hover {
 /* Filter button group */
 .filter-button-group {
   display: flex;
+  align-items: center;
   gap: var(--spacing-sm);
   flex-wrap: wrap;
+}
+
+/* Reset Pure.css stacked form button styles - needs high specificity */
+.pure-form-stacked .filter-button-group button,
+.pure-form-stacked .filter-button-group a,
+.filter-button-group button.pure-button,
+.filter-button-group a.pure-button {
+  margin-top: 0 !important;
+  font-size: var(--font-sm) !important;
 }
 
 /* Per-page selector */
