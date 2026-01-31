@@ -545,7 +545,13 @@ class WineEditForm(WineBaseForm):
         )
         # Configure appellation TomSelect
         appellation = initial.get("appellation")
-        appellation_items = [appellation.pk] if appellation else []
+        # Handle both int (from model_to_dict) and Appellation object
+        if appellation:
+            appellation_items = [
+                appellation.pk if hasattr(appellation, "pk") else appellation
+            ]
+        else:
+            appellation_items = []
         self.fields["appellation"].widget.attrs.update(
             {
                 "data-tom_config": json.dumps(
