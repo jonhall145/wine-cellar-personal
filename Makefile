@@ -42,6 +42,10 @@ fixtures:
 pytest:
 	$(VIRTUAL_ENV)/bin/py.test --reuse-db
 
+.PHONY: smoke-test
+smoke-test:
+	@./scripts/smoke_test.sh http://localhost:8003
+
 .PHONY: test
 test: pytest
 
