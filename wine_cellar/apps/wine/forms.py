@@ -122,10 +122,12 @@ class WineFormPostCleanMixin:
                     clear=False,
                 )
             appellation = self.cleaned_data.get("appellation")
-            if appellation:
+            if appellation and "appellation" in self.fields:
+                # Handle both Appellation object and string/int (from filters)
+                app_pk = appellation.pk if hasattr(appellation, "pk") else appellation
                 self.set_tom_config(
                     name="appellation",
-                    items=[appellation.pk],
+                    items=[app_pk],
                     max_items=1,
                     max_options=-1,
                     clear=False,
