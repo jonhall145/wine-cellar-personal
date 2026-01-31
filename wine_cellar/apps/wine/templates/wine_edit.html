@@ -2,146 +2,27 @@
 {% load static i18n %}
 {% block extra_css %}
     {{ block.super }}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
     <style>
-        .image-selection {
+        .image-link {
+            display: block;
             margin-bottom: 1.5em;
             padding: 1em;
             background: var(--bg-secondary, #f5f5f5);
             border-radius: 8px;
-        }
-        .image-selection__title {
-            font-size: 0.9em;
-            font-weight: 600;
-            margin-bottom: 0.75em;
-            color: var(--text-secondary, #666);
-        }
-        .image-selection__list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1em;
-        }
-        .image-selection__item {
-            position: relative;
             text-align: center;
         }
-        .image-selection__thumb {
-            width: 80px;
-            height: 80px;
+        .image-link__thumbs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5em;
+            justify-content: center;
+            margin-bottom: 0.75em;
+        }
+        .image-link__thumb {
+            width: 60px;
+            height: 60px;
             object-fit: cover;
             border-radius: 6px;
-            border: 3px solid transparent;
-            cursor: pointer;
-            transition: border-color 0.2s;
-        }
-        .image-selection__thumb:hover {
-            border-color: var(--border-color, #ccc);
-        }
-        .image-selection__thumb--primary {
-            border-color: var(--color-primary, #007bff);
-        }
-        .image-selection__label {
-            display: block;
-            font-size: 0.75em;
-            margin-top: 0.25em;
-            color: var(--text-secondary, #666);
-        }
-        .image-selection__badge {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            background: var(--color-primary, #007bff);
-            color: white;
-            font-size: 0.7em;
-            padding: 2px 6px;
-            border-radius: 10px;
-        }
-        .image-selection__actions {
-            display: flex;
-            gap: 0.25em;
-            margin-top: 0.25em;
-            justify-content: center;
-        }
-        .image-selection__crop-btn {
-            font-size: 0.85em;
-            padding: 8px 12px;
-            min-height: 44px;
-            min-width: 44px;
-            background: var(--bg-primary, #fff);
-            border: 1px solid var(--border-color, #ccc);
-            border-radius: 4px;
-            cursor: pointer;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .image-selection__crop-btn:hover,
-        .image-selection__crop-btn:active {
-            background: var(--bg-secondary, #f5f5f5);
-        }
-        /* Crop modal styles */
-        .crop-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 1000;
-            padding: 1em;
-        }
-        .crop-modal--active {
-            display: flex;
-            flex-direction: column;
-        }
-        .crop-modal__header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5em;
-            color: white;
-        }
-        .crop-modal__title {
-            font-size: 1.1em;
-            font-weight: 600;
-        }
-        .crop-modal__close {
-            font-size: 1.5em;
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-        }
-        .crop-modal__body {
-            flex: 1;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .crop-modal__body img {
-            max-width: 100%;
-            max-height: 100%;
-        }
-        .crop-modal__footer {
-            padding: 1em;
-            display: flex;
-            justify-content: center;
-            gap: 1em;
-        }
-        .crop-modal__btn {
-            padding: 0.5em 1.5em;
-            border-radius: 4px;
-            border: none;
-            cursor: pointer;
-        }
-        .crop-modal__btn--save {
-            background: var(--color-primary, #007bff);
-            color: white;
-        }
-        .crop-modal__btn--cancel {
-            background: var(--bg-secondary, #6c757d);
-            color: white;
         }
     </style>
 {% endblock extra_css %}
@@ -149,151 +30,6 @@
     {{ block.super }}
     <script src="{% static 'tom_select.js' %}" type="module" defer></script>
     <script src="{% static 'image_preview.js' %}" type="module" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            let cropper = null;
-            let currentImageId = null;
-
-            // Primary image selection
-            const imageItems = document.querySelectorAll('.image-selection__thumb');
-            imageItems.forEach(function(img) {
-                img.addEventListener('click', function() {
-                    const imageId = this.dataset.imageId;
-
-                    fetch('/wine/image/' + imageId + '/set-primary/', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': csrfToken,
-                            'Content-Type': 'application/json'
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            document.querySelectorAll('.image-selection__thumb').forEach(function(el) {
-                                el.classList.remove('image-selection__thumb--primary');
-                                const badge = el.parentElement.querySelector('.image-selection__badge');
-                                if (badge) badge.remove();
-                            });
-                            if (data.is_primary) {
-                                img.classList.add('image-selection__thumb--primary');
-                                const badge = document.createElement('span');
-                                badge.className = 'image-selection__badge';
-                                badge.textContent = '{% translate "Primary" %}';
-                                img.parentElement.appendChild(badge);
-                            }
-                        }
-                    });
-                });
-            });
-
-            // Crop modal functionality
-            const modal = document.getElementById('crop-modal');
-            const cropImage = document.getElementById('crop-image');
-            const closeBtn = document.querySelector('.crop-modal__close');
-            const cancelBtn = document.querySelector('.crop-modal__btn--cancel');
-            const saveBtn = document.querySelector('.crop-modal__btn--save');
-
-            function openCropModal(imageId, imageUrl) {
-                currentImageId = imageId;
-                cropImage.src = imageUrl;
-                modal.classList.add('crop-modal--active');
-
-                // Wait for image to load before initializing cropper
-                cropImage.onload = function() {
-                    if (cropper) {
-                        cropper.destroy();
-                    }
-                    cropper = new Cropper(cropImage, {
-                        aspectRatio: NaN,
-                        viewMode: 1,
-                        dragMode: 'move',
-                        autoCropArea: 0.8,
-                        restore: false,
-                        guides: true,
-                        center: true,
-                        highlight: false,
-                        cropBoxMovable: true,
-                        cropBoxResizable: true,
-                        toggleDragModeOnDblclick: false,
-                    });
-                };
-            }
-
-            function closeCropModal() {
-                modal.classList.remove('crop-modal--active');
-                if (cropper) {
-                    cropper.destroy();
-                    cropper = null;
-                }
-                currentImageId = null;
-            }
-
-            function saveCrop() {
-                if (!cropper || !currentImageId) return;
-
-                const cropData = cropper.getData(true);
-
-                fetch('/wine/image/' + currentImageId + '/crop/', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': csrfToken,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        x: Math.round(cropData.x),
-                        y: Math.round(cropData.y),
-                        width: Math.round(cropData.width),
-                        height: Math.round(cropData.height)
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Update the thumbnail in the UI
-                        const thumbImg = document.querySelector(
-                            '.image-selection__thumb[data-image-id="' + currentImageId + '"]'
-                        );
-                        if (thumbImg) {
-                            thumbImg.src = data.thumbnail_url + '?t=' + Date.now();
-                        }
-                        closeCropModal();
-                    } else {
-                        alert('{% translate "Error cropping image" %}: ' + (data.error || 'Unknown error'));
-                    }
-                })
-                .catch(function(err) {
-                    alert('{% translate "Error cropping image" %}: ' + err.message);
-                });
-            }
-
-            // Bind crop button clicks (both click and touch for mobile)
-            document.querySelectorAll('.image-selection__crop-btn').forEach(function(btn) {
-                function handleCropClick(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const imageId = btn.dataset.imageId;
-                    const imageUrl = btn.dataset.imageUrl;
-                    openCropModal(imageId, imageUrl);
-                }
-                btn.addEventListener('click', handleCropClick);
-                btn.addEventListener('touchend', handleCropClick);
-            });
-
-            if (closeBtn) closeBtn.addEventListener('click', closeCropModal);
-            if (cancelBtn) cancelBtn.addEventListener('click', closeCropModal);
-            if (saveBtn) saveBtn.addEventListener('click', saveCrop);
-
-            // Close on escape key
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && modal.classList.contains('crop-modal--active')) {
-                    closeCropModal();
-                }
-            });
-        });
-    </script>
 {% endblock extra_js %}
 {% block title %}
     Create/Edit Wine
@@ -305,32 +41,19 @@
     <div class="pure-g">
         <div class="pure-u-1 pure-u-lg-1-3 m-auto">
             {% if wine_images %}
-                <div class="image-selection">
-                    <div class="image-selection__title">{% translate "Images (click to set primary, crop to adjust)" %}</div>
-                    <div class="image-selection__list">
+                <div class="image-link">
+                    <div class="image-link__thumbs">
                         {% for img in wine_images %}
-                            <div class="image-selection__item">
-                                <img src="{% if img.thumbnail %}{{ img.thumbnail.url }}{% else %}{{ img.image.url }}{% endif %}"
-                                     alt="{{ img.get_image_type_display }}"
-                                     class="image-selection__thumb {% if img.is_primary %}image-selection__thumb--primary{% endif %}"
-                                     data-image-id="{{ img.pk }}"
-                                     width="80"
-                                     height="80">
-                                <span class="image-selection__label">{{ img.get_image_type_display }}</span>
-                                {% if img.is_primary %}
-                                    <span class="image-selection__badge">{% translate "Primary" %}</span>
-                                {% endif %}
-                                <div class="image-selection__actions">
-                                    <button type="button"
-                                            class="image-selection__crop-btn"
-                                            data-image-id="{{ img.pk }}"
-                                            data-image-url="{{ img.image.url }}">
-                                        {% translate "Crop" %}
-                                    </button>
-                                </div>
-                            </div>
+                            <img src="{% if img.thumbnail %}{{ img.thumbnail.url }}{% else %}{{ img.image.url }}{% endif %}"
+                                 alt="{{ img.get_image_type_display }}"
+                                 class="image-link__thumb"
+                                 width="60"
+                                 height="60">
                         {% endfor %}
                     </div>
+                    <a href="{% url 'wine-images' wine.pk %}" class="pure-button button__neutral">
+                        <i class="fa-solid fa-crop"></i> {% translate "Edit Images" %}
+                    </a>
                 </div>
             {% endif %}
             <form method="post"
@@ -347,21 +70,6 @@
                     </div>
                 </fieldset>
             </form>
-        </div>
-    </div>
-
-    <!-- Crop Modal -->
-    <div id="crop-modal" class="crop-modal">
-        <div class="crop-modal__header">
-            <span class="crop-modal__title">{% translate "Crop Image" %}</span>
-            <button type="button" class="crop-modal__close">×</button>
-        </div>
-        <div class="crop-modal__body">
-            <img id="crop-image" src="" alt="{% translate 'Crop preview' %}" width="100%" height="auto">
-        </div>
-        <div class="crop-modal__footer">
-            <button type="button" class="crop-modal__btn crop-modal__btn--cancel">{% translate "Cancel" %}</button>
-            <button type="button" class="crop-modal__btn crop-modal__btn--save">{% translate "Save Crop" %}</button>
         </div>
     </div>
 {% endblock content %}

@@ -1,0 +1,584 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+{% block styles %}
+    {{ block.super }}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+    <style>
+        .wine-images {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        .wine-images__back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-secondary, #666);
+            text-decoration: none;
+            font-size: 0.9rem;
+            min-height: 44px;
+            touch-action: manipulation;
+        }
+
+        .wine-images__back:hover {
+            color: var(--text-primary, #333);
+        }
+
+        .wine-images__title {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        /* Main preview area */
+        .wine-images__preview {
+            width: 100%;
+            aspect-ratio: 1;
+            max-height: 50vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-secondary, #f5f5f5);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .wine-images__preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* Thumbnail strip */
+        .wine-images__thumbs {
+            display: flex;
+            gap: 0.75rem;
+            overflow-x: auto;
+            padding: 0.5rem 0;
+            margin-bottom: 1rem;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .wine-images__thumb {
+            flex-shrink: 0;
+            width: 80px;
+            height: 80px;
+            border-radius: 6px;
+            border: 3px solid transparent;
+            cursor: pointer;
+            object-fit: cover;
+            transition: border-color 0.2s, transform 0.2s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .wine-images__thumb:hover,
+        .wine-images__thumb:focus {
+            border-color: var(--border-color, #ccc);
+        }
+
+        .wine-images__thumb--selected {
+            border-color: var(--color-primary, #007bff);
+            transform: scale(1.05);
+        }
+
+        .wine-images__thumb-wrapper {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .wine-images__primary-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: var(--color-primary, #007bff);
+            color: white;
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            white-space: nowrap;
+        }
+
+        /* Action buttons */
+        .wine-images__actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .wine-images__btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1.5rem;
+            height: 48px;
+            min-width: 120px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color, #ccc);
+            background: var(--bg-primary, #fff);
+            color: var(--text-primary, #333);
+            font-size: 1rem;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            transition: background-color 0.2s, border-color 0.2s;
+            box-sizing: border-box;
+        }
+
+        .wine-images__btn:hover,
+        .wine-images__btn:active {
+            background: var(--bg-secondary, #f5f5f5);
+        }
+
+        .wine-images__btn--primary {
+            background: var(--color-primary, #007bff);
+            border-color: var(--color-primary, #007bff);
+            color: white;
+        }
+
+        .wine-images__btn--primary:hover,
+        .wine-images__btn--primary:active {
+            background: var(--color-primary-dark, #0056b3);
+        }
+
+        .wine-images__btn--active {
+            background: var(--color-success, #28a745);
+            border-color: var(--color-success, #28a745);
+            color: white;
+        }
+
+        /* Crop modal - full screen on mobile */
+        .crop-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            flex-direction: column;
+        }
+
+        .crop-modal--active {
+            display: flex;
+        }
+
+        .crop-modal__header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .crop-modal__title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .crop-modal__close {
+            font-size: 1.75rem;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0.5rem;
+            min-width: 44px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .crop-modal__body {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Use dvh for proper mobile viewport handling */
+            max-height: calc(100dvh - 140px);
+        }
+
+        .crop-modal__body img {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+        }
+
+        .crop-modal__footer {
+            padding: 1rem;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-shrink: 0;
+            /* Safe area for notched phones */
+            padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        }
+
+        .crop-modal__btn {
+            padding: 0.75rem 2rem;
+            min-height: 48px;
+            min-width: 100px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .crop-modal__btn--save {
+            background: var(--color-primary, #007bff);
+            color: white;
+        }
+
+        .crop-modal__btn--cancel {
+            background: var(--bg-secondary, #6c757d);
+            color: white;
+        }
+
+        /* Empty state */
+        .wine-images__empty {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary, #666);
+        }
+
+        .wine-images__empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Cropper touch improvements */
+        .cropper-container {
+            touch-action: none;
+        }
+
+        .cropper-crop-box,
+        .cropper-view-box {
+            touch-action: none;
+        }
+
+        .cropper-point {
+            width: 20px !important;
+            height: 20px !important;
+        }
+
+        @media (max-width: 480px) {
+            .cropper-point {
+                width: 30px !important;
+                height: 30px !important;
+            }
+        }
+    </style>
+{% endblock styles %}
+{% block extra_js %}
+    {{ block.super }}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                              document.cookie.match(/csrftoken=([^;]+)/)?.[1];
+
+            let cropper = null;
+            let currentImageId = null;
+            let selectedImageId = null;
+
+            const previewImg = document.getElementById('preview-image');
+            const thumbs = document.querySelectorAll('.wine-images__thumb');
+            const primaryBtn = document.getElementById('primary-btn');
+            const cropBtn = document.getElementById('crop-btn');
+            const modal = document.getElementById('crop-modal');
+            const cropImage = document.getElementById('crop-image');
+
+            // Select first image by default
+            if (thumbs.length > 0) {
+                selectImage(thumbs[0]);
+            }
+
+            // Thumbnail click handler
+            thumbs.forEach(function(thumb) {
+                thumb.addEventListener('click', function() {
+                    selectImage(this);
+                });
+            });
+
+            function selectImage(thumb) {
+                // Update selection state
+                thumbs.forEach(function(t) {
+                    t.classList.remove('wine-images__thumb--selected');
+                });
+                thumb.classList.add('wine-images__thumb--selected');
+
+                // Update preview
+                selectedImageId = thumb.dataset.imageId;
+                const fullUrl = thumb.dataset.fullUrl;
+                if (previewImg) {
+                    previewImg.src = fullUrl;
+                }
+
+                // Update primary button state
+                updatePrimaryButton(thumb.dataset.isPrimary === 'true');
+            }
+
+            function updatePrimaryButton(isPrimary) {
+                if (!primaryBtn) return;
+                if (isPrimary) {
+                    primaryBtn.classList.add('wine-images__btn--active');
+                    primaryBtn.innerHTML = '<i class="fa-solid fa-star"></i> {% translate "Primary" %}';
+                } else {
+                    primaryBtn.classList.remove('wine-images__btn--active');
+                    primaryBtn.innerHTML = '<i class="fa-regular fa-star"></i> {% translate "Set as Primary" %}';
+                }
+            }
+
+            // Set as Primary button
+            if (primaryBtn) {
+                primaryBtn.addEventListener('click', function() {
+                    if (!selectedImageId) return;
+
+                    fetch('/wine/image/' + selectedImageId + '/set-primary/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update all badges
+                            document.querySelectorAll('.wine-images__primary-badge').forEach(function(badge) {
+                                badge.remove();
+                            });
+
+                            // Update data attributes on thumbs
+                            thumbs.forEach(function(thumb) {
+                                thumb.dataset.isPrimary = 'false';
+                            });
+
+                            if (data.is_primary) {
+                                // Add badge to selected
+                                const selectedThumb = document.querySelector('.wine-images__thumb[data-image-id="' + selectedImageId + '"]');
+                                if (selectedThumb) {
+                                    selectedThumb.dataset.isPrimary = 'true';
+                                    const wrapper = selectedThumb.closest('.wine-images__thumb-wrapper');
+                                    if (wrapper) {
+                                        const badge = document.createElement('span');
+                                        badge.className = 'wine-images__primary-badge';
+                                        badge.textContent = '{% translate "Primary" %}';
+                                        wrapper.appendChild(badge);
+                                    }
+                                }
+                            }
+
+                            updatePrimaryButton(data.is_primary);
+                        }
+                    });
+                });
+            }
+
+            // Crop button
+            if (cropBtn) {
+                cropBtn.addEventListener('click', function() {
+                    if (!selectedImageId) return;
+                    const selectedThumb = document.querySelector('.wine-images__thumb[data-image-id="' + selectedImageId + '"]');
+                    if (selectedThumb) {
+                        openCropModal(selectedImageId, selectedThumb.dataset.fullUrl);
+                    }
+                });
+            }
+
+            function openCropModal(imageId, imageUrl) {
+                currentImageId = imageId;
+                cropImage.src = imageUrl;
+                modal.classList.add('crop-modal--active');
+                document.body.style.overflow = 'hidden';
+
+                cropImage.onload = function() {
+                    if (cropper) {
+                        cropper.destroy();
+                    }
+                    cropper = new Cropper(cropImage, {
+                        aspectRatio: NaN,
+                        viewMode: 2,
+                        dragMode: 'move',
+                        autoCropArea: 0.8,
+                        restore: false,
+                        guides: true,
+                        center: true,
+                        highlight: false,
+                        cropBoxMovable: true,
+                        cropBoxResizable: true,
+                        toggleDragModeOnDblclick: false,
+                        responsive: true,
+                        checkCrossOrigin: false,
+                        // Touch optimizations
+                        minContainerWidth: 200,
+                        minContainerHeight: 200,
+                    });
+                };
+            }
+
+            function closeCropModal() {
+                modal.classList.remove('crop-modal--active');
+                document.body.style.overflow = '';
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+                currentImageId = null;
+            }
+
+            function saveCrop() {
+                if (!cropper || !currentImageId) return;
+
+                const cropData = cropper.getData(true);
+
+                fetch('/wine/image/' + currentImageId + '/crop/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        x: Math.round(cropData.x),
+                        y: Math.round(cropData.y),
+                        width: Math.round(cropData.width),
+                        height: Math.round(cropData.height)
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update the thumbnail
+                        const thumbImg = document.querySelector(
+                            '.wine-images__thumb[data-image-id="' + currentImageId + '"]'
+                        );
+                        if (thumbImg) {
+                            thumbImg.src = data.thumbnail_url + '?t=' + Date.now();
+                        }
+                        closeCropModal();
+                    } else {
+                        alert('{% translate "Error cropping image" %}: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(function(err) {
+                    alert('{% translate "Error cropping image" %}: ' + err.message);
+                });
+            }
+
+            // Modal controls
+            const closeBtn = document.querySelector('.crop-modal__close');
+            const cancelBtn = document.querySelector('.crop-modal__btn--cancel');
+            const saveBtn = document.querySelector('.crop-modal__btn--save');
+
+            if (closeBtn) closeBtn.addEventListener('click', closeCropModal);
+            if (cancelBtn) cancelBtn.addEventListener('click', closeCropModal);
+            if (saveBtn) saveBtn.addEventListener('click', saveCrop);
+
+            // Close on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modal.classList.contains('crop-modal--active')) {
+                    closeCropModal();
+                }
+            });
+        });
+    </script>
+{% endblock extra_js %}
+{% block title %}
+    {% translate "Edit Images" %} - {{ wine.name }}
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">{% translate "Edit Images" %}</h1>
+{% endblock header %}
+{% block content %}
+    {% csrf_token %}
+    <div class="wine-images">
+        <a href="{% url 'wine-detail' wine.pk %}" class="wine-images__back">
+            <i class="fa-solid fa-arrow-left"></i> {% translate "Back to" %} {{ wine.name }}
+        </a>
+
+        {% if wine.wineimage_set.all %}
+            <!-- Main preview -->
+            <div class="wine-images__preview">
+                <img id="preview-image"
+                     src="{{ wine.wineimage_set.first.image.url }}"
+                     alt="{% translate 'Selected wine image' %}"
+                     width="300"
+                     height="300">
+            </div>
+
+            <!-- Thumbnail strip -->
+            <div class="wine-images__thumbs">
+                {% for img in wine.wineimage_set.all %}
+                    <div class="wine-images__thumb-wrapper">
+                        <img src="{% if img.thumbnail %}{{ img.thumbnail.url }}{% else %}{{ img.image.url }}{% endif %}"
+                             alt="{{ img.get_image_type_display }}"
+                             class="wine-images__thumb {% if forloop.first %}wine-images__thumb--selected{% endif %}"
+                             data-image-id="{{ img.pk }}"
+                             data-full-url="{{ img.image.url }}"
+                             data-is-primary="{{ img.is_primary|yesno:'true,false' }}"
+                             width="80"
+                             height="80">
+                        {% if img.is_primary %}
+                            <span class="wine-images__primary-badge">{% translate "Primary" %}</span>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Action buttons -->
+            <div class="wine-images__actions">
+                <button type="button" id="primary-btn" class="wine-images__btn {% if wine.wineimage_set.first.is_primary %}wine-images__btn--active{% endif %}">
+                    {% if wine.wineimage_set.first.is_primary %}
+                        <i class="fa-solid fa-star"></i> {% translate "Primary" %}
+                    {% else %}
+                        <i class="fa-regular fa-star"></i> {% translate "Set as Primary" %}
+                    {% endif %}
+                </button>
+                <button type="button" id="crop-btn" class="wine-images__btn wine-images__btn--primary">
+                    <i class="fa-solid fa-crop"></i> {% translate "Crop" %}
+                </button>
+            </div>
+        {% else %}
+            <div class="wine-images__empty">
+                <div class="wine-images__empty-icon">
+                    <i class="fa-regular fa-image"></i>
+                </div>
+                <p>{% translate "No images for this wine." %}</p>
+                <a href="{% url 'wine-edit' wine.pk %}" class="pure-button button__primary">
+                    {% translate "Add Images" %}
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Crop Modal -->
+    <div id="crop-modal" class="crop-modal">
+        <div class="crop-modal__header">
+            <span class="crop-modal__title">{% translate "Crop Image" %}</span>
+            <button type="button" class="crop-modal__close" aria-label="{% translate 'Close' %}">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="crop-modal__body">
+            <img id="crop-image" src="" alt="{% translate 'Crop preview' %}" width="100%" height="auto">
+        </div>
+        <div class="crop-modal__footer">
+            <button type="button" class="crop-modal__btn crop-modal__btn--cancel">{% translate "Cancel" %}</button>
+            <button type="button" class="crop-modal__btn crop-modal__btn--save">{% translate "Save Crop" %}</button>
+        </div>
+    </div>
+{% endblock content %}

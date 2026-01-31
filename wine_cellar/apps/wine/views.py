@@ -723,6 +723,19 @@ class WineDetailView(DetailView):
         )
 
 
+class WineImagesView(DetailView):
+    """View for managing wine images (set primary, crop)."""
+
+    template_name = "wine_images.html"
+    model = Wine
+    context_object_name = "wine"
+
+    def get_queryset(self):
+        return Wine.objects.filter(user=self.request.user).prefetch_related(
+            "wineimage_set"
+        )
+
+
 class WineListView(FilterView):
     model = Wine
     template_name = "wine_list.html"

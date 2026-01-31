@@ -60,6 +60,7 @@ from wine_cellar.apps.wine.views import (
     WineCreateView,
     WineDeleteView,
     WineDetailView,
+    WineImagesView,
     WineListView,
     WineMapView,
     WineScannedView,
@@ -118,6 +119,7 @@ urlpatterns = [
     path("wine/add/<str:code>/", WineCreateView.as_view(), name="wine-add"),
     path("wine/extract-vision/", extract_wine_vision_ajax, name="wine-extract-vision"),
     path("wine/<int:pk>/", WineDetailView.as_view(), name="wine-detail"),
+    path("wine/<int:pk>/images/", WineImagesView.as_view(), name="wine-images"),
     path("wine/edit/<int:pk>/", WineUpdateView.as_view(), name="wine-edit"),
     path(
         "wine/image/<int:pk>/set-primary/", set_primary_image, name="set-primary-image"

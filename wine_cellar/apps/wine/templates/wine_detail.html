@@ -42,6 +42,11 @@
                             </div>
                         {% endif %}
                     </div>
+                    <div class="wine-detail__image-actions">
+                        <a href="{% url 'wine-images' wine.pk %}" class="pure-button button__neutral">
+                            <i class="fa-solid fa-crop"></i> {% translate "Edit Images" %}
+                        </a>
+                    </div>
                 {% else %}
                     <div>{% translate "No image" %}</div>
                 {% endif %}
