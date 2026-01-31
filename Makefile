@@ -34,6 +34,7 @@ watch:
 fixtures:
 	$(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/user.json
 	$(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/grapes.json
+	$(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/appellations.json
 	$(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/wines.json
 	$(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/stock.json
 
