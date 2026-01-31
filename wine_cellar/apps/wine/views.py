@@ -307,6 +307,17 @@ class WineCreateView(FormView):
                 # wine_type field (already handled by service)
                 # category field (already handled by service)
 
+                # Appellation: convert PK to Appellation instance for ModelChoiceField
+                if "appellation" in result_data and result_data["appellation"]:
+                    try:
+                        from wine_cellar.apps.wine.models import Appellation
+
+                        initial["appellation"] = Appellation.objects.get(
+                            pk=result_data["appellation"]
+                        )
+                    except (Appellation.DoesNotExist, TypeError):
+                        pass  # Skip if invalid
+
         return initial
 
     def get_form_kwargs(self):
@@ -502,6 +513,7 @@ class WineCreateView(FormView):
         comment = cleaned_data["comment"]
         country = cleaned_data["country"]
         subregion = cleaned_data["subregion"]
+        appellation = cleaned_data.get("appellation")
         food_pairings = cleaned_data["food_pairings"]
         source = cleaned_data["source"]
         price = cleaned_data["price"]
@@ -529,6 +541,7 @@ class WineCreateView(FormView):
             defaults={
                 "category": category,
                 "subregion": subregion,
+                "appellation": appellation,
                 "barcode": barcode,
                 "drink_from": drink_from,
                 "drink_to": drink_to,
@@ -593,6 +606,13 @@ class WineUpdateView(FormView):
         initial.update(model_to_dict(wine))
         return initial
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], user=self.request.user)
+        context["wine"] = wine
+        context["wine_images"] = wine.wineimage_set.all()
+        return context
+
     def form_valid(self, form):
         wine = get_object_or_404(Wine, pk=self.kwargs["pk"], user=self.request.user)
         self.process_form_data(wine, self.request.user, form.cleaned_data)
@@ -615,6 +635,7 @@ class WineUpdateView(FormView):
         comment = cleaned_data["comment"]
         country = cleaned_data["country"]
         subregion = cleaned_data["subregion"]
+        appellation = cleaned_data.get("appellation")
         food_pairings = cleaned_data["food_pairings"]
         source = cleaned_data["source"]
         price = cleaned_data["price"]
@@ -635,6 +656,7 @@ class WineUpdateView(FormView):
         wine.comment = comment
         wine.country = country
         wine.subregion = subregion
+        wine.appellation = appellation
         wine.name = name
         wine.barcode = barcode
         wine.rating = rating
@@ -1621,3 +1643,139 @@ def scan_barcode_ajax(request):
         logger = logging.getLogger(__name__)
         logger.exception("Error in barcode scanning")
         return JsonResponse({"error": str(e)}, status=500)
+
+
+@login_required
+def set_primary_image(request, pk):
+    """Set a WineImage as the primary image for its wine."""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    wine_image = get_object_or_404(WineImage, pk=pk, user=request.user)
+
+    # Toggle: if already primary, unset it; otherwise set it as primary
+    if wine_image.is_primary:
+        wine_image.is_primary = False
+        wine_image.save(update_fields=["is_primary"])
+        return JsonResponse({"success": True, "is_primary": False})
+    else:
+        # The model's save() method will clear other primary flags
+        wine_image.is_primary = True
+        wine_image.save()
+        return JsonResponse({"success": True, "is_primary": True})
+
+
+@login_required
+def crop_wine_image(request, pk):
+    """Apply manual crop to a WineImage and create a new thumbnail."""
+    import json
+
+    from wine_cellar.apps.wine.utils import apply_manual_crop
+
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    wine_image = get_object_or_404(WineImage, pk=pk, user=request.user)
+
+    try:
+        data = json.loads(request.body)
+        x = int(data.get("x", 0))
+        y = int(data.get("y", 0))
+        width = int(data.get("width", 100))
+        height = int(data.get("height", 100))
+
+        # Validate crop dimensions
+        if width <= 0 or height <= 0:
+            return JsonResponse({"error": "Invalid crop dimensions"}, status=400)
+
+        # Apply the crop
+        thumb_path = apply_manual_crop(wine_image, x, y, width, height)
+
+        # Update the thumbnail field
+        wine_image.thumbnail = thumb_path
+        wine_image.save(update_fields=["thumbnail"])
+
+        return JsonResponse(
+            {
+                "success": True,
+                "thumbnail_url": wine_image.thumbnail.url,
+            }
+        )
+    except (json.JSONDecodeError, ValueError) as e:
+        return JsonResponse({"error": str(e)}, status=400)
+    except Exception as e:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.exception("Error cropping image")
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+class SaleAlertsView(TemplateView):
+    """View and manage sale alerts."""
+
+    template_name = "sale_alerts.html"
+
+    def get_context_data(self, **kwargs):
+        from wine_cellar.apps.wine.models import SaleAlert
+
+        context = super().get_context_data(**kwargs)
+        context["alerts"] = (
+            SaleAlert.objects.filter(user=self.request.user)
+            .select_related("wine", "source")
+            .order_by("-is_active", "-created")
+        )
+        return context
+
+
+class SaleAlertCreateView(FormView):
+    """Create a new sale alert."""
+
+    template_name = "sale_alert_create.html"
+    success_url = reverse_lazy("sale-alerts")
+
+    def get_form_class(self):
+        from wine_cellar.apps.wine.forms import SaleAlertForm
+
+        return SaleAlertForm
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        from wine_cellar.apps.wine.models import SaleAlert
+
+        SaleAlert.objects.create(
+            user=self.request.user,
+            wine=form.cleaned_data.get("wine"),
+            source=form.cleaned_data.get("source"),
+            threshold_percent=form.cleaned_data.get("threshold_percent", 10),
+            threshold_price=form.cleaned_data.get("threshold_price"),
+        )
+        return super().form_valid(form)
+
+
+class SaleAlertDeleteView(DeleteView):
+    """Delete a sale alert."""
+
+    template_name = "sale_alert_confirm_delete.html"
+    success_url = reverse_lazy("sale-alerts")
+
+    def get_queryset(self):
+        from wine_cellar.apps.wine.models import SaleAlert
+
+        return SaleAlert.objects.filter(user=self.request.user)
+
+
+class SaleAlertToggleView(TemplateView):
+    """Toggle a sale alert's active status."""
+
+    def get(self, request, *args, **kwargs):
+        from wine_cellar.apps.wine.models import SaleAlert
+
+        alert = get_object_or_404(SaleAlert, pk=kwargs["pk"], user=request.user)
+        alert.is_active = not alert.is_active
+        alert.save(update_fields=["is_active"])
+        return redirect("sale-alerts")

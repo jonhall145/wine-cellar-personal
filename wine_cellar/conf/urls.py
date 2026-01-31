@@ -53,6 +53,10 @@ from wine_cellar.apps.wine.views import (
     ReorderReminderCreateView,
     ReorderReminderDeleteView,
     ReorderRemindersView,
+    SaleAlertCreateView,
+    SaleAlertDeleteView,
+    SaleAlertsView,
+    SaleAlertToggleView,
     WineCreateView,
     WineDeleteView,
     WineDetailView,
@@ -65,9 +69,11 @@ from wine_cellar.apps.wine.views import (
     WishlistDeleteView,
     WishlistListView,
     WishlistPurchasedView,
+    crop_wine_image,
     extract_wine_vision_ajax,
     health_check,
     scan_barcode_ajax,
+    set_primary_image,
 )
 
 
@@ -113,6 +119,10 @@ urlpatterns = [
     path("wine/extract-vision/", extract_wine_vision_ajax, name="wine-extract-vision"),
     path("wine/<int:pk>/", WineDetailView.as_view(), name="wine-detail"),
     path("wine/edit/<int:pk>/", WineUpdateView.as_view(), name="wine-edit"),
+    path(
+        "wine/image/<int:pk>/set-primary/", set_primary_image, name="set-primary-image"
+    ),
+    path("wine/image/<int:pk>/crop/", crop_wine_image, name="crop-wine-image"),
     path("wine/delete/<int:pk>/", WineDeleteView.as_view(), name="wine-delete"),
     path(
         "wine/<int:pk>/drink/", DrinkRecordCreateView.as_view(), name="drink-record-add"
@@ -161,6 +171,18 @@ urlpatterns = [
         "reorder/delete/<int:pk>/",
         ReorderReminderDeleteView.as_view(),
         name="reorder-reminder-delete",
+    ),
+    path("sale-alerts/", SaleAlertsView.as_view(), name="sale-alerts"),
+    path("sale-alerts/add/", SaleAlertCreateView.as_view(), name="sale-alert-add"),
+    path(
+        "sale-alerts/delete/<int:pk>/",
+        SaleAlertDeleteView.as_view(),
+        name="sale-alert-delete",
+    ),
+    path(
+        "sale-alerts/toggle/<int:pk>/",
+        SaleAlertToggleView.as_view(),
+        name="sale-alert-toggle",
     ),
     path("label-scan/", LabelScanView.as_view(), name="label-scan"),
     path("storage/history/", StorageItemHistoryView.as_view(), name="stock-history"),

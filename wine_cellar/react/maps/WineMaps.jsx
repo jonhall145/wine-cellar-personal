@@ -63,6 +63,15 @@ export const MapWithMarkers = ({ wines, countriesWithWines, withoutPopup, childr
         return null
     }
     feature.properties = Object.assign(wine, feature.properties)
+
+    // Use appellation coordinates when available, otherwise fall back to country center
+    if (wine.appellation && wine.appellation.lat && wine.appellation.lng) {
+      feature.geometry = {
+        ...feature.geometry,
+        coordinates: [wine.appellation.lng, wine.appellation.lat]
+      }
+    }
+
     return (
       <GeoJsonMarker key={index} feature={feature}>
           {!withoutPopup && <ItemPopup feature={feature} />}

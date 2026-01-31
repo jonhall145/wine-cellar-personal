@@ -1,0 +1,252 @@
+[
+  {
+    "model": "wine.appellation",
+    "pk": 1,
+    "fields": {"name": "Bordeaux", "country": "FR", "latitude": 44.8378, "longitude": -0.5792, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 2,
+    "fields": {"name": "Burgundy", "country": "FR", "latitude": 47.0520, "longitude": 4.3833, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 3,
+    "fields": {"name": "Champagne", "country": "FR", "latitude": 49.0500, "longitude": 4.0500, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 4,
+    "fields": {"name": "Rhone Valley", "country": "FR", "latitude": 44.9333, "longitude": 4.8833, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 5,
+    "fields": {"name": "Loire Valley", "country": "FR", "latitude": 47.3833, "longitude": 0.6833, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 6,
+    "fields": {"name": "Alsace", "country": "FR", "latitude": 48.0833, "longitude": 7.3500, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 7,
+    "fields": {"name": "Provence", "country": "FR", "latitude": 43.5333, "longitude": 6.0500, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 8,
+    "fields": {"name": "Languedoc", "country": "FR", "latitude": 43.6167, "longitude": 3.8833, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 9,
+    "fields": {"name": "Beaujolais", "country": "FR", "latitude": 46.1500, "longitude": 4.6667, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 10,
+    "fields": {"name": "Chablis", "country": "FR", "latitude": 47.8167, "longitude": 3.8000, "parent_region": 2}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 11,
+    "fields": {"name": "Tuscany", "country": "IT", "latitude": 43.7711, "longitude": 11.2486, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 12,
+    "fields": {"name": "Piedmont", "country": "IT", "latitude": 44.6939, "longitude": 7.6708, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 13,
+    "fields": {"name": "Veneto", "country": "IT", "latitude": 45.4408, "longitude": 12.3155, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 14,
+    "fields": {"name": "Sicily", "country": "IT", "latitude": 37.5000, "longitude": 14.0000, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 15,
+    "fields": {"name": "Chianti", "country": "IT", "latitude": 43.4600, "longitude": 11.2533, "parent_region": 11}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 16,
+    "fields": {"name": "Barolo", "country": "IT", "latitude": 44.6094, "longitude": 7.9394, "parent_region": 12}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 17,
+    "fields": {"name": "Prosecco", "country": "IT", "latitude": 45.8833, "longitude": 12.0667, "parent_region": 13}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 18,
+    "fields": {"name": "Rioja", "country": "ES", "latitude": 42.4500, "longitude": -2.4500, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 19,
+    "fields": {"name": "Ribera del Duero", "country": "ES", "latitude": 41.6500, "longitude": -3.7000, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 20,
+    "fields": {"name": "Priorat", "country": "ES", "latitude": 41.2000, "longitude": 0.7500, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 21,
+    "fields": {"name": "Rias Baixas", "country": "ES", "latitude": 42.3333, "longitude": -8.6667, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 22,
+    "fields": {"name": "Cava", "country": "ES", "latitude": 41.4500, "longitude": 1.7500, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 23,
+    "fields": {"name": "Douro Valley", "country": "PT", "latitude": 41.1564, "longitude": -7.8528, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 24,
+    "fields": {"name": "Vinho Verde", "country": "PT", "latitude": 41.8000, "longitude": -8.4000, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 25,
+    "fields": {"name": "Dao", "country": "PT", "latitude": 40.5167, "longitude": -7.9000, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 26,
+    "fields": {"name": "Alentejo", "country": "PT", "latitude": 38.5667, "longitude": -7.9000, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 27,
+    "fields": {"name": "Mosel", "country": "DE", "latitude": 49.9667, "longitude": 6.7500, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 28,
+    "fields": {"name": "Rheingau", "country": "DE", "latitude": 50.0167, "longitude": 8.0500, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 29,
+    "fields": {"name": "Pfalz", "country": "DE", "latitude": 49.2333, "longitude": 8.0833, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 30,
+    "fields": {"name": "Napa Valley", "country": "US", "latitude": 38.4596, "longitude": -122.4286, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 31,
+    "fields": {"name": "Sonoma", "country": "US", "latitude": 38.5110, "longitude": -122.8453, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 32,
+    "fields": {"name": "Willamette Valley", "country": "US", "latitude": 45.0522, "longitude": -123.0855, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 33,
+    "fields": {"name": "Paso Robles", "country": "US", "latitude": 35.6264, "longitude": -120.6910, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 34,
+    "fields": {"name": "Barossa Valley", "country": "AU", "latitude": -34.5333, "longitude": 138.9500, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 35,
+    "fields": {"name": "Margaret River", "country": "AU", "latitude": -33.9500, "longitude": 115.0667, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 36,
+    "fields": {"name": "Hunter Valley", "country": "AU", "latitude": -32.8167, "longitude": 151.1500, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 37,
+    "fields": {"name": "McLaren Vale", "country": "AU", "latitude": -35.2167, "longitude": 138.5500, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 38,
+    "fields": {"name": "Marlborough", "country": "NZ", "latitude": -41.5167, "longitude": 173.9500, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 39,
+    "fields": {"name": "Central Otago", "country": "NZ", "latitude": -45.0333, "longitude": 169.1500, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 40,
+    "fields": {"name": "Hawke's Bay", "country": "NZ", "latitude": -39.6500, "longitude": 176.8500, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 41,
+    "fields": {"name": "Mendoza", "country": "AR", "latitude": -32.8833, "longitude": -68.8167, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 42,
+    "fields": {"name": "Salta", "country": "AR", "latitude": -24.7833, "longitude": -65.4167, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 43,
+    "fields": {"name": "Maipo Valley", "country": "CL", "latitude": -33.6833, "longitude": -70.6500, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 44,
+    "fields": {"name": "Casablanca Valley", "country": "CL", "latitude": -33.3167, "longitude": -71.4000, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 45,
+    "fields": {"name": "Colchagua Valley", "country": "CL", "latitude": -34.5833, "longitude": -71.2167, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 46,
+    "fields": {"name": "Stellenbosch", "country": "ZA", "latitude": -33.9333, "longitude": 18.8500, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 47,
+    "fields": {"name": "Constantia", "country": "ZA", "latitude": -34.0333, "longitude": 18.4167, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 48,
+    "fields": {"name": "Wachau", "country": "AT", "latitude": 48.3667, "longitude": 15.5167, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 49,
+    "fields": {"name": "Santorini", "country": "GR", "latitude": 36.4167, "longitude": 25.4333, "parent_region": null}
+  },
+  {
+    "model": "wine.appellation",
+    "pk": 50,
+    "fields": {"name": "Tokaj", "country": "HU", "latitude": 48.1167, "longitude": 21.4000, "parent_region": null}
+  }
+]

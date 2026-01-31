@@ -182,8 +182,47 @@ class Attribute(UserContentModel):
         return self.name
 
 
+class Appellation(models.Model):
+    """Wine appellation/region with geocoded coordinates."""
+
+    name = models.CharField(max_length=100, verbose_name=_("Name"))
+    country = models.CharField(
+        max_length=3,
+        choices={country.alpha_2: country.name for country in pycountry.countries},
+        verbose_name=_("Country"),
+    )
+    latitude = models.FloatField(verbose_name=_("Latitude"))
+    longitude = models.FloatField(verbose_name=_("Longitude"))
+    parent_region = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="subregions",
+        verbose_name=_("Parent Region"),
+    )
+
+    class Meta:
+        verbose_name = _("Appellation")
+        verbose_name_plural = _("Appellations")
+        unique_together = ["name", "country"]
+        indexes = [
+            models.Index(fields=["country"], name="appellation_country_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.country})"
+
+
 class Source(UserContentModel):
     name = models.CharField(max_length=250, verbose_name=_("Source"))
+    url = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name=_("URL"),
+        help_text=_("Website URL for this source"),
+    )
 
     class Meta:
         verbose_name = _("Source")
@@ -255,6 +294,14 @@ class Wine(UserContentModel):
         null=True,
         blank=True,
         verbose_name=_("Subregion"),
+    )
+    appellation = models.ForeignKey(
+        Appellation,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        verbose_name=_("Appellation"),
+        help_text=_("Wine region with geocoded coordinates for map display"),
     )
     vineyard = models.ManyToManyField(Vineyard, verbose_name=_("Vineyard"))
     source = models.ManyToManyField(Source, verbose_name=_("Source"))
@@ -354,6 +401,13 @@ class Wine(UserContentModel):
 
     @property
     def image_thumbnail(self):
+        # First check for explicitly selected primary image
+        primary = self.wineimage_set.filter(is_primary=True).first()
+        if primary:
+            if primary.thumbnail:
+                return primary.thumbnail.url
+            return primary.image.url
+        # Fall back to front label
         front = self.wineimage_set.filter(image_type=ImageType.LABEL_FRONT).first()
         if not front:
             return static(settings.DEFAULT_WINE_IMAGE)
@@ -438,10 +492,23 @@ class WineImage(models.Model):
         default=ImageType.LABEL_FRONT,
         verbose_name=_("Image Type"),
     )
+    is_primary = models.BooleanField(
+        default=False,
+        verbose_name=_("Primary Image"),
+        help_text=_("Use this image as the featured thumbnail for the wine."),
+    )
 
     class Meta:
         verbose_name = _("Wine Image")
         verbose_name_plural = _("Wine Images")
+
+    def save(self, *args, **kwargs):
+        if self.is_primary:
+            # Ensure only one primary image per wine
+            WineImage.objects.filter(wine=self.wine, is_primary=True).exclude(
+                pk=self.pk
+            ).update(is_primary=False)
+        super().save(*args, **kwargs)
 
 
 class DrinkRecord(UserContentModel):
@@ -653,3 +720,106 @@ class VisionExtractionLog(UserContentModel):
 
     def __str__(self):
         return f"Extraction {self.pk} ({self.confidence}) - {self.created}"
+
+
+class PriceHistory(UserContentModel):
+    """Historical price records for wines from various sources."""
+
+    wine = models.ForeignKey(
+        Wine,
+        on_delete=models.CASCADE,
+        related_name="price_history",
+        verbose_name=_("Wine"),
+    )
+    source = models.ForeignKey(
+        Source,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="price_records",
+        verbose_name=_("Source"),
+    )
+    price = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        verbose_name=_("Price"),
+    )
+    recorded_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        verbose_name=_("Recorded At"),
+    )
+
+    class Meta:
+        verbose_name = _("Price History")
+        verbose_name_plural = _("Price History Records")
+        ordering = ["-recorded_at"]
+        indexes = [
+            models.Index(
+                fields=["wine", "source", "recorded_at"],
+                name="pricehistory_wine_source_idx",
+            ),
+        ]
+
+    def __str__(self):
+        source_name = self.source.name if self.source else "Unknown"
+        return f"{self.wine.name} - {self.price} ({source_name})"
+
+
+class SaleAlert(UserContentModel):
+    """Alerts for price drops on wines from specific sources."""
+
+    wine = models.ForeignKey(
+        Wine,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="sale_alerts",
+        verbose_name=_("Wine"),
+        help_text=_("Leave blank to monitor all wines from this source"),
+    )
+    source = models.ForeignKey(
+        Source,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="sale_alerts",
+        verbose_name=_("Source"),
+        help_text=_("Leave blank to monitor all sources for this wine"),
+    )
+    threshold_percent = models.PositiveIntegerField(
+        default=10,
+        verbose_name=_("Price Drop Threshold (%)"),
+        help_text=_("Alert when price drops by this percentage or more"),
+    )
+    threshold_price = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("Target Price"),
+        help_text=_("Alert when price drops to or below this amount"),
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name=_("Active"),
+    )
+    last_notified = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Last Notified"),
+    )
+
+    class Meta:
+        verbose_name = _("Sale Alert")
+        verbose_name_plural = _("Sale Alerts")
+        indexes = [
+            models.Index(
+                fields=["user", "is_active"], name="salealert_user_active_idx"
+            ),
+        ]
+
+    def __str__(self):
+        wine_name = self.wine.name if self.wine else "Any wine"
+        source_name = self.source.name if self.source else "Any source"
+        return f"Alert: {wine_name} from {source_name}"

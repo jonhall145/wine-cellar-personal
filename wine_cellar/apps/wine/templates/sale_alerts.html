@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+{% block title %}
+    {% translate "Sale Alerts" %}
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">{% translate "Sale Alerts" %}</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1">
+            <div class="mb-12">
+                <a href="{% url 'sale-alert-add' %}" class="pure-button button__primary">
+                    <i class="fa-solid fa-plus"></i> {% translate "New Alert" %}
+                </a>
+            </div>
+
+            {% if alerts %}
+                <table class="pure-table pure-table-horizontal pure-table-striped">
+                    <thead>
+                        <tr>
+                            <th>{% translate "Wine" %}</th>
+                            <th>{% translate "Source" %}</th>
+                            <th>{% translate "Threshold" %}</th>
+                            <th>{% translate "Status" %}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for alert in alerts %}
+                            <tr>
+                                <td>
+                                    {% if alert.wine %}
+                                        <a href="{% url 'wine-detail' alert.wine.pk %}">{{ alert.wine.name }}</a>
+                                    {% else %}
+                                        <em>{% translate "Any wine" %}</em>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if alert.source %}
+                                        {{ alert.source.name }}
+                                        {% if alert.source.url %}
+                                            <a href="{{ alert.source.url }}" target="_blank" rel="noopener">
+                                                <i class="fa-solid fa-external-link-alt"></i>
+                                            </a>
+                                        {% endif %}
+                                    {% else %}
+                                        <em>{% translate "Any source" %}</em>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if alert.threshold_price %}
+                                        {% translate "Below" %} {{ alert.threshold_price }}
+                                    {% endif %}
+                                    {% if alert.threshold_percent %}
+                                        {% if alert.threshold_price %}{% translate "or" %}{% endif %}
+                                        {{ alert.threshold_percent }}% {% translate "drop" %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if alert.is_active %}
+                                        <span class="text--success"><i class="fa-solid fa-check-circle"></i> {% translate "Active" %}</span>
+                                    {% else %}
+                                        <span class="text--muted"><i class="fa-solid fa-pause-circle"></i> {% translate "Paused" %}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'sale-alert-toggle' alert.pk %}" class="pure-button" title="{% if alert.is_active %}{% translate 'Pause' %}{% else %}{% translate 'Resume' %}{% endif %}">
+                                        {% if alert.is_active %}
+                                            <i class="fa-solid fa-pause"></i>
+                                        {% else %}
+                                            <i class="fa-solid fa-play"></i>
+                                        {% endif %}
+                                    </a>
+                                    <a href="{% url 'sale-alert-delete' alert.pk %}" class="pure-button"><i class="fa-regular fa-trash-can"></i></a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state__icon"><i class="fa-solid fa-bell"></i></div>
+                    <h3 class="empty-state__title">{% translate "No Sale Alerts Yet" %}</h3>
+                    <p class="empty-state__message">{% translate "Set up alerts to be notified when wine prices drop at your favorite sources." %}</p>
+                    <a href="{% url 'sale-alert-add' %}" class="pure-button button__primary empty-state__action">
+                        <i class="fa-solid fa-plus"></i> {% translate "Create Alert" %}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock content %}

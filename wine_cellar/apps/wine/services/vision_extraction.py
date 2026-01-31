@@ -600,6 +600,15 @@ LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
                 data["country"] = inferred_country
                 extracted_fields.append("country")
 
+        # Try to match subregion to an Appellation for map coordinates
+        if "subregion" in data:
+            appellation = self._match_appellation(
+                data["subregion"], data.get("country")
+            )
+            if appellation:
+                data["appellation"] = appellation
+                extracted_fields.append("appellation")
+
         return {
             "data": data,
             "confidence": confidence,
@@ -702,6 +711,10 @@ LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
         elif field == "subregion":
             return value
 
+        elif field == "appellation":
+            # This field is populated by post-processing, not direct extraction
+            return value
+
         elif field == "barcode":
             # Only return if it looks like a barcode (numbers)
             if re.match(r"^\d+$", value):
@@ -763,6 +776,54 @@ LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
                 return country_code
 
         return None
+
+    def _match_appellation(
+        self, subregion: str, country: str | None = None
+    ) -> int | None:
+        """
+        Try to match extracted subregion to an Appellation record.
+
+        Args:
+            subregion: Extracted subregion/region name
+            country: Optional country code to narrow matches
+
+        Returns:
+            Appellation ID if matched, else None
+        """
+        try:
+            from wine_cellar.apps.wine.models import Appellation
+
+            subregion_lower = subregion.lower().strip()
+
+            # Build query - try exact match first (case-insensitive)
+            query = Appellation.objects.filter(name__iexact=subregion)
+            if country:
+                query = query.filter(country=country)
+
+            appellation = query.first()
+            if appellation:
+                return appellation.pk
+
+            # Try contains match if no exact match
+            query = Appellation.objects.filter(name__icontains=subregion_lower)
+            if country:
+                query = query.filter(country=country)
+
+            appellation = query.first()
+            if appellation:
+                return appellation.pk
+
+            # Try matching subregion within appellation name
+            for app in Appellation.objects.all():
+                if app.name.lower() in subregion_lower:
+                    if not country or app.country == country:
+                        return app.pk
+
+            return None
+
+        except Exception as e:
+            logger.warning(f"Error matching appellation for '{subregion}': {e}")
+            return None
 
     def _fallback_regex_extraction(self, text: str) -> dict:
         """

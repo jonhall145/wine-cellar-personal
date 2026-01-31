@@ -1,5 +1,19 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
+import {
+    DndContext,
+    DragEndEvent,
+    DragOverlay,
+    DragStartEvent,
+    MouseSensor,
+    TouchSensor,
+    useSensor,
+    useSensors,
+    useDraggable,
+    useDroppable,
+    Active,
+    Over,
+} from '@dnd-kit/core';
 // @ts-ignore
 import django from 'django';
 
@@ -13,7 +27,7 @@ const translated = {
     selectDestination: django.gettext('Now select an empty cell in the destination'),
     cancelMove: django.gettext('Cancel'),
     tapToSeeDetails: django.gettext('Tap a bottle to see details'),
-    dragToMove: django.gettext('Drag and drop to move bottles'),
+    dragToMove: django.gettext('Long press and drag to move bottles'),
     loading: django.gettext('Loading...'),
     noStorageData: django.gettext('No storage data available'),
     storageNotFound: django.gettext('Storage not found'),
@@ -141,7 +155,7 @@ const Tooltip: React.FC<TooltipProps> = ({ wine, position }) => {
 // Render star rating for grid cells
 const RatingStars: React.FC<{ rating: number | null; maxRating?: number }> = ({ rating, maxRating = 3 }) => {
     if (rating === null || rating === undefined) return null;
-    
+
     const stars = Math.min(rating, maxRating);
     return (
         <span className="storage-grid__rating">
@@ -152,68 +166,54 @@ const RatingStars: React.FC<{ rating: number | null; maxRating?: number }> = ({ 
     );
 };
 
-interface GridCellProps {
+// Draggable cell component
+interface DraggableCellProps {
     cell: CellData;
-    isSelected: boolean;
-    isDragOver: boolean;
-    onSelect: (cell: CellData) => void;
-    onDragStart: (cell: CellData) => void;
-    onDragOver: (cell: CellData) => void;
-    onDrop: (cell: CellData) => void;
-    onMouseEnter: (wine: WineInfo, e: React.MouseEvent) => void;
-    onMouseLeave: () => void;
+    storageId: number;
+    onShowTooltip: (wine: WineInfo, e: { clientX: number; clientY: number }) => void;
+    onHideTooltip: () => void;
+    isDragActive: boolean;
 }
 
-const GridCell: React.FC<GridCellProps> = ({
+const DraggableCell: React.FC<DraggableCellProps> = ({
     cell,
-    isSelected,
-    isDragOver,
-    onSelect,
-    onDragStart,
-    onDragOver,
-    onDrop,
-    onMouseEnter,
-    onMouseLeave,
+    storageId,
+    onShowTooltip,
+    onHideTooltip,
+    isDragActive,
 }) => {
+    const id = `cell-${storageId}-${cell.row}-${cell.column}`;
     const hasWine = cell.wine !== null;
-    
-    const handleDragStart = (e: React.DragEvent) => {
-        if (hasWine) {
-            e.dataTransfer.effectAllowed = 'move';
-            onDragStart(cell);
-        }
+
+    const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
+        id,
+        data: { cell, storageId },
+        disabled: !hasWine,
+    });
+
+    const { setNodeRef: setDropRef, isOver } = useDroppable({
+        id,
+        data: { cell, storageId },
+        disabled: hasWine, // Can't drop on occupied cell
+    });
+
+    // Combine refs
+    const setNodeRef = (node: HTMLDivElement | null) => {
+        setDragRef(node);
+        setDropRef(node);
     };
-    
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        onDragOver(cell);
-    };
-    
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        onDrop(cell);
-    };
-    
+
     const handleMouseEnter = (e: React.MouseEvent) => {
-        if (cell.wine) {
-            onMouseEnter(cell.wine, e);
+        if (cell.wine && !isDragActive) {
+            onShowTooltip(cell.wine, { clientX: e.clientX, clientY: e.clientY });
         }
     };
 
-    const handleTouch = (e: React.TouchEvent) => {
-        if (cell.wine && e.touches.length > 0) {
-            const touch = e.touches[0];
-            const mouseEvent = {
-                clientX: touch.clientX,
-                clientY: touch.clientY,
-            } as React.MouseEvent;
-            onMouseEnter(cell.wine, mouseEvent);
-            // Prevent cell click from firing immediately
-            e.preventDefault();
-        } else {
-            // Tapping empty cell should close tooltip
-            onMouseLeave();
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        // Show tooltip on tap (if not dragging)
+        if (cell.wine && !isDragActive && e.changedTouches.length > 0) {
+            const touch = e.changedTouches[0];
+            onShowTooltip(cell.wine, { clientX: touch.clientX, clientY: touch.clientY });
         }
     };
 
@@ -223,28 +223,39 @@ const GridCell: React.FC<GridCellProps> = ({
         const wineTypeClass = getWineTypeClass(cell.wine?.wine_type);
         if (wineTypeClass) className += ` storage-grid__cell--${wineTypeClass}`;
     }
-    if (isSelected) className += ' storage-grid__cell--selected';
-    if (isDragOver) className += ' storage-grid__cell--drag-over';
-    
+    if (isDragging) className += ' storage-grid__cell--dragging';
+    if (isOver && !hasWine) className += ' storage-grid__cell--drag-over';
+
     return (
         <div
+            ref={setNodeRef}
             className={className}
-            draggable={hasWine}
-            onClick={() => onSelect(cell)}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
+            {...listeners}
+            {...attributes}
             onMouseEnter={handleMouseEnter}
-            onMouseLeave={onMouseLeave}
-            onTouchStart={handleTouch}
+            onMouseLeave={onHideTooltip}
+            onTouchEnd={handleTouchEnd}
             title={hasWine ? cell.wine!.name : `Empty (${cell.row}, ${cell.column})`}
         >
-            {hasWine && (
+            {hasWine && !isDragging && (
                 <div className="storage-grid__bottle">
                     <i className="fa-solid fa-wine-bottle" />
                     <RatingStars rating={cell.wine!.rating} />
                 </div>
             )}
+        </div>
+    );
+};
+
+// Drag overlay component shown during drag
+const DragOverlayContent: React.FC<{ wine: WineInfo }> = ({ wine }) => {
+    const wineTypeClass = getWineTypeClass(wine.wine_type);
+    return (
+        <div className={`storage-grid__cell storage-grid__cell--filled storage-grid__cell--overlay${wineTypeClass ? ` storage-grid__cell--${wineTypeClass}` : ''}`}>
+            <div className="storage-grid__bottle">
+                <i className="fa-solid fa-wine-bottle" />
+                <RatingStars rating={wine.rating} />
+            </div>
         </div>
     );
 };
@@ -257,24 +268,39 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
     const [data, setData] = useState<AllStoragesData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [selectedCell, setSelectedCell] = useState<CellData | null>(null);
-    const [draggedCell, setDraggedCell] = useState<CellData | null>(null);
-    const [dragOverCell, setDragOverCell] = useState<CellData | null>(null);
     const [tooltip, setTooltip] = useState<{ wine: WineInfo; position: { x: number; y: number } } | null>(null);
     const [sourceStorageId, setSourceStorageId] = useState<number | null>(null);
     const [targetStorageId, setTargetStorageId] = useState<number | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [moveMode, setMoveMode] = useState(false);
     const [selectedBottle, setSelectedBottle] = useState<{ cell: CellData; storageId: number } | null>(null);
-    
+    const [activeItem, setActiveItem] = useState<{ cell: CellData; storageId: number } | null>(null);
+
+    // Configure sensors for mouse and touch
+    // TouchSensor with delay to distinguish scroll from drag
+    const mouseSensor = useSensor(MouseSensor, {
+        activationConstraint: {
+            distance: 5, // Start drag after moving 5px
+        },
+    });
+
+    const touchSensor = useSensor(TouchSensor, {
+        activationConstraint: {
+            delay: 250, // 250ms long press before drag starts
+            tolerance: 5, // Allow 5px movement during delay
+        },
+    });
+
+    const sensors = useSensors(mouseSensor, touchSensor);
+
     // Fetch data on mount
     React.useEffect(() => {
         fetchStorageData();
     }, []);
-    
+
     const fetchStorageData = async () => {
         try {
-            const url = initialStorageId 
+            const url = initialStorageId
                 ? `/api/storage/grid-data/?storage_id=${initialStorageId}`
                 : '/api/storage/grid-data/';
             const response = await fetch(url);
@@ -291,22 +317,10 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
             setLoading(false);
         }
     };
-    
-    const handleCellSelect = useCallback((cell: CellData) => {
-        setSelectedCell(cell);
-    }, []);
-    
-    const handleDragStart = useCallback((cell: CellData) => {
-        setDraggedCell(cell);
-    }, []);
-    
-    const handleDragOver = useCallback((cell: CellData) => {
-        setDragOverCell(cell);
-    }, []);
-    
+
     const moveBottle = async (itemId: number, targetStorageIdParam: number, targetRow: number, targetColumn: number) => {
         const csrfToken = document.querySelector<HTMLInputElement>('[name=csrfmiddlewaretoken]')?.value || '';
-        
+
         const response = await fetch('/api/storage/move-bottle/', {
             method: 'POST',
             headers: {
@@ -320,49 +334,62 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                 target_column: targetColumn,
             }),
         });
-        
+
         if (!response.ok) {
             const errData = await response.json();
             throw new Error(errData.error || translated.moveFailed);
         }
-        
+
         return response.json();
     };
-    
-    const handleDrop = useCallback(async (targetCell: CellData) => {
-        if (!draggedCell || !draggedCell.wine) {
-            setDraggedCell(null);
-            setDragOverCell(null);
-            return;
+
+    const handleDragStart = (event: DragStartEvent) => {
+        const { active } = event;
+        const data = active.data.current as { cell: CellData; storageId: number } | undefined;
+        if (data) {
+            setActiveItem(data);
+            setTooltip(null); // Hide tooltip during drag
         }
-        
+    };
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+        setActiveItem(null);
+
+        if (!over) return;
+
+        const activeData = active.data.current as { cell: CellData; storageId: number } | undefined;
+        const overData = over.data.current as { cell: CellData; storageId: number } | undefined;
+
+        if (!activeData || !overData || !activeData.cell.wine) return;
+
         // Don't allow drop on same cell
-        if (draggedCell.row === targetCell.row && draggedCell.column === targetCell.column) {
-            setDraggedCell(null);
-            setDragOverCell(null);
+        if (activeData.storageId === overData.storageId &&
+            activeData.cell.row === overData.cell.row &&
+            activeData.cell.column === overData.cell.column) {
             return;
         }
-        
+
         // Don't allow drop on occupied cell
-        if (targetCell.wine) {
+        if (overData.cell.wine) {
             setMessage({ type: 'error', text: translated.cellOccupied });
-            setDraggedCell(null);
-            setDragOverCell(null);
             return;
         }
-        
+
         try {
-            await moveBottle(draggedCell.wine.item_id, sourceStorageId!, targetCell.row, targetCell.column);
+            await moveBottle(
+                activeData.cell.wine.item_id,
+                overData.storageId,
+                overData.cell.row,
+                overData.cell.column
+            );
             await fetchStorageData();
             setMessage({ type: 'success', text: translated.movedSuccessfully });
         } catch (e) {
             setMessage({ type: 'error', text: e instanceof Error ? e.message : translated.moveFailed });
-        } finally {
-            setDraggedCell(null);
-            setDragOverCell(null);
         }
-    }, [draggedCell, sourceStorageId]);
-    
+    };
+
     // Handle click in move mode - select bottle from source, then destination cell
     const handleMoveModeClick = useCallback(async (cell: CellData, storageId: number, isSource: boolean) => {
         if (isSource) {
@@ -386,20 +413,20 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
             }
         }
     }, [selectedBottle]);
-    
-    const handleMouseEnter = useCallback((wine: WineInfo, e: React.MouseEvent) => {
+
+    const handleShowTooltip = useCallback((wine: WineInfo, e: { clientX: number; clientY: number }) => {
         setTooltip({ wine, position: { x: e.clientX, y: e.clientY } });
     }, []);
-    
-    const handleMouseLeave = useCallback(() => {
+
+    const handleHideTooltip = useCallback(() => {
         setTooltip(null);
     }, []);
-    
+
     const toggleMoveMode = () => {
         setMoveMode(!moveMode);
         setSelectedBottle(null);
     };
-    
+
     // Clear message after 3 seconds
     React.useEffect(() => {
         if (message) {
@@ -411,7 +438,6 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
     // Close tooltip when tapping outside on mobile
     React.useEffect(() => {
         const handleDocumentTouch = (e: TouchEvent) => {
-            // If tooltip is open and user taps outside grid cells, close it
             const target = e.target as HTMLElement;
             if (tooltip && !target.closest('.storage-grid__cell') && !target.closest('.storage-grid__tooltip')) {
                 setTooltip(null);
@@ -422,8 +448,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
         return () => document.removeEventListener('touchstart', handleDocumentTouch);
     }, [tooltip]);
 
-    // Build grid helper - memoized to prevent unnecessary recalculations
-    // Must be defined before conditional returns to follow Rules of Hooks
+    // Build grid helper - memoized
     const buildGrid = useCallback((storage: StorageData): CellData[][] => {
         const grid: CellData[][] = [];
         for (let row = 1; row <= storage.rows; row++) {
@@ -441,11 +466,11 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
         return grid;
     }, []);
 
-    // Find storages (may be null/undefined if data not loaded yet)
+    // Find storages
     const sourceStorage = data?.storages.find(s => s.id === sourceStorageId);
     const targetStorage = data?.storages.find(s => s.id === targetStorageId);
 
-    // Memoize grid computations - hooks must be called unconditionally
+    // Memoize grid computations
     const sourceGrid = useMemo(() => sourceStorage ? buildGrid(sourceStorage) : [], [buildGrid, sourceStorage]);
     const targetGrid = useMemo(() => targetStorage ? buildGrid(targetStorage) : [], [buildGrid, targetStorage]);
 
@@ -454,8 +479,8 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
     if (error) return <div className="storage-grid__error">Error: {error}</div>;
     if (!data) return <div className="storage-grid__empty">{translated.noStorageData}</div>;
     if (!sourceStorage) return <div className="storage-grid__error">{translated.storageNotFound}</div>;
-    
-    // Render a single grid pane
+
+    // Render a single grid pane for move mode
     const renderGridPane = (storage: StorageData, grid: CellData[][], isSource: boolean) => (
         <div className="storage-grid__pane">
             <div className="storage-grid__pane-header">
@@ -475,23 +500,23 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                     ))}
                 </select>
             </div>
-            
+
             <div className="storage-grid__header">
                 <div className="storage-grid__corner" />
                 {Array.from({ length: storage.columns }, (_, i) => (
                     <div key={i} className="storage-grid__col-label">{i + 1}</div>
                 ))}
             </div>
-            
+
             <div className="storage-grid__body">
                 {grid.map((row, rowIdx) => (
                     <div key={rowIdx} className="storage-grid__row">
                         <div className="storage-grid__row-label">{rowIdx + 1}</div>
                         {row.map((cell, colIdx) => {
-                            const isSelectedForMove = selectedBottle?.cell.row === cell.row && 
-                                selectedBottle?.cell.column === cell.column && 
+                            const isSelectedForMove = selectedBottle?.cell.row === cell.row &&
+                                selectedBottle?.cell.column === cell.column &&
                                 selectedBottle?.storageId === storage.id;
-                            
+
                             const wineTypeClass = cell.wine ? getWineTypeClass(cell.wine.wine_type) : '';
 
                             return (
@@ -499,12 +524,12 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                                     key={`${rowIdx}-${colIdx}`}
                                     className={`storage-grid__cell${cell.wine ? ' storage-grid__cell--filled' : ''}${wineTypeClass ? ` storage-grid__cell--${wineTypeClass}` : ''}${isSelectedForMove ? ' storage-grid__cell--selected-for-move' : ''}${!isSource && !cell.wine && selectedBottle ? ' storage-grid__cell--drop-target' : ''}`}
                                     onClick={() => handleMoveModeClick(cell, storage.id, isSource)}
-                                    onMouseEnter={(e) => cell.wine && handleMouseEnter(cell.wine, e)}
-                                    onMouseLeave={handleMouseLeave}
+                                    onMouseEnter={(e) => cell.wine && handleShowTooltip(cell.wine, e)}
+                                    onMouseLeave={handleHideTooltip}
                                     onTouchStart={(e) => {
                                         if (cell.wine && e.touches.length > 0) {
                                             const touch = e.touches[0];
-                                            handleMouseEnter(cell.wine, { clientX: touch.clientX, clientY: touch.clientY } as React.MouseEvent);
+                                            handleShowTooltip(cell.wine, { clientX: touch.clientX, clientY: touch.clientY });
                                             e.stopPropagation();
                                         }
                                     }}
@@ -524,14 +549,14 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
             </div>
         </div>
     );
-    
-    // Move mode: dual pane view
+
+    // Move mode: dual pane view (without dnd-kit, uses click-based selection)
     if (moveMode && targetStorage) {
         return (
             <div className="storage-grid storage-grid--move-mode">
                 {/* Move mode toggle */}
                 <div className="storage-grid__controls">
-                    <button 
+                    <button
                         type="button"
                         className="storage-grid__mode-btn storage-grid__mode-btn--active"
                         onClick={toggleMoveMode}
@@ -539,7 +564,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                         <i className="fa-solid fa-arrows-left-right" /> {translated.moveMode}
                     </button>
                     {selectedBottle && (
-                        <button 
+                        <button
                             type="button"
                             className="storage-grid__cancel-btn"
                             onClick={() => setSelectedBottle(null)}
@@ -548,14 +573,14 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                         </button>
                     )}
                 </div>
-                
+
                 {/* Message */}
                 {message && (
                     <div className={`storage-grid__message storage-grid__message--${message.type}`}>
                         {message.text}
                     </div>
                 )}
-                
+
                 {/* Move mode hint */}
                 <div className="storage-grid__move-hint">
                     {selectedBottle ? (
@@ -564,7 +589,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                         <><i className="fa-solid fa-wine-bottle" /> {translated.selectBottle}</>
                     )}
                 </div>
-                
+
                 {/* Dual pane layout */}
                 <div className="storage-grid__dual-pane">
                     {renderGridPane(sourceStorage, sourceGrid, true)}
@@ -573,90 +598,99 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                     </div>
                     {renderGridPane(targetStorage, targetGrid, false)}
                 </div>
-                
+
                 {/* Tooltip */}
                 {tooltip && <Tooltip wine={tooltip.wine} position={tooltip.position} />}
             </div>
         );
     }
-    
-    // Normal single-grid view with drag and drop
+
+    // Normal single-grid view with dnd-kit drag and drop
     return (
-        <div className="storage-grid">
-            {/* Controls */}
-            <div className="storage-grid__controls">
-                <label htmlFor="storage-select">{translated.storage}:</label>
-                <select
-                    id="storage-select"
-                    value={sourceStorageId || ''}
-                    onChange={(e) => setSourceStorageId(Number(e.target.value))}
-                    className="storage-grid__select"
-                >
-                    {data.storages.map(s => (
-                        <option key={s.id} value={s.id}>
-                            {s.name} ({s.rows}x{s.columns})
-                        </option>
-                    ))}
-                </select>
-                
-                {data.storages.length > 1 && (
-                    <button 
-                        type="button"
-                        className="storage-grid__mode-btn"
-                        onClick={toggleMoveMode}
+        <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+        >
+            <div className="storage-grid">
+                {/* Controls */}
+                <div className="storage-grid__controls">
+                    <label htmlFor="storage-select">{translated.storage}:</label>
+                    <select
+                        id="storage-select"
+                        value={sourceStorageId || ''}
+                        onChange={(e) => setSourceStorageId(Number(e.target.value))}
+                        className="storage-grid__select"
                     >
-                        <i className="fa-solid fa-arrows-left-right" /> {translated.moveMode}
-                    </button>
-                )}
-            </div>
-            
-            {/* Message */}
-            {message && (
-                <div className={`storage-grid__message storage-grid__message--${message.type}`}>
-                    {message.text}
-                </div>
-            )}
-            
-            {/* Grid header with column numbers */}
-            <div className="storage-grid__header">
-                <div className="storage-grid__corner" />
-                {Array.from({ length: sourceStorage.columns }, (_, i) => (
-                    <div key={i} className="storage-grid__col-label">{i + 1}</div>
-                ))}
-            </div>
-            
-            {/* Grid rows */}
-            <div className="storage-grid__body">
-                {sourceGrid.map((row, rowIdx) => (
-                    <div key={rowIdx} className="storage-grid__row">
-                        <div className="storage-grid__row-label">{rowIdx + 1}</div>
-                        {row.map((cell, colIdx) => (
-                            <GridCell
-                                key={`${rowIdx}-${colIdx}`}
-                                cell={cell}
-                                isSelected={selectedCell?.row === cell.row && selectedCell?.column === cell.column}
-                                isDragOver={dragOverCell?.row === cell.row && dragOverCell?.column === cell.column}
-                                onSelect={handleCellSelect}
-                                onDragStart={handleDragStart}
-                                onDragOver={handleDragOver}
-                                onDrop={handleDrop}
-                                onMouseEnter={handleMouseEnter}
-                                onMouseLeave={handleMouseLeave}
-                            />
+                        {data.storages.map(s => (
+                            <option key={s.id} value={s.id}>
+                                {s.name} ({s.rows}x{s.columns})
+                            </option>
                         ))}
+                    </select>
+
+                    {data.storages.length > 1 && (
+                        <button
+                            type="button"
+                            className="storage-grid__mode-btn"
+                            onClick={toggleMoveMode}
+                        >
+                            <i className="fa-solid fa-arrows-left-right" /> {translated.moveMode}
+                        </button>
+                    )}
+                </div>
+
+                {/* Message */}
+                {message && (
+                    <div className={`storage-grid__message storage-grid__message--${message.type}`}>
+                        {message.text}
                     </div>
-                ))}
+                )}
+
+                {/* Grid header with column numbers */}
+                <div className="storage-grid__header">
+                    <div className="storage-grid__corner" />
+                    {Array.from({ length: sourceStorage.columns }, (_, i) => (
+                        <div key={i} className="storage-grid__col-label">{i + 1}</div>
+                    ))}
+                </div>
+
+                {/* Grid rows */}
+                <div className="storage-grid__body">
+                    {sourceGrid.map((row, rowIdx) => (
+                        <div key={rowIdx} className="storage-grid__row">
+                            <div className="storage-grid__row-label">{rowIdx + 1}</div>
+                            {row.map((cell, colIdx) => (
+                                <DraggableCell
+                                    key={`${rowIdx}-${colIdx}`}
+                                    cell={cell}
+                                    storageId={sourceStorageId!}
+                                    onShowTooltip={handleShowTooltip}
+                                    onHideTooltip={handleHideTooltip}
+                                    isDragActive={activeItem !== null}
+                                />
+                            ))}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Drag overlay */}
+                <DragOverlay>
+                    {activeItem?.cell.wine && (
+                        <DragOverlayContent wine={activeItem.cell.wine} />
+                    )}
+                </DragOverlay>
+
+                {/* Tooltip */}
+                {tooltip && <Tooltip wine={tooltip.wine} position={tooltip.position} />}
+
+                {/* Instructions */}
+                <div className="storage-grid__instructions">
+                    <p><i className="fa-solid fa-hand-pointer" /> {translated.tapToSeeDetails}</p>
+                    <p><i className="fa-solid fa-hand-back-fist" /> {translated.dragToMove}</p>
+                </div>
             </div>
-            
-            {/* Tooltip */}
-            {tooltip && <Tooltip wine={tooltip.wine} position={tooltip.position} />}
-            
-            {/* Instructions */}
-            <div className="storage-grid__instructions">
-                <p><i className="fa-solid fa-hand-pointer" /> {translated.tapToSeeDetails}</p>
-                <p><i className="fa-solid fa-arrows-up-down-left-right" /> {translated.dragToMove}</p>
-            </div>
-        </div>
+        </DndContext>
     );
 };
 

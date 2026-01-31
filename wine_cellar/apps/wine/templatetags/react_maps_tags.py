@@ -18,7 +18,15 @@ def wine_to_json(wine: Wine):
         "image": wine.image_thumbnail,
         "vintage": wine.vintage,
         "url": wine.get_absolute_url(),
+        "subregion": wine.subregion,
     }
+    # Add appellation coordinates if available
+    if wine.appellation:
+        feature["appellation"] = {
+            "name": wine.appellation.name,
+            "lat": wine.appellation.latitude,
+            "lng": wine.appellation.longitude,
+        }
     return feature
 
 

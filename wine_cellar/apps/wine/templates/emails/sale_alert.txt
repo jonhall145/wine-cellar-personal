@@ -1,0 +1,13 @@
+{% load static i18n settings %}
+{% blocktranslate %}
+Hello {{ user }},
+
+Great news! We found some price drops on wines you're tracking:
+{% endblocktranslate %}
+{% for deal in deals %}
+{{ deal.wine.name }}{% if deal.wine.vintage %} ({{ deal.wine.vintage }}){% endif %}
+  {% translate "Source:" %} {{ deal.source.name }}
+  {% translate "Price:" %} {{ deal.current_price }}{% if deal.previous_price %} ({% translate "was" %} {{ deal.previous_price }}){% endif %}
+{% endfor %}
+
+{% blocktranslate %}Check your cellar to add these wines:{% endblocktranslate %} {% get_setting "SITE_URL" %}

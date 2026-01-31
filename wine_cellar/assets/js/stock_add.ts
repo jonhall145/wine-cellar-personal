@@ -140,4 +140,30 @@ function updateStorageCells() {
 }
 
 
-document.addEventListener('DOMContentLoaded', updateStorageCells)
+function setupStorageSuggestions() {
+    const suggestionButtons = document.querySelectorAll('.storage-suggestion__btn')
+    const storageSelect = document.getElementById('id_storage') as HTMLSelectElement
+
+    suggestionButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const storageId = (btn as HTMLElement).dataset.storageId
+            if (storageId && storageSelect) {
+                // Set the value on the native select
+                storageSelect.value = storageId
+                // If TomSelect is attached, update it
+                // @ts-ignore
+                if (storageSelect.tomselect) {
+                    // @ts-ignore
+                    storageSelect.tomselect.setValue(storageId, true)
+                }
+                // Trigger change event to update rows/columns
+                storageSelect.dispatchEvent(new Event('change'))
+            }
+        })
+    })
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateStorageCells()
+    setupStorageSuggestions()
+})

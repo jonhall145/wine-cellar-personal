@@ -1,6 +1,7 @@
 import json
 
 from django.contrib.auth.decorators import login_required
+from django.db import models
 from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -177,6 +178,8 @@ class StorageItemAddView(FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        wine = self.get_wine()
+        context["wine"] = wine
         user_storages = Storage.objects.filter(user=self.request.user)
         free_cells_by_storage = {}
         for storage in user_storages:
@@ -196,6 +199,38 @@ class StorageItemAddView(FormView):
                         free.append(column)
                 free_cells_by_storage[storage.pk][row] = free
         context["free_cells_by_storage"] = free_cells_by_storage
+
+        # Storage suggestions: find where this wine already has bottles
+        existing_bottles = (
+            StorageItem.objects.filter(wine=wine, user=self.request.user, deleted=False)
+            .select_related("storage")
+            .values("storage__pk", "storage__name", "storage__rows", "storage__columns")
+            .annotate(bottle_count=models.Count("pk"))
+        )
+
+        storage_suggestions = []
+        for item in existing_bottles:
+            storage_pk = item["storage__pk"]
+            total_slots = item["storage__rows"] * item["storage__columns"]
+            # For unlimited shelves (rows=0), show as "unlimited"
+            if total_slots == 0:
+                free_slots = None  # Unlimited
+            else:
+                used_slots = StorageItem.objects.filter(
+                    storage_id=storage_pk, user=self.request.user, deleted=False
+                ).count()
+                free_slots = total_slots - used_slots
+
+            storage_suggestions.append(
+                {
+                    "storage_id": storage_pk,
+                    "storage_name": item["storage__name"],
+                    "bottle_count": item["bottle_count"],
+                    "free_slots": free_slots,
+                }
+            )
+
+        context["storage_suggestions"] = storage_suggestions
         return context
 
     def form_valid(self, form):

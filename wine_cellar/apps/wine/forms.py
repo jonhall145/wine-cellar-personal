@@ -14,6 +14,7 @@ from wine_cellar.apps.storage.models import Storage, StorageItem
 from wine_cellar.apps.user.views import get_user_settings
 from wine_cellar.apps.wine.fields import OpenMultipleChoiceField
 from wine_cellar.apps.wine.models import (
+    Appellation,
     Attribute,
     Category,
     FoodPairing,
@@ -120,6 +121,15 @@ class WineFormPostCleanMixin:
                     max_options=-1,
                     clear=False,
                 )
+            appellation = self.cleaned_data.get("appellation")
+            if appellation:
+                self.set_tom_config(
+                    name="appellation",
+                    items=[appellation.pk],
+                    max_items=1,
+                    max_options=-1,
+                    clear=False,
+                )
 
 
 class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
@@ -218,6 +228,14 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         required=False,
         help_text=_(
             "Enter the subregion or appellation of the wine, e.g. Douro Valley, Dao."
+        ),
+    )
+    appellation = forms.ModelChoiceField(
+        queryset=Appellation.objects.all().order_by("country", "name"),
+        required=False,
+        help_text=_(
+            "Select a known wine region for map display. "
+            "If your region is not listed, use subregion field above."
         ),
     )
     size = forms.CharField(
@@ -419,6 +437,13 @@ class WineForm(WineBaseForm):
         self.set_tom_config(name="food_pairings", create=True)
         self.set_tom_config(name="source", create=True)
         self.set_tom_config(name="vineyard", create=True)
+        self.set_tom_config(
+            name="appellation",
+            max_items=1,
+            max_options=-1,
+            search=True,
+            placeholder=str(_("Search appellations...")),
+        )
 
         # Include initial country value in TomSelect config to preserve it
         # (TomSelect's clear() would otherwise wipe pre-filled values from label scan)
@@ -516,6 +541,22 @@ class WineEditForm(WineBaseForm):
                         "maxOptions": None,
                     }
                 ),
+            }
+        )
+        # Configure appellation TomSelect
+        appellation = initial.get("appellation")
+        appellation_items = [appellation.pk] if appellation else []
+        self.fields["appellation"].widget.attrs.update(
+            {
+                "data-tom_config": json.dumps(
+                    {
+                        "create": False,
+                        "items": appellation_items,
+                        "maxItems": 1,
+                        "maxOptions": None,
+                    }
+                ),
+                "data-search": "true",
             }
         )
 
@@ -696,4 +737,45 @@ class LabelScanForm(forms.Form):
         required=False,
         label=_("Back Label Image"),
         help_text=_("Optional: Upload back label image"),
+    )
+
+
+class SaleAlertForm(forms.Form):
+    """Form for creating sale alerts."""
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user")
+        super().__init__(*args, **kwargs)
+        from wine_cellar.apps.wine.models import Wine
+
+        self.fields["wine"].queryset = Wine.objects.filter(user=user).order_by("name")
+        self.fields["source"].queryset = Source.objects.filter(user=user).order_by(
+            "name"
+        )
+
+    wine = forms.ModelChoiceField(
+        queryset=None,
+        required=False,
+        label=_("Wine"),
+        help_text=_("Leave blank to monitor all wines"),
+    )
+    source = forms.ModelChoiceField(
+        queryset=None,
+        required=False,
+        label=_("Source"),
+        help_text=_("Leave blank to monitor all sources"),
+    )
+    threshold_percent = forms.IntegerField(
+        initial=10,
+        min_value=1,
+        max_value=100,
+        label=_("Price Drop Threshold (%)"),
+        help_text=_("Alert when price drops by this percentage"),
+    )
+    threshold_price = forms.DecimalField(
+        required=False,
+        max_digits=6,
+        decimal_places=2,
+        label=_("Target Price"),
+        help_text=_("Alert when price drops to or below this amount"),
     )

@@ -513,6 +513,30 @@
   background-color: rgba(40, 167, 69, 0.3);
 }
 
+/* Dragging states for dnd-kit */
+.storage-grid__cell--dragging {
+  opacity: 0.5;
+  border-style: dashed;
+}
+
+.storage-grid__cell--overlay {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  transform: scale(1.1);
+  z-index: 1000;
+  opacity: 0.95;
+}
+
+/* Touch feedback for mobile */
+@media (pointer: coarse) {
+  .storage-grid__cell--filled {
+    touch-action: none;
+  }
+
+  .storage-grid__cell--filled:active {
+    transform: scale(0.95);
+  }
+}
+
 /* Dark theme for move mode */
 [data-theme="dark"] .storage-grid__mode-btn {
   background-color: var(--gray-50);
