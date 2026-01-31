@@ -1701,6 +1701,14 @@ def crop_wine_image(request, pk):
         if width <= 0 or height <= 0:
             return JsonResponse({"error": "Invalid crop dimensions"}, status=400)
 
+        # Delete old thumbnail if exists
+        old_thumbnail = wine_image.thumbnail
+        if old_thumbnail:
+            try:
+                old_thumbnail.delete(save=False)
+            except Exception:
+                pass  # Ignore errors deleting old file
+
         # Apply the crop
         thumb_path = apply_manual_crop(wine_image, x, y, width, height)
 

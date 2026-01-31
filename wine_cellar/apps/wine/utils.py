@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from typing import TYPE_CHECKING
 
 from django.conf import settings
@@ -75,9 +76,10 @@ def apply_manual_crop(
     target_width = int(target_height * aspect)
     result_img = cropped_img.resize((target_width, target_height), Image.LANCZOS)
 
-    # Save thumbnail
+    # Save thumbnail with timestamp for cache busting
     base, ext = os.path.splitext(image_path)
-    name = f"{base}_thumb{ext}"
+    timestamp = int(time.time())
+    name = f"{base}_thumb_{timestamp}{ext}"
     thumb_full_path = os.path.join(settings.MEDIA_ROOT, name)
 
     # Determine format
