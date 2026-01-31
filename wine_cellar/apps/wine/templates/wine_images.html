@@ -225,6 +225,12 @@
             display: block;
         }
 
+        /* Constrain CropperJS container to available space */
+        .crop-modal__body .cropper-container {
+            max-width: 100% !important;
+            max-height: 100% !important;
+        }
+
         .crop-modal__footer {
             padding: 1rem;
             display: flex;
