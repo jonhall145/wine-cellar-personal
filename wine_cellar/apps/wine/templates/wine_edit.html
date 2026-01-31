@@ -63,14 +63,19 @@
             justify-content: center;
         }
         .image-selection__crop-btn {
-            font-size: 0.7em;
-            padding: 2px 6px;
+            font-size: 0.85em;
+            padding: 8px 12px;
+            min-height: 44px;
+            min-width: 44px;
             background: var(--bg-primary, #fff);
             border: 1px solid var(--border-color, #ccc);
             border-radius: 4px;
             cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
-        .image-selection__crop-btn:hover {
+        .image-selection__crop-btn:hover,
+        .image-selection__crop-btn:active {
             background: var(--bg-secondary, #f5f5f5);
         }
         /* Crop modal styles */
@@ -264,14 +269,17 @@
                 });
             }
 
-            // Bind crop button clicks
+            // Bind crop button clicks (both click and touch for mobile)
             document.querySelectorAll('.image-selection__crop-btn').forEach(function(btn) {
-                btn.addEventListener('click', function(e) {
+                function handleCropClick(e) {
+                    e.preventDefault();
                     e.stopPropagation();
-                    const imageId = this.dataset.imageId;
-                    const imageUrl = this.dataset.imageUrl;
+                    const imageId = btn.dataset.imageId;
+                    const imageUrl = btn.dataset.imageUrl;
                     openCropModal(imageId, imageUrl);
-                });
+                }
+                btn.addEventListener('click', handleCropClick);
+                btn.addEventListener('touchend', handleCropClick);
             });
 
             if (closeBtn) closeBtn.addEventListener('click', closeCropModal);
