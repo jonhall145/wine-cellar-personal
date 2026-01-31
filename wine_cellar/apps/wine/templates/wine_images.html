@@ -158,11 +158,21 @@
             position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
+            width: 100%;
+            /* Use dvh for proper mobile viewport handling (accounts for browser chrome) */
+            height: 100dvh;
+            height: 100vh; /* Fallback for older browsers */
             background: rgba(0, 0, 0, 0.95);
             z-index: 1000;
             flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* iOS Safari fix - use -webkit-fill-available as additional fallback */
+        @supports (-webkit-touch-callout: none) {
+            .crop-modal {
+                height: -webkit-fill-available;
+            }
         }
 
         .crop-modal--active {
@@ -174,6 +184,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 0.75rem 1rem;
+            padding-top: max(0.75rem, env(safe-area-inset-top));
             color: white;
             flex-shrink: 0;
         }
@@ -201,12 +212,11 @@
 
         .crop-modal__body {
             flex: 1;
+            min-height: 0; /* Allow flex item to shrink below content size */
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            /* Use dvh for proper mobile viewport handling */
-            max-height: calc(100dvh - 140px);
         }
 
         .crop-modal__body img {
@@ -223,6 +233,7 @@
             flex-shrink: 0;
             /* Safe area for notched phones */
             padding-bottom: max(1rem, env(safe-area-inset-bottom));
+            background: rgba(0, 0, 0, 0.95);
         }
 
         .crop-modal__btn {
