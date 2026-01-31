@@ -72,7 +72,7 @@ def get_appellation_choices(user=None):
     Build appellation choices for filter dropdown.
     Only includes appellations that have wines in stock.
     """
-    choices = [("", _("Any"))]
+    choices = [("", _("Any")), ("missing", _("Missing"))]
 
     if user and user.is_authenticated:
         # Get appellations that have wines in stock for this user
@@ -238,7 +238,9 @@ class WineFilter(django_filters.FilterSet):
         return queryset
 
     def filter_appellation(self, queryset, name, value):
-        if value:
+        if value == "missing":
+            return queryset.filter(appellation__isnull=True)
+        elif value:
             return queryset.filter(appellation_id=int(value))
         return queryset
 
