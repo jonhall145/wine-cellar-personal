@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from django_filters import ChoiceFilter, OrderingFilter
 
 from wine_cellar.apps.wine.forms import WineFilterForm
-from wine_cellar.apps.wine.models import Wine
+from wine_cellar.apps.wine.models import Appellation, Wine
 
 # Default favourite countries (alpha_2 codes)
 DEFAULT_FAVOURITES = ["GB", "PT", "FR"]
@@ -67,6 +67,31 @@ def get_country_choices_with_favourites(user=None):
     return choices
 
 
+def get_appellation_choices(user=None):
+    """
+    Build appellation choices for filter dropdown.
+    Only includes appellations that have wines in stock.
+    """
+    choices = [("", _("Any"))]
+
+    if user and user.is_authenticated:
+        # Get appellations that have wines in stock for this user
+        appellations_in_stock = (
+            Appellation.objects.filter(
+                wine__user=user,
+                wine__storageitem__isnull=False,
+                wine__storageitem__deleted=False,
+            )
+            .distinct()
+            .order_by("country", "name")
+        )
+
+        for app in appellations_in_stock:
+            choices.append((app.pk, f"{app.name} ({app.country})"))
+
+    return choices
+
+
 class WineFilter(django_filters.FilterSet):
     name = django_filters.CharFilter(field_name="name", lookup_expr="icontains")
     stock = ChoiceFilter(
@@ -79,6 +104,11 @@ class WineFilter(django_filters.FilterSet):
     country = ChoiceFilter(
         choices=[],
         label=_("Country"),
+    )
+    appellation = ChoiceFilter(
+        choices=[],
+        label=_("Appellation"),
+        method="filter_appellation",
     )
     rating = ChoiceFilter(
         method="filter_rating",
@@ -207,6 +237,11 @@ class WineFilter(django_filters.FilterSet):
             ).distinct()
         return queryset
 
+    def filter_appellation(self, queryset, name, value):
+        if value:
+            return queryset.filter(appellation_id=int(value))
+        return queryset
+
     class Meta:
         form = WineFilterForm
         model = Wine
@@ -225,6 +260,7 @@ class WineFilter(django_filters.FilterSet):
             "food_pairings",
             "source",
             "country",
+            "appellation",
             "stock",
         ]
 
@@ -244,5 +280,10 @@ class WineFilter(django_filters.FilterSet):
 
         # Update country filter with favourites-ordered choices
         self.filters["country"].extra["choices"] = get_country_choices_with_favourites(
+            request.user if request else None
+        )
+
+        # Update appellation filter with choices from user's wines
+        self.filters["appellation"].extra["choices"] = get_appellation_choices(
             request.user if request else None
         )
