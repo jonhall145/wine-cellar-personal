@@ -64,6 +64,7 @@ class SourceFactory(DjangoModelFactory):
 class WineFactory(DjangoModelFactory):
     class Meta:
         model = Wine
+        skip_postgeneration_save = True
 
     user = factory.SubFactory(UserFactory)
     name = factory.Faker("name")

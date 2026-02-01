@@ -223,6 +223,12 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
+# Trust X-Forwarded-Proto header from reverse proxies (cloudflared, nginx)
+# This allows Django to detect HTTPS when behind a proxy that terminates SSL
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
 # Production-only security settings (enable in prod.py)
 # SECURE_SSL_REDIRECT = True
 # SECURE_HSTS_SECONDS = 31536000

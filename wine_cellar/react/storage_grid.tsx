@@ -135,6 +135,11 @@ const Tooltip: React.FC<TooltipProps> = ({ wine, position }) => {
                 onClick={(e) => {
                     e.stopPropagation();
                 }}
+                onTouchEnd={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.location.href = `/wine/${wine.id}/`;
+                }}
             >
                 {wine.name}
             </a>
