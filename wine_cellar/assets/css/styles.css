@@ -703,12 +703,17 @@ a:hover {
 /* Mobile dropdown in sidebar - use relative positioning */
 @media screen and (max-width: 47.99em) {
   .menu__sm .pure-menu-has-children > .pure-menu-children {
+    display: none;
     position: relative;
     background: rgba(255, 255, 255, 0.1);
     box-shadow: none;
     border-radius: 0;
     min-width: auto;
     margin-left: var(--spacing-md);
+  }
+
+  .menu__sm .pure-menu-has-children.menu-open > .pure-menu-children {
+    display: block;
   }
 
   .menu__sm .pure-menu-children .pure-menu-link {
