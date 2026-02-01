@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required, login_required
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import connections, transaction
-from django.db.models import Avg, Count, Max, Min, Q, Sum
+from django.db.models import Avg, Count, F, Max, Min, Q, Sum
 from django.db.models.functions import Coalesce
 from django.forms import model_to_dict
 from django.http import JsonResponse
@@ -139,15 +139,17 @@ class HomePageView(TemplateView):
             }
         )
 
-        # Low stock reminders
-        reminders = ReorderReminder.objects.filter(
-            user=self.request.user, is_active=True
-        ).annotate(
-            current_stock=Count(
-                "wine__storageitem", filter=Q(wine__storageitem__deleted=False)
+        # Low stock reminders - filter at database level for efficiency
+        low_stock_count = (
+            ReorderReminder.objects.filter(user=self.request.user, is_active=True)
+            .annotate(
+                current_stock=Count(
+                    "wine__storageitem", filter=Q(wine__storageitem__deleted=False)
+                )
             )
+            .filter(current_stock__lte=F("min_stock"))
+            .count()
         )
-        low_stock_count = sum(1 for r in reminders if r.current_stock <= r.min_stock)
 
         # Recent drinks
         recent_drinks = (
@@ -170,8 +172,6 @@ class HomePageView(TemplateView):
         avg_rating = (
             round(drink_stats["avg_rating"], 1) if drink_stats["avg_rating"] else None
         )
-
-        total_bottles = StorageItem.objects.filter(user=user, deleted=False).count()
 
         # Pending hardware position reviews (gracefully handle if hardware not set up)
         pending_reviews_count = 0
@@ -197,7 +197,7 @@ class HomePageView(TemplateView):
                 "recent_drinks": recent_drinks,
                 "wishlist_items": wishlist_items,
                 "total_consumed": total_consumed,
-                "total_bottles": total_bottles,
+                "total_bottles": bottles_in_stock,
                 "avg_rating": avg_rating,
                 "pending_reviews_count": pending_reviews_count,
             }
@@ -337,23 +337,9 @@ class WineCreateView(FormView):
         context = super().get_context_data(**kwargs)
         # Provide free cells for storage dropdown (for stock_add.js)
         user_storages = Storage.objects.filter(user=self.request.user)
-        free_cells_by_storage = {}
-        for storage in user_storages:
-            if storage.rows == 0:
-                free_cells_by_storage[storage.pk] = {}
-                continue
-            used_cells = set(
-                storage.items.filter(deleted=False).values_list("row", "column")
-            )
-            all_rows = range(1, storage.rows + 1)
-            all_columns = range(1, storage.columns + 1)
-            free_cells_by_storage[storage.pk] = {}
-            for row in all_rows:
-                free = []
-                for column in all_columns:
-                    if (row, column) not in used_cells:
-                        free.append(column)
-                free_cells_by_storage[storage.pk][row] = free
+        free_cells_by_storage = {
+            storage.pk: storage.get_free_cells_by_row() for storage in user_storages
+        }
         context["free_cells_by_storage"] = free_cells_by_storage
 
         # Add extraction result to context if available
@@ -706,7 +692,8 @@ class WineDetailView(DetailView):
     def get_queryset(self):
         qs = super().get_queryset()
         return (
-            qs.prefetch_related(
+            qs.select_related("size", "appellation")
+            .prefetch_related(
                 "grapes",
                 "attributes",
                 "food_pairings",
@@ -766,6 +753,7 @@ class WineListView(FilterView):
         qs = (
             super()
             .get_queryset()
+            .select_related("size", "appellation")
             .prefetch_related("grapes", "attributes", "food_pairings", "wineimage_set")
             .order_by("-created")
         )

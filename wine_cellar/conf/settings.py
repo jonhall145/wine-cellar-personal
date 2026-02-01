@@ -116,6 +116,18 @@ DATABASES = {
     }
 }
 
+# Cache configuration for filter choices and user settings
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "wine-cellar-cache",
+        "TIMEOUT": 3600,  # 1 hour default
+        "OPTIONS": {
+            "MAX_ENTRIES": 1000,
+        },
+    }
+}
+
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",

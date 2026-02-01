@@ -40,6 +40,8 @@ def drink_by_reminder():
 @shared_task(name="check_sale_alerts")
 def check_sale_alerts():
     """Check for price drops and send sale alerts."""
+    from collections import defaultdict
+
     now = timezone.now()
 
     # Get all active alerts for users with notifications enabled
@@ -65,41 +67,44 @@ def check_sale_alerts():
             price_query = price_query.filter(source=alert.source)
 
         # Get wines with recent price entries
+        last_notified = alert.last_notified or timezone.datetime.min.replace(
+            tzinfo=timezone.utc
+        )
         wines_with_prices = (
             price_query.values("wine", "source")
             .annotate(latest_date=Max("recorded_at"))
-            .filter(
-                latest_date__gte=alert.last_notified
-                or timezone.datetime.min.replace(tzinfo=timezone.utc)
-            )
+            .filter(latest_date__gte=last_notified)
         )
 
-        for entry in wines_with_prices:
-            # Get the latest price
-            latest = (
-                PriceHistory.objects.filter(
-                    user=alert.user,
-                    wine_id=entry["wine"],
-                    source_id=entry["source"],
-                )
-                .order_by("-recorded_at")
-                .first()
-            )
+        if not wines_with_prices:
+            continue
 
-            if not latest:
+        # Batch fetch all relevant prices at once to avoid N+1 queries
+        wine_source_pairs = [(e["wine"], e["source"]) for e in wines_with_prices]
+        all_prices = (
+            PriceHistory.objects.filter(user=alert.user)
+            .filter(
+                wine_id__in=[p[0] for p in wine_source_pairs],
+                source_id__in=[p[1] for p in wine_source_pairs],
+            )
+            .select_related("wine", "source")
+            .order_by("wine_id", "source_id", "-recorded_at")
+        )
+
+        # Group prices by (wine_id, source_id)
+        prices_by_key = defaultdict(list)
+        for price in all_prices:
+            key = (price.wine_id, price.source_id)
+            prices_by_key[key].append(price)
+
+        # Process each wine/source combination
+        for wine_id, source_id in wine_source_pairs:
+            prices = prices_by_key.get((wine_id, source_id), [])
+            if not prices:
                 continue
 
-            # Get the previous price before this one
-            previous = (
-                PriceHistory.objects.filter(
-                    user=alert.user,
-                    wine_id=entry["wine"],
-                    source_id=entry["source"],
-                    recorded_at__lt=latest.recorded_at,
-                )
-                .order_by("-recorded_at")
-                .first()
-            )
+            latest = prices[0]  # Already ordered by -recorded_at
+            previous = prices[1] if len(prices) > 1 else None
 
             should_alert = False
 

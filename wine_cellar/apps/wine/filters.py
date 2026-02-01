@@ -2,6 +2,7 @@ from datetime import date
 
 import django_filters
 import pycountry
+from django.core.cache import cache
 from django.db.models import Count, F, Q
 from django.utils.translation import gettext_lazy as _
 from django_filters import ChoiceFilter, OrderingFilter
@@ -12,13 +13,23 @@ from wine_cellar.apps.wine.models import Appellation, Wine
 # Default favourite countries (alpha_2 codes)
 DEFAULT_FAVOURITES = ["GB", "PT", "FR"]
 
+# Cache timeout for filter choices (5 minutes)
+FILTER_CACHE_TIMEOUT = 300
+
 
 def get_country_choices_with_favourites(user=None):
     """
     Build country choices with favourites at the top.
     Only includes countries that have wines in stock.
     Favourites: UK, Portugal, France + most frequent from user's cellar.
+    Results are cached per-user for 5 minutes.
     """
+    user_id = user.id if user and user.is_authenticated else "anon"
+    cache_key = f"country_choices_{user_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     favourites = list(DEFAULT_FAVOURITES)
 
     # Get countries that have wines in stock
@@ -64,6 +75,8 @@ def get_country_choices_with_favourites(user=None):
         choices = any_choice + favourite_choices + [("---", "─" * 20)] + other_choices
     else:
         choices = any_choice + favourite_choices + other_choices
+
+    cache.set(cache_key, choices, FILTER_CACHE_TIMEOUT)
     return choices
 
 
@@ -71,7 +84,14 @@ def get_appellation_choices(user=None):
     """
     Build appellation choices for filter dropdown.
     Only includes appellations that have wines in stock.
+    Results are cached per-user for 5 minutes.
     """
+    user_id = user.id if user and user.is_authenticated else "anon"
+    cache_key = f"appellation_choices_{user_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     choices = [("", _("Any")), ("missing", _("Missing"))]
 
     if user and user.is_authenticated:
@@ -89,6 +109,7 @@ def get_appellation_choices(user=None):
         for app in appellations_in_stock:
             choices.append((app.pk, f"{app.name} ({app.country})"))
 
+    cache.set(cache_key, choices, FILTER_CACHE_TIMEOUT)
     return choices
 
 

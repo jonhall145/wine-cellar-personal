@@ -181,23 +181,9 @@ class StorageItemAddView(FormView):
         wine = self.get_wine()
         context["wine"] = wine
         user_storages = Storage.objects.filter(user=self.request.user)
-        free_cells_by_storage = {}
-        for storage in user_storages:
-            if storage.rows == 0:
-                free_cells_by_storage[storage.pk] = {}
-                continue
-            used_cells = set(
-                storage.items.filter(deleted=False).values_list("row", "column")
-            )
-            all_rows = range(1, storage.rows + 1)
-            all_columns = range(1, storage.columns + 1)
-            free_cells_by_storage[storage.pk] = {}
-            for row in all_rows:
-                free = []
-                for column in all_columns:
-                    if (row, column) not in used_cells:
-                        free.append(column)
-                free_cells_by_storage[storage.pk][row] = free
+        free_cells_by_storage = {
+            storage.pk: storage.get_free_cells_by_row() for storage in user_storages
+        }
         context["free_cells_by_storage"] = free_cells_by_storage
 
         # Storage suggestions: find where this wine already has bottles
@@ -363,26 +349,12 @@ class StorageItemUpdateView(FormView):
         context["wine"] = item.wine
         context["item"] = item
 
-        # Free cells calculation (same as StorageItemAddView but excluding current item)
+        # Free cells calculation - exclude current item so it can be moved
         user_storages = Storage.objects.filter(user=self.request.user)
-        free_cells_by_storage = {}
-        for storage in user_storages:
-            if storage.rows == 0:
-                free_cells_by_storage[storage.pk] = {}
-                continue
-            # Exclude current item from used cells
-            used_cells = set(
-                storage.items.filter(deleted=False)
-                .exclude(pk=item.pk)
-                .values_list("row", "column")
-            )
-            all_rows = range(1, storage.rows + 1)
-            all_columns = range(1, storage.columns + 1)
-            free_cells_by_storage[storage.pk] = {}
-            for row in all_rows:
-                free = [col for col in all_columns if (row, col) not in used_cells]
-                free_cells_by_storage[storage.pk][row] = free
-
+        free_cells_by_storage = {
+            storage.pk: storage.get_free_cells_by_row(exclude_item=item)
+            for storage in user_storages
+        }
         context["free_cells_by_storage"] = free_cells_by_storage
 
         # Cancel URL - return to wine detail or bottle list

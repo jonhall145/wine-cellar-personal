@@ -53,6 +53,36 @@ class Storage(UserContentModel):
     def get_wines(self):
         return self.items.filter(deleted=False).order_by("row", "column")
 
+    def get_free_cells_by_row(self, exclude_item=None):
+        """
+        Calculate free cells for each row in this storage.
+
+        Args:
+            exclude_item: Optional StorageItem to exclude from occupied calculation
+                         (useful when moving a bottle)
+
+        Returns:
+            Dict mapping row numbers to lists of free column numbers.
+            Empty dict if storage has no rows (rows=0).
+        """
+        if self.rows == 0:
+            return {}
+
+        occupied_query = self.items.filter(deleted=False)
+        if exclude_item:
+            occupied_query = occupied_query.exclude(pk=exclude_item.pk)
+
+        used_cells = set(occupied_query.values_list("row", "column"))
+
+        free_cells = {}
+        for row in range(1, self.rows + 1):
+            free_cells[row] = [
+                col
+                for col in range(1, self.columns + 1)
+                if (row, col) not in used_cells
+            ]
+        return free_cells
+
 
 class StorageItem(UserContentModel):
     storage = models.ForeignKey(Storage, on_delete=models.CASCADE, related_name="items")

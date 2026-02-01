@@ -56,9 +56,17 @@ MEDIA_ROOT = BASE_DIR / "test_media/"
 # Run Celery tasks synchronously in tests
 CELERY_TASK_ALWAYS_EAGER = True
 
+# Use dummy cache in tests to prevent cache interference between tests
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+    }
+}
+
 # Ensure all exports are available
 __all__ = [
     "ACCOUNT_ADAPTER",
+    "CACHES",
     "ALLOWED_HOSTS",
     "ANTHROPIC_API_KEY",
     "AUTH_PASSWORD_VALIDATORS",

@@ -30,6 +30,7 @@ class UserSettingsView(UpdateView):
 
 
 def get_user_settings(user: "AbstractUser") -> UserSettings:
-    """Get or create user settings, ensuring persistence."""
-    user_settings, _ = UserSettings.objects.get_or_create(user=user)
-    return user_settings
+    """Get or create user settings, with per-request caching on user object."""
+    if not hasattr(user, "_cached_settings"):
+        user._cached_settings, _ = UserSettings.objects.get_or_create(user=user)
+    return user._cached_settings
