@@ -223,6 +223,13 @@ class Source(UserContentModel):
         verbose_name=_("URL"),
         help_text=_("Website URL for this source"),
     )
+    price_selector = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        verbose_name=_("Price CSS Selector"),
+        help_text=_("CSS selector to extract price, e.g., '.product-price'"),
+    )
 
     class Meta:
         verbose_name = _("Source")
@@ -315,6 +322,18 @@ class Wine(UserContentModel):
         blank=True,
         verbose_name=_("RRP"),
     )
+    price_url = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name=_("Price URL"),
+        help_text=_("Product page URL for automatic price tracking"),
+    )
+
+    def __str__(self):
+        if self.vintage:
+            return f"{self.name} ({self.vintage})"
+        return self.name
 
     def get_absolute_url(self):
         return reverse("wine-detail", kwargs={"pk": self.pk})

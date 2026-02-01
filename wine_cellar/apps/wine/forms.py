@@ -341,6 +341,12 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
             "Enter the recommended retail price if different from purchase price."
         ),
     )
+    price_url = forms.URLField(
+        required=False,
+        max_length=500,
+        assume_scheme="https",
+        help_text=_("Product page URL for automatic price tracking."),
+    )
     barcode = forms.CharField(
         max_length=100,
         required=False,

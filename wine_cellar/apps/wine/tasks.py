@@ -1,3 +1,9 @@
+import logging
+import re
+from decimal import Decimal, InvalidOperation
+
+import requests
+from bs4 import BeautifulSoup
 from celery import shared_task
 from django.contrib.auth import get_user_model
 from django.db.models import Max
@@ -5,6 +11,8 @@ from django.utils import timezone
 
 from wine_cellar.apps.wine.emails import send_drink_by_reminder, send_sale_alert
 from wine_cellar.apps.wine.models import PriceHistory, SaleAlert, Wine
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task(name="drink_by_reminder")
@@ -120,3 +128,79 @@ def check_sale_alerts():
             send_sale_alert(alert.user, triggered_deals)
             alert.last_notified = now
             alert.save(update_fields=["last_notified"])
+
+
+@shared_task(name="fetch_wine_prices")
+def fetch_wine_prices():
+    """Fetch prices from wine URLs and record in PriceHistory."""
+    # Get wines with price_url configured
+    wines = (
+        Wine.objects.filter(
+            price_url__isnull=False,
+        )
+        .exclude(price_url="")
+        .select_related("user")
+        .prefetch_related("source")
+    )
+
+    fetched_count = 0
+    for wine in wines:
+        # Get first source with a price_selector
+        source = (
+            wine.source.filter(price_selector__isnull=False)
+            .exclude(price_selector="")
+            .first()
+        )
+        if not source:
+            continue
+
+        try:
+            response = requests.get(
+                wine.price_url,
+                timeout=30,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; WineCellar/1.0)"},
+            )
+            response.raise_for_status()
+
+            soup = BeautifulSoup(response.text, "html.parser")
+            price_element = soup.select_one(source.price_selector)
+
+            if price_element:
+                price_text = price_element.get_text(strip=True)
+                # Extract numeric value (handles $19.99, €19,99, etc.)
+                price_match = re.search(r"[\d.,]+", price_text)
+                if price_match:
+                    price_str = price_match.group()
+                    # Handle European format (1.234,56 -> 1234.56)
+                    if "," in price_str and "." in price_str:
+                        # Determine which is the decimal separator
+                        if price_str.rfind(",") > price_str.rfind("."):
+                            # European: 1.234,56
+                            price_str = price_str.replace(".", "").replace(",", ".")
+                        else:
+                            # US: 1,234.56
+                            price_str = price_str.replace(",", "")
+                    elif "," in price_str:
+                        # Could be European decimal (19,99) or US thousands (1,000)
+                        # Assume decimal if only one comma and 2 digits after
+                        parts = price_str.split(",")
+                        if len(parts) == 2 and len(parts[1]) == 2:
+                            price_str = price_str.replace(",", ".")
+                        else:
+                            price_str = price_str.replace(",", "")
+
+                    price = Decimal(price_str)
+
+                    PriceHistory.objects.create(
+                        wine=wine,
+                        source=source,
+                        price=price,
+                        user=wine.user,
+                    )
+                    fetched_count += 1
+        except requests.RequestException as e:
+            logger.warning(f"Price fetch failed for {wine.name}: {e}")
+        except InvalidOperation as e:
+            logger.warning(f"Price parse failed for {wine.name}: {e}")
+
+    return f"Fetched {fetched_count} prices"

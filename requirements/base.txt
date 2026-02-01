@@ -1,3 +1,4 @@
+beautifulsoup4==4.12.3
 Django==5.2.9
 celery==5.6.1
 django-allauth[socialaccount]==65.13.1
