@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}
+    Upload CSS
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">Upload CSS</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1 pure-u-md-1-2">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert--{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+            <form method="post"
+                  enctype="multipart/form-data"
+                  class="pure-form pure-form-stacked">
+                {% csrf_token %}
+                <fieldset>
+                    <label for="id_file">CSS file (.css, max 500KB)</label>
+                    {{ form.file }}
+                    {% if form.file.errors %}
+                        <div class="form-error">
+                            {% for error in form.file.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <button type="submit"
+                            class="pure-button button__primary mt-12">
+                        <i class="fa-solid fa-upload"></i> Upload
+                    </button>
+                </fieldset>
+            </form>
+        </div>
+    </div>
+    {% if uploaded_files %}
+        <div class="pure-g mt-12">
+            <div class="pure-u-1">
+                <h2>Uploaded Files</h2>
+                <table class="pure-table pure-table-horizontal pure-table-striped">
+                    <thead>
+                        <tr>
+                            <th>Filename</th>
+                            <th>Size</th>
+                            <th>Uploaded</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in uploaded_files %}
+                            <tr>
+                                <td>{{ f.name }}</td>
+                                <td>{{ f.size|filesizeformat }}</td>
+                                <td>{{ f.modified|date:"Y-m-d H:i" }}</td>
+                                <td>
+                                    <form method="post" action="{% url 'css-delete' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="filename" value="{{ f.name }}">
+                                        <button type="submit"
+                                                class="pure-button"
+                                                title="Delete">
+                                            <i class="fa-regular fa-trash-can"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+{% endblock content %}
