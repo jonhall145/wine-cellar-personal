@@ -20,7 +20,7 @@ from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
 from wine_cellar.apps.storage.models import Storage, StorageItem
-from wine_cellar.apps.user.views import get_user_settings
+from wine_cellar.apps.user.views import get_active_household, get_user_settings
 from wine_cellar.apps.wine.filters import WineFilter
 from wine_cellar.apps.wine.forms import WineEditForm, WineForm, image_fields_map
 from wine_cellar.apps.wine.models import Wine, WineImage
@@ -68,12 +68,13 @@ class HomePageView(TemplateView):
 
         context = super().get_context_data(**kwargs)
         user = self.request.user
+        household = get_active_household(user)
 
         # Get total wines count separately to avoid JOIN issues
-        wines = Wine.objects.filter(user=user).count()
+        wines = Wine.objects.filter(household=household).count()
 
         # Get other wine stats
-        wine_stats = Wine.objects.filter(user=user).aggregate(
+        wine_stats = Wine.objects.filter(household=household).aggregate(
             wines_in_stock=Count(
                 "id", filter=Q(storageitem__deleted=False), distinct=True
             ),
@@ -112,7 +113,7 @@ class HomePageView(TemplateView):
         total_value = StorageItem.objects.aggregate(
             total=Sum(
                 Coalesce("price", "wine__price"),
-                filter=Q(deleted=False, wine__user=self.request.user),
+                filter=Q(deleted=False, household=household),
             )
         )["total"] or Decimal("0")
         total_value = total_value.quantize(Decimal("0"))
@@ -125,7 +126,9 @@ class HomePageView(TemplateView):
         total_value = f"{currency}{formatted_price}"
 
         # Calculate bottles in stock
-        bottles_in_stock = StorageItem.objects.filter(user=user, deleted=False).count()
+        bottles_in_stock = StorageItem.objects.filter(
+            household=household, deleted=False
+        ).count()
 
         context.update(
             {
@@ -141,7 +144,7 @@ class HomePageView(TemplateView):
 
         # Low stock reminders - filter at database level for efficiency
         low_stock_count = (
-            ReorderReminder.objects.filter(user=self.request.user, is_active=True)
+            ReorderReminder.objects.filter(household=household, is_active=True)
             .annotate(
                 current_stock=Count(
                     "wine__storageitem", filter=Q(wine__storageitem__deleted=False)
@@ -153,18 +156,18 @@ class HomePageView(TemplateView):
 
         # Recent drinks
         recent_drinks = (
-            DrinkRecord.objects.filter(user=self.request.user)
+            DrinkRecord.objects.filter(household=household)
             .select_related("wine")
             .order_by("-date_consumed")[:3]
         )
 
         # Wishlist
         wishlist_items = Wishlist.objects.filter(
-            user=self.request.user, purchased=False
+            household=household, purchased=False
         ).order_by("-priority")[:3]
 
         # Stats - consolidate into single query per model
-        drink_stats = DrinkRecord.objects.filter(user=user).aggregate(
+        drink_stats = DrinkRecord.objects.filter(household=household).aggregate(
             total_consumed=Count("id"),
             avg_rating=Avg("rating", filter=Q(rating__isnull=False)),
         )
@@ -182,7 +185,7 @@ class HomePageView(TemplateView):
             )
 
             pending_reviews_count = PositionChangeReview.objects.filter(
-                user=self.request.user,
+                household=household,
                 status=ReviewStatus.PENDING,
             ).count()
         except Exception:
@@ -336,7 +339,8 @@ class WineCreateView(FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Provide free cells for storage dropdown (for stock_add.js)
-        user_storages = Storage.objects.filter(user=self.request.user)
+        household = get_active_household(self.request.user)
+        user_storages = Storage.objects.filter(household=household)
         free_cells_by_storage = {
             storage.pk: storage.get_free_cells_by_row() for storage in user_storages
         }
@@ -468,7 +472,10 @@ class WineCreateView(FormView):
                         image_data[2], "scanned_front_label.jpg"
                     )
 
-        wine, created = self.process_form_data(self.request.user, form.cleaned_data)
+        household = get_active_household(self.request.user)
+        wine, created = self.process_form_data(
+            self.request.user, household, form.cleaned_data
+        )
 
         # Clear scanned label data from session after successful save
         if "scanned_label" in self.request.session:
@@ -485,7 +492,7 @@ class WineCreateView(FormView):
 
     @staticmethod
     @transaction.atomic
-    def process_form_data(user, cleaned_data):
+    def process_form_data(user, household, cleaned_data):
         from wine_cellar.apps.wine.models import Size
 
         abv = cleaned_data["abv"]
@@ -524,6 +531,7 @@ class WineCreateView(FormView):
             vintage=vintage,
             country=country,
             user=user,
+            household=household,
             defaults={
                 "category": category,
                 "subregion": subregion,
@@ -566,6 +574,7 @@ class WineCreateView(FormView):
                 row=row,
                 column=column,
                 user=user,
+                household=household,
                 price=bottle_price,
                 is_gift=is_gift,
                 gift_from=gift_from,
@@ -588,19 +597,22 @@ class WineUpdateView(FormView):
 
     def get_initial(self):
         initial = super().get_initial()
-        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], user=self.request.user)
+        household = get_active_household(self.request.user)
+        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], household=household)
         initial.update(model_to_dict(wine))
         return initial
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], user=self.request.user)
+        household = get_active_household(self.request.user)
+        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], household=household)
         context["wine"] = wine
         context["wine_images"] = wine.wineimage_set.all()
         return context
 
     def form_valid(self, form):
-        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], user=self.request.user)
+        household = get_active_household(self.request.user)
+        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], household=household)
         self.process_form_data(wine, self.request.user, form.cleaned_data)
         self.success_url = reverse_lazy("wine-detail", kwargs={"pk": wine.pk})
         return super().form_valid(form)
@@ -691,6 +703,7 @@ class WineDetailView(DetailView):
 
     def get_queryset(self):
         qs = super().get_queryset()
+        household = get_active_household(self.request.user)
         return (
             qs.select_related("size", "appellation")
             .prefetch_related(
@@ -706,7 +719,7 @@ class WineDetailView(DetailView):
                     "storageitem", filter=Q(storageitem__deleted=False), distinct=True
                 )
             )
-            .filter(user=self.request.user)
+            .filter(household=household)
         )
 
 
@@ -718,7 +731,8 @@ class WineImagesView(DetailView):
     context_object_name = "wine"
 
     def get_queryset(self):
-        return Wine.objects.filter(user=self.request.user).prefetch_related(
+        household = get_active_household(self.request.user)
+        return Wine.objects.filter(household=household).prefetch_related(
             "wineimage_set"
         )
 
@@ -766,7 +780,8 @@ class WineListView(FilterView):
                 "storageitem", filter=Q(storageitem__deleted=False), distinct=True
             ),
         )
-        return qs.filter(user=self.request.user).distinct()
+        household = get_active_household(self.request.user)
+        return qs.filter(household=household).distinct()
 
 
 class WineScanView(TemplateView):
@@ -798,7 +813,8 @@ class WineDeleteView(DeleteView):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(user=self.request.user)
+        household = get_active_household(self.request.user)
+        return qs.filter(household=household)
 
 
 class WineMapView(TemplateView):
@@ -806,9 +822,10 @@ class WineMapView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        household = get_active_household(self.request.user)
         # Only show wines that are currently in stock (have non-deleted storage items)
         wines = Wine.objects.filter(
-            user=self.request.user,
+            household=household,
             storageitem__isnull=False,
             storageitem__deleted=False,
         ).distinct()
@@ -889,28 +906,32 @@ class DrinkRecordCreateView(FormView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], user=self.request.user)
+        household = get_active_household(self.request.user)
+        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], household=household)
         kwargs["wine"] = wine
         kwargs["user"] = self.request.user
         return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        household = get_active_household(self.request.user)
         context["wine"] = get_object_or_404(
-            Wine, pk=self.kwargs["pk"], user=self.request.user
+            Wine, pk=self.kwargs["pk"], household=household
         )
         return context
 
     def form_valid(self, form):
         from wine_cellar.apps.wine.models import DrinkRecord
 
-        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], user=self.request.user)
+        household = get_active_household(self.request.user)
+        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], household=household)
         storage_item = form.cleaned_data.get("storage_item")
 
         # Create drink record
         DrinkRecord.objects.create(
             wine=wine,
             user=self.request.user,
+            household=household,
             date_consumed=form.cleaned_data["date_consumed"],
             tasting_notes=form.cleaned_data.get("tasting_notes"),
             rating=form.cleaned_data.get("rating"),
@@ -935,8 +956,9 @@ class DrinkRecordListView(TemplateView):
         from wine_cellar.apps.wine.models import DrinkRecord
 
         context = super().get_context_data(**kwargs)
+        household = get_active_household(self.request.user)
         context["drink_records"] = DrinkRecord.objects.filter(
-            user=self.request.user
+            household=household
         ).select_related("wine")
         return context
 
@@ -952,9 +974,8 @@ class DrinkRecordEditView(FormView):
     def get_object(self):
         from wine_cellar.apps.wine.models import DrinkRecord
 
-        return get_object_or_404(
-            DrinkRecord, pk=self.kwargs["pk"], user=self.request.user
-        )
+        household = get_active_household(self.request.user)
+        return get_object_or_404(DrinkRecord, pk=self.kwargs["pk"], household=household)
 
     def get_initial(self):
         record = self.get_object()
@@ -992,7 +1013,8 @@ class DrinkRecordDeleteView(DeleteView):
     def get_queryset(self):
         from wine_cellar.apps.wine.models import DrinkRecord
 
-        return DrinkRecord.objects.filter(user=self.request.user)
+        household = get_active_household(self.request.user)
+        return DrinkRecord.objects.filter(household=household)
 
 
 class WishlistListView(TemplateView):
@@ -1002,8 +1024,9 @@ class WishlistListView(TemplateView):
         from wine_cellar.apps.wine.models import Wishlist
 
         context = super().get_context_data(**kwargs)
+        household = get_active_household(self.request.user)
         context["wishlist_items"] = Wishlist.objects.filter(
-            user=self.request.user, purchased=False
+            household=household, purchased=False
         )
         return context
 
@@ -1020,8 +1043,10 @@ class WishlistCreateView(FormView):
     def form_valid(self, form):
         from wine_cellar.apps.wine.models import Wishlist
 
+        household = get_active_household(self.request.user)
         Wishlist.objects.create(
             user=self.request.user,
+            household=household,
             name=form.cleaned_data["name"],
             wine_type=form.cleaned_data.get("wine_type") or None,
             country=form.cleaned_data.get("country") or None,
@@ -1041,7 +1066,8 @@ class WishlistDeleteView(DeleteView):
     def get_queryset(self):
         from wine_cellar.apps.wine.models import Wishlist
 
-        return Wishlist.objects.filter(user=self.request.user)
+        household = get_active_household(self.request.user)
+        return Wishlist.objects.filter(household=household)
 
 
 class WishlistPurchasedView(TemplateView):
@@ -1050,7 +1076,8 @@ class WishlistPurchasedView(TemplateView):
     def get(self, request, *args, **kwargs):
         from wine_cellar.apps.wine.models import Wishlist
 
-        item = get_object_or_404(Wishlist, pk=kwargs["pk"], user=request.user)
+        household = get_active_household(request.user)
+        item = get_object_or_404(Wishlist, pk=kwargs["pk"], household=household)
         item.purchased = True
         item.save()
         return redirect("wishlist-list")
@@ -1062,13 +1089,14 @@ class CellarValueView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
+        household = get_active_household(user)
         user_settings = get_user_settings(user)
         currency = settings.CURRENCY_SYMBOLS.get(
             getattr(user_settings, "currency", "EUR"), "€"
         )
 
         # Total value from storage items
-        storage_items = StorageItem.objects.filter(user=user, deleted=False)
+        storage_items = StorageItem.objects.filter(household=household, deleted=False)
         total_value = storage_items.aggregate(
             total=Coalesce(Sum("price"), Decimal("0.00"))
         )["total"]
@@ -1123,20 +1151,23 @@ class BottleNoteCreateView(FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        household = get_active_household(self.request.user)
         context["storage_item"] = get_object_or_404(
-            StorageItem, pk=self.kwargs["pk"], user=self.request.user
+            StorageItem, pk=self.kwargs["pk"], household=household
         )
         return context
 
     def form_valid(self, form):
         from wine_cellar.apps.wine.models import BottleNote
 
+        household = get_active_household(self.request.user)
         storage_item = get_object_or_404(
-            StorageItem, pk=self.kwargs["pk"], user=self.request.user
+            StorageItem, pk=self.kwargs["pk"], household=household
         )
         BottleNote.objects.create(
             storage_item=storage_item,
             user=self.request.user,
+            household=household,
             note_date=form.cleaned_data["note_date"],
             note=form.cleaned_data["note"],
         )
@@ -1155,10 +1186,11 @@ class DrinkingWindowAlertsView(TemplateView):
         from wine_cellar.apps.wine.models import DrinkingWindowAlert
 
         context = super().get_context_data(**kwargs)
+        household = get_active_household(self.request.user)
 
         # Get existing alerts
         alerts = DrinkingWindowAlert.objects.filter(
-            user=self.request.user, is_read=False
+            household=household, is_read=False
         ).select_related("wine")
 
         current_year = date.today().year
@@ -1166,7 +1198,7 @@ class DrinkingWindowAlertsView(TemplateView):
         # Find wines approaching end of drinking window (this year or next)
         upcoming_wines = (
             Wine.objects.filter(
-                user=self.request.user,
+                household=household,
                 drink_to__isnull=False,
                 drink_to__gt=0,  # Not "now"
                 drink_to__gte=current_year,
@@ -1179,7 +1211,7 @@ class DrinkingWindowAlertsView(TemplateView):
         # Wines past drinking window
         overdue_wines = (
             Wine.objects.filter(
-                user=self.request.user,
+                household=household,
                 drink_to__isnull=False,
                 drink_to__gt=0,  # Not "now"
                 drink_to__lt=current_year,
@@ -1211,8 +1243,9 @@ class ConsumptionStatsView(TemplateView):
 
         context = super().get_context_data(**kwargs)
         user = self.request.user
+        household = get_active_household(user)
 
-        records = DrinkRecord.objects.filter(user=user).select_related("wine")
+        records = DrinkRecord.objects.filter(household=household).select_related("wine")
 
         # Drinks by month (last 12 months)
         by_month = (
@@ -1266,9 +1299,10 @@ class ReorderRemindersView(TemplateView):
 
         context = super().get_context_data(**kwargs)
         user = self.request.user
+        household = get_active_household(user)
 
         reminders = (
-            ReorderReminder.objects.filter(user=user, is_active=True)
+            ReorderReminder.objects.filter(household=household, is_active=True)
             .select_related("wine")
             .annotate(
                 current_stock=Count(
@@ -1309,18 +1343,21 @@ class ReorderReminderCreateView(FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        household = get_active_household(self.request.user)
         context["wine"] = get_object_or_404(
-            Wine, pk=self.kwargs["pk"], user=self.request.user
+            Wine, pk=self.kwargs["pk"], household=household
         )
         return context
 
     def form_valid(self, form):
         from wine_cellar.apps.wine.models import ReorderReminder
 
-        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], user=self.request.user)
+        household = get_active_household(self.request.user)
+        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], household=household)
         ReorderReminder.objects.update_or_create(
             wine=wine,
             user=self.request.user,
+            household=household,
             defaults={
                 "min_stock": form.cleaned_data["min_stock"],
                 "is_active": True,
@@ -1337,7 +1374,8 @@ class ReorderReminderDeleteView(DeleteView):
     def get_queryset(self):
         from wine_cellar.apps.wine.models import ReorderReminder
 
-        return ReorderReminder.objects.filter(user=self.request.user)
+        household = get_active_household(self.request.user)
+        return ReorderReminder.objects.filter(household=household)
 
 
 class LabelScanView(FormView):
@@ -1729,8 +1767,9 @@ class SaleAlertsView(TemplateView):
         from wine_cellar.apps.wine.models import SaleAlert
 
         context = super().get_context_data(**kwargs)
+        household = get_active_household(self.request.user)
         context["alerts"] = (
-            SaleAlert.objects.filter(user=self.request.user)
+            SaleAlert.objects.filter(household=household)
             .select_related("wine", "source")
             .order_by("-is_active", "-created")
         )
@@ -1756,8 +1795,10 @@ class SaleAlertCreateView(FormView):
     def form_valid(self, form):
         from wine_cellar.apps.wine.models import SaleAlert
 
+        household = get_active_household(self.request.user)
         SaleAlert.objects.create(
             user=self.request.user,
+            household=household,
             wine=form.cleaned_data.get("wine"),
             source=form.cleaned_data.get("source"),
             threshold_percent=form.cleaned_data.get("threshold_percent", 10),
@@ -1775,7 +1816,8 @@ class SaleAlertDeleteView(DeleteView):
     def get_queryset(self):
         from wine_cellar.apps.wine.models import SaleAlert
 
-        return SaleAlert.objects.filter(user=self.request.user)
+        household = get_active_household(self.request.user)
+        return SaleAlert.objects.filter(household=household)
 
 
 class SaleAlertToggleView(TemplateView):
@@ -1784,7 +1826,8 @@ class SaleAlertToggleView(TemplateView):
     def get(self, request, *args, **kwargs):
         from wine_cellar.apps.wine.models import SaleAlert
 
-        alert = get_object_or_404(SaleAlert, pk=kwargs["pk"], user=request.user)
+        household = get_active_household(request.user)
+        alert = get_object_or_404(SaleAlert, pk=kwargs["pk"], household=household)
         alert.is_active = not alert.is_active
         alert.save(update_fields=["is_active"])
         return redirect("sale-alerts")

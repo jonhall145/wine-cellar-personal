@@ -11,7 +11,7 @@ from django.forms import ImageField
 from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.storage.models import Storage, StorageItem
-from wine_cellar.apps.user.views import get_user_settings
+from wine_cellar.apps.user.views import get_active_household, get_user_settings
 from wine_cellar.apps.wine.fields import OpenMultipleChoiceField
 from wine_cellar.apps.wine.models import (
     Appellation,
@@ -138,6 +138,7 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user")
         super().__init__(*args, **kwargs)
+        household = get_active_household(user)
         user_fields = [
             "vineyard",
             "attributes",
@@ -146,11 +147,13 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
             "source",
         ]
         for user_field in user_fields:
-            self.fields[user_field].queryset = self.fields[
-                user_field
-            ].queryset.model.objects.filter(Q(user=None) | Q(user=user))
+            model = self.fields[user_field].queryset.model
+            self.fields[user_field].queryset = model.objects.filter(
+                Q(household__isnull=True) | Q(household=household)
+            )
             self.fields[user_field].user = user
         self.user = user
+        self.household = household
         user_settings = get_user_settings(user)
         self.fields["price"].help_text = _(
             "Enter the price of the bottle in %(currency)s."
@@ -165,10 +168,10 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         self.fields["drink_from"].choices = year_choices
         self.fields["drink_to"].choices = year_choices
 
-        # Configure storage field for user's storages
+        # Configure storage field for household's storages
         if "storage" in self.fields:
             self.fields["storage"].queryset = Storage.objects.filter(
-                user=user
+                household=household
             ).order_by("order", "created")
 
         for field_name, image_type_code in image_fields_map.items():

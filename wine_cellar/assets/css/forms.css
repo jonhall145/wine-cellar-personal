@@ -175,6 +175,7 @@ p.form-hint {
 .filter-form__sm-container {
   details > summary {
     list-style: none;
+    cursor: pointer;
   }
 
   summary::-webkit-details-marker {
@@ -182,17 +183,17 @@ p.form-hint {
   }
 
   summary::before {
-    content: '  +';
-    font-size: 27px;
-    font-weight: 400;
-    vertical-align: text-bottom;
+    content: '\f078';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-size: var(--font-sm);
+    margin-right: var(--spacing-sm);
+    display: inline-block;
+    transition: transform var(--transition-fast);
   }
 
-  details[open] summary:before {
-    content: '  –';
-    font-size: 27px;
-    font-weight: 400;
-    vertical-align: unset;
+  details[open] summary::before {
+    transform: rotate(180deg);
   }
 
   .filter-form__header {
@@ -213,7 +214,7 @@ p.form-hint {
 
 /* Scanner overlay - modern green viewfinder */
 .overlay {
-  --border-style: 3px solid var(--primary);
+  --border-style: 4px solid var(--primary);
   --border-space: var(--spacing-lg);
   --glow-color: rgba(1, 150, 3, 0.4);
 
@@ -227,10 +228,10 @@ p.form-hint {
 
 .overlay-element {
   position: absolute;
-  width: 20px;
-  height: 20px;
+  width: 30px;
+  height: 30px;
   border-radius: 2px;
-  box-shadow: 0 0 8px var(--glow-color);
+  box-shadow: 0 0 10px var(--glow-color);
   transition: box-shadow 0.3s ease;
 }
 

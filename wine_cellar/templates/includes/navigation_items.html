@@ -45,6 +45,34 @@
             </li>
         </ul>
     </li>
+    {% if has_multiple_households %}
+        <li class="pure-menu-item pure-menu-has-children pure-menu-allow-hover">
+            <a href="{% url 'household-list' %}" class="pure-menu-link">
+                {{ active_household.name|truncatechars:15 }}{% if show_dropdown_indicator %} ▾{% endif %}
+            </a>
+            <ul class="pure-menu-children">
+                {% for household in user_households %}
+                    {% if household != active_household %}
+                        <li class="pure-menu-item">
+                            <form action="{% url 'household-switch' household.pk %}" method="post" class="household-switch-form">
+                                {% csrf_token %}
+                                <button type="submit" class="pure-menu-link household-switch-btn">
+                                    {{ household.name }}
+                                </button>
+                            </form>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                <li class="pure-menu-item">
+                    <a href="{% url 'household-list' %}" class="pure-menu-link">{% translate "Manage Households" %}</a>
+                </li>
+            </ul>
+        </li>
+    {% elif active_household %}
+        <li class="pure-menu-item">
+            <a href="{% url 'household-list' %}" class="pure-menu-link">{{ active_household.name|truncatechars:15 }}</a>
+        </li>
+    {% endif %}
     <li class="pure-menu-item">
         <a href="{% url 'user-settings' %}" class="pure-menu-link">{% translate "Settings" %}</a>
     </li>

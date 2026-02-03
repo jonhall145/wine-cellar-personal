@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     "allauth.socialaccount.providers.openid_connect",
     "widget_tweaks",
+    "wine_cellar.apps.household",
     "wine_cellar.apps.wine",
     "wine_cellar.apps.user",
     "wine_cellar.apps.storage",
@@ -81,6 +82,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "wine_cellar.apps.household.middleware.HouseholdMiddleware",
 ]
 
 ROOT_URLCONF = "wine_cellar.conf.urls"
@@ -96,6 +98,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "wine_cellar.apps.household.context_processors.household_context",
             ],
         },
     },

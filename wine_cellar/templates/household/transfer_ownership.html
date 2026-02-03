@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}
+    {% translate "Transfer Ownership" %}
+{% endblock title %}
+{% block header %}
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1 pure-u-md-2-3 pure-u-lg-1-2 m-auto">
+            <a href="{% url 'household-detail' household.pk %}" class="back-link">← {% translate "Back to household" %}</a>
+            <h1>{% translate "Transfer Ownership" %}</h1>
+            <div class="card alert alert--warning">
+                <p>{% blocktranslate with name=household.name %}Transfer ownership of "{{ name }}" to another member.{% endblocktranslate %}</p>
+                <p>{% translate "You will become an Admin after the transfer." %}</p>
+            </div>
+            <form method="post" class="pure-form pure-form-stacked wine-form" novalidate>
+                {% csrf_token %}
+                <div class="form-container">
+                    <label for="{{ form.new_owner.id_for_label }}">{% translate "New Owner" %}</label>
+                    {{ form.new_owner }}
+                    {% if form.new_owner.errors %}
+                        <ul class="form-errorlist">
+                            {% for error in form.new_owner.errors %}<li>{{ error }}</li>{% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+                <div class="pure-controls">
+                    <button type="submit" class="pure-button button__primary" onclick="return confirm('{% translate "Are you sure you want to transfer ownership?" %}')">{% translate "Transfer Ownership" %}</button>
+                    <a href="{% url 'household-detail' household.pk %}" class="pure-button">{% translate "Cancel" %}</a>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock content %}

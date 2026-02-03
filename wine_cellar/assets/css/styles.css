@@ -523,7 +523,9 @@ a:hover {
 }
 
 .bottom-nav__item--primary span {
-  display: none;
+  display: block;
+  font-size: var(--font-xs);
+  margin-top: 2px;
 }
 
 /* Dashboard Widgets */
@@ -710,6 +712,8 @@ a:hover {
     border-radius: 0;
     min-width: auto;
     margin-left: var(--spacing-md);
+    border-left: 2px solid rgba(255, 255, 255, 0.3);
+    padding-left: var(--spacing-sm);
   }
 
   .menu__sm .pure-menu-has-children.menu-open > .pure-menu-children {
@@ -725,6 +729,19 @@ a:hover {
     background: rgba(255, 255, 255, 0.15);
     color: white;
   }
+}
+
+/* Household switcher */
+.household-switch-form {
+  margin: 0;
+}
+
+.household-switch-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
 }
 
 /* Text utilities */

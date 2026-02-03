@@ -91,7 +91,9 @@ def test_get_average_respects_user_currency(user, wine_factory, storage_item_fac
     storage_item_factory(wine=wine, price=Decimal("20.00"))
 
     # set user preference to USD
-    us = UserSettings.objects.create(user=user, currency="USD")
+    us, _ = UserSettings.objects.get_or_create(user=user, defaults={"currency": "USD"})
+    us.currency = "USD"
+    us.save()
     avg = Decimal("15.00")
     currency = settings.CURRENCY_SYMBOLS.get(us.currency)
     expected = f"{currency}{number_format(avg, use_l10n=True)}"

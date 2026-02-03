@@ -34,3 +34,11 @@ def get_user_settings(user: "AbstractUser") -> UserSettings:
     if not hasattr(user, "_cached_settings"):
         user._cached_settings, _ = UserSettings.objects.get_or_create(user=user)
     return user._cached_settings
+
+
+def get_active_household(user: "AbstractUser"):
+    """Get the user's active household, with per-request caching."""
+    if not hasattr(user, "_cached_household"):
+        settings = get_user_settings(user)
+        user._cached_household = settings.active_household
+    return user._cached_household

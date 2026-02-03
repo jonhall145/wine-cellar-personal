@@ -19,11 +19,20 @@ from wine_cellar.apps.wine.models import (
 )
 
 
+def get_household_from_user(obj):
+    """Helper to get household from user's active household."""
+    if hasattr(obj, "user") and obj.user:
+        if hasattr(obj.user, "user_settings") and obj.user.user_settings:
+            return obj.user.user_settings.active_household
+    return None
+
+
 class GrapeFactory(DjangoModelFactory):
     class Meta:
         model = Grape
 
     name = factory.Faker("name")
+    # user and household are nullable - only set if explicitly passed
 
 
 class SizeFactory(DjangoModelFactory):
@@ -31,6 +40,7 @@ class SizeFactory(DjangoModelFactory):
         model = Size
 
     name = random.choice([choice[0] for choice in SizeChoices.choices])
+    # user and household are nullable - only set if explicitly passed
 
 
 class VineyardFactory(DjangoModelFactory):
@@ -38,6 +48,7 @@ class VineyardFactory(DjangoModelFactory):
         model = Vineyard
 
     name = factory.Faker("company")
+    # user and household are nullable - only set if explicitly passed
 
 
 class FoodPairingFactory(DjangoModelFactory):
@@ -45,6 +56,7 @@ class FoodPairingFactory(DjangoModelFactory):
         model = FoodPairing
 
     name = factory.Faker("name")
+    # user and household are nullable - only set if explicitly passed
 
 
 class AttributeFactory(DjangoModelFactory):
@@ -52,6 +64,7 @@ class AttributeFactory(DjangoModelFactory):
         model = Attribute
 
     name = factory.Faker("name")
+    # user and household are nullable - only set if explicitly passed
 
 
 class SourceFactory(DjangoModelFactory):
@@ -59,6 +72,7 @@ class SourceFactory(DjangoModelFactory):
         model = Source
 
     name = factory.Faker("name")
+    # user and household are nullable - only set if explicitly passed
 
 
 class WineFactory(DjangoModelFactory):
@@ -73,12 +87,16 @@ class WineFactory(DjangoModelFactory):
     abv = 12.0
     country = "DE"
 
+    @factory.lazy_attribute
+    def household(self):
+        return get_household_from_user(self)
+
     @post_generation
     def grapes(obj, create, extracted, **kwargs):
         if not create:
             return
         if not extracted:
-            grape = GrapeFactory()
+            grape = GrapeFactory(user=obj.user, household=obj.household)
             obj.grapes.add(grape)
         else:
             obj.save()

@@ -7,6 +7,7 @@ from django.db.models import Count, F, Q
 from django.utils.translation import gettext_lazy as _
 from django_filters import ChoiceFilter, OrderingFilter
 
+from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.forms import WineFilterForm
 from wine_cellar.apps.wine.models import Appellation, Wine
 
@@ -22,10 +23,11 @@ def get_country_choices_with_favourites(user=None):
     Build country choices with favourites at the top.
     Only includes countries that have wines in stock.
     Favourites: UK, Portugal, France + most frequent from user's cellar.
-    Results are cached per-user for 5 minutes.
+    Results are cached per-household for 5 minutes.
     """
-    user_id = user.id if user and user.is_authenticated else "anon"
-    cache_key = f"country_choices_{user_id}"
+    household = get_active_household(user) if user and user.is_authenticated else None
+    household_id = household.id if household else "anon"
+    cache_key = f"country_choices_{household_id}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
@@ -34,19 +36,23 @@ def get_country_choices_with_favourites(user=None):
 
     # Get countries that have wines in stock
     countries_in_stock = set()
-    if user and user.is_authenticated:
+    if household:
         countries_in_stock = set(
             Wine.objects.filter(
-                user=user, storageitem__isnull=False, storageitem__deleted=False
+                household=household,
+                storageitem__isnull=False,
+                storageitem__deleted=False,
             )
             .values_list("country", flat=True)
             .distinct()
         )
 
-        # Get most frequent country from user's wines in stock
+        # Get most frequent country from household's wines in stock
         most_frequent = (
             Wine.objects.filter(
-                user=user, storageitem__isnull=False, storageitem__deleted=False
+                household=household,
+                storageitem__isnull=False,
+                storageitem__deleted=False,
             )
             .values("country")
             .annotate(count=Count("id"))
@@ -84,21 +90,22 @@ def get_appellation_choices(user=None):
     """
     Build appellation choices for filter dropdown.
     Only includes appellations that have wines in stock.
-    Results are cached per-user for 5 minutes.
+    Results are cached per-household for 5 minutes.
     """
-    user_id = user.id if user and user.is_authenticated else "anon"
-    cache_key = f"appellation_choices_{user_id}"
+    household = get_active_household(user) if user and user.is_authenticated else None
+    household_id = household.id if household else "anon"
+    cache_key = f"appellation_choices_{household_id}"
     cached = cache.get(cache_key)
     if cached is not None:
         return cached
 
     choices = [("", _("Any")), ("missing", _("Missing"))]
 
-    if user and user.is_authenticated:
-        # Get appellations that have wines in stock for this user
+    if household:
+        # Get appellations that have wines in stock for this household
         appellations_in_stock = (
             Appellation.objects.filter(
-                wine__user=user,
+                wine__household=household,
                 wine__storageitem__isnull=False,
                 wine__storageitem__deleted=False,
             )
@@ -289,6 +296,10 @@ class WineFilter(django_filters.FilterSet):
 
     def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
         super().__init__(data, queryset, request=request, prefix=prefix)
+        user = request.user if request else None
+        household = (
+            get_active_household(user) if user and user.is_authenticated else None
+        )
         user_filters = [
             "vineyard",
             "grapes",
@@ -299,7 +310,7 @@ class WineFilter(django_filters.FilterSet):
         for user_filter in user_filters:
             self.filters[user_filter].queryset = self.filters[
                 user_filter
-            ].queryset.filter(Q(user=None) | Q(user=request.user))
+            ].queryset.filter(Q(household__isnull=True) | Q(household=household))
 
         # Update country filter with favourites-ordered choices
         self.filters["country"].extra["choices"] = get_country_choices_with_favourites(

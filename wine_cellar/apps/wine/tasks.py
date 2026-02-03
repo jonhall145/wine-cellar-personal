@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Max
 from django.utils import timezone
 
+from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.emails import send_drink_by_reminder, send_sale_alert
 from wine_cellar.apps.wine.models import PriceHistory, SaleAlert, Wine
 
@@ -26,9 +27,13 @@ def drink_by_reminder():
     )
     current_year = timezone.now().year
     for user in users:
+        # Get the user's active household
+        household = get_active_household(user)
+        if not household:
+            continue
         # Find wines where drink_to matches current year (not "now" which is 0)
         wines = Wine.objects.filter(
-            user=user,
+            household=household,
             drink_to=current_year,
             storageitem__isnull=False,
             storageitem__deleted=False,
@@ -58,8 +63,13 @@ def check_sale_alerts():
     for alert in alerts:
         triggered_deals = []
 
+        # Get the user's active household
+        household = get_active_household(alert.user)
+        if not household:
+            continue
+
         # Build base query for price history
-        price_query = PriceHistory.objects.filter(user=alert.user)
+        price_query = PriceHistory.objects.filter(household=household)
 
         if alert.wine:
             price_query = price_query.filter(wine=alert.wine)
@@ -82,7 +92,7 @@ def check_sale_alerts():
         # Batch fetch all relevant prices at once to avoid N+1 queries
         wine_source_pairs = [(e["wine"], e["source"]) for e in wines_with_prices]
         all_prices = (
-            PriceHistory.objects.filter(user=alert.user)
+            PriceHistory.objects.filter(household=household)
             .filter(
                 wine_id__in=[p[0] for p in wine_source_pairs],
                 source_id__in=[p[1] for p in wine_source_pairs],
@@ -201,6 +211,7 @@ def fetch_wine_prices():
                         source=source,
                         price=price,
                         user=wine.user,
+                        household=wine.household,
                     )
                     fetched_count += 1
         except requests.RequestException as e:

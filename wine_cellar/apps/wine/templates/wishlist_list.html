@@ -47,7 +47,7 @@
                 </table>
             {% else %}
                 <div class="empty-state">
-                    <div class="empty-state__icon">💝</div>
+                    <div class="empty-state__icon"><i class="fa-solid fa-heart"></i></div>
                     <h3 class="empty-state__title">{% translate "Wishlist is empty" %}</h3>
                     <p class="empty-state__message">{% translate "Add wines you'd like to buy someday." %}</p>
                     <a href="{% url 'wishlist-add' %}" class="pure-button button__primary empty-state__action">

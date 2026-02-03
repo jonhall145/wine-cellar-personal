@@ -4,7 +4,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.storage.models import Storage
-from wine_cellar.apps.user.views import get_user_settings
+from wine_cellar.apps.user.views import get_active_household, get_user_settings
 
 
 class StarRatingWidget(forms.RadioSelect):
@@ -60,12 +60,11 @@ class StockAddForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop("user")
         super().__init__(*args, **kwargs)
-        user_fields = ["storage"]
-        for user_field in user_fields:
-            self.fields[user_field].queryset = self.fields[
-                user_field
-            ].queryset.model.objects.filter(user=self.user)
-            self.fields[user_field].user = self.user
+        household = get_active_household(self.user)
+        self.fields["storage"].queryset = Storage.objects.filter(
+            household=household
+        ).order_by("order", "created")
+        self.fields["storage"].user = self.user
         user_settings = get_user_settings(self.user)
         self.fields["price"].help_text = _(
             "Enter the price of the bottle in %(currency)s."
@@ -180,8 +179,9 @@ class StorageItemEditForm(forms.Form):
         self.user = kwargs.pop("user")
         self.instance = kwargs.pop("instance", None)
         super().__init__(*args, **kwargs)
+        household = get_active_household(self.user)
         self.fields["storage"].queryset = Storage.objects.filter(
-            user=self.user
+            household=household
         ).order_by("order", "created")
         user_settings = get_user_settings(self.user)
         self.fields["price"].help_text = _(

@@ -11,6 +11,14 @@ class UserSettings(models.Model):
         related_name="user_settings",
         verbose_name=_("User"),
     )
+    active_household = models.ForeignKey(
+        "household.Household",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="active_for_users",
+        verbose_name=_("Active Household"),
+    )
     language = models.CharField(
         max_length=7,
         choices=settings.LANGUAGES,

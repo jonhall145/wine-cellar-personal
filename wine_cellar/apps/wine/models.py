@@ -23,6 +23,14 @@ class UserContentModel(models.Model):
         null=True,
         verbose_name=_("User"),
     )
+    household = models.ForeignKey(
+        "household.Household",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="%(class)s_items",
+        verbose_name=_("Household"),
+    )
     created = models.DateTimeField(
         auto_now_add=True,
         db_index=True,

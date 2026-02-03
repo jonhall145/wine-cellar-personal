@@ -80,8 +80,8 @@ h2.header__title {
     align-items: center;
     justify-content: center;
     font-size: var(--font-md);
-    min-width: 40px;
-    height: 40px;
+    min-width: 44px;
+    height: 44px;
     border-radius: var(--border-radius-sm);
     background: var(--white);
     box-shadow: var(--container-box-shadow);

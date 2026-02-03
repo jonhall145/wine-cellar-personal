@@ -16,6 +16,7 @@ from django.views.decorators.http import require_GET, require_POST
 from django.views.generic import TemplateView
 
 from wine_cellar.apps.storage.models import Storage, StorageItem
+from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.models import Grape, ImageType, Size, Wine, WineImage
 from wine_cellar.apps.wine.services.vision_extraction import WineVisionExtractor
 
@@ -54,6 +55,7 @@ def get_device_from_token(request):
 
 def hardware_auth_required(view_func):
     """Decorator to require hardware device authentication."""
+
     def wrapper(request, *args, **kwargs):
         device, user = get_device_from_token(request)
         if not device:
@@ -61,20 +63,25 @@ def hardware_auth_required(view_func):
         request.hardware_device = device
         request.user = user
         return view_func(request, *args, **kwargs)
+
     return wrapper
 
 
 # ============== Health Check ==============
 
+
 def api_health_check(request):
     """Health check endpoint for Pi client connectivity test."""
-    return JsonResponse({
-        "status": "ok",
-        "timestamp": timezone.now().isoformat(),
-    })
+    return JsonResponse(
+        {
+            "status": "ok",
+            "timestamp": timezone.now().isoformat(),
+        }
+    )
 
 
 # ============== Hardware Device Management ==============
+
 
 @login_required
 @require_POST
@@ -95,34 +102,39 @@ def register_device(request):
             return JsonResponse({"error": "Device already registered"}, status=400)
 
         # Get storage if specified
+        household = get_active_household(request.user)
         storage = None
         if storage_id:
-            storage = get_object_or_404(Storage, pk=storage_id, user=request.user)
+            storage = get_object_or_404(Storage, pk=storage_id, household=household)
 
         # Generate API token
         api_token = secrets.token_urlsafe(32)
 
         device = HardwareDevice.objects.create(
             user=request.user,
+            household=household,
             name=name,
             device_id=device_id,
             storage=storage,
             api_token=api_token,
         )
 
-        return JsonResponse({
-            "id": device.pk,
-            "name": device.name,
-            "device_id": device.device_id,
-            "api_token": api_token,
-            "storage_id": storage.pk if storage else None,
-        })
+        return JsonResponse(
+            {
+                "id": device.pk,
+                "name": device.name,
+                "device_id": device.device_id,
+                "api_token": api_token,
+                "storage_id": storage.pk if storage else None,
+            }
+        )
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
 
 # ============== Position Change Endpoints ==============
+
 
 @csrf_exempt
 @require_POST
@@ -161,10 +173,11 @@ def report_position_change(request):
             image_file = None
 
         # Validate storage
+        household = get_active_household(request.user)
         storage = get_object_or_404(
             Storage,
             pk=rack_id,
-            user=request.user,
+            household=household,
         )
 
         # Validate change type
@@ -174,11 +187,12 @@ def report_position_change(request):
         # Get wine if specified
         wine = None
         if wine_id:
-            wine = Wine.objects.filter(pk=wine_id, user=request.user).first()
+            wine = Wine.objects.filter(pk=wine_id, household=household).first()
 
         # Create review record
         review = PositionChangeReview.objects.create(
             user=request.user,
+            household=household,
             storage=storage,
             wine=wine,
             row=row if row >= 0 else None,
@@ -205,11 +219,13 @@ def report_position_change(request):
             # Apply the change
             _apply_position_change(review)
 
-        return JsonResponse({
-            "id": review.pk,
-            "status": review.status,
-            "auto_applied": review.status == ReviewStatus.AUTO_APPLIED,
-        })
+        return JsonResponse(
+            {
+                "id": review.pk,
+                "status": review.status,
+                "auto_applied": review.status == ReviewStatus.AUTO_APPLIED,
+            }
+        )
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
@@ -223,6 +239,7 @@ def _apply_position_change(review):
         # Add bottle to position
         StorageItem.objects.create(
             user=review.user,
+            household=review.household,
             storage=review.storage,
             wine=review.wine,
             row=review.final_row,
@@ -243,26 +260,29 @@ def _apply_position_change(review):
 @hardware_auth_required
 def get_pending_reviews(request):
     """Get position changes pending user review."""
+    household = get_active_household(request.user)
     reviews = PositionChangeReview.objects.filter(
-        user=request.user,
+        household=household,
         status=ReviewStatus.PENDING,
     ).select_related("storage", "wine")
 
     result = []
     for review in reviews:
-        result.append({
-            "id": review.pk,
-            "storage_id": review.storage.pk,
-            "storage_name": review.storage.name,
-            "wine_id": review.wine.pk if review.wine else None,
-            "wine_name": review.wine.name if review.wine else None,
-            "row": review.row,
-            "column": review.column,
-            "change_type": review.change_type,
-            "confidence": review.confidence,
-            "image_url": review.image.url if review.image else None,
-            "created": review.created.isoformat(),
-        })
+        result.append(
+            {
+                "id": review.pk,
+                "storage_id": review.storage.pk,
+                "storage_name": review.storage.name,
+                "wine_id": review.wine.pk if review.wine else None,
+                "wine_name": review.wine.name if review.wine else None,
+                "row": review.row,
+                "column": review.column,
+                "change_type": review.change_type,
+                "confidence": review.confidence,
+                "image_url": review.image.url if review.image else None,
+                "created": review.created.isoformat(),
+            }
+        )
 
     return JsonResponse({"reviews": result})
 
@@ -284,9 +304,7 @@ def approve_review(request, review_id):
         )
 
         review.status = ReviewStatus.APPROVED
-        review.final_row = (
-            final_row if final_row is not None else review.row
-        )
+        review.final_row = final_row if final_row is not None else review.row
         review.final_column = (
             final_column if final_column is not None else review.column
         )
@@ -323,6 +341,7 @@ def reject_review(request, review_id):
 
 # ============== Rack Snapshot Endpoints ==============
 
+
 @csrf_exempt
 @require_POST
 @hardware_auth_required
@@ -345,10 +364,11 @@ def upload_rack_snapshot(request):
             status=400,
         )
 
+    household = get_active_household(request.user)
     storage = get_object_or_404(
         Storage,
         pk=rack_id,
-        user=request.user,
+        household=household,
     )
 
     grid_state = None
@@ -365,6 +385,7 @@ def upload_rack_snapshot(request):
 
     snapshot = RackSnapshot.objects.create(
         user=request.user,
+        household=household,
         storage=storage,
         grid_state=grid_state,
         discrepancies=discrepancies,
@@ -374,11 +395,13 @@ def upload_rack_snapshot(request):
         image_file,
     )
 
-    return JsonResponse({
-        "id": snapshot.pk,
-        "has_discrepancies": bool(discrepancies),
-        "discrepancy_count": len(discrepancies) if discrepancies else 0,
-    })
+    return JsonResponse(
+        {
+            "id": snapshot.pk,
+            "has_discrepancies": bool(discrepancies),
+            "discrepancy_count": len(discrepancies) if discrepancies else 0,
+        }
+    )
 
 
 def _compute_discrepancies(storage, grid_state):
@@ -398,17 +421,20 @@ def _compute_discrepancies(storage, grid_state):
             db_occupied = (db_row, db_col) in db_positions
 
             if is_occupied != db_occupied:
-                discrepancies.append({
-                    "row": db_row,
-                    "column": db_col,
-                    "camera_says": "occupied" if is_occupied else "empty",
-                    "database_says": "occupied" if db_occupied else "empty",
-                })
+                discrepancies.append(
+                    {
+                        "row": db_row,
+                        "column": db_col,
+                        "camera_says": "occupied" if is_occupied else "empty",
+                        "database_says": "occupied" if db_occupied else "empty",
+                    }
+                )
 
     return discrepancies if discrepancies else None
 
 
 # ============== Sync Endpoints ==============
+
 
 @csrf_exempt
 @require_POST
@@ -461,10 +487,12 @@ def sync_operations(request):
                 offline_op.save(update_fields=["error"])
                 results.append({"id": offline_op.pk, "success": False, "error": str(e)})
 
-        return JsonResponse({
-            "synced": len(results),
-            "results": results,
-        })
+        return JsonResponse(
+            {
+                "synced": len(results),
+                "results": results,
+            }
+        )
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
@@ -514,6 +542,7 @@ def _apply_offline_operation(user, op_type, op_data):
 
 
 # ============== Wine API Endpoints ==============
+
 
 @csrf_exempt
 @require_GET
@@ -631,11 +660,13 @@ def create_wine_from_labels(request):
             image_type=ImageType.LABEL_BACK,
         ).image.save("back_label.jpg", back_label)
 
-    return JsonResponse({
-        **_wine_to_dict(wine),
-        "extraction_confidence": result.get("confidence", "low"),
-        "extracted_fields": result.get("extracted_fields", []),
-    })
+    return JsonResponse(
+        {
+            **_wine_to_dict(wine),
+            "extraction_confidence": result.get("confidence", "low"),
+            "extracted_fields": result.get("extracted_fields", []),
+        }
+    )
 
 
 def _wine_to_dict(wine):
@@ -658,6 +689,7 @@ def _wine_to_dict(wine):
 
 # ============== Storage API Endpoints ==============
 
+
 @csrf_exempt
 @require_GET
 @hardware_auth_required
@@ -671,25 +703,26 @@ def get_rack_positions(request, rack_id):
     positions = []
     for row in range(1, storage.rows + 1):
         for col in range(1, storage.columns + 1):
-            item = next(
-                (i for i in items if i.row == row and i.column == col),
-                None
+            item = next((i for i in items if i.row == row and i.column == col), None)
+            positions.append(
+                {
+                    "row": row,
+                    "col": col,
+                    "is_empty": item is None,
+                    "wine_id": item.wine.pk if item else None,
+                    "wine": _wine_to_dict(item.wine) if item else None,
+                }
             )
-            positions.append({
-                "row": row,
-                "col": col,
-                "is_empty": item is None,
-                "wine_id": item.wine.pk if item else None,
-                "wine": _wine_to_dict(item.wine) if item else None,
-            })
 
-    return JsonResponse({
-        "rack_id": storage.pk,
-        "rack_name": storage.name,
-        "rows": storage.rows,
-        "columns": storage.columns,
-        "positions": positions,
-    })
+    return JsonResponse(
+        {
+            "rack_id": storage.pk,
+            "rack_name": storage.name,
+            "rows": storage.rows,
+            "columns": storage.columns,
+            "positions": positions,
+        }
+    )
 
 
 @csrf_exempt
@@ -699,20 +732,26 @@ def get_position(request, rack_id, row, col):
     """Get a specific position."""
     storage = get_object_or_404(Storage, pk=rack_id, user=request.user)
 
-    item = storage.items.filter(
-        row=row,
-        column=col,
-        deleted=False,
-    ).select_related("wine").first()
+    item = (
+        storage.items.filter(
+            row=row,
+            column=col,
+            deleted=False,
+        )
+        .select_related("wine")
+        .first()
+    )
 
-    return JsonResponse({
-        "rack_id": storage.pk,
-        "row": row,
-        "col": col,
-        "is_empty": item is None,
-        "wine_id": item.wine.pk if item else None,
-        "wine": _wine_to_dict(item.wine) if item else None,
-    })
+    return JsonResponse(
+        {
+            "rack_id": storage.pk,
+            "row": row,
+            "col": col,
+            "is_empty": item is None,
+            "wine_id": item.wine.pk if item else None,
+            "wine": _wine_to_dict(item.wine) if item else None,
+        }
+    )
 
 
 @csrf_exempt
@@ -751,14 +790,16 @@ def add_wine_to_position(request):
             column=col,
         )
 
-        return JsonResponse({
-            "id": item.pk,
-            "rack_id": storage.pk,
-            "row": row,
-            "col": col,
-            "wine_id": wine.pk,
-            "is_empty": False,
-        })
+        return JsonResponse(
+            {
+                "id": item.pk,
+                "rack_id": storage.pk,
+                "row": row,
+                "col": col,
+                "wine_id": wine.pk,
+                "is_empty": False,
+            }
+        )
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
@@ -783,11 +824,15 @@ def remove_wine_from_position(request):
 
         storage = get_object_or_404(Storage, pk=rack_id, user=request.user)
 
-        item = storage.items.filter(
-            row=row,
-            column=col,
-            deleted=False,
-        ).select_related("wine").first()
+        item = (
+            storage.items.filter(
+                row=row,
+                column=col,
+                deleted=False,
+            )
+            .select_related("wine")
+            .first()
+        )
 
         if not item:
             return JsonResponse({"wine": None})
@@ -796,15 +841,18 @@ def remove_wine_from_position(request):
         item.deleted = True
         item.save(update_fields=["deleted"])
 
-        return JsonResponse({
-            "wine": _wine_to_dict(wine),
-        })
+        return JsonResponse(
+            {
+                "wine": _wine_to_dict(wine),
+            }
+        )
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
 
 # ============== Web Views ==============
+
 
 class PositionReviewView(LoginRequiredMixin, TemplateView):
     """Web interface for reviewing detected position changes."""
@@ -814,10 +862,14 @@ class PositionReviewView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        reviews = PositionChangeReview.objects.filter(
-            user=self.request.user,
-            status=ReviewStatus.PENDING,
-        ).select_related("storage", "wine").order_by("-created")
+        reviews = (
+            PositionChangeReview.objects.filter(
+                user=self.request.user,
+                status=ReviewStatus.PENDING,
+            )
+            .select_related("storage", "wine")
+            .order_by("-created")
+        )
 
         context["reviews"] = reviews
         context["review_count"] = reviews.count()
@@ -831,12 +883,15 @@ class DeviceSettingsView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        household = get_active_household(self.request.user)
 
-        devices = HardwareDevice.objects.filter(
-            user=self.request.user
-        ).select_related("storage").order_by("-created")
+        devices = (
+            HardwareDevice.objects.filter(household=household)
+            .select_related("storage")
+            .order_by("-created")
+        )
 
-        storages = Storage.objects.filter(user=self.request.user)
+        storages = Storage.objects.filter(household=household)
 
         context["devices"] = devices
         context["storages"] = storages
@@ -911,7 +966,7 @@ class RackConfigView(LoginRequiredMixin, TemplateView):
                 "auto_apply_threshold": 90,
                 "enable_hourly_snapshots": True,
                 "enable_daily_reconciliation": True,
-            }
+            },
         )
 
         storages = Storage.objects.filter(user=self.request.user)
@@ -923,8 +978,7 @@ class RackConfigView(LoginRequiredMixin, TemplateView):
     def post(self, request, *args, **kwargs):
         """Save rack configuration."""
         config, _ = RackVisionConfig.objects.get_or_create(
-            user=request.user,
-            defaults={}
+            user=request.user, defaults={}
         )
 
         storage_id = request.POST.get("storage_id")

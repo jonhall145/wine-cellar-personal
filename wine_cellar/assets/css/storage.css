@@ -34,6 +34,31 @@
   max-width: 100%;
   overflow-x: auto;
   padding: var(--spacing-md);
+  position: relative;
+}
+
+/* Scroll hint gradient on right edge */
+.storage-grid::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  background: linear-gradient(to left, var(--bg-primary), transparent);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.storage-grid:not(:hover)::after {
+  opacity: 1;
+}
+
+@media screen and (min-width: 48em) {
+  .storage-grid::after {
+    display: none;
+  }
 }
 
 .storage-grid__controls {
@@ -130,6 +155,22 @@
   background-color: var(--gray-50);
   transition: all var(--transition-fast);
   flex-shrink: 0;
+}
+
+/* Larger cells on mobile for better touch targets */
+@media screen and (max-width: 48em) {
+  .storage-grid__cell {
+    width: 60px;
+    height: 60px;
+  }
+
+  .storage-grid__row-label {
+    height: 60px;
+  }
+
+  .storage-grid__col-label {
+    width: 60px;
+  }
 }
 
 .storage-grid__cell:hover {

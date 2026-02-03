@@ -126,7 +126,7 @@
                 {% include "includes/pagination.html" %}
             {% else %}
                 <div class="empty-state">
-                    <div class="empty-state__icon">🍾</div>
+                    <div class="empty-state__icon"><i class="fa-solid fa-wine-bottle"></i></div>
                     <h3 class="empty-state__title">{% translate "No bottles found" %}</h3>
                     <p class="empty-state__message">{% translate "Add wines to your collection and stock bottles to see them here." %}</p>
                     <a href="{% url 'wine-add' %}" class="pure-button button__primary empty-state__action">

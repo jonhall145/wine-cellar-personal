@@ -44,7 +44,7 @@
                     {% include "includes/pagination.html" %}
                 {% else %}
                     <div class="empty-state">
-                        <div class="empty-state__icon">🗄️</div>
+                        <div class="empty-state__icon"><i class="fa-solid fa-warehouse"></i></div>
                         <h3 class="empty-state__title">{% translate "No storage locations yet" %}</h3>
                         <p class="empty-state__message">{% translate "Create a storage location to organize your wine collection. You can define shelves, racks, or any storage setup." %}</p>
                         <a href="{% url 'storage-add' %}" class="pure-button button__primary empty-state__action">

@@ -59,7 +59,7 @@
 
             {% if not overdue_wines and not upcoming_wines %}
                 <div class="empty-state">
-                    <div class="empty-state__icon">✅</div>
+                    <div class="empty-state__icon"><i class="fa-solid fa-circle-check"></i></div>
                     <h3 class="empty-state__title">{% translate "All Clear!" %}</h3>
                     <p class="empty-state__message">{% translate "No wines approaching their drink-by date. Your cellar is in great shape." %}</p>
                     <a href="{% url 'wine-list' %}" class="pure-button button__primary empty-state__action">

@@ -19,6 +19,7 @@ from wine_cellar.apps.storage.forms import (
     StorageItemEditForm,
 )
 from wine_cellar.apps.storage.models import Storage, StorageItem
+from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.models import Wine
 
 
@@ -30,7 +31,8 @@ class StorageListView(ListView):
 
     def get_queryset(self):
         qs = super().get_queryset().order_by("order", "created")
-        return qs.filter(user=self.request.user)
+        household = get_active_household(self.request.user)
+        return qs.filter(household=household)
 
 
 class StorageDetailView(DetailView, MultipleObjectMixin):
@@ -48,7 +50,8 @@ class StorageDetailView(DetailView, MultipleObjectMixin):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(user=self.request.user)
+        household = get_active_household(self.request.user)
+        return qs.filter(household=household)
 
 
 class StorageCreateView(FormView):
@@ -57,11 +60,12 @@ class StorageCreateView(FormView):
     success_url = reverse_lazy("storage-list")
 
     def form_valid(self, form):
-        self.process_form_data(self.request.user, form.cleaned_data)
+        household = get_active_household(self.request.user)
+        self.process_form_data(self.request.user, household, form.cleaned_data)
         return super().form_valid(form)
 
     @staticmethod
-    def process_form_data(user, cleaned_data):
+    def process_form_data(user, household, cleaned_data):
         location = cleaned_data["location"]
         description = cleaned_data["description"]
         name = cleaned_data["name"]
@@ -70,8 +74,8 @@ class StorageCreateView(FormView):
         is_cold = cleaned_data.get("is_cold", False)
         is_default = cleaned_data.get("is_default", False)
 
-        # Get max order for this user
-        max_order = Storage.objects.filter(user=user).count()
+        # Get max order for this household
+        max_order = Storage.objects.filter(household=household).count()
 
         Storage.objects.create(
             location=location,
@@ -83,6 +87,7 @@ class StorageCreateView(FormView):
             is_default=is_default,
             order=max_order,
             user=user,
+            household=household,
         )
 
 
@@ -93,16 +98,14 @@ class StorageUpdateView(FormView):
 
     def get_initial(self):
         initial = super().get_initial()
-        storage = get_object_or_404(
-            Storage, pk=self.kwargs["pk"], user=self.request.user
-        )
+        household = get_active_household(self.request.user)
+        storage = get_object_or_404(Storage, pk=self.kwargs["pk"], household=household)
         initial.update(model_to_dict(storage))
         return initial
 
     def form_valid(self, form):
-        storage = get_object_or_404(
-            Storage, pk=self.kwargs["pk"], user=self.request.user
-        )
+        household = get_active_household(self.request.user)
+        storage = get_object_or_404(Storage, pk=self.kwargs["pk"], household=household)
         self.process_form_data(storage, self.request.user, form.cleaned_data)
         self.success_url = reverse_lazy("storage-detail", kwargs={"pk": storage.pk})
         return super().form_valid(form)
@@ -134,7 +137,8 @@ class StorageDeleteView(DeleteView):
     success_url = reverse_lazy("storage-list")
 
     def form_valid(self, form):
-        storages = Storage.objects.filter(user=self.request.user).count()
+        household = get_active_household(self.request.user)
+        storages = Storage.objects.filter(household=household).count()
         if storages <= 1:
             form.add_error(
                 None,
@@ -148,7 +152,8 @@ class StorageDeleteView(DeleteView):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(user=self.request.user)
+        household = get_active_household(self.request.user)
+        return qs.filter(household=household)
 
 
 class StorageItemAddView(FormView):
@@ -157,8 +162,9 @@ class StorageItemAddView(FormView):
 
     def get_wine(self):
         if not hasattr(self, "_wine"):
+            household = get_active_household(self.request.user)
             self._wine = get_object_or_404(
-                Wine, pk=self.kwargs["pk"], user=self.request.user
+                Wine, pk=self.kwargs["pk"], household=household
             )
         return self._wine
 
@@ -180,7 +186,8 @@ class StorageItemAddView(FormView):
         context = super().get_context_data(**kwargs)
         wine = self.get_wine()
         context["wine"] = wine
-        user_storages = Storage.objects.filter(user=self.request.user)
+        household = get_active_household(self.request.user)
+        user_storages = Storage.objects.filter(household=household)
         free_cells_by_storage = {
             storage.pk: storage.get_free_cells_by_row() for storage in user_storages
         }
@@ -188,7 +195,7 @@ class StorageItemAddView(FormView):
 
         # Storage suggestions: find where this wine already has bottles
         existing_bottles = (
-            StorageItem.objects.filter(wine=wine, user=self.request.user, deleted=False)
+            StorageItem.objects.filter(wine=wine, household=household, deleted=False)
             .select_related("storage")
             .values("storage__pk", "storage__name", "storage__rows", "storage__columns")
             .annotate(bottle_count=models.Count("pk"))
@@ -203,7 +210,7 @@ class StorageItemAddView(FormView):
                 free_slots = None  # Unlimited
             else:
                 used_slots = StorageItem.objects.filter(
-                    storage_id=storage_pk, user=self.request.user, deleted=False
+                    storage_id=storage_pk, household=household, deleted=False
                 ).count()
                 free_slots = total_slots - used_slots
 
@@ -221,12 +228,13 @@ class StorageItemAddView(FormView):
 
     def form_valid(self, form):
         wine = self.get_wine()
-        self.process_form_data(wine, self.request.user, form.cleaned_data)
+        household = get_active_household(self.request.user)
+        self.process_form_data(wine, self.request.user, household, form.cleaned_data)
         self.success_url = reverse_lazy("wine-detail", kwargs={"pk": wine.pk})
         return super().form_valid(form)
 
     @staticmethod
-    def process_form_data(wine, user, cleaned_data):
+    def process_form_data(wine, user, household, cleaned_data):
         storage = cleaned_data["storage"]
         row = cleaned_data["row"]
         column = cleaned_data["column"]
@@ -242,6 +250,7 @@ class StorageItemAddView(FormView):
             row=row,
             column=column,
             user=user,
+            household=household,
             price=price,
             is_gift=is_gift,
             gift_from=gift_from,
@@ -262,7 +271,8 @@ class StorageItemDeleteView(DeleteView):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        return qs.filter(user=self.request.user, deleted=False)
+        household = get_active_household(self.request.user)
+        return qs.filter(household=household, deleted=False)
 
     def form_valid(self, form):
         self.object = self.get_object()
@@ -284,7 +294,8 @@ class StorageItemHistoryView(ListView):
             .select_related("wine", "storage")
             .order_by("-created")
         )
-        return qs.filter(user=self.request.user, deleted=True)
+        household = get_active_household(self.request.user)
+        return qs.filter(household=household, deleted=True)
 
 
 class StorageItemListView(FilterView):
@@ -297,8 +308,9 @@ class StorageItemListView(FilterView):
     paginate_by = 20
 
     def get_queryset(self):
+        household = get_active_household(self.request.user)
         return (
-            StorageItem.objects.filter(user=self.request.user, deleted=False)
+            StorageItem.objects.filter(household=household, deleted=False)
             .select_related("wine", "storage")
             .order_by("-created")
         )
@@ -312,10 +324,11 @@ class StorageItemUpdateView(FormView):
 
     def get_object(self):
         if not hasattr(self, "_object"):
+            household = get_active_household(self.request.user)
             self._object = get_object_or_404(
                 StorageItem,
                 pk=self.kwargs["pk"],
-                user=self.request.user,
+                household=household,
                 deleted=False,
             )
         return self._object
@@ -350,7 +363,8 @@ class StorageItemUpdateView(FormView):
         context["item"] = item
 
         # Free cells calculation - exclude current item so it can be moved
-        user_storages = Storage.objects.filter(user=self.request.user)
+        household = get_active_household(self.request.user)
+        user_storages = Storage.objects.filter(household=household)
         free_cells_by_storage = {
             storage.pk: storage.get_free_cells_by_row(exclude_item=item)
             for storage in user_storages
@@ -392,7 +406,8 @@ class StorageItemUpdateView(FormView):
 @login_required
 def storage_grid_data(request):
     """API endpoint to get storage grid data for React component."""
-    storages = Storage.objects.filter(user=request.user).order_by("name")
+    household = get_active_household(request.user)
+    storages = Storage.objects.filter(household=household).order_by("name")
 
     # Get current storage from query param or use first one
     current_storage_id = request.GET.get("storage_id")
@@ -461,16 +476,20 @@ def move_bottle(request):
         if not all([item_id, target_storage_id, target_row, target_column]):
             return JsonResponse({"error": "Missing required fields"}, status=400)
 
+        household = get_active_household(request.user)
+
         # Get the item to move
         try:
-            item = StorageItem.objects.get(pk=item_id, user=request.user, deleted=False)
+            item = StorageItem.objects.get(
+                pk=item_id, household=household, deleted=False
+            )
         except StorageItem.DoesNotExist:
             return JsonResponse({"error": "Bottle not found"}, status=404)
 
         # Get target storage
         try:
             target_storage = Storage.objects.get(
-                pk=target_storage_id, user=request.user
+                pk=target_storage_id, household=household
             )
         except Storage.DoesNotExist:
             return JsonResponse({"error": "Storage not found"}, status=404)
@@ -516,9 +535,10 @@ def move_bottle(request):
 @login_required
 def storage_move_up(request, pk):
     """Move a storage up in the display order."""
-    storage = get_object_or_404(Storage, pk=pk, user=request.user)
+    household = get_active_household(request.user)
+    storage = get_object_or_404(Storage, pk=pk, household=household)
     prev_storage = (
-        Storage.objects.filter(user=request.user, order__lt=storage.order)
+        Storage.objects.filter(household=household, order__lt=storage.order)
         .order_by("-order")
         .first()
     )
@@ -532,9 +552,10 @@ def storage_move_up(request, pk):
 @login_required
 def storage_move_down(request, pk):
     """Move a storage down in the display order."""
-    storage = get_object_or_404(Storage, pk=pk, user=request.user)
+    household = get_active_household(request.user)
+    storage = get_object_or_404(Storage, pk=pk, household=household)
     next_storage = (
-        Storage.objects.filter(user=request.user, order__gt=storage.order)
+        Storage.objects.filter(household=household, order__gt=storage.order)
         .order_by("order")
         .first()
     )

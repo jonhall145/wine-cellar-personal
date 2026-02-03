@@ -45,7 +45,7 @@
                 </table>
             {% else %}
                 <div class="empty-state">
-                    <div class="empty-state__icon">🍷</div>
+                    <div class="empty-state__icon"><i class="fa-solid fa-wine-glass"></i></div>
                     <h3 class="empty-state__title">{% translate "No drink records yet" %}</h3>
                     <p class="empty-state__message">{% translate "Record your wine experiences to build your tasting history." %}</p>
                     <a href="{% url 'wine-list' %}" class="pure-button button__primary empty-state__action">
