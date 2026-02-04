@@ -1,3 +1,4 @@
+import os
 from decimal import Decimal
 
 import pycountry
@@ -12,6 +13,18 @@ from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.user.views import get_user_settings
 from wine_cellar.apps.wine.utils import user_directory_path
+
+
+def _versioned_media_url(field):
+    """Append ?v={mtime} to a media file URL for cache busting."""
+    if not field:
+        return None
+    url = field.url
+    try:
+        mtime = int(os.path.getmtime(field.path))
+        return f"{url}?v={mtime}"
+    except (FileNotFoundError, ValueError):
+        return url
 
 
 class UserContentModel(models.Model):
@@ -424,7 +437,7 @@ class Wine(UserContentModel):
         i = self.wineimage_set.first()
         if not i:
             return static(settings.DEFAULT_WINE_IMAGE)
-        return i.image.url
+        return _versioned_media_url(i.image) or i.image.url
 
     @property
     def image_thumbnail(self):
@@ -432,16 +445,16 @@ class Wine(UserContentModel):
         primary = self.wineimage_set.filter(is_primary=True).first()
         if primary:
             if primary.thumbnail:
-                return primary.thumbnail.url
-            return primary.image.url
+                return _versioned_media_url(primary.thumbnail) or primary.thumbnail.url
+            return _versioned_media_url(primary.image) or primary.image.url
         # Fall back to front label
         front = self.wineimage_set.filter(image_type=ImageType.LABEL_FRONT).first()
         if not front:
             return static(settings.DEFAULT_WINE_IMAGE)
         if front.thumbnail:
-            return front.thumbnail.url
+            return _versioned_media_url(front.thumbnail) or front.thumbnail.url
         # return normal image as fallback
-        return front.image.url
+        return _versioned_media_url(front.image) or front.image.url
 
     @property
     def image_thumbnails(self):
@@ -455,11 +468,11 @@ class Wine(UserContentModel):
         for image_type in order:
             image = images.get(image_type)
             if image:
-                # Add thumbnail if it exists
                 if image.thumbnail:
-                    result.append(image.thumbnail.url)
-                # Always add the full image
-                result.append(image.image.url)
+                    result.append(
+                        _versioned_media_url(image.thumbnail) or image.thumbnail.url
+                    )
+                result.append(_versioned_media_url(image.image) or image.image.url)
         return result
 
     @property

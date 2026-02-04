@@ -72,6 +72,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.gzip.GZipMiddleware",  # Compress responses for faster transfers
+    "django.middleware.http.ConditionalGetMiddleware",
+    "wine_cellar.middleware.CacheControlMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -185,6 +187,17 @@ CURRENCY_SYMBOLS = {"EUR": "€", "USD": "$", "GBP": "£"}
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = "/static/"
+STATIC_VERSION = VERSION
+
+# Custom staticfiles storage to keep gzip-only compression behavior
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "wine_cellar.storage.GzipOnlyManifestStaticFilesStorage",
+    },
+}
 STATIC_ROOT = ROOT_DIR / "staticfiles"  # Where collectstatic gathers all static files
 
 STATICFILES_DIRS = [

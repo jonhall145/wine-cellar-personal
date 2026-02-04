@@ -15,9 +15,13 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+import os
+from email.utils import formatdate, parsedate_to_datetime
+
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.decorators import login_not_required
+from django.http import HttpResponseNotModified
 from django.urls import include, path, re_path
 from django.views.i18n import JavaScriptCatalog
 from django.views.static import serve
@@ -78,11 +82,42 @@ from wine_cellar.apps.wine.views import (
     set_primary_image,
 )
 
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".svg"}
+
 
 @login_not_required
 def serve_media(request, path):
-    """Serve media files without requiring login."""
-    return serve(request, path, document_root=settings.MEDIA_ROOT)
+    """Serve media files with cache headers and 304 support."""
+    fullpath = os.path.join(settings.MEDIA_ROOT, path)
+
+    # Handle If-Modified-Since for conditional requests
+    if os.path.isfile(fullpath):
+        mtime = os.path.getmtime(fullpath)
+
+        ims = request.META.get("HTTP_IF_MODIFIED_SINCE")
+        if ims:
+            try:
+                ims_dt = parsedate_to_datetime(ims)
+                if mtime <= ims_dt.timestamp():
+                    return HttpResponseNotModified()
+            except (ValueError, TypeError):
+                pass
+
+    response = serve(request, path, document_root=settings.MEDIA_ROOT)
+
+    # Only add cache headers to successful responses
+    if response.status_code == 200:
+        ext = os.path.splitext(path)[1].lower()
+        if ext in IMAGE_EXTENSIONS:
+            response["Cache-Control"] = "public, max-age=86400"
+        else:
+            response["Cache-Control"] = "public, max-age=3600"
+
+        if os.path.isfile(fullpath):
+            mtime = os.path.getmtime(fullpath)
+            response["Last-Modified"] = formatdate(mtime, usegmt=True)
+
+    return response
 
 
 urlpatterns = [
