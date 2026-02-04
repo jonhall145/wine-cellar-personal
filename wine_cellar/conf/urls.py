@@ -42,7 +42,6 @@ from wine_cellar.apps.storage.views import (
     storage_move_down,
     storage_move_up,
 )
-from wine_cellar.apps.user.upload import CSSUploadView, delete_css_file
 from wine_cellar.apps.user.views import UserSettingsView
 from wine_cellar.apps.wine.views import (
     BottleNoteCreateView,
@@ -134,8 +133,6 @@ urlpatterns = [
         ),
     ),
     path("user/settings/", UserSettingsView.as_view(), name="user-settings"),
-    path("user/upload-css/", CSSUploadView.as_view(), name="css-upload"),
-    path("user/upload-css/delete/", delete_css_file, name="css-delete"),
     path("storages/", StorageListView.as_view(), name="storage-list"),
     path("storage/<int:pk>/", StorageDetailView.as_view(), name="storage-detail"),
     path("storage/add/", StorageCreateView.as_view(), name="storage-add"),
