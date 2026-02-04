@@ -708,6 +708,8 @@ a:hover {
   .menu__sm .pure-menu-has-children > .pure-menu-children {
     display: none;
     position: relative;
+    left: 0;
+    top: auto;
     background: rgba(255, 255, 255, 0.1);
     box-shadow: none;
     border-radius: 0;
