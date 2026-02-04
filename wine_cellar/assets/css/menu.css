@@ -1,6 +1,9 @@
 .pure-menu,
 .pure-menu-heading {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background-color: var(--primary);
+  background-image: url('/static/images/topbar.jpeg');
+  background-size: cover;
+  background-position: center;
 }
 
 .pure-menu-link {
@@ -54,9 +57,13 @@
   left: 0;
   bottom: 0;
   z-index: 1000;
-  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background-color: var(--primary);
+  background-image: url('/static/images/topbar.jpeg');
+  background-size: cover;
+  background-position: center;
   overflow-y: auto;
   box-shadow: var(--container-box-shadow-lg);
+  touch-action: pan-y;
 }
 
 .menu__sm .menu-link {

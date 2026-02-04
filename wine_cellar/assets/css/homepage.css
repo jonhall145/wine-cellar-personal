@@ -49,7 +49,7 @@
 .stats__number {
   font-size: var(--font-xl);
   font-weight: 700;
-  color: var(--secondary-dark);
+  color: var(--secondary);
   margin: 0;
   line-height: 1.2;
 }

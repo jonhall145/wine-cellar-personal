@@ -92,7 +92,7 @@
   overflow-wrap: anywhere;
   font-size: var(--font-lg);
   font-weight: 600;
-  color: var(--secondary-dark);
+  color: var(--secondary);
   transition: color var(--transition-fast);
 }
 

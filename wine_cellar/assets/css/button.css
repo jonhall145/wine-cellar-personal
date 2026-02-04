@@ -4,7 +4,7 @@
   justify-content: center;
   text-decoration: none;
   line-height: 1.2;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: var(--primary);
   color: white;
   border: none;
   padding: var(--spacing-sm) var(--spacing-lg);
@@ -16,7 +16,7 @@
   box-shadow: var(--container-box-shadow);
 
   &:hover {
-    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+    background: var(--primary-light);
     transform: translateY(-2px);
     box-shadow: var(--container-box-shadow-lg);
   }
@@ -38,7 +38,7 @@
   justify-content: center;
   text-decoration: none;
   line-height: 1.2;
-  background: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-dark) 100%);
+  background: var(--secondary);
   color: white;
   border: none;
   padding: var(--spacing-sm) var(--spacing-lg);
@@ -50,7 +50,7 @@
   box-shadow: var(--container-box-shadow);
 
   &:hover {
-    background: linear-gradient(135deg, var(--secondary-light) 0%, var(--secondary) 100%);
+    background: var(--secondary-light);
     transform: translateY(-2px);
   }
 
