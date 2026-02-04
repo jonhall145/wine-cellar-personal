@@ -7,13 +7,24 @@
     // Mobile dropdown toggle for touch devices
     document.querySelectorAll<HTMLElement>('.pure-menu-has-children').forEach((dropdown) => {
       dropdown.addEventListener('click', (e: Event) => {
-        if (window.innerWidth < 768) {
-          const link = dropdown.querySelector<HTMLElement>(':scope > .pure-menu-link')
-          const target = e.target as Node
+        const link = dropdown.querySelector<HTMLElement>(':scope > .pure-menu-link')
+        const target = e.target as Node
+        const isMobile = window.innerWidth < 768
+
+        if (isMobile) {
           if (link && (target === link || link.contains(target))) {
             e.preventDefault()
             dropdown.classList.toggle('menu-open')
           }
+        } else if (link && (target === link || link.contains(target))) {
+          // Allow tapping "More" on touch devices in desktop layout to open dropdown
+          dropdown.classList.add('menu-open')
+        }
+      })
+
+      dropdown.addEventListener('mouseleave', () => {
+        if (window.innerWidth >= 768) {
+          dropdown.classList.remove('menu-open')
         }
       })
     })

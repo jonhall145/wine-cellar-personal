@@ -10,7 +10,7 @@
               crossorigin="anonymous">
         <link rel="stylesheet"
               href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/grids-responsive-min.css" />
-        <link rel="stylesheet" href="{% static 'base.css' %}">
+        <link rel="stylesheet" href="{% static 'base.css' %}?v={% get_setting 'VERSION' %}">
         <link rel="icon"
               type="image/x-icon"
               href="{% static 'images/favicon.svg' %}">
@@ -89,9 +89,9 @@
                 </a>
                 <a href="{% url 'storage-list' %}" class="bottom-nav__item">
                     <i class="fa-solid fa-warehouse"></i>
-                    <span>{% translate "Storage" %}</span>
-                </a>
-            </nav>
+                <span>{% translate "Storage" %}</span>
+            </a>
+        </nav>
         {% endif %}
         <footer class="footer">
             <p>
@@ -99,5 +99,6 @@
     target="_blank">Github <span class="visually-hidden">(opens in new tab)</span></a>
             </p>
         </footer>
+        <script src="{% static 'base.js' %}?v={% get_setting 'VERSION' %}" defer></script>
     </body>
 </html>

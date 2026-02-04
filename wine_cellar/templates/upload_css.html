@@ -19,7 +19,7 @@
                   class="pure-form pure-form-stacked">
                 {% csrf_token %}
                 <fieldset>
-                    <label for="id_file">CSS file (.css, max 500KB)</label>
+                    <label for="id_file">File (.css or .jpg/.jpeg, max 500KB)</label>
                     {{ form.file }}
                     {% if form.file.errors %}
                         <div class="form-error">

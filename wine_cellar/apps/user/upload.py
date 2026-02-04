@@ -15,9 +15,10 @@ from django_ratelimit.decorators import ratelimit
 UPLOAD_DIR = Path(settings.MEDIA_ROOT) / "uploads" / "css"
 MAX_FILE_SIZE = 512 * 1024  # 500KB
 MAX_FILES = 10
+ALLOWED_EXTENSIONS = {".css", ".jpg", ".jpeg"}
 
 # Patterns that should never appear in a CSS file
-DANGEROUS_PATTERNS = [
+DANGEROUS_CSS_PATTERNS = [
     re.compile(r"<\s*script", re.IGNORECASE),
     re.compile(r"javascript\s*:", re.IGNORECASE),
     re.compile(r"expression\s*\(", re.IGNORECASE),
@@ -29,46 +30,50 @@ DANGEROUS_PATTERNS = [
 
 class CSSUploadForm(forms.Form):
     file = forms.FileField(
-        label="CSS file",
-        help_text="Upload a .css file (max 500KB).",
-        widget=forms.ClearableFileInput(attrs={"accept": ".css"}),
+        label="File",
+        help_text="Upload a .css or .jpg/.jpeg file (max 500KB).",
+        widget=forms.ClearableFileInput(attrs={"accept": ".css,.jpg,.jpeg"}),
     )
 
     def clean_file(self):
         f = self.cleaned_data["file"]
+        ext = Path(f.name).suffix.lower()
 
         # Check extension
-        if not f.name.lower().endswith(".css"):
-            raise forms.ValidationError("Only .css files are allowed.")
+        if ext not in ALLOWED_EXTENSIONS:
+            raise forms.ValidationError("Only .css and .jpg/.jpeg files are allowed.")
 
         # Check size
         if f.size > MAX_FILE_SIZE:
             raise forms.ValidationError("File must be under 500KB.")
 
-        # Check content is valid UTF-8 text
+        if ext == ".css":
+            self._validate_css(f)
+
+        return f
+
+    def _validate_css(self, f):
+        """Validate CSS file content for safety."""
         try:
             content = f.read().decode("utf-8")
             f.seek(0)
         except (UnicodeDecodeError, AttributeError):
             raise forms.ValidationError("File must be valid UTF-8 text.")
 
-        # Check for dangerous content
-        for pattern in DANGEROUS_PATTERNS:
+        for pattern in DANGEROUS_CSS_PATTERNS:
             if pattern.search(content):
                 raise forms.ValidationError(
                     "File contains disallowed content (HTML or script injection)."
                 )
 
-        return f
-
 
 def _get_uploaded_files():
-    """Return list of uploaded CSS files with metadata, newest first."""
+    """Return list of uploaded files with metadata, newest first."""
     if not UPLOAD_DIR.exists():
         return []
     files = []
     for p in UPLOAD_DIR.iterdir():
-        if p.is_file() and p.suffix.lower() == ".css":
+        if p.is_file() and p.suffix.lower() in ALLOWED_EXTENSIONS:
             stat = p.stat()
             files.append(
                 {
@@ -108,7 +113,8 @@ class CSSUploadView(FormView):
 
         # Sanitize filename: keep only alphanumeric, hyphens, underscores, dots
         safe_name = re.sub(r"[^\w.\-]", "_", f.name)
-        if not safe_name.lower().endswith(".css"):
+        ext = Path(safe_name).suffix.lower()
+        if ext not in ALLOWED_EXTENSIONS:
             safe_name += ".css"
 
         UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -131,7 +137,7 @@ def delete_css_file(request):
     filename = request.POST.get("filename", "")
     # Prevent path traversal
     safe = os.path.basename(filename)
-    if not safe or not safe.lower().endswith(".css"):
+    if not safe or Path(safe).suffix.lower() not in ALLOWED_EXTENSIONS:
         messages.error(request, "Invalid file.")
         return HttpResponseRedirect(reverse_lazy("css-upload"))
 

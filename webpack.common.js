@@ -177,6 +177,10 @@ module.exports = {
           to: '[name][ext]',
         },
         {
+          from: './node_modules/tom-select/dist/css/tom-select.css.map',
+          to: '[name][ext]',
+        },
+        {
           from: './node_modules/zxing-wasm/dist/reader/zxing_reader.wasm',
           to: '[name][ext]',
         },

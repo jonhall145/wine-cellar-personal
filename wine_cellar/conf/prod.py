@@ -5,61 +5,9 @@ This module imports all base settings and overrides production-specific values.
 """
 
 # Import all base settings explicitly
-from wine_cellar.conf.settings import (
-    ACCOUNT_ADAPTER,
-    ALLOWED_HOSTS,
-    ANTHROPIC_API_KEY,
-    AUTH_PASSWORD_VALIDATORS,
-    AUTHENTICATION_BACKENDS,
-    BASE_DIR,
-    CSRF_TRUSTED_ORIGINS,
-    CURRENCIES,
-    CURRENCY_SYMBOLS,
-    DATABASES,
-    DEBUG,
-    DEFAULT_AUTO_FIELD,
-    DEFAULT_WINE_IMAGE,
-    EMAIL_BACKEND,
-    INSTALLED_APPS,
-    LANGUAGE_CODE,
-    LANGUAGES,
-    LOCALE_PATHS,
-    LOG_LEVEL,
-    LOGGING,
-    LOGIN_REDIRECT_URL,
-    LOGOUT_REDIRECT_URL,
-    MAP_BASEURL,
-    MEDIA_ROOT,
-    MEDIA_URL,
-    MIDDLEWARE,
-    ROOT_DIR,
-    ROOT_URLCONF,
-    SECRET_KEY,
-    SECURE_BROWSER_XSS_FILTER,
-    SECURE_CONTENT_TYPE_NOSNIFF,
-    SECURE_REFERRER_POLICY,
-    SITE_URL,
-    STATIC_ROOT,
-    STATIC_URL,
-    STATICFILES_DIRS,
-    TEMPLATES,
-    TIME_ZONE,
-    USE_I18N,
-    USE_TZ,
-    VERSION,
-    WSGI_APPLICATION,
-    X_FRAME_OPTIONS,
-)
+from wine_cellar.conf.settings import *  # noqa: F403, F401
 
-# Production-specific static file storage with compression
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-}
+# Production-specific static file storage uses base settings (gzip-only manifest)
 
 # Production security settings - enforce HTTPS
 SECURE_SSL_REDIRECT = True
