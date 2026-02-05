@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
 
 # Wine Cellar - Backup to Cloudflare R2
 # Usage: ./backup_to_r2.sh
