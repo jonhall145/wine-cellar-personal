@@ -12,6 +12,7 @@
             </div>
             <div class="pure-u-1 pure-u-md-1 text-align-center">
                 {% if storages %}
+                    <div class="storage-list__table-wrapper">
                     <table class="storage-list__table">
                         <tr>
                             <th>{% translate "Name" %}</th>
@@ -41,6 +42,7 @@
                             </tr>
                         {% endfor %}
                     </table>
+                    </div>
                     {% include "includes/pagination.html" %}
                 {% else %}
                     <div class="empty-state">

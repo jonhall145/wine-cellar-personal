@@ -11,6 +11,11 @@ html {
   color: var(--secondary-dark);
 }
 
+html,
+body {
+  overflow-x: hidden;
+}
+
 [data-theme="dark"] html,
 [data-theme="dark"] {
   background-color: var(--bg-primary);

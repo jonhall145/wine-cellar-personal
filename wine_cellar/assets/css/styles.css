@@ -179,6 +179,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.table-responsive {
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
 .pure-table {
   border: none;
   border-radius: var(--border-radius-sm);

@@ -1,3 +1,9 @@
+.storage-list__table-wrapper {
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
 .storage-list__table {
   text-align: left;
   margin: auto;

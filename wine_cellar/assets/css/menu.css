@@ -103,6 +103,8 @@
   padding: var(--spacing-md) var(--spacing-lg);
   font-size: var(--font-lg);
   font-weight: 600;
+  border-radius: 0;
+  margin: 0;
 }
 
 .menu-toggle {
