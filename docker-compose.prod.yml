@@ -1,0 +1,84 @@
+services:
+  web:
+    build:
+      context: .
+      args:
+        REQUIREMENTS_FILE: requirements/prod.txt
+    image: wine-cellar:prod
+    command: gunicorn wine_cellar.conf.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120 --worker-class sync
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.docker.prod
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wine_cellar_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-wine_cellar_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  celery-worker:
+    image: wine-cellar:prod
+    command: celery -A wine_cellar.conf.celery:celery_app worker --loglevel=warning --concurrency=2
+    volumes:
+      - media_data:/app/media
+    env_file:
+      - .env.docker.prod
+    depends_on:
+      web:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  celery-beat:
+    image: wine-cellar:prod
+    command: celery -A wine_cellar.conf.celery:celery_app beat --loglevel=warning --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    env_file:
+      - .env.docker.prod
+    depends_on:
+      web:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  media_data:
+  static_data:
+  redis_data:

@@ -1,0 +1,5 @@
+-r dev.txt
+
+# Docker needs PostgreSQL + Redis drivers (normally only in prod.txt)
+psycopg[binary]==3.3.2
+redis==7.1.0

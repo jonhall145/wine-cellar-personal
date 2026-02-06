@@ -1,0 +1,80 @@
+services:
+  web:
+    build:
+      context: .
+      args:
+        REQUIREMENTS_FILE: requirements/docker.txt
+    image: wine-cellar:dev
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./wine_cellar:/app/wine_cellar
+      - ./tests:/app/tests
+      - ./fixtures:/app/fixtures
+      - ./manage.py:/app/manage.py
+      - media_data:/app/media
+    ports:
+      - "8003:8000"
+    env_file:
+      - .env.docker
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-django_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-django_dev_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-django_dev_password}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U django_dev_user -d django_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  celery-worker:
+    image: wine-cellar:dev
+    command: celery -A wine_cellar.conf.celery:celery_app worker --loglevel=info
+    volumes:
+      - ./wine_cellar:/app/wine_cellar
+      - media_data:/app/media
+    env_file:
+      - .env.docker
+    depends_on:
+      web:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery-beat:
+    image: wine-cellar:dev
+    command: celery -A wine_cellar.conf.celery:celery_app beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - ./wine_cellar:/app/wine_cellar
+    env_file:
+      - .env.docker
+    depends_on:
+      web:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  media_data:

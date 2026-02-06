@@ -1,0 +1,60 @@
+# Version control
+.git
+.gitignore
+
+# Python
+venv/
+__pycache__
+*.pyc
+*.egg-info/
+.coverage
+.pytest_cache/
+
+# Node (rebuilt in Docker)
+node_modules/
+
+# Built assets (rebuilt in Docker)
+wine_cellar/static/
+staticfiles/
+
+# Database files
+db.sqlite3
+test_db.sqlite3
+*.backup*
+
+# Environment files
+.env*
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
+nohup.out
+
+# SSL certificates
+ssl/
+
+# Backups
+*.tar.gz
+
+# Documentation build
+docs/site/
+
+# Claude AI
+.claude/
+CLAUDE.md
+
+# Archive
+archive/
+
+# Media (mounted as volume)
+media/
+
+# Misc
+unwrap_labels/
+test-results/
+htmlcov/
+*.png
+*.html

@@ -389,3 +389,4 @@ const initScanner = () => {
 }
 
 document.addEventListener('DOMContentLoaded', initScanner, false)
+// Cache test
