@@ -40,7 +40,7 @@ class Storage(UserContentModel):
 
     @property
     def used_slots(self):
-        return self.items.count()
+        return self.items.filter(deleted=False).count()
 
     @property
     def is_full(self):
