@@ -17,7 +17,15 @@ from django.views.generic import TemplateView
 
 from wine_cellar.apps.storage.models import Storage, StorageItem
 from wine_cellar.apps.user.views import get_active_household
-from wine_cellar.apps.wine.models import Grape, ImageType, Size, Wine, WineImage
+from wine_cellar.apps.wine.models import (
+    Grape,
+    ImageType,
+    Size,
+    Wine,
+    WineBarcode,
+    WineImage,
+)
+from wine_cellar.apps.wine.services.barcode_service import BarcodeScanner
 from wine_cellar.apps.wine.services.vision_extraction import WineVisionExtractor
 
 from .models import (
@@ -549,10 +557,8 @@ def _apply_offline_operation(user, op_type, op_data):
 @hardware_auth_required
 def get_wine_by_barcode(request, barcode):
     """Look up a wine by its barcode."""
-    wine = Wine.objects.filter(
-        user=request.user,
-        barcode=barcode,
-    ).first()
+    scanner = BarcodeScanner()
+    wine = scanner.get_wine_object_by_barcode(barcode, request.user)
 
     if not wine:
         return JsonResponse({"error": "Wine not found"}, status=404)
@@ -611,10 +617,10 @@ def create_wine_from_labels(request):
 
     # Create the wine
     default_name = f"Unknown Wine ({barcode})" if barcode else "Unknown Wine"
+    barcode_value = barcode or extracted.get("barcode")
     wine_data = {
         "user": request.user,
         "name": extracted.get("name", default_name),
-        "barcode": barcode or extracted.get("barcode"),
         "wine_type": extracted.get("wine_type", "RE"),  # Default to red
         "vintage": extracted.get("vintage"),
         "country": extracted.get("country", "US"),  # Default country
@@ -624,6 +630,15 @@ def create_wine_from_labels(request):
     }
 
     wine = Wine.objects.create(**wine_data)
+
+    # Create barcode entry if we have one
+    if barcode_value:
+        household = get_active_household(request.user)
+        WineBarcode.objects.get_or_create(
+            barcode=barcode_value,
+            user=request.user,
+            defaults={"wine": wine, "household": household},
+        )
 
     # Handle grapes
     grapes = extracted.get("grapes", [])
@@ -671,10 +686,12 @@ def create_wine_from_labels(request):
 
 def _wine_to_dict(wine):
     """Convert wine model to dictionary."""
+    barcodes = list(wine.barcodes.values_list("barcode", flat=True))
     return {
         "id": wine.pk,
         "name": wine.name,
-        "barcode": wine.barcode,
+        "barcode": barcodes[0] if barcodes else None,
+        "barcodes": barcodes,
         "wine_type": wine.wine_type,
         "vintage": wine.vintage,
         "country": wine.country,

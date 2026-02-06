@@ -5,9 +5,7 @@ import io
 import logging
 from typing import Optional
 
-import cv2
-import numpy as np
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageFilter
 
 try:
     from pyzbar import pyzbar
@@ -34,52 +32,27 @@ class BarcodeScanner:
                 self._pyzbar_available = False
         return self._pyzbar_available
 
-    def _preprocess_image(self, img: np.ndarray) -> list[np.ndarray]:
+    def _preprocess_image(self, img: Image.Image) -> list[Image.Image]:
         """
-        Generate multiple preprocessed versions of an image for barcode detection.
-
-        Args:
-            img: OpenCV image (BGR or grayscale)
+        Generate preprocessed versions of an image for barcode detection.
 
         Returns:
-            List of preprocessed images to try for barcode detection
+            List of PIL images to try for barcode detection
         """
-        versions = []
+        gray = img.convert("L")
+        versions = [gray]
 
-        # Convert to grayscale if needed
-        if len(img.shape) == 3:
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        else:
-            gray = img.copy()
+        # High contrast
+        versions.append(ImageEnhance.Contrast(gray).enhance(2.0))
 
-        # 1. Simple grayscale
-        versions.append(gray)
-
-        # 2. CLAHE (Contrast Limited Adaptive Histogram Equalization)
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        clahe_img = clahe.apply(gray)
-        versions.append(clahe_img)
-
-        # 3. Adaptive thresholding
-        adaptive = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
-        )
-        versions.append(adaptive)
-
-        # 4. Otsu's binary thresholding
-        _, otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        versions.append(otsu)
-
-        # 5. Sharpened image
-        kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
-        sharpened = cv2.filter2D(gray, -1, kernel)
-        versions.append(sharpened)
+        # Sharpened
+        versions.append(gray.filter(ImageFilter.SHARPEN))
 
         return versions
 
     def scan_images_for_barcodes(self, base64_images: list[str]) -> list[str]:
         """
-        Scan multiple images for barcodes using various preprocessing techniques.
+        Scan multiple images for barcodes.
 
         Args:
             base64_images: List of base64-encoded image data
@@ -95,54 +68,39 @@ class BarcodeScanner:
         for base64_image in base64_images:
             pil_image = None
             try:
-                # Decode base64 to image
                 image_data = base64.b64decode(base64_image)
                 pil_image = Image.open(io.BytesIO(image_data))
 
-                # Convert PIL Image to OpenCV format
                 if pil_image.mode == "RGBA":
                     pil_image = pil_image.convert("RGB")
-                cv_image = np.array(pil_image)
-                if len(cv_image.shape) == 3:
-                    cv_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2BGR)
 
-                # Try original image first (color can help with some barcodes)
-                decoded_barcodes = pyzbar.decode(cv_image)
+                # Try original image first
+                decoded_barcodes = pyzbar.decode(pil_image)
                 for barcode in decoded_barcodes:
                     try:
                         barcode_data = barcode.data.decode("utf-8")
-                        barcode_type = barcode.type
                         logger.info(
-                            f"Found barcode: {barcode_data} (type: {barcode_type})"
+                            f"Found barcode: {barcode_data} (type: {barcode.type})"
                         )
                         barcodes.add(barcode_data)
                     except UnicodeDecodeError:
-                        logger.warning(
-                            f"Skipping barcode with non-UTF-8 data: {barcode.data}"
-                        )
                         continue
 
                 # If no barcodes found, try preprocessed versions
                 if not barcodes:
-                    preprocessed_versions = self._preprocess_image(cv_image)
-                    for i, processed_img in enumerate(preprocessed_versions):
+                    for processed_img in self._preprocess_image(pil_image):
                         decoded_barcodes = pyzbar.decode(processed_img)
                         for barcode in decoded_barcodes:
                             try:
                                 barcode_data = barcode.data.decode("utf-8")
-                                barcode_type = barcode.type
                                 logger.info(
-                                    f"Found barcode with preprocessing #{i}: "
-                                    f"{barcode_data} (type: {barcode_type})"
+                                    "Found barcode: %s (type: %s)",
+                                    barcode_data,
+                                    barcode.type,
                                 )
                                 barcodes.add(barcode_data)
                             except UnicodeDecodeError:
-                                logger.warning(
-                                    f"Skipping barcode with non-UTF-8 data: "
-                                    f"{barcode.data}"
-                                )
                                 continue
-                        # Stop if we found barcodes
                         if barcodes:
                             break
 
@@ -150,7 +108,6 @@ class BarcodeScanner:
                 logger.warning(f"Error scanning image for barcodes: {e}")
                 continue
             finally:
-                # Explicitly close PIL Image objects to free resources
                 if pil_image is not None:
                     pil_image.close()
 
@@ -173,7 +130,7 @@ class BarcodeScanner:
         """
         from django.db.models import Q
 
-        from wine_cellar.apps.wine.models import Wine
+        from wine_cellar.apps.wine.models import WineBarcode
 
         if not barcode:
             return None
@@ -193,20 +150,21 @@ class BarcodeScanner:
             for variant in variants:
                 query |= Q(barcode=variant)
 
-            # Try finding exact matches first
-            wine = Wine.objects.filter(query, user=user).first()
-            if wine:
-                return wine
+            wb = (
+                WineBarcode.objects.filter(query, user=user)
+                .select_related("wine")
+                .first()
+            )
+            if wb:
+                return wb.wine
 
             # 2. If failure, try lax whitespace match
-            # (This handles the case where DB has " 123 ")
-            # We use the longest variant for safety to avoid matching partials too
-            # aggressively
             search_term = max(variants, key=len)
-            wines = Wine.objects.filter(user=user, barcode__icontains=search_term)
-            for wine in wines:
-                if wine.barcode and wine.barcode.strip() in variants:
-                    return wine
+            for wb in WineBarcode.objects.filter(
+                user=user, barcode__icontains=search_term
+            ).select_related("wine"):
+                if wb.barcode and wb.barcode.strip() in variants:
+                    return wb.wine
 
         except Exception as e:
             logger.error(f"Error finding wine object by barcode: {e}")
@@ -284,10 +242,12 @@ class BarcodeScanner:
         Returns:
             dict with wine data matching form fields
         """
+        barcodes = list(wine.barcodes.values_list("barcode", flat=True))
         data = {
             "name": wine.name,
             "wine_type": wine.wine_type,
-            "barcode": wine.barcode,
+            "barcode": barcodes[0] if barcodes else None,
+            "barcodes": barcodes,
         }
 
         # Add optional fields if present

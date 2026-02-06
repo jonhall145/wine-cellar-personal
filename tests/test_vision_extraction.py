@@ -8,6 +8,7 @@ import pytest
 from django.urls import reverse
 from PIL import Image
 
+from wine_cellar.apps.wine.models import WineBarcode
 from wine_cellar.apps.wine.views import MAX_IMAGE_SIZE
 
 
@@ -56,12 +57,14 @@ class TestExtractWineVisionAjax:
     def test_barcode_match_returns_wine_data(self, client, user, wine_factory):
         """Test that matching barcode returns the wine data."""
         # Create a wine with barcode
-        wine_factory(
+        wine = wine_factory(
             user=user,
             name="Barcode Match Wine",
-            barcode="1234567890123",
             wine_type="RE",
             vintage=2020,
+        )
+        WineBarcode.objects.create(
+            wine=wine, barcode="1234567890123", user=user, household=wine.household
         )
 
         client.force_login(user)

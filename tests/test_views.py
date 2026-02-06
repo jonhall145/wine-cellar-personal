@@ -8,7 +8,7 @@ from pytest_django.asserts import (
     assertTemplateUsed,
 )
 
-from wine_cellar.apps.wine.models import Wine
+from wine_cellar.apps.wine.models import Wine, WineBarcode
 
 
 @pytest.mark.django_db
@@ -153,7 +153,7 @@ def test_wine_create_post_with_barcode(client, user):
     assert wine.abv == data["abv"]
     assert wine.size.name == "ST"
     assert wine.vintage == data["vintage"]
-    assert wine.barcode == "12345"
+    assert wine.barcodes.filter(barcode="12345").exists()
 
 
 @pytest.mark.django_db
@@ -190,7 +190,7 @@ def test_wine_create_post_with_drinking_window(client, user):
     assert wine.abv == data["abv"]
     assert wine.size.name == "ST"
     assert wine.vintage == data["vintage"]
-    assert wine.barcode == "12345"
+    assert wine.barcodes.filter(barcode="12345").exists()
     assert wine.drink_from == 2025
     assert wine.drink_to == 2030
 
@@ -641,9 +641,12 @@ def test_wine_scanned_existing(
     user,
     wine_factory,
 ):
-    wine = wine_factory(user=user, country="DE", barcode="12345")
+    wine = wine_factory(user=user, country="DE")
+    WineBarcode.objects.create(
+        wine=wine, barcode="12345", user=user, household=wine.household
+    )
     client.force_login(user)
-    r = client.get(reverse("wine-scan", kwargs={"code": wine.barcode}), follow=True)
+    r = client.get(reverse("wine-scan", kwargs={"code": "12345"}), follow=True)
     assert r.status_code == HTTPStatus.OK
     assertRedirects(
         response=r, expected_url=reverse("wine-detail", kwargs={"pk": wine.pk})
@@ -658,7 +661,10 @@ def test_wine_scanned_non_existing(
     user,
     wine_factory,
 ):
-    wine_factory(user=user, country="DE", barcode="12345")
+    wine = wine_factory(user=user, country="DE")
+    WineBarcode.objects.create(
+        wine=wine, barcode="12345", user=user, household=wine.household
+    )
     client.force_login(user)
     r = client.get(reverse("wine-scan", kwargs={"code": "00000"}), follow=True)
     assert r.status_code == HTTPStatus.OK

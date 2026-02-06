@@ -30,16 +30,12 @@ WORKDIR /app
 
 # System dependencies:
 #  libzbar0 - barcode reading (pyzbar)
-#  libgl1, libglib2.0-0 - OpenCV headless
 #  libpq5 - PostgreSQL client library (psycopg[binary] runtime)
 #  curl - health checks
-#  Using cache mounts to speed up rebuilds
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
     libzbar0 \
-    libgl1 \
-    libglib2.0-0 \
     libpq5 \
     curl \
     && rm -rf /var/lib/apt/lists/*

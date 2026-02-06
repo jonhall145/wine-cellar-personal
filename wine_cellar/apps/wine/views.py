@@ -23,7 +23,7 @@ from wine_cellar.apps.storage.models import Storage, StorageItem
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 from wine_cellar.apps.wine.filters import WineFilter
 from wine_cellar.apps.wine.forms import WineEditForm, WineForm, image_fields_map
-from wine_cellar.apps.wine.models import Wine, WineImage
+from wine_cellar.apps.wine.models import Wine, WineBarcode, WineImage
 from wine_cellar.apps.wine.services import BarcodeScanner, WineVisionExtractor
 
 # Form step constants - no longer used for multi-step, kept for compatibility
@@ -536,7 +536,6 @@ class WineCreateView(FormView):
                 "category": category,
                 "subregion": subregion,
                 "appellation": appellation,
-                "barcode": barcode,
                 "drink_from": drink_from,
                 "drink_to": drink_to,
                 "comment": comment,
@@ -545,6 +544,14 @@ class WineCreateView(FormView):
                 "rrp": rrp,
             },
         )
+
+        # Create barcode entry if provided
+        if barcode:
+            WineBarcode.objects.get_or_create(
+                barcode=barcode,
+                user=user,
+                defaults={"wine": wine, "household": household},
+            )
 
         wine.vineyard.set(vineyards)
         wine.grapes.set(grapes)
@@ -600,6 +607,10 @@ class WineUpdateView(FormView):
         household = get_active_household(self.request.user)
         wine = get_object_or_404(Wine, pk=self.kwargs["pk"], household=household)
         initial.update(model_to_dict(wine))
+        # Populate barcode from related WineBarcode model
+        first_barcode = wine.barcodes.first()
+        if first_barcode:
+            initial["barcode"] = first_barcode.barcode
         return initial
 
     def get_context_data(self, **kwargs):
@@ -656,7 +667,6 @@ class WineUpdateView(FormView):
         wine.subregion = subregion
         wine.appellation = appellation
         wine.name = name
-        wine.barcode = barcode
         wine.rating = rating
         wine.vintage = vintage
         wine.drink_from = drink_from
@@ -665,6 +675,14 @@ class WineUpdateView(FormView):
         wine.price = price
         wine.rrp = rrp
         wine.save()
+
+        # Create barcode entry if provided
+        if barcode:
+            WineBarcode.objects.get_or_create(
+                barcode=barcode,
+                user=user,
+                defaults={"wine": wine, "household": wine.household},
+            )
 
         wine.vineyard.set(vineyards)
         wine.grapes.set(grapes)
@@ -713,6 +731,7 @@ class WineDetailView(DetailView):
                 "wineimage_set",
                 "vineyard",
                 "source",
+                "barcodes",
             )
             .annotate(
                 stock_count=Count(

@@ -268,7 +268,6 @@ class Source(UserContentModel):
 
 class Wine(UserContentModel):
     name = models.CharField(max_length=100, verbose_name=_("Name"))
-    barcode = models.CharField(max_length=100, null=True, verbose_name=_("Barcode"))
     wine_type = models.CharField(max_length=2, choices=WineType, verbose_name=_("Type"))
     category = models.CharField(
         max_length=2, choices=Category, null=True, verbose_name=_("Category")
@@ -489,7 +488,6 @@ class Wine(UserContentModel):
         indexes = [
             models.Index(fields=["user", "wine_type"], name="wine_user_type_idx"),
             models.Index(fields=["name"], name="wine_name_idx"),
-            models.Index(fields=["barcode"], name="wine_barcode_idx"),
             models.Index(fields=["user", "vintage"], name="wine_user_vintage_idx"),
             models.Index(fields=["user", "drink_by"], name="wine_user_drinkby_idx"),
             models.Index(fields=["user", "drink_to"], name="wine_user_drinkto_idx"),
@@ -549,6 +547,42 @@ class WineImage(models.Model):
                 pk=self.pk
             ).update(is_primary=False)
         super().save(*args, **kwargs)
+
+
+class WineBarcode(models.Model):
+    """A barcode associated with a wine. Supports multiple barcodes per wine."""
+
+    wine = models.ForeignKey(
+        Wine, on_delete=models.CASCADE, related_name="barcodes", verbose_name=_("Wine")
+    )
+    barcode = models.CharField(max_length=100, verbose_name=_("Barcode"))
+    user = models.ForeignKey(
+        get_user_model(), on_delete=models.CASCADE, null=True, verbose_name=_("User")
+    )
+    household = models.ForeignKey(
+        "household.Household",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name=_("Household"),
+    )
+    created = models.DateTimeField(auto_now_add=True, verbose_name=_("Created"))
+
+    class Meta:
+        verbose_name = _("Wine Barcode")
+        verbose_name_plural = _("Wine Barcodes")
+        indexes = [
+            models.Index(fields=["barcode"], name="winebarcode_barcode_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["barcode", "user"],
+                name="unique_barcode_per_user",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.barcode} ({self.wine.name})"
 
 
 class DrinkRecord(UserContentModel):

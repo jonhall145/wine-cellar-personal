@@ -93,8 +93,7 @@ def apply_manual_crop(
 
 def make_thumbnail(instance: "WineImage", height: int = 225) -> str:
     """
-    Creates a smart thumbnail with label detection, falling back to
-    proportional scaling if detection fails.
+    Create a proportionally scaled thumbnail.
 
     Returns the path to the thumbnail file.
     """
@@ -112,38 +111,11 @@ def make_thumbnail(instance: "WineImage", height: int = 225) -> str:
     # Store original format before any processing
     original_format = img.format
 
-    # Attempt smart label detection
-    try:
-        from wine_cellar.apps.wine.label_detection import (
-            detect_and_crop_label,
-            enhance_detection_for_difficult_images,
-        )
-
-        result_img, success = detect_and_crop_label(img, target_height=height)
-
-        # If initial detection failed, try with enhanced image
-        if not success:
-            enhanced_img = enhance_detection_for_difficult_images(img)
-            result_img, success = detect_and_crop_label(
-                enhanced_img,
-                target_height=height,
-            )
-
-            # If still failed, use simple scaling as final fallback
-            if not success:
-                logger.info("Using simple scaling fallback")
-                aspect = img.width / img.height
-                width = int(height * aspect)
-                result_img = img.copy()
-                result_img.thumbnail((width, height), Image.LANCZOS)
-
-    except ImportError:
-        # OpenCV not installed - use simple scaling
-        logger.warning("OpenCV not available, using simple scaling")
-        aspect = img.width / img.height
-        width = int(height * aspect)
-        result_img = img.copy()
-        result_img.thumbnail((width, height), Image.LANCZOS)
+    # Scale proportionally to target height
+    aspect = img.width / img.height
+    width = int(height * aspect)
+    result_img = img.copy()
+    result_img.thumbnail((width, height), Image.LANCZOS)
 
     # Save thumbnail
     base, ext = os.path.splitext(image_path)

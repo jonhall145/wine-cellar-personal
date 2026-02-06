@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PIL import Image
 
+from wine_cellar.apps.wine.models import WineBarcode
 from wine_cellar.apps.wine.services.barcode_service import BarcodeScanner
 
 PYZBAR_PATH = "wine_cellar.apps.wine.services.barcode_service.pyzbar"
@@ -101,7 +102,10 @@ class TestBarcodeScanner:
     @pytest.mark.django_db
     def test_find_wine_by_barcode_with_match(self, user, wine_factory):
         """Test finding wine when match exists."""
-        wine_factory(user=user, barcode="1234567890123", name="Test Wine")
+        wine = wine_factory(user=user, name="Test Wine")
+        WineBarcode.objects.create(
+            wine=wine, barcode="1234567890123", user=user, household=wine.household
+        )
 
         scanner = BarcodeScanner()
         result = scanner.find_wine_by_barcode("1234567890123", user)
@@ -116,7 +120,13 @@ class TestBarcodeScanner:
     ):
         """Test that barcode lookup only finds wines for the correct user."""
         other_user = user_factory()
-        wine_factory(user=other_user, barcode="1234567890123", name="Other User Wine")
+        wine = wine_factory(user=other_user, name="Other User Wine")
+        WineBarcode.objects.create(
+            wine=wine,
+            barcode="1234567890123",
+            user=other_user,
+            household=wine.household,
+        )
 
         scanner = BarcodeScanner()
         result = scanner.find_wine_by_barcode("1234567890123", user)
@@ -154,7 +164,10 @@ class TestBarcodeScanner:
     @pytest.mark.django_db
     def test_scan_and_match_barcode_found_with_match(self, user, wine_factory):
         """Test scan_and_match when barcode is found and matches a wine."""
-        wine_factory(user=user, barcode="1234567890123", name="Matched Wine")
+        wine = wine_factory(user=user, name="Matched Wine")
+        WineBarcode.objects.create(
+            wine=wine, barcode="1234567890123", user=user, household=wine.household
+        )
 
         scanner = BarcodeScanner()
         # Mock the barcode scanning to return our test barcode
@@ -188,10 +201,12 @@ class TestBarcodeScanner:
             user=user,
             name="Test Wine",
             wine_type="RE",
-            barcode="123456",
             vintage=2020,
             country="FR",
             abv=13.5,
+        )
+        WineBarcode.objects.create(
+            wine=wine, barcode="123456", user=user, household=wine.household
         )
 
         scanner = BarcodeScanner()
@@ -200,6 +215,7 @@ class TestBarcodeScanner:
         assert result["name"] == "Test Wine"
         assert result["wine_type"] == "RE"
         assert result["barcode"] == "123456"
+        assert result["barcodes"] == ["123456"]
         assert result["vintage"] == 2020
         assert result["country"] == "FR"
         assert result["abv"] == 13.5

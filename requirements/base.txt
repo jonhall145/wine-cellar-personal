@@ -13,5 +13,3 @@ whitenoise[brotli]==6.11.0
 anthropic==0.40.0
 pyzbar==0.1.9
 django-ratelimit==4.1.0
-opencv-python-headless==4.10.0.84
-numpy==2.0.2

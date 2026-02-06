@@ -8,14 +8,27 @@ from wine_cellar.apps.wine.models import (
     Source,
     Vineyard,
     Wine,
+    WineBarcode,
 )
+
+
+class WineBarcodeInline(admin.TabularInline):
+    model = WineBarcode
+    extra = 1
 
 
 @admin.register(Wine)
 class WineAdmin(admin.ModelAdmin):
-    list_display = ["name", "barcode", "user", "household"]
+    list_display = ["name", "user", "household"]
     list_filter = ["household", "user"]
-    fields = ["name", "barcode", "user", "household"]
+    fields = ["name", "user", "household"]
+    inlines = [WineBarcodeInline]
+
+
+@admin.register(WineBarcode)
+class WineBarcodeAdmin(admin.ModelAdmin):
+    list_display = ["barcode", "wine", "user"]
+    list_filter = ["user"]
 
 
 @admin.register(Size)

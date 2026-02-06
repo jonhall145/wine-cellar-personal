@@ -14,6 +14,7 @@ from wine_cellar.apps.wine.models import (
     Source,
     Vineyard,
     Wine,
+    WineBarcode,
     WineImage,
     WineType,
 )
@@ -102,6 +103,16 @@ class WineFactory(DjangoModelFactory):
             obj.save()
             for grape in extracted:
                 obj.grapes.add(grape)
+
+
+class WineBarcodeFactory(DjangoModelFactory):
+    class Meta:
+        model = WineBarcode
+
+    wine = factory.SubFactory(WineFactory)
+    barcode = factory.Faker("ean13")
+    user = factory.LazyAttribute(lambda o: o.wine.user)
+    household = factory.LazyAttribute(lambda o: o.wine.household)
 
 
 class WineImageFactory(DjangoModelFactory):
