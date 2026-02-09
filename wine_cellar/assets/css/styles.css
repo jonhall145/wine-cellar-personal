@@ -792,6 +792,7 @@ a:hover {
 }
 
 /* Margin utilities */
+.mt-md { margin-top: var(--spacing-md); }
 .mt-12 { margin-top: var(--spacing-lg); }
 .mb-12 { margin-bottom: var(--spacing-lg); }
 

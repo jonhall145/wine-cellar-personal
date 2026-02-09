@@ -67,6 +67,7 @@ from wine_cellar.apps.wine.views import (
     WineImagesView,
     WineListView,
     WineMapView,
+    WineMergeConfirmView,
     WineScannedView,
     WineScanView,
     WineUpdateView,
@@ -162,6 +163,11 @@ urlpatterns = [
     ),
     path("wine/image/<int:pk>/crop/", crop_wine_image, name="crop-wine-image"),
     path("wine/delete/<int:pk>/", WineDeleteView.as_view(), name="wine-delete"),
+    path(
+        "wine/merge/<int:pk>/into/<int:primary_pk>/",
+        WineMergeConfirmView.as_view(),
+        name="wine-merge-confirm",
+    ),
     path(
         "wine/<int:pk>/drink/", DrinkRecordCreateView.as_view(), name="drink-record-add"
     ),

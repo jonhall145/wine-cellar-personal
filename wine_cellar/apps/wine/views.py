@@ -741,6 +741,25 @@ class WineDetailView(DetailView):
             .filter(household=household)
         )
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        wine = self.object
+        household = get_active_household(self.request.user)
+        duplicates = (
+            Wine.objects.filter(household=household, name=wine.name)
+            .exclude(pk=wine.pk)
+            .annotate(
+                stock_count=Count(
+                    "storageitem",
+                    filter=Q(storageitem__deleted=False),
+                    distinct=True,
+                ),
+                barcode_count=Count("barcodes", distinct=True),
+            )
+        )
+        context["duplicates"] = duplicates
+        return context
+
 
 class WineImagesView(DetailView):
     """View for managing wine images (set primary, crop)."""
@@ -834,6 +853,92 @@ class WineDeleteView(DeleteView):
         qs = super().get_queryset()
         household = get_active_household(self.request.user)
         return qs.filter(household=household)
+
+
+class WineMergeConfirmView(TemplateView):
+    template_name = "wine_merge_confirm.html"
+
+    def get_wines(self):
+        household = get_active_household(self.request.user)
+        qs = Wine.objects.filter(household=household)
+        primary = get_object_or_404(qs, pk=self.kwargs["primary_pk"])
+        duplicate = get_object_or_404(qs, pk=self.kwargs["pk"])
+        return primary, duplicate
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        primary, duplicate = self.get_wines()
+        dup_stock = StorageItem.objects.filter(wine=duplicate, deleted=False).count()
+        dup_barcodes = duplicate.barcodes.count()
+        context.update(
+            {
+                "primary": primary,
+                "duplicate": duplicate,
+                "dup_stock": dup_stock,
+                "dup_barcodes": dup_barcodes,
+            }
+        )
+        return context
+
+    def post(self, request, *args, **kwargs):
+        from wine_cellar.apps.hardware.models import PositionChangeReview
+        from wine_cellar.apps.wine.models import (
+            DrinkingWindowAlert,
+            DrinkRecord,
+            PriceHistory,
+            ReorderReminder,
+            SaleAlert,
+            VisionExtractionLog,
+        )
+
+        primary, duplicate = self.get_wines()
+
+        with transaction.atomic():
+            # Move bottles
+            StorageItem.objects.filter(wine=duplicate).update(wine=primary)
+
+            # Move barcodes (skip duplicates)
+            for barcode in duplicate.barcodes.all():
+                if not primary.barcodes.filter(barcode=barcode.barcode).exists():
+                    barcode.wine = primary
+                    barcode.save()
+
+            # Move images
+            WineImage.objects.filter(wine=duplicate).update(wine=primary)
+
+            # Merge M2M fields
+            primary.grapes.add(*duplicate.grapes.all())
+            primary.attributes.add(*duplicate.attributes.all())
+            primary.food_pairings.add(*duplicate.food_pairings.all())
+            primary.vineyard.add(*duplicate.vineyard.all())
+            primary.source.add(*duplicate.source.all())
+
+            # Move FK references
+            DrinkRecord.objects.filter(wine=duplicate).update(wine=primary)
+            DrinkingWindowAlert.objects.filter(wine=duplicate).update(wine=primary)
+            PriceHistory.objects.filter(wine=duplicate).update(wine=primary)
+            VisionExtractionLog.objects.filter(wine=duplicate).update(wine=primary)
+            PositionChangeReview.objects.filter(wine=duplicate).update(wine=primary)
+            SaleAlert.objects.filter(wine=duplicate).update(wine=primary)
+
+            # Handle ReorderReminder (unique on wine+user)
+            for reminder in ReorderReminder.objects.filter(wine=duplicate):
+                if not ReorderReminder.objects.filter(
+                    wine=primary, user=reminder.user
+                ).exists():
+                    reminder.wine = primary
+                    reminder.save()
+                else:
+                    reminder.delete()
+
+            # Delete the duplicate
+            duplicate.delete()
+
+        messages.success(
+            request,
+            f'Merged "{duplicate.name}" into "{primary.name}".',
+        )
+        return redirect("wine-detail", pk=primary.pk)
 
 
 class WineMapView(TemplateView):

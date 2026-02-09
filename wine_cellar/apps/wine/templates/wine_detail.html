@@ -227,6 +227,37 @@
                     {% endif %}
                 </div>
             </div>
+            {% if duplicates %}
+            <div class="pure-u-1 pure-u-md-1 text-align-center">
+                <h2 class="header__title">{% translate "Potential Duplicates" %}</h2>
+            </div>
+            <div class="pure-u-1 pure-u-md-3-8 m-auto">
+                <div class="table-responsive">
+                <table class="pure-table pure-table-horizontal pure-table-striped">
+                    <thead>
+                        <tr>
+                            <th>{% translate "Vintage" %}</th>
+                            <th>{% translate "Bottles" %}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for dup in duplicates %}
+                        <tr>
+                            <td>{{ dup.vintage|default_if_none:"" }}</td>
+                            <td>{{ dup.stock_count }}</td>
+                            <td>
+                                <a href="{% url 'wine-merge-confirm' dup.pk wine.pk %}" class="pure-button button__neutral">
+                                    <i class="fa-solid fa-code-merge"></i> {% translate "Merge" %}
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 {% endblock content %}
