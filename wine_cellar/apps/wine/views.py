@@ -831,16 +831,18 @@ class WineScannedView(TemplateView):
 
     def dispatch(self, request, *args, **kwargs):
         code = self.kwargs["code"]
-        # Use robust barcode matching from service
         scanner = BarcodeScanner()
-        wine = scanner.get_wine_object_by_barcode(code, self.request.user)
+        wines = scanner.get_wines_by_barcode(code, self.request.user)
 
-        if wine:
-            return redirect(reverse("wine-detail", kwargs={"pk": wine.pk}))
+        if wines is not None and wines.exists():
+            if wines.count() == 1:
+                return redirect(reverse("wine-detail", kwargs={"pk": wines.first().pk}))
+            # Multiple matches — fall through to render selection template
+            self.extra_context = {"wines": wines, "barcode": code}
+            return super().dispatch(request, *args, **kwargs)
 
-        # Store barcode in session for use if user continues to label scan
+        # No matches — store barcode in session for label scan flow
         request.session["pending_barcode"] = code
-
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -1686,7 +1688,20 @@ def extract_wine_vision_ajax(request):
         barcode_result = barcode_scanner.scan_and_match(images, request.user)
 
         if barcode_result.get("matched"):
-            # Found a matching wine via barcode
+            if barcode_result.get("multiple_matches"):
+                # Multiple wines share this barcode
+                return JsonResponse(
+                    {
+                        "success": True,
+                        "multiple_matches": True,
+                        "match_type": "barcode",
+                        "matched_barcode": barcode_result["barcode"],
+                        "wines": barcode_result["wines"],
+                        "message": "Multiple wines found with this barcode",
+                    }
+                )
+
+            # Single match — return wine data as before
             wine_data = barcode_result["wine_data"]
             extracted_fields = list(wine_data.keys())
 

@@ -113,6 +113,16 @@ class BarcodeScanner:
 
         return list(barcodes)
 
+    def _barcode_variants(self, barcode: str) -> set[str]:
+        """Return the cleaned barcode and its UPC-A/EAN-13 variants."""
+        barcode_clean = barcode.strip()
+        variants = {barcode_clean}
+        if len(barcode_clean) == 12:
+            variants.add(f"0{barcode_clean}")
+        elif len(barcode_clean) == 13 and barcode_clean.startswith("0"):
+            variants.add(barcode_clean[1:])
+        return variants
+
     def get_wine_object_by_barcode(self, barcode: str, user):
         """
         Find a wine object in the database by barcode with robust matching.
@@ -128,21 +138,32 @@ class BarcodeScanner:
         Returns:
             Wine model instance if found, None otherwise
         """
-        from django.db.models import Q
+        wines = self.get_wines_by_barcode(barcode, user)
+        return wines.first() if wines is not None else None
 
-        from wine_cellar.apps.wine.models import WineBarcode
+    def get_wines_by_barcode(self, barcode: str, user):
+        """
+        Find all wines matching a barcode with robust matching.
+
+        Handles:
+        - Whitespace stripping (input and DB)
+        - Leading zero variations (UPC-A vs EAN-13)
+
+        Args:
+            barcode: Barcode string to search for
+            user: The user to search wines for
+
+        Returns:
+            Wine queryset of matching wines, or None on error/empty barcode
+        """
+        from django.db.models import Count, Q
+
+        from wine_cellar.apps.wine.models import Wine, WineBarcode
 
         if not barcode:
             return None
 
-        barcode_clean = barcode.strip()
-
-        # Potential variants to check
-        variants = {barcode_clean}
-        if len(barcode_clean) == 12:
-            variants.add(f"0{barcode_clean}")
-        elif len(barcode_clean) == 13 and barcode_clean.startswith("0"):
-            variants.add(barcode_clean[1:])
+        variants = self._barcode_variants(barcode)
 
         try:
             # 1. Try exact matches on variants
@@ -150,24 +171,38 @@ class BarcodeScanner:
             for variant in variants:
                 query |= Q(barcode=variant)
 
-            wb = (
+            wine_pks = list(
                 WineBarcode.objects.filter(query, user=user)
                 .select_related("wine")
-                .first()
+                .values_list("wine_id", flat=True)
+                .distinct()
             )
-            if wb:
-                return wb.wine
 
-            # 2. If failure, try lax whitespace match
-            search_term = max(variants, key=len)
-            for wb in WineBarcode.objects.filter(
-                user=user, barcode__icontains=search_term
-            ).select_related("wine"):
-                if wb.barcode and wb.barcode.strip() in variants:
-                    return wb.wine
+            # 2. If no exact hits, try lax whitespace match
+            if not wine_pks:
+                search_term = max(variants, key=len)
+                for wb in WineBarcode.objects.filter(
+                    user=user, barcode__icontains=search_term
+                ).select_related("wine"):
+                    if wb.barcode and wb.barcode.strip() in variants:
+                        wine_pks.append(wb.wine_id)
+
+            if wine_pks:
+                return (
+                    Wine.objects.filter(pk__in=wine_pks)
+                    .select_related("size")
+                    .prefetch_related("wineimage_set")
+                    .annotate(
+                        stock_count=Count(
+                            "storageitem",
+                            filter=Q(storageitem__deleted=False),
+                            distinct=True,
+                        )
+                    )
+                )
 
         except Exception as e:
-            logger.error(f"Error finding wine object by barcode: {e}")
+            logger.error(f"Error finding wines by barcode: {e}")
 
         return None
 
@@ -201,14 +236,18 @@ class BarcodeScanner:
         Returns:
             dict with keys:
                 - matched: True if a wine was found
+                - multiple_matches: True if more than one wine matched
                 - barcode: The barcode that matched (if any)
-                - wine_data: The matched wine data (if any)
+                - wine_data: The matched wine data (if any, single match)
+                - wines: List of wine summary dicts (if multiple matches)
                 - all_barcodes: All barcodes found in images
         """
         result = {
             "matched": False,
+            "multiple_matches": False,
             "barcode": None,
             "wine_data": None,
+            "wines": [],
             "all_barcodes": [],
         }
 
@@ -222,11 +261,16 @@ class BarcodeScanner:
 
         # Try to match each barcode against existing wines
         for barcode in barcodes:
-            wine_data = self.find_wine_by_barcode(barcode, user)
-            if wine_data:
+            wines_qs = self.get_wines_by_barcode(barcode, user)
+            if wines_qs is not None and wines_qs.exists():
                 result["matched"] = True
                 result["barcode"] = barcode
-                result["wine_data"] = wine_data
+
+                if wines_qs.count() > 1:
+                    result["multiple_matches"] = True
+                    result["wines"] = [self._wine_to_summary(w) for w in wines_qs]
+                else:
+                    result["wine_data"] = self._wine_to_dict(wines_qs.first())
                 return result
 
         logger.info(f"Barcodes found but no matching wines: {barcodes}")
@@ -282,3 +326,23 @@ class BarcodeScanner:
             data["vineyard"] = vineyards
 
         return data
+
+    def _wine_to_summary(self, wine) -> dict:
+        """
+        Convert a Wine model instance to a lightweight summary for selection UI.
+
+        Args:
+            wine: Wine model instance (should have stock_count annotation)
+
+        Returns:
+            dict with pk, name, vintage, wine_type, country, stock_count, thumbnail
+        """
+        return {
+            "pk": wine.pk,
+            "name": wine.name,
+            "vintage": wine.vintage,
+            "wine_type": wine.get_type if wine.wine_type else None,
+            "country": wine.country_name if wine.country else None,
+            "stock_count": getattr(wine, "stock_count", 0),
+            "thumbnail": wine.image_thumbnail,
+        }
