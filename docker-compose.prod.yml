@@ -6,8 +6,8 @@ services:
         REQUIREMENTS_FILE: requirements/prod.txt
     image: wine-cellar:prod
     command: gunicorn wine_cellar.conf.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120 --worker-class sync
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     env_file:
       - .env.docker.prod
     volumes:
@@ -20,14 +20,32 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8000:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - static_data:/app/staticfiles:ro
+      - media_data:/app/media:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:80/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      - web
+    restart: unless-stopped
+
   db:
     image: postgres:16-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-wine_cellar_prod}
-      POSTGRES_USER: ${POSTGRES_USER:-wine_cellar_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    env_file:
+      - .env.docker.prod
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -54,6 +72,12 @@ services:
       - media_data:/app/media
     env_file:
       - .env.docker.prod
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A wine_cellar.conf.celery:celery_app inspect ping --timeout 5"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
     depends_on:
       web:
         condition: service_started
@@ -68,6 +92,12 @@ services:
     command: celery -A wine_cellar.conf.celery:celery_app beat --loglevel=warning --scheduler django_celery_beat.schedulers:DatabaseScheduler
     env_file:
       - .env.docker.prod
+    healthcheck:
+      test: ["CMD-SHELL", "cat /proc/1/cmdline | tr '\\0' ' ' | grep -q 'celery.*beat'"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
     depends_on:
       web:
         condition: service_started

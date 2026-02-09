@@ -31,12 +31,16 @@ WORKDIR /app
 # System dependencies:
 #  libzbar0 - barcode reading (pyzbar)
 #  libpq5 - PostgreSQL client library (psycopg[binary] runtime)
+#  libjpeg62-turbo libpng16-16 libwebp7 - image processing (Pillow)
 #  curl - health checks
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
     libzbar0 \
     libpq5 \
+    libjpeg62-turbo \
+    libpng16-16 \
+    libwebp7 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -59,8 +63,8 @@ COPY --from=frontend-builder /app/wine_cellar/static/ wine_cellar/static/
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-# Create media directory
-RUN mkdir -p /app/media
+# Create media and static directories
+RUN mkdir -p /app/media /app/staticfiles
 
 # Non-root user
 RUN addgroup --system django && adduser --system --ingroup django django
