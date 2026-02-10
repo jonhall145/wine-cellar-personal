@@ -25,3 +25,16 @@
         </div>
     </div>
 {% endblock content %}
+{% block extra_js %}
+    {{ block.super }}
+    <script>
+    // Sync CSRF token from cookie into form (allows page to be served from cache)
+    document.addEventListener('DOMContentLoaded', function() {
+        var cookie = document.cookie.match(/csrftoken=([^;]+)/);
+        if (cookie) {
+            var input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (input) input.value = cookie[1];
+        }
+    });
+    </script>
+{% endblock extra_js %}

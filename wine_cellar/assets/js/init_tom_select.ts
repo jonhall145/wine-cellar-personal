@@ -3,6 +3,9 @@ import { TomSettings } from 'tom-select/dist/esm/types/settings.js';
 import { RecursivePartial, TomCreateCallback} from 'tom-select/dist/esm/types/core.js';
 
 
+// Store TomSelect instances by element ID for cross-field interaction
+const tsInstances: Record<string, TomSelect> = {}
+
 function initTomSelect (): void {
   document.querySelectorAll('select').forEach((el) => {
     const rawConfig : string | undefined = el.dataset.tom_config
@@ -39,7 +42,73 @@ function initTomSelect (): void {
     if (clearOpts) {
       ts.clearOptions()
     }
+    // Store instance by element name for later lookup
+    if (el.name) {
+      tsInstances[el.name] = ts
+    }
   })
+
+  // Set up country-based appellation filtering
+  initAppellationCountryFilter()
+}
+
+function initAppellationCountryFilter(): void {
+  const appellationSelect = document.querySelector('select[name="appellation"]') as HTMLSelectElement | null
+  if (!appellationSelect) return
+
+  const countryMapRaw = appellationSelect.dataset.appellationCountries
+  if (!countryMapRaw) return
+
+  const countryMap: Record<string, string> = JSON.parse(countryMapRaw)
+  const appellationTs = tsInstances['appellation']
+  const countryTs = tsInstances['country']
+  if (!appellationTs || !countryTs) return
+
+  // Store all original options so we can restore them when filtering
+  const allOptions: Record<string, {value: string, text: string, country: string}> = {}
+  for (const [value, data] of Object.entries(appellationTs.options)) {
+    if (value === '') continue // skip empty option
+    allOptions[value] = {
+      value,
+      text: (data as any).text || '',
+      country: countryMap[value] || '',
+    }
+  }
+
+  function filterByCountry(countryCode: string): void {
+    const currentValue = appellationTs.getValue()
+
+    // Clear and rebuild options
+    appellationTs.clearOptions()
+    // Re-add empty option
+    appellationTs.addOption({value: '', text: '---------'})
+
+    for (const opt of Object.values(allOptions)) {
+      if (!countryCode || opt.country === countryCode) {
+        appellationTs.addOption({value: opt.value, text: opt.text})
+      }
+    }
+
+    // Keep current selection if it matches the country, otherwise clear
+    if (currentValue && allOptions[currentValue]?.country === countryCode) {
+      appellationTs.setValue(currentValue, true)
+    } else if (countryCode) {
+      appellationTs.clear(true)
+    }
+
+    appellationTs.refreshOptions(false)
+  }
+
+  // Listen for country changes
+  countryTs.on('change', (value: string) => {
+    filterByCountry(value)
+  })
+
+  // Apply initial filter if country is already set
+  const initialCountry = countryTs.getValue() as string
+  if (initialCountry) {
+    filterByCountry(initialCountry)
+  }
 }
 
 if (document.readyState === 'loading') {

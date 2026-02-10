@@ -174,6 +174,16 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
                 household=household
             ).order_by("order", "created")
 
+        # Pass appellation->country mapping for JS-based country filtering
+        if "appellation" in self.fields:
+            country_map = {
+                str(pk): country
+                for pk, country in Appellation.objects.values_list("pk", "country")
+            }
+            self.fields["appellation"].widget.attrs["data-appellation-countries"] = (
+                json.dumps(country_map)
+            )
+
         for field_name, image_type_code in image_fields_map.items():
             field = self.fields.get(field_name)
             if not field:
