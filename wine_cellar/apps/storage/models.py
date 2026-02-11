@@ -1,8 +1,9 @@
+from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from wine_cellar.apps.wine.models import UserContentModel, Wine
+from wine_cellar.apps.core.models import UserContentModel
 
 
 class Storage(UserContentModel):
@@ -34,24 +35,30 @@ class Storage(UserContentModel):
     def __str__(self):
         return self.name
 
+    def _get_items(self):
+        """Get the related items queryset based on app type."""
+        if getattr(settings, "CELLAR_APP_TYPE", "wine") == "whisky":
+            return self.whisky_items
+        return self.items
+
     @property
     def total_slots(self):
         return self.rows * self.columns
 
     @property
     def used_slots(self):
-        return self.items.filter(deleted=False).count()
+        return self._get_items().filter(deleted=False).count()
 
     @property
     def is_full(self):
         return self.used_slots >= self.total_slots
 
     def is_slot_occupied(self, row, column):
-        return self.items.filter(row=row, column=column, deleted=False).exists()
+        return self._get_items().filter(row=row, column=column, deleted=False).exists()
 
     @property
     def get_wines(self):
-        return self.items.filter(deleted=False).order_by("row", "column")
+        return self._get_items().filter(deleted=False).order_by("row", "column")
 
     def get_free_cells_by_row(self, exclude_item=None):
         """
@@ -68,7 +75,7 @@ class Storage(UserContentModel):
         if self.rows == 0:
             return {}
 
-        occupied_query = self.items.filter(deleted=False)
+        occupied_query = self._get_items().filter(deleted=False)
         if exclude_item:
             occupied_query = occupied_query.exclude(pk=exclude_item.pk)
 
@@ -86,7 +93,7 @@ class Storage(UserContentModel):
 
 class StorageItem(UserContentModel):
     storage = models.ForeignKey(Storage, on_delete=models.CASCADE, related_name="items")
-    wine = models.ForeignKey(Wine, on_delete=models.CASCADE)
+    wine = models.ForeignKey("wine.Wine", on_delete=models.CASCADE)
     row = models.PositiveIntegerField(null=True, blank=True)
     column = models.PositiveIntegerField(null=True, blank=True)
     deleted = models.BooleanField(default=False, db_index=True)

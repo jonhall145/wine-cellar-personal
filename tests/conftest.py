@@ -1,3 +1,4 @@
+import os
 import shutil
 from pathlib import Path
 
@@ -22,6 +23,11 @@ from wine_cellar.apps.wine.tests.factories import (
     WineFactory,
     WineImageFactory,
 )
+
+# Skip whisky tests when not running in whisky mode
+collect_ignore_glob = []
+if os.environ.get("CELLAR_APP_TYPE") != "whisky":
+    collect_ignore_glob.append("whisky/*")
 
 register(UserFactory)
 register(WineFactory)

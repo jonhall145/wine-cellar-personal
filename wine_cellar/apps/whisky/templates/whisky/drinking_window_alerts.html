@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+{% block title %}
+    {% translate "Drinking Window Alerts" %}
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">{% translate "Drinking Window Alerts" %}</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1">
+            {% if overdue_whiskies %}
+                <h2 class="text--danger">{% translate "Past Drinking Window" %}</h2>
+                <table class="pure-table pure-table-horizontal pure-table-striped mb-12">
+                    <thead>
+                        <tr>
+                            <th>{% translate "Whisky" %}</th>
+                            <th>{% translate "Age" %}</th>
+                            <th>{% translate "Drink Until" %}</th>
+                            <th>{% translate "Bottles" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for whisky in overdue_whiskies %}
+                            <tr>
+                                <td><a href="{% url 'whisky-detail' whisky.pk %}">{{ whisky.name }}</a></td>
+                                <td>{{ whisky.age|default_if_none:"-" }}</td>
+                                <td>{{ whisky.drink_to }}</td>
+                                <td>{{ whisky.total_stock }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+
+            {% if upcoming_whiskies %}
+                <h2>{% translate "Approaching End of Drinking Window" %}</h2>
+                <table class="pure-table pure-table-horizontal pure-table-striped mb-12">
+                    <thead>
+                        <tr>
+                            <th>{% translate "Whisky" %}</th>
+                            <th>{% translate "Age" %}</th>
+                            <th>{% translate "Drink Until" %}</th>
+                            <th>{% translate "Bottles" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for whisky in upcoming_whiskies %}
+                            <tr>
+                                <td><a href="{% url 'whisky-detail' whisky.pk %}">{{ whisky.name }}</a></td>
+                                <td>{{ whisky.age|default_if_none:"-" }}</td>
+                                <td>{{ whisky.drink_to }}</td>
+                                <td>{{ whisky.total_stock }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+
+            {% if not overdue_whiskies and not upcoming_whiskies %}
+                <div class="empty-state">
+                    <div class="empty-state__icon"><i class="fa-solid fa-circle-check"></i></div>
+                    <h3 class="empty-state__title">{% translate "All Clear!" %}</h3>
+                    <p class="empty-state__message">{% translate "No whiskies approaching their drink-by date. Your collection is in great shape." %}</p>
+                    <a href="{% url 'whisky-list' %}" class="pure-button button__primary empty-state__action">
+                        <i class="fa-solid fa-whiskey-glass"></i> {% translate "Browse Whiskies" %}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock content %}

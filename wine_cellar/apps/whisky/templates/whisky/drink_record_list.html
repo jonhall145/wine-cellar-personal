@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+{% block title %}
+    {% translate "Drink History" %}
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">{% translate "Drink History" %}</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1">
+            {% if drink_records %}
+                <table class="pure-table pure-table-horizontal pure-table-striped">
+                    <thead>
+                        <tr>
+                            <th>{% translate "Date" %}</th>
+                            <th>{% translate "Whisky" %}</th>
+                            <th>{% translate "Rating" %}</th>
+                            <th>{% translate "Shared With" %}</th>
+                            <th>{% translate "Occasion" %}</th>
+                            <th>{% translate "Notes" %}</th>
+                            <th>{% translate "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in drink_records %}
+                            <tr>
+                                <td>{{ record.date_consumed }}</td>
+                                <td><a href="{% url 'whisky-detail' record.whisky.pk %}">{{ record.whisky.name }}</a></td>
+                                <td>{{ record.rating|default_if_none:"-" }}</td>
+                                <td>{{ record.shared_with|default_if_none:"-" }}</td>
+                                <td>{{ record.occasion|default_if_none:"-" }}</td>
+                                <td>{{ record.tasting_notes|default_if_none:"-"|truncatewords:20 }}</td>
+                                <td>
+                                    <a href="{% url 'drink-record-edit' record.pk %}" class="pure-button pure-button-small" title="{% translate 'Edit' %}">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </a>
+                                    <a href="{% url 'drink-record-delete' record.pk %}" class="pure-button pure-button-small button__danger" title="{% translate 'Delete' %}">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state__icon"><i class="fa-solid fa-whiskey-glass"></i></div>
+                    <h3 class="empty-state__title">{% translate "No drink records yet" %}</h3>
+                    <p class="empty-state__message">{% translate "Record your whisky experiences to build your tasting history." %}</p>
+                    <a href="{% url 'whisky-list' %}" class="pure-button button__primary empty-state__action">
+                        <i class="fa-solid fa-whiskey-glass"></i> {% translate "Browse Whiskies" %}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock content %}

@@ -1,0 +1,148 @@
+from django import template
+from django.utils.safestring import mark_safe
+from django.utils.translation import gettext_lazy as _
+
+register = template.Library()
+
+
+WHISKY_TYPE_CLASSES = {
+    "SM": "single-malt",
+    "BM": "blended-malt",
+    "BL": "blended",
+    "SG": "single-grain",
+}
+
+WHISKY_TYPE_LABELS = {
+    "SM": _("Single Malt"),
+    "BM": _("Blended Malt"),
+    "BL": _("Blended"),
+    "SG": _("Single Grain"),
+}
+
+PEATED_LEVEL_CLASSES = {
+    "UP": "unpeated",
+    "LP": "lightly-peated",
+    "PE": "peated",
+    "HP": "heavily-peated",
+}
+
+PEATED_LEVEL_LABELS = {
+    "UP": _("Unpeated"),
+    "LP": _("Lightly Peated"),
+    "PE": _("Peated"),
+    "HP": _("Heavily Peated"),
+}
+
+FILL_LEVEL_ICONS = {
+    "FU": "fa-solid fa-battery-full",
+    "3Q": "fa-solid fa-battery-three-quarters",
+    "HA": "fa-solid fa-battery-half",
+    "1Q": "fa-solid fa-battery-quarter",
+    "NE": "fa-solid fa-battery-empty",
+    "EM": "fa-solid fa-battery-empty",
+}
+
+FILL_LEVEL_LABELS = {
+    "FU": _("Full (sealed)"),
+    "3Q": _("3/4"),
+    "HA": _("Half"),
+    "1Q": _("1/4"),
+    "NE": _("Nearly Empty"),
+    "EM": _("Empty"),
+}
+
+FILL_LEVEL_CLASSES = {
+    "FU": "full",
+    "3Q": "three-quarters",
+    "HA": "half",
+    "1Q": "quarter",
+    "NE": "nearly-empty",
+    "EM": "empty",
+}
+
+
+@register.simple_tag
+def rating_stars(rating, max_rating=3):
+    """Render star rating display (0-3 star scale)."""
+    if rating is None:
+        return mark_safe('<span class="rating-stars rating-stars--empty">—</span>')
+
+    # Ensure rating is within bounds
+    stars = min(int(rating), max_rating)
+
+    html = '<span class="rating-stars">'
+
+    # Full stars
+    for _i in range(stars):
+        html += (
+            '<i class="fa-solid fa-star rating-stars__star '
+            'rating-stars__star--filled"></i>'
+        )
+
+    # Empty stars
+    for _j in range(max_rating - stars):
+        html += '<i class="fa-regular fa-star rating-stars__star"></i>'
+
+    html += "</span>"
+
+    return mark_safe(html)
+
+
+@register.simple_tag
+def whisky_type_badge(whisky_type: str) -> str:
+    """Render a colored badge for the whisky type."""
+    if not whisky_type:
+        return ""
+
+    css_class = WHISKY_TYPE_CLASSES.get(whisky_type, "")
+    label = WHISKY_TYPE_LABELS.get(whisky_type, whisky_type)
+
+    if not css_class:
+        return f'<span class="whisky-type-badge">{label}</span>'
+
+    return mark_safe(
+        f'<span class="whisky-type-badge whisky-type-badge--{css_class}">{label}</span>'
+    )
+
+
+@register.simple_tag
+def peated_badge(peated_level: str) -> str:
+    """Render a badge for the peated level."""
+    if not peated_level:
+        return ""
+
+    css_class = PEATED_LEVEL_CLASSES.get(peated_level, "")
+    label = PEATED_LEVEL_LABELS.get(peated_level, peated_level)
+
+    if not css_class:
+        return f'<span class="peated-badge">{label}</span>'
+
+    return mark_safe(
+        f'<span class="peated-badge peated-badge--{css_class}">{label}</span>'
+    )
+
+
+@register.simple_tag
+def fill_level_display(fill_level: str) -> str:
+    """Render fill level indicator with icon and text."""
+    if not fill_level:
+        return ""
+
+    icon_class = FILL_LEVEL_ICONS.get(fill_level, "fa-solid fa-battery-full")
+    label = FILL_LEVEL_LABELS.get(fill_level, fill_level)
+    css_class = FILL_LEVEL_CLASSES.get(fill_level, "")
+
+    if not css_class:
+        return mark_safe(
+            f'<span class="fill-level">'
+            f'<i class="{icon_class} fill-level__icon"></i>'
+            f"{label}"
+            f"</span>"
+        )
+
+    return mark_safe(
+        f'<span class="fill-level fill-level--{css_class}">'
+        f'<i class="{icon_class} fill-level__icon"></i>'
+        f"{label}"
+        f"</span>"
+    )

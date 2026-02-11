@@ -63,6 +63,7 @@ interface StorageData {
 interface AllStoragesData {
     storages: StorageData[];
     current_storage_id: number;
+    item_url_prefix: string;
 }
 
 // Convert wine type display string to CSS class suffix
@@ -85,9 +86,10 @@ const getWineTypeClass = (wineType: string | null | undefined): string => {
 interface TooltipProps {
     wine: WineInfo;
     position: { x: number; y: number };
+    itemUrlPrefix: string;
 }
 
-const Tooltip: React.FC<TooltipProps> = ({ wine, position }) => {
+const Tooltip: React.FC<TooltipProps> = ({ wine, position, itemUrlPrefix }) => {
     const tooltipRef = React.useRef<HTMLDivElement>(null);
     const [adjustedPosition, setAdjustedPosition] = React.useState({ x: position.x, y: position.y });
 
@@ -130,7 +132,7 @@ const Tooltip: React.FC<TooltipProps> = ({ wine, position }) => {
             }}
         >
             <a
-                href={`/wine/${wine.id}/`}
+                href={`${itemUrlPrefix}${wine.id}/`}
                 className="tooltip__name tooltip__name--link"
                 onClick={(e) => {
                     e.stopPropagation();
@@ -138,7 +140,7 @@ const Tooltip: React.FC<TooltipProps> = ({ wine, position }) => {
                 onTouchEnd={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    window.location.href = `/wine/${wine.id}/`;
+                    window.location.href = `${itemUrlPrefix}${wine.id}/`;
                 }}
             >
                 {wine.name}
@@ -280,6 +282,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
     const [moveMode, setMoveMode] = useState(false);
     const [selectedBottle, setSelectedBottle] = useState<{ cell: CellData; storageId: number } | null>(null);
     const [activeItem, setActiveItem] = useState<{ cell: CellData; storageId: number } | null>(null);
+    const [itemUrlPrefix, setItemUrlPrefix] = useState('/wine/');
 
     // Configure sensors for mouse and touch
     // TouchSensor with delay to distinguish scroll from drag
@@ -313,6 +316,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
             const json = await response.json();
             setData(json);
             setSourceStorageId(json.current_storage_id);
+            if (json.item_url_prefix) setItemUrlPrefix(json.item_url_prefix);
             // Set target to a different storage if available, otherwise same as source
             const otherStorage = json.storages.find((s: StorageData) => s.id !== json.current_storage_id);
             setTargetStorageId(otherStorage?.id || json.current_storage_id);
@@ -605,7 +609,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                 </div>
 
                 {/* Tooltip */}
-                {tooltip && <Tooltip wine={tooltip.wine} position={tooltip.position} />}
+                {tooltip && <Tooltip wine={tooltip.wine} position={tooltip.position} itemUrlPrefix={itemUrlPrefix} />}
             </div>
         );
     }
@@ -687,7 +691,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                 </DragOverlay>
 
                 {/* Tooltip */}
-                {tooltip && <Tooltip wine={tooltip.wine} position={tooltip.position} />}
+                {tooltip && <Tooltip wine={tooltip.wine} position={tooltip.position} itemUrlPrefix={itemUrlPrefix} />}
 
                 {/* Instructions */}
                 <div className="storage-grid__instructions">

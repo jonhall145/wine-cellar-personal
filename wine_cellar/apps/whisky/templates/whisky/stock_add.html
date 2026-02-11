@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load static i18n storage_tags %}
+{% block extra_css %}
+    {{ block.super }}
+    <style>
+        .storage-suggestions {
+            margin-bottom: 1.5em;
+            padding: 1em;
+            background: var(--bg-secondary, #f5f5f5);
+            border-radius: 8px;
+        }
+        .storage-suggestions__title {
+            font-size: 0.9em;
+            font-weight: 600;
+            margin-bottom: 0.5em;
+            color: var(--text-secondary, #666);
+        }
+        .storage-suggestions__list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5em;
+        }
+        .storage-suggestion {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75em;
+            background: var(--bg-primary, #fff);
+            border-radius: 6px;
+            border: 1px solid var(--border-color, #ddd);
+        }
+        .storage-suggestion__info {
+            flex: 1;
+        }
+        .storage-suggestion__name {
+            font-weight: 500;
+        }
+        .storage-suggestion__details {
+            font-size: 0.85em;
+            color: var(--text-secondary, #666);
+        }
+        .storage-suggestion__btn {
+            padding: 0.4em 0.8em;
+            font-size: 0.85em;
+        }
+    </style>
+{% endblock extra_css %}
+{% block extra_js %}
+    {{ block.super }}
+    <script src="{% static 'tom_select.js' %}" type="module" defer></script>
+    <script src="{% static 'stock_add.js' %}" defer></script>
+{% endblock extra_js %}
+{% block title %}
+    {% translate "Add Bottle" %}
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">{% translate "Add Bottle" %}</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1 pure-u-lg-1-3 m-auto">
+            {% storage_cells free_cells_by_storage %}
+            {% if storage_suggestions %}
+                <div class="storage-suggestions">
+                    <div class="storage-suggestions__title">{% translate "This whisky is already in:" %}</div>
+                    <div class="storage-suggestions__list">
+                        {% for suggestion in storage_suggestions %}
+                            <div class="storage-suggestion">
+                                <div class="storage-suggestion__info">
+                                    <div class="storage-suggestion__name">{{ suggestion.storage_name }}</div>
+                                    <div class="storage-suggestion__details">
+                                        {{ suggestion.bottle_count }} {% if suggestion.bottle_count == 1 %}{% translate "bottle" %}{% else %}{% translate "bottles" %}{% endif %}{% if suggestion.free_slots is not None %}, {{ suggestion.free_slots }} {% translate "slots available" %}{% endif %}
+                                    </div>
+                                </div>
+                                {% if suggestion.free_slots is None or suggestion.free_slots > 0 %}
+                                    <button type="button"
+                                            class="pure-button button__secondary storage-suggestion__btn"
+                                            data-storage-id="{{ suggestion.storage_id }}">
+                                        {% translate "Add here" %}
+                                    </button>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+            <form method="post"
+                  enctype="multipart/form-data"
+                  class="pure-form pure-form-stacked wine-form"
+                  novalidate>
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                    <ul class="form-errorlist" aria-live="assertive" aria-atomic="true">
+                        {% for error in form.non_field_errors %}<li>{{ error|escape }}</li>{% endfor %}
+                    </ul>
+                {% endif %}
+                {% include 'forms/form_field.html' with field=form.storage %}
+                {% include 'forms/form_field.html' with field=form.row %}
+                <ul id="storage__error-full"
+                    class="form-errorlist hidden"
+                    aria-live="assertive"
+                    aria-atomic="true">
+                    <li>
+                        <span>{% translate "This row of the shelf is full. Please choose another one." %}</span>
+                    </li>
+                </ul>
+                {% include 'forms/form_field.html' with field=form.column %}
+                {% include 'forms/form_field.html' with field=form.price %}
+                {% include 'forms/form_field.html' with field=form.fill_level %}
+                {% include 'forms/form_field.html' with field=form.is_gift %}
+                {% include 'forms/form_field.html' with field=form.gift_from %}
+                {% include 'forms/form_field.html' with field=form.occasion %}
+                {% include 'forms/form_field.html' with field=form.rating %}
+                <div class="pure-controls">
+                    <div class="pure-g">
+                        <div id="save_button_container" class="pure-u-1 pure-u-sm-1-1">
+                            <button id="submit_button"
+                                    type="submit"
+                                    name="save"
+                                    class="pure-button button__secondary">{% translate "Save" %}</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock content %}

@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load static i18n storage_tags %}
+{% block extra_js %}
+    {{ block.super }}
+    <script src="{% static 'tom_select.js' %}" type="module" defer></script>
+    <script src="{% static 'stock_add.js' %}" defer></script>
+    <script>
+        // Set initial values for row/column restoration
+        document.addEventListener('DOMContentLoaded', function() {
+            var rowSelect = document.getElementById('id_row');
+            var columnSelect = document.getElementById('id_column');
+            if (rowSelect) rowSelect.dataset.initialValue = '{{ item.row|default:"" }}';
+            if (columnSelect) columnSelect.dataset.initialValue = '{{ item.column|default:"" }}';
+        });
+    </script>
+{% endblock extra_js %}
+{% block title %}
+    {% translate "Edit Bottle" %}
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">{% translate "Edit Bottle" %}</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1 pure-u-lg-1-3 m-auto">
+            {% storage_cells free_cells_by_storage %}
+            <div class="wine-form">
+                <h2 class="text-align-center mb-12">
+                    {{ whisky.name }}
+                </h2>
+                <form method="post"
+                      class="pure-form pure-form-stacked"
+                      novalidate>
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                        <ul class="form-errorlist" aria-live="assertive" aria-atomic="true">
+                            {% for error in form.non_field_errors %}<li>{{ error|escape }}</li>{% endfor %}
+                        </ul>
+                    {% endif %}
+                    {% include 'forms/form_field.html' with field=form.storage %}
+                    {% include 'forms/form_field.html' with field=form.row %}
+                    <ul id="storage__error-full"
+                        class="form-errorlist hidden"
+                        aria-live="assertive"
+                        aria-atomic="true">
+                        <li>
+                            <span>{% translate "This row of the shelf is full. Please choose another one." %}</span>
+                        </li>
+                    </ul>
+                    {% include 'forms/form_field.html' with field=form.column %}
+                    {% include 'forms/form_field.html' with field=form.price %}
+                    {% include 'forms/form_field.html' with field=form.fill_level %}
+                    {% include 'forms/form_field.html' with field=form.is_gift %}
+                    {% include 'forms/form_field.html' with field=form.gift_from %}
+                    {% include 'forms/form_field.html' with field=form.occasion %}
+                    {% include 'forms/form_field.html' with field=form.rating %}
+                    <div class="pure-controls">
+                        <div class="pure-g">
+                            <div class="pure-u-1 pure-u-sm-1-2">
+                                <button type="submit"
+                                        name="save"
+                                        class="pure-button button__primary">{% translate "Save" %}</button>
+                            </div>
+                            <div class="pure-u-1 pure-u-sm-1-2">
+                                <a href="{{ cancel_url }}"
+                                   class="pure-button button__secondary">{% translate "Cancel" %}</a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock content %}

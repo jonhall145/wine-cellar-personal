@@ -47,6 +47,9 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 
+# App type: 'wine' or 'whisky' - controls branding, URLs, models
+CELLAR_APP_TYPE = os.environ.get("CELLAR_APP_TYPE", "wine")
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -63,12 +66,16 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     "allauth.socialaccount.providers.openid_connect",
     "widget_tweaks",
+    "wine_cellar.apps.core",
     "wine_cellar.apps.household",
     "wine_cellar.apps.wine",
     "wine_cellar.apps.user",
     "wine_cellar.apps.storage",
     "wine_cellar.apps.hardware",
 ]
+
+if CELLAR_APP_TYPE == "whisky":
+    INSTALLED_APPS.append("wine_cellar.apps.whisky")
 
 MIDDLEWARE = [
     "django.middleware.gzip.GZipMiddleware",  # Compress responses for faster transfers
@@ -101,6 +108,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "wine_cellar.apps.household.context_processors.household_context",
+                "wine_cellar.apps.core.context_processors.app_context",
             ],
         },
     },

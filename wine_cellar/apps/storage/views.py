@@ -1,5 +1,6 @@
 import json
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import models
 from django.forms import model_to_dict
@@ -21,6 +22,18 @@ from wine_cellar.apps.storage.forms import (
 from wine_cellar.apps.storage.models import Storage, StorageItem
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.models import Wine
+
+
+def _is_whisky_mode():
+    return getattr(settings, "CELLAR_APP_TYPE", "wine") == "whisky"
+
+
+def _get_storage_item_model():
+    if _is_whisky_mode():
+        from wine_cellar.apps.whisky.models import WhiskyStorageItem
+
+        return WhiskyStorageItem
+    return StorageItem
 
 
 class StorageListView(ListView):
@@ -418,30 +431,60 @@ def storage_grid_data(request):
     else:
         current_storage_id = None
 
+    whisky_mode = _is_whisky_mode()
+
     storage_data = []
     for storage in storages:
         items = []
-        for item in storage.items.filter(deleted=False).select_related("wine"):
-            wine = item.wine
-            # Use bottle's rating, fall back to wine's rating
-            rating = item.rating if item.rating is not None else wine.rating
-            items.append(
-                {
-                    "row": item.row,
-                    "column": item.column,
-                    "wine": {
-                        "id": wine.pk,
-                        "name": wine.name,
-                        "vintage": wine.vintage,
-                        "wine_type": (
-                            wine.get_wine_type_display() if wine.wine_type else ""
-                        ),
-                        "country": wine.country or "",
-                        "item_id": item.pk,
-                        "rating": rating,
-                    },
-                }
-            )
+        item_qs = storage._get_items().filter(deleted=False)
+        if whisky_mode:
+            item_qs = item_qs.select_related("whisky")
+        else:
+            item_qs = item_qs.select_related("wine")
+
+        for item in item_qs:
+            if whisky_mode:
+                whisky = item.whisky
+                rating = item.rating if item.rating is not None else whisky.rating
+                items.append(
+                    {
+                        "row": item.row,
+                        "column": item.column,
+                        "wine": {
+                            "id": whisky.pk,
+                            "name": whisky.name,
+                            "vintage": whisky.vintage_year,
+                            "wine_type": (
+                                whisky.get_whisky_type_display()
+                                if whisky.whisky_type
+                                else ""
+                            ),
+                            "country": whisky.country or "",
+                            "item_id": item.pk,
+                            "rating": rating,
+                        },
+                    }
+                )
+            else:
+                wine = item.wine
+                rating = item.rating if item.rating is not None else wine.rating
+                items.append(
+                    {
+                        "row": item.row,
+                        "column": item.column,
+                        "wine": {
+                            "id": wine.pk,
+                            "name": wine.name,
+                            "vintage": wine.vintage,
+                            "wine_type": (
+                                wine.get_wine_type_display() if wine.wine_type else ""
+                            ),
+                            "country": wine.country or "",
+                            "item_id": item.pk,
+                            "rating": rating,
+                        },
+                    }
+                )
 
         storage_data.append(
             {
@@ -457,6 +500,7 @@ def storage_grid_data(request):
         {
             "storages": storage_data,
             "current_storage_id": current_storage_id,
+            "item_url_prefix": "/whisky/" if whisky_mode else "/wine/",
         }
     )
 
@@ -479,11 +523,10 @@ def move_bottle(request):
         household = get_active_household(request.user)
 
         # Get the item to move
+        ItemModel = _get_storage_item_model()
         try:
-            item = StorageItem.objects.get(
-                pk=item_id, household=household, deleted=False
-            )
-        except StorageItem.DoesNotExist:
+            item = ItemModel.objects.get(pk=item_id, household=household, deleted=False)
+        except ItemModel.DoesNotExist:
             return JsonResponse({"error": "Bottle not found"}, status=404)
 
         # Get target storage

@@ -1,0 +1,326 @@
+{% extends 'base.html' %}
+{% load static i18n l10n whisky_tags %}
+{% block extra_js %}
+    {{ block.super }}
+    <script src="{% static 'wine_carousel.js' %}" type="module" defer></script>
+{% endblock extra_js %}
+{% block header %}
+    <h1 class="header__title">{{ whisky.name }}</h1>
+{% endblock header %}
+{% block content %}
+    <div class="wine-detail__container">
+        <div class="pure-g">
+            <div class="pure-u-1 pure-u-md-1">
+                {% url 'whisky-edit' whisky.pk as edit_url %}
+                {% url 'whisky-delete' whisky.pk as delete_url %}
+                {% include "includes/edit_delete_buttons.html" with edit_url=edit_url delete_url=delete_url %}
+            </div>
+            <div class="pure-u-1 pure-u-md-1-2">
+                {% if whisky.image_thumbnail %}
+                    <div class="wine-detail__image-wrapper"
+                         data-images='[{% for img in whisky.image_thumbnails %}"{{ img }}"{% if not forloop.last %},{% endif %}{% endfor %}]'>
+                        <div class="image wine-detail__image" id="wine-image-wrapper">
+                            <img id="wine-image"
+                                 src="{{ whisky.image_thumbnail }}"
+                                 loading="lazy"
+                                 height="225"
+                                 width="auto"
+                                 alt="{% translate 'Picture of a whisky bottle' %}">
+                        </div>
+                        {% if whisky.image_thumbnails|length > 1 %}
+                            <div class="image-controls"
+                                 role="group"
+                                 aria-label="{% translate "Image carousel controls" %}">
+                                <button type="button"
+                                        class="wine-prev"
+                                        aria-label="{% translate "Previous image" %}"
+                                        title="{% translate "Previous image" %}">«</button>
+                                <button type="button"
+                                        class="wine-next"
+                                        aria-label="{% translate "Next image" %}"
+                                        title="{% translate "Next image" %}">»</button>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="wine-detail__image-actions">
+                        <a href="{% url 'whisky-images' whisky.pk %}" class="pure-button button__neutral">
+                            <i class="fa-solid fa-crop"></i> {% translate "Edit Images" %}
+                        </a>
+                    </div>
+                {% else %}
+                    <div>{% translate "No image" %}</div>
+                {% endif %}
+            </div>
+            <div class="pure-u-1 pure-u-md-1-2">
+                <table class="wine-detail__table">
+                    {% if whisky.distillery %}
+                        <tr>
+                            <th>{% translate "Distillery" %}</th>
+                            <td>{{ whisky.distillery }}</td>
+                        </tr>
+                    {% endif %}
+                    {% if whisky.region %}
+                        <tr>
+                            <th>{% translate "Region" %}</th>
+                            <td>{{ whisky.region }}</td>
+                        </tr>
+                    {% endif %}
+                    <tr>
+                        <th>{% translate "Country" context "Singular" %}</th>
+                        <td>{{ whisky.country_icon }} {{ whisky.country_name }}</td>
+                    </tr>
+                    <tr>
+                        <th>{% translate "Type" %}</th>
+                        <td>{% whisky_type_badge whisky.whisky_type %}</td>
+                    </tr>
+                    {% if whisky.age_statement %}
+                        <tr>
+                            <th>{% translate "Age Statement" %}</th>
+                            <td>{{ whisky.age_statement }} {% translate "years" %}</td>
+                        </tr>
+                    {% endif %}
+                    <tr>
+                        <th>{% translate "ABV" %}</th>
+                        <td>{{ whisky.abv | localize }}%</td>
+                    </tr>
+                    <tr>
+                        <th>{% translate "Size" %}</th>
+                        <td>{{ whisky.size }}</td>
+                    </tr>
+                    {% if whisky.peated_level %}
+                        <tr>
+                            <th>{% translate "Peated Level" %}</th>
+                            <td>{% peated_badge whisky.peated_level %}</td>
+                        </tr>
+                    {% endif %}
+                    {% if whisky.vintage_year %}
+                        <tr>
+                            <th>{% translate "Vintage Year" %}</th>
+                            <td>{{ whisky.vintage_year }}</td>
+                        </tr>
+                    {% endif %}
+                    {% if whisky.bottled_year %}
+                        <tr>
+                            <th>{% translate "Bottled Year" %}</th>
+                            <td>{{ whisky.bottled_year }}</td>
+                        </tr>
+                    {% endif %}
+                    <tr>
+                        <th>{% translate "Bottler" %}</th>
+                        <td>
+                            {% if whisky.bottler %}
+                                {{ whisky.bottler }} <span class="badge badge-info">{% translate "IB" %}</span>
+                            {% else %}
+                                {% translate "OB" %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if whisky.cask_number %}
+                        <tr>
+                            <th>{% translate "Cask Number" %}</th>
+                            <td>{{ whisky.cask_number }}</td>
+                        </tr>
+                    {% endif %}
+                    {% if whisky.batch_number %}
+                        <tr>
+                            <th>{% translate "Batch Number" %}</th>
+                            <td>{{ whisky.batch_number }}</td>
+                        </tr>
+                    {% endif %}
+                    {% if whisky.bottle_number %}
+                        <tr>
+                            <th>{% translate "Bottle Number" %}</th>
+                            <td>{{ whisky.bottle_number }}</td>
+                        </tr>
+                    {% endif %}
+                    {% if whisky.series %}
+                        <tr>
+                            <th>{% translate "Series" %}</th>
+                            <td>{{ whisky.series }}</td>
+                        </tr>
+                    {% endif %}
+                    {% if whisky.price is not None or whisky.get_average_price_with_currency %}
+                        <tr>
+                            <th>{% translate "Price" %}</th>
+                            <td>{{ whisky.get_price_with_currency }}{% if whisky.get_average_price_with_currency %} ({% translate "Average" %}: {{ whisky.get_average_price_with_currency }}){% endif %}</td>
+                        </tr>
+                    {% endif %}
+                    {% if whisky.rrp is not None %}
+                        <tr>
+                            <th>{% translate "RRP" %}</th>
+                            <td>{{ whisky.get_rrp_with_currency }}</td>
+                        </tr>
+                    {% endif %}
+                    {% if whisky.drink_from or whisky.drink_to %}
+                        <tr>
+                            <th>{% translate "Drinking Window" %}</th>
+                            <td>
+                                {% if whisky.drink_from %}{{ whisky.drink_from }}{% endif %}
+                                {% if whisky.drink_from and whisky.drink_to %}–{% endif %}
+                                {% if whisky.drink_to %}{{ whisky.drink_to }}{% endif %}
+                            </td>
+                        </tr>
+                    {% endif %}
+                    <tr>
+                        <th>{% translate "Rating" %}</th>
+                        <td>
+                            {% if whisky.rating %}
+                                {% rating_stars whisky.rating %}
+                            {% else %}
+                                {% translate "No rating yet" %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if whisky.comment %}
+                        <tr>
+                            <th>{% translate "Comment" %}</th>
+                            <td>{{ whisky.comment }}</td>
+                        </tr>
+                    {% endif %}
+                </table>
+            </div>
+
+            <!-- Cask History Section -->
+            {% if whisky.cask_histories.all %}
+            <div class="pure-u-1 pure-u-md-1 text-align-center">
+                <h2 class="header__title">{% translate "Cask History" %}</h2>
+            </div>
+            <div class="pure-u-1 pure-u-md-3-8 m-auto">
+                <div class="table-responsive">
+                    <table class="pure-table pure-table-horizontal pure-table-striped">
+                        <thead>
+                            <tr>
+                                <th>{% translate "Order" %}</th>
+                                <th>{% translate "Cask Type" %}</th>
+                                <th>{% translate "Wood" %}</th>
+                                <th>{% translate "Previous Contents" %}</th>
+                                <th>{% translate "Duration" %}</th>
+                                <th>{% translate "Finish" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cask in whisky.cask_histories.all %}
+                                <tr>
+                                    <td>{{ cask.order }}</td>
+                                    <td>{{ cask.cask_type|default_if_none:"" }}</td>
+                                    <td>{{ cask.wood|default_if_none:"" }}</td>
+                                    <td>{{ cask.previous_contents|default_if_none:"" }}</td>
+                                    <td>{{ cask.duration|default_if_none:"" }}</td>
+                                    <td>
+                                        {% if cask.is_finish %}
+                                            <span class="badge badge-info">{% translate "Finish" %}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Stock Section -->
+            <div class="pure-u-1 pure-u-md-1 text-align-center">
+                <h2 class="header__title">{% translate "Stock" %}</h2>
+            </div>
+            <div class="pure-u-1 pure-u-md-3-8 m-auto">
+                <div class="d-flex j-between mb-12">
+                    <p class="stock__count">
+                        {% with stock=whisky.stock_count|default:whisky.total_stock|default:0 %}
+                        {% blocktranslate count counter=stock %}
+                    {{ counter }} bottle
+                    {% plural %}
+                    {{ counter }} bottles
+                    {% endblocktranslate %}
+                        {% endwith %}
+                    </p>
+                    <div>
+                        <a href="{% url 'stock-add' whisky.pk %}"
+                           class="pure-button button__neutral"><i class="fa-regular fa-plus"></i> <span>{% translate "Add bottle" %}</span></a>
+                        <a href="{% url 'drink-record-add' whisky.pk %}"
+                           class="pure-button button__neutral"><i class="fa-solid fa-whiskey-glass"></i> <span>{% translate "Record Drink" %}</span></a>
+                        <a href="{% url 'reorder-reminder-add' whisky.pk %}"
+                           class="pure-button button__neutral"><i class="fa-solid fa-bell"></i> <span>{% translate "Reorder Alert" %}</span></a>
+                    </div>
+                </div>
+                <div class="pure-u-1 pure-u-md-1">
+                    {% if whisky.get_stock %}
+                        <table class="pure-table pure-table-horizontal pure-table-striped wine-detail__stock-table">
+                            <thead>
+                                <tr>
+                                    <th>{% translate "Location" %}</th>
+                                    <th>{% translate "Row" %}</th>
+                                    <th>{% translate "Cell" %}</th>
+                                    <th>{% translate "Fill Level" %}</th>
+                                    <th>{% translate "Opened" %}</th>
+                                    <th>{% translate "Gift" %}</th>
+                                    <th>{% translate "Occasion" %}</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            {% for item in whisky.get_stock %}
+                                <tr>
+                                    <td>{{ item.storage }}</td>
+                                    <td>{{ item.row|default_if_none:"" }}</td>
+                                    <td>{{ item.column|default_if_none:"" }}</td>
+                                    <td>{% fill_level_display item.fill_level %}</td>
+                                    <td>{{ item.opened_date|default_if_none:"" }}</td>
+                                    <td>{% if item.is_gift %}<i class="fa-solid fa-gift" title="{{ item.gift_from|default:'' }}"></i>{% if item.gift_from %} {{ item.gift_from }}{% endif %}{% endif %}</td>
+                                    <td>{{ item.occasion|default_if_none:"" }}</td>
+                                    <td>
+                                        <a class="pure-button" href="{% url 'bottle-edit' item.pk %}" title="{% translate 'Edit bottle' %}"><i class="fa-regular fa-pen-to-square"></i></a>
+                                        <a class="pure-button" href="{% url 'stock-delete' item.pk %}" title="{% translate 'Remove bottle' %}"><i class="fa-regular fa-trash-can"></i></a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </table>
+                    {% else %}
+                        <div class="empty-state">
+                            <div class="empty-state__icon"><i class="fa-solid fa-box-open"></i></div>
+                            <h3 class="empty-state__title">{% translate "No bottles in stock" %}</h3>
+                            <p class="empty-state__message">{% translate "Add bottles to track your inventory." %}</p>
+                            <a href="{% url 'stock-add' whisky.pk %}" class="pure-button button__primary empty-state__action">
+                                <i class="fa-solid fa-plus"></i> {% translate "Add bottle" %}
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Potential Duplicates Section -->
+            {% if duplicates %}
+            <div class="pure-u-1 pure-u-md-1 text-align-center">
+                <h2 class="header__title">{% translate "Potential Duplicates" %}</h2>
+            </div>
+            <div class="pure-u-1 pure-u-md-3-8 m-auto">
+                <div class="table-responsive">
+                <table class="pure-table pure-table-horizontal pure-table-striped">
+                    <thead>
+                        <tr>
+                            <th>{% translate "Name" %}</th>
+                            <th>{% translate "Age" %}</th>
+                            <th>{% translate "Bottles" %}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for dup in duplicates %}
+                        <tr>
+                            <td>{{ dup.name }}</td>
+                            <td>{{ dup.age_statement|default_if_none:"" }}</td>
+                            <td>{{ dup.stock_count }}</td>
+                            <td>
+                                <a href="{% url 'whisky-merge-confirm' dup.pk whisky.pk %}" class="pure-button button__neutral">
+                                    <i class="fa-solid fa-code-merge"></i> {% translate "Merge" %}
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock content %}

@@ -3,16 +3,6 @@ URL configuration for wine_cellar project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
 import os
@@ -30,11 +20,6 @@ from wine_cellar.apps.storage.views import (
     StorageCreateView,
     StorageDeleteView,
     StorageDetailView,
-    StorageItemAddView,
-    StorageItemDeleteView,
-    StorageItemHistoryView,
-    StorageItemListView,
-    StorageItemUpdateView,
     StorageListView,
     StorageUpdateView,
     move_bottle,
@@ -43,44 +28,6 @@ from wine_cellar.apps.storage.views import (
     storage_move_up,
 )
 from wine_cellar.apps.user.views import UserSettingsView
-from wine_cellar.apps.wine.views import (
-    BottleNoteCreateView,
-    CellarValueView,
-    ConsumptionStatsView,
-    DrinkingWindowAlertsView,
-    DrinkRecordCreateView,
-    DrinkRecordDeleteView,
-    DrinkRecordEditView,
-    DrinkRecordListView,
-    HomePageView,
-    LabelScanView,
-    ReorderReminderCreateView,
-    ReorderReminderDeleteView,
-    ReorderRemindersView,
-    SaleAlertCreateView,
-    SaleAlertDeleteView,
-    SaleAlertsView,
-    SaleAlertToggleView,
-    WineCreateView,
-    WineDeleteView,
-    WineDetailView,
-    WineImagesView,
-    WineListView,
-    WineMapView,
-    WineMergeConfirmView,
-    WineScannedView,
-    WineScanView,
-    WineUpdateView,
-    WishlistCreateView,
-    WishlistDeleteView,
-    WishlistListView,
-    WishlistPurchasedView,
-    crop_wine_image,
-    extract_wine_vision_ajax,
-    health_check,
-    scan_barcode_ajax,
-    set_primary_image,
-)
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".svg"}
 
@@ -120,6 +67,45 @@ def serve_media(request, path):
     return response
 
 
+def health_check(request):
+    """Health check endpoint for container orchestration and monitoring."""
+    import shutil
+
+    from django.db import connections
+    from django.http import JsonResponse
+
+    health = {
+        "status": "ok",
+        "database": "ok",
+        "disk": "ok",
+    }
+    status_code = 200
+
+    try:
+        for conn in connections.all():
+            conn.ensure_connection()
+    except Exception:
+        health["database"] = "unhealthy"
+        health["status"] = "unhealthy"
+        status_code = 503
+
+    try:
+        media_root = getattr(settings, "MEDIA_ROOT", "/tmp")
+        disk_usage = shutil.disk_usage(media_root)
+        free_gb = disk_usage.free / (1024**3)
+        health["disk_free_gb"] = round(free_gb, 2)
+        if free_gb < 0.1:
+            health["disk"] = "critical"
+            health["status"] = "unhealthy"
+            status_code = 503
+        elif free_gb < 1:
+            health["disk"] = "low"
+    except Exception:
+        health["disk"] = "unknown"
+
+    return JsonResponse(health, status=status_code)
+
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
@@ -134,6 +120,7 @@ urlpatterns = [
         ),
     ),
     path("user/settings/", UserSettingsView.as_view(), name="user-settings"),
+    # Storage (shared across wine/whisky)
     path("storages/", StorageListView.as_view(), name="storage-list"),
     path("storage/<int:pk>/", StorageDetailView.as_view(), name="storage-detail"),
     path("storage/add/", StorageCreateView.as_view(), name="storage-add"),
@@ -143,97 +130,18 @@ urlpatterns = [
     path("storage/edit/<int:pk>/", StorageUpdateView.as_view(), name="storage-edit"),
     path("storage/move-up/<int:pk>/", storage_move_up, name="storage-move-up"),
     path("storage/move-down/<int:pk>/", storage_move_down, name="storage-move-down"),
-    path("storage/history/", StorageItemHistoryView.as_view(), name="storage-history"),
     path("api/storage/grid-data/", storage_grid_data, name="storage-grid-data"),
     path("api/storage/move-bottle/", move_bottle, name="storage-move-bottle"),
-    path("stock/add/<int:pk>/", StorageItemAddView.as_view(), name="stock-add"),
-    path(
-        "stock/delete/<int:pk>/", StorageItemDeleteView.as_view(), name="stock-delete"
-    ),
-    path("bottles/", StorageItemListView.as_view(), name="bottle-list"),
-    path("bottle/edit/<int:pk>/", StorageItemUpdateView.as_view(), name="bottle-edit"),
-    path("wine/add/", WineCreateView.as_view(), name="wine-add"),
-    path("wine/add/<str:code>/", WineCreateView.as_view(), name="wine-add"),
-    path("wine/extract-vision/", extract_wine_vision_ajax, name="wine-extract-vision"),
-    path("wine/<int:pk>/", WineDetailView.as_view(), name="wine-detail"),
-    path("wine/<int:pk>/images/", WineImagesView.as_view(), name="wine-images"),
-    path("wine/edit/<int:pk>/", WineUpdateView.as_view(), name="wine-edit"),
-    path(
-        "wine/image/<int:pk>/set-primary/", set_primary_image, name="set-primary-image"
-    ),
-    path("wine/image/<int:pk>/crop/", crop_wine_image, name="crop-wine-image"),
-    path("wine/delete/<int:pk>/", WineDeleteView.as_view(), name="wine-delete"),
-    path(
-        "wine/merge/<int:pk>/into/<int:primary_pk>/",
-        WineMergeConfirmView.as_view(),
-        name="wine-merge-confirm",
-    ),
-    path(
-        "wine/<int:pk>/drink/", DrinkRecordCreateView.as_view(), name="drink-record-add"
-    ),
-    path("wines/", WineListView.as_view(), name="wine-list"),
-    path("wine/scan/", WineScanView.as_view(), name="wine-scan"),
-    path("wine/scan/<str:code>/", WineScannedView.as_view(), name="wine-scan"),
-    path("wine/scan-barcode/", scan_barcode_ajax, name="wine-scan-barcode"),
-    path("wines/map/", WineMapView.as_view(), name="wine-map"),
-    path("drink-history/", DrinkRecordListView.as_view(), name="drink-history"),
-    path(
-        "drink-history/edit/<int:pk>/",
-        DrinkRecordEditView.as_view(),
-        name="drink-record-edit",
-    ),
-    path(
-        "drink-history/delete/<int:pk>/",
-        DrinkRecordDeleteView.as_view(),
-        name="drink-record-delete",
-    ),
-    path("wishlist/", WishlistListView.as_view(), name="wishlist-list"),
-    path("wishlist/add/", WishlistCreateView.as_view(), name="wishlist-add"),
-    path(
-        "wishlist/delete/<int:pk>/",
-        WishlistDeleteView.as_view(),
-        name="wishlist-delete",
-    ),
-    path(
-        "wishlist/purchased/<int:pk>/",
-        WishlistPurchasedView.as_view(),
-        name="wishlist-purchased",
-    ),
-    path("cellar-value/", CellarValueView.as_view(), name="cellar-value"),
-    path(
-        "bottle/<int:pk>/note/", BottleNoteCreateView.as_view(), name="bottle-note-add"
-    ),
-    path("alerts/", DrinkingWindowAlertsView.as_view(), name="drinking-alerts"),
-    path("stats/", ConsumptionStatsView.as_view(), name="consumption-stats"),
-    path("reorder/", ReorderRemindersView.as_view(), name="reorder-reminders"),
-    path(
-        "reorder/add/<int:pk>/",
-        ReorderReminderCreateView.as_view(),
-        name="reorder-reminder-add",
-    ),
-    path(
-        "reorder/delete/<int:pk>/",
-        ReorderReminderDeleteView.as_view(),
-        name="reorder-reminder-delete",
-    ),
-    path("sale-alerts/", SaleAlertsView.as_view(), name="sale-alerts"),
-    path("sale-alerts/add/", SaleAlertCreateView.as_view(), name="sale-alert-add"),
-    path(
-        "sale-alerts/delete/<int:pk>/",
-        SaleAlertDeleteView.as_view(),
-        name="sale-alert-delete",
-    ),
-    path(
-        "sale-alerts/toggle/<int:pk>/",
-        SaleAlertToggleView.as_view(),
-        name="sale-alert-toggle",
-    ),
-    path("label-scan/", LabelScanView.as_view(), name="label-scan"),
-    path("storage/history/", StorageItemHistoryView.as_view(), name="stock-history"),
+    # Shared utilities
     path("health/", health_check, name="health_check"),
-    path("", HomePageView.as_view(), name="homepage"),
     path("jsi18n/", JavaScriptCatalog.as_view(), name="javascript-catalog"),
 ]
+
+# Include app-specific URLs
+if settings.CELLAR_APP_TYPE == "whisky":
+    urlpatterns += [path("", include("wine_cellar.apps.whisky.urls"))]
+else:
+    urlpatterns += [path("", include("wine_cellar.apps.wine.urls"))]
 
 # Serve media files (in production, consider using nginx instead)
 urlpatterns += [

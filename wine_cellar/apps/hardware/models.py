@@ -3,12 +3,14 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from wine_cellar.apps.core.models import UserContentModel
 from wine_cellar.apps.storage.models import Storage
-from wine_cellar.apps.wine.models import UserContentModel, Wine
+from wine_cellar.apps.wine.models import Wine
 
 
 class ChangeType(models.TextChoices):
     """Types of position changes."""
+
     ADDED = "added", _("Bottle Added")
     REMOVED = "removed", _("Bottle Removed")
     RECONCILIATION = "reconciliation", _("Reconciliation Discrepancy")
@@ -16,6 +18,7 @@ class ChangeType(models.TextChoices):
 
 class ReviewStatus(models.TextChoices):
     """Status of position change reviews."""
+
     PENDING = "pending", _("Pending Review")
     APPROVED = "approved", _("Approved")
     REJECTED = "rejected", _("Rejected")

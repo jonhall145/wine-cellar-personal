@@ -38,6 +38,22 @@ fixtures:
 	$(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/wines.json
 	$(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/stock.json
 
+.PHONY: whisky-fixtures
+whisky-fixtures:
+	CELLAR_APP_TYPE=whisky $(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/whisky_regions.json
+	CELLAR_APP_TYPE=whisky $(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/distilleries.json
+	CELLAR_APP_TYPE=whisky $(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/bottlers.json
+
+.PHONY: whisky-server
+whisky-server:
+	CELLAR_APP_TYPE=whisky $(VIRTUAL_ENV)/bin/python3 manage.py runserver 8004
+
+.PHONY: whisky-watch
+whisky-watch:
+	trap 'kill %1' KILL; \
+	npm run watch & \
+	CELLAR_APP_TYPE=whisky $(VIRTUAL_ENV)/bin/python3 manage.py runserver 8004
+
 .PHONY: pytest
 pytest:
 	$(VIRTUAL_ENV)/bin/py.test --reuse-db

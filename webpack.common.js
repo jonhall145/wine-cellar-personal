@@ -48,6 +48,14 @@ module.exports = {
         './wine_cellar/react/maps/react_maps.tsx'
       ]
     },
+    distillery_map: {
+      import: [
+        'leaflet/dist/leaflet.css',
+        'leaflet.markercluster/dist/MarkerCluster.css',
+        './wine_cellar/assets/css/map.css',
+        './wine_cellar/react/maps/react_distillery_map.tsx'
+      ]
+    },
     wine_carousel: {
       import: ['./wine_cellar/assets/js/wine_carousel.ts'],
     },
