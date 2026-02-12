@@ -1502,7 +1502,7 @@ class StorageItemListView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         household = get_active_household(self.request.user)
-        context["storage_items"] = (
+        context["bottles"] = (
             WhiskyStorageItem.objects.filter(household=household, deleted=False)
             .select_related("whisky", "storage")
             .order_by("storage__order", "row", "column")
