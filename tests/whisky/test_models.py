@@ -3,7 +3,6 @@ from django.db import IntegrityError
 
 from wine_cellar.apps.whisky.models import (
     CaskHistory,
-    CaskTypeChoice,
     FillLevel,
     PreviousContents,
     WhiskyRegion,
@@ -174,11 +173,11 @@ def test_whisky_storage_item_creation(
     item = whisky_storage_item_factory(
         whisky=whisky,
         storage=storage,
-        fill_level=FillLevel.HALF,
+        fill_level=FillLevel.OPENED,
         price=55.00,
     )
     assert item.pk is not None
-    assert item.fill_level == FillLevel.HALF
+    assert item.fill_level == FillLevel.OPENED
     assert item.whisky == whisky
     assert item.deleted is False
     assert float(item.price) == 55.00
@@ -234,7 +233,7 @@ def test_cask_history_creation(cask_history_factory, whisky_factory, user):
     cask = cask_history_factory(
         whisky=whisky,
         order=1,
-        cask_type=CaskTypeChoice.BUTT,
+        cask_type="Butt",
         previous_contents=PreviousContents.SHERRY_OLOROSO,
         duration_years=12,
         is_finish=False,
@@ -275,7 +274,7 @@ def test_cask_history_str(cask_history_factory, whisky_factory, user):
     cask = cask_history_factory(
         whisky=whisky,
         order=1,
-        cask_type=CaskTypeChoice.BUTT,
+        cask_type="Butt",
         previous_contents=PreviousContents.SHERRY_OLOROSO,
         duration_years=12,
         is_finish=True,

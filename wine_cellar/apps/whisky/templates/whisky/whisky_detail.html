@@ -177,6 +177,18 @@
                             {% endif %}
                         </td>
                     </tr>
+                    {% if whisky.owner %}
+                        <tr>
+                            <th>{% translate "Owner" %}</th>
+                            <td>{{ whisky.owner }}</td>
+                        </tr>
+                    {% endif %}
+                    {% if whisky.source %}
+                        <tr>
+                            <th>{% translate "Source" %}</th>
+                            <td>{{ whisky.source }}</td>
+                        </tr>
+                    {% endif %}
                     {% if whisky.comment %}
                         <tr>
                             <th>{% translate "Comment" %}</th>
@@ -269,7 +281,14 @@
                                     <td>{{ item.storage }}</td>
                                     <td>{{ item.row|default_if_none:"" }}</td>
                                     <td>{{ item.column|default_if_none:"" }}</td>
-                                    <td>{% fill_level_display item.fill_level %}</td>
+                                    <td>
+                                        {% fill_level_display item.fill_level %}
+                                        {% if item.dreg_expired %}
+                                            <span class="badge badge-danger" title="{% translate 'Dreg for over 1 year' %}"><i class="fa-solid fa-exclamation-triangle"></i></span>
+                                        {% elif item.dreg_warning %}
+                                            <span class="badge badge-warning" title="{% translate 'Dreg approaching 1 year' %}"><i class="fa-solid fa-clock"></i></span>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ item.opened_date|default_if_none:"" }}</td>
                                     <td>{% if item.is_gift %}<i class="fa-solid fa-gift" title="{{ item.gift_from|default:'' }}"></i>{% if item.gift_from %} {{ item.gift_from }}{% endif %}{% endif %}</td>
                                     <td>{{ item.occasion|default_if_none:"" }}</td>

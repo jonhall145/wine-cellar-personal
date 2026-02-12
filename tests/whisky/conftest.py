@@ -14,7 +14,6 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
     from wine_cellar.apps.whisky.models import (
         Bottler,
         CaskHistory,
-        CaskTypeChoice,
         Distillery,
         FillLevel,
         PreviousContents,
@@ -76,7 +75,7 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
 
         whisky = factory.SubFactory(WhiskyFactory)
         order = factory.Sequence(lambda n: n + 1)
-        cask_type = CaskTypeChoice.HOGSHEAD
+        cask_type = "Hogshead"
         previous_contents = PreviousContents.BOURBON
 
     class WhiskyStorageFactory(StorageFactory):
@@ -88,7 +87,7 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
 
         storage = factory.SubFactory(WhiskyStorageFactory)
         whisky = factory.SubFactory(WhiskyFactory)
-        fill_level = FillLevel.FULL
+        fill_level = FillLevel.UNOPENED
 
         @factory.lazy_attribute
         def user(self):

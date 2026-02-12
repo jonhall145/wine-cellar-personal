@@ -39,6 +39,7 @@ from wine_cellar.apps.whisky.forms import (
     WhiskyWishlistForm,
 )
 from wine_cellar.apps.whisky.models import (
+    FillLevel,
     Whisky,
     WhiskyBarcode,
     WhiskyBottleNote,
@@ -118,10 +119,10 @@ class HomePageView(TemplateView):
             household=household, deleted=False
         ).count()
 
-        # Open bottles (not Full fill level)
+        # Open bottles (not Unopened fill level)
         open_bottles = (
             WhiskyStorageItem.objects.filter(household=household, deleted=False)
-            .exclude(fill_level="FU")
+            .exclude(fill_level="UN")
             .count()
         )
 
@@ -156,6 +157,23 @@ class HomePageView(TemplateView):
             .count()
         )
 
+        # Dreg alerts
+        dreg_cutoff_warning = datetime.date.today() - datetime.timedelta(days=335)
+        dreg_cutoff_expired = datetime.date.today() - datetime.timedelta(days=365)
+        dreg_expired_count = WhiskyStorageItem.objects.filter(
+            household=household,
+            deleted=False,
+            fill_level="DR",
+            dreg_date__lte=dreg_cutoff_expired,
+        ).count()
+        dreg_warning_count = WhiskyStorageItem.objects.filter(
+            household=household,
+            deleted=False,
+            fill_level="DR",
+            dreg_date__lte=dreg_cutoff_warning,
+            dreg_date__gt=dreg_cutoff_expired,
+        ).count()
+
         context.update(
             {
                 "whiskies": whiskies,
@@ -169,6 +187,8 @@ class HomePageView(TemplateView):
                 "total_value": total_value,
                 "overdue_count": overdue_count,
                 "upcoming_count": upcoming_count,
+                "dreg_expired_count": dreg_expired_count,
+                "dreg_warning_count": dreg_warning_count,
             }
         )
 
@@ -287,7 +307,7 @@ class WhiskyCreateView(FormView):
         vintage_year = cleaned_data.get("vintage_year")
         bottled_year = cleaned_data.get("bottled_year")
         peated_level = cleaned_data.get("peated_level") or None
-        cask_type = cleaned_data.get("cask_type") or None
+        cask_type = cleaned_data.get("cask_type") or ""
         color = cleaned_data.get("color")
         bottler = cleaned_data.get("bottler")
         bottler_series = cleaned_data.get("bottler_series")
@@ -296,6 +316,8 @@ class WhiskyCreateView(FormView):
         bottle_number = cleaned_data.get("bottle_number")
         limited_edition = cleaned_data.get("limited_edition", False)
         release_year = cleaned_data.get("release_year")
+        source = cleaned_data.get("source")
+        owner = cleaned_data.get("owner", "")
 
         # Use get_or_create to handle duplicate whiskies gracefully
         whisky, created = Whisky.objects.get_or_create(
@@ -326,6 +348,8 @@ class WhiskyCreateView(FormView):
                 "rating": rating,
                 "price": price,
                 "rrp": rrp,
+                "source": source,
+                "owner": owner,
             },
         )
 
@@ -359,12 +383,16 @@ class WhiskyCreateView(FormView):
         # Handle storage (add bottle to cellar) if provided
         storage = cleaned_data.get("storage")
         if storage:
+            import datetime
+
             row = cleaned_data.get("row")
             column = cleaned_data.get("column")
             bottle_price = cleaned_data.get("bottle_price") or price
             is_gift = cleaned_data.get("is_gift", False)
             gift_from = cleaned_data.get("gift_from")
             occasion = cleaned_data.get("occasion")
+            fill_level = cleaned_data.get("fill_level", FillLevel.UNOPENED)
+            dreg_date = datetime.date.today() if fill_level == FillLevel.DREG else None
             WhiskyStorageItem.objects.create(
                 storage=storage,
                 whisky=whisky,
@@ -376,6 +404,8 @@ class WhiskyCreateView(FormView):
                 is_gift=is_gift,
                 gift_from=gift_from,
                 occasion=occasion,
+                fill_level=fill_level,
+                dreg_date=dreg_date,
             )
 
         return whisky, created
@@ -437,7 +467,7 @@ class WhiskyUpdateView(FormView):
         vintage_year = cleaned_data.get("vintage_year")
         bottled_year = cleaned_data.get("bottled_year")
         peated_level = cleaned_data.get("peated_level") or None
-        cask_type = cleaned_data.get("cask_type") or None
+        cask_type = cleaned_data.get("cask_type") or ""
         color = cleaned_data.get("color")
         bottler = cleaned_data.get("bottler")
         bottler_series = cleaned_data.get("bottler_series")
@@ -446,6 +476,9 @@ class WhiskyUpdateView(FormView):
         bottle_number = cleaned_data.get("bottle_number")
         limited_edition = cleaned_data.get("limited_edition", False)
         release_year = cleaned_data.get("release_year")
+
+        source = cleaned_data.get("source")
+        owner = cleaned_data.get("owner", "")
 
         whisky.abv = abv
         whisky.size = size
@@ -471,6 +504,8 @@ class WhiskyUpdateView(FormView):
         whisky.release_year = release_year
         whisky.price = price
         whisky.rrp = rrp
+        whisky.source = source
+        whisky.owner = owner
         whisky.save()
 
         # Create barcode entry if provided
@@ -533,7 +568,7 @@ class WhiskyDetailView(DetailView):
         qs = super().get_queryset()
         household = get_active_household(self.request.user)
         return (
-            qs.select_related("distillery", "region", "bottler")
+            qs.select_related("distillery", "region", "bottler", "source")
             .prefetch_related(
                 "cask_history",
                 "images",
@@ -725,21 +760,118 @@ def extract_whisky_vision_ajax(request):
     """
     AJAX endpoint for whisky data extraction from uploaded images.
 
-    Currently a placeholder that returns an error.
-    Full implementation will be added later.
+    Attempts barcode scanning first (non-AI, faster), then falls back
+    to AI vision extraction if no barcode match is found.
 
     Rate limited to 10 requests per minute per user.
     """
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
 
-    return JsonResponse(
-        {
-            "error": "Vision extraction for whisky not yet implemented",
-            "success": False,
-        },
-        status=501,
-    )
+    try:
+        # Collect uploaded images
+        images = []
+        image_fields = [
+            "image_front_label",
+            "image_back_label",
+            "image_front",
+            "image_back",
+        ]
+
+        for field_name in image_fields:
+            image_file = request.FILES.get(field_name)
+            if image_file:
+                if image_file.size > MAX_IMAGE_SIZE:
+                    return JsonResponse(
+                        {
+                            "error": f"Image {field_name} is too large. "
+                            f"Maximum size is {MAX_IMAGE_SIZE // (1024 * 1024)}MB."
+                        },
+                        status=400,
+                    )
+                image_data = image_file.read()
+                base64_image = base64.b64encode(image_data).decode("utf-8")
+                images.append(base64_image)
+                image_file.seek(0)
+
+        if not images:
+            return JsonResponse(
+                {"error": "No images uploaded. Please select at least one image."},
+                status=400,
+            )
+
+        # Step 1: Try barcode scanning first (non-AI, faster)
+        from wine_cellar.apps.whisky.services.barcode_service import (
+            WhiskyBarcodeScanner,
+        )
+
+        barcode_scanner = WhiskyBarcodeScanner()
+        barcode_result = barcode_scanner.scan_and_match(images, request.user)
+
+        if barcode_result.get("matched"):
+            if barcode_result.get("multiple_matches"):
+                return JsonResponse(
+                    {
+                        "success": True,
+                        "multiple_matches": True,
+                        "match_type": "barcode",
+                        "matched_barcode": barcode_result["barcode"],
+                        "whiskies": barcode_result["whiskies"],
+                        "message": "Multiple whiskies found with this barcode",
+                    }
+                )
+
+            whisky_data = barcode_result["whisky_data"]
+            extracted_fields = list(whisky_data.keys())
+
+            return JsonResponse(
+                {
+                    "success": True,
+                    "data": whisky_data,
+                    "confidence": "high",
+                    "extracted_fields": extracted_fields,
+                    "errors": [],
+                    "match_type": "barcode",
+                    "matched_barcode": barcode_result["barcode"],
+                    "message": (
+                        f"Matched whisky via barcode: " f"{barcode_result['barcode']}"
+                    ),
+                }
+            )
+
+        # Step 2: No barcode match, use AI vision extraction
+        from wine_cellar.apps.whisky.services.vision_extraction import (
+            WhiskyVisionExtractor,
+        )
+
+        extractor = WhiskyVisionExtractor()
+        result = extractor.extract_from_images(images, user=request.user)
+
+        response_data = {
+            "success": True,
+            "data": result.get("data", {}),
+            "confidence": result.get("confidence", "low"),
+            "extracted_fields": result.get("extracted_fields", []),
+            "errors": result.get("errors", []),
+            "match_type": "vision",
+        }
+
+        # If barcodes were found but didn't match, include them
+        if barcode_result.get("all_barcodes"):
+            barcodes = barcode_result["all_barcodes"]
+            if barcodes and "barcode" not in response_data["data"]:
+                response_data["data"]["barcode"] = barcodes[0]
+                if "barcode" not in response_data["extracted_fields"]:
+                    response_data["extracted_fields"].append("barcode")
+
+        return JsonResponse(response_data)
+
+    except Exception as e:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.exception("Error in whisky AJAX vision extraction")
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 @ratelimit(key="user", rate="30/m", method="POST", block=True)
@@ -748,21 +880,59 @@ def scan_barcode_ajax(request):
     """
     AJAX endpoint for server-side barcode scanning from captured images.
 
-    Currently a placeholder that returns an error.
-    Full implementation will be added later.
-
     Rate limited to 30 requests per minute per user.
     """
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
 
-    return JsonResponse(
-        {
-            "error": "Barcode scanning for whisky not yet implemented",
-            "success": False,
-        },
-        status=501,
-    )
+    try:
+        images = []
+        image_fields = [
+            "image_front_label",
+            "image_back_label",
+            "image_front",
+            "image_back",
+        ]
+
+        for field_name in image_fields:
+            image_file = request.FILES.get(field_name)
+            if image_file:
+                if image_file.size > MAX_IMAGE_SIZE:
+                    return JsonResponse(
+                        {"error": f"Image {field_name} is too large."},
+                        status=400,
+                    )
+                image_data = image_file.read()
+                base64_image = base64.b64encode(image_data).decode("utf-8")
+                images.append(base64_image)
+                image_file.seek(0)
+
+        if not images:
+            return JsonResponse(
+                {"error": "No images uploaded."},
+                status=400,
+            )
+
+        from wine_cellar.apps.whisky.services.barcode_service import (
+            WhiskyBarcodeScanner,
+        )
+
+        scanner = WhiskyBarcodeScanner()
+        barcodes = scanner.scan_images_for_barcodes(images)
+
+        return JsonResponse(
+            {
+                "success": True,
+                "barcodes": barcodes,
+            }
+        )
+
+    except Exception as e:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.exception("Error in whisky barcode scanning")
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 class DrinkRecordCreateView(FormView):
@@ -1284,8 +1454,12 @@ class StorageItemAddView(FormView):
         return context
 
     def form_valid(self, form):
+        import datetime
+
         household = get_active_household(self.request.user)
         whisky = get_object_or_404(Whisky, pk=self.kwargs["pk"], household=household)
+        fill_level = form.cleaned_data["fill_level"]
+        dreg_date = datetime.date.today() if fill_level == FillLevel.DREG else None
 
         WhiskyStorageItem.objects.create(
             storage=form.cleaned_data["storage"],
@@ -1299,7 +1473,8 @@ class StorageItemAddView(FormView):
             gift_from=form.cleaned_data.get("gift_from"),
             occasion=form.cleaned_data.get("occasion"),
             rating=form.cleaned_data.get("rating"),
-            fill_level=form.cleaned_data["fill_level"],
+            fill_level=fill_level,
+            dreg_date=dreg_date,
         )
 
         self.success_url = reverse_lazy("whisky-detail", kwargs={"pk": whisky.pk})
@@ -1378,10 +1553,15 @@ class StorageItemUpdateView(FormView):
         return context
 
     def form_valid(self, form):
+        import datetime
+
         household = get_active_household(self.request.user)
         item = get_object_or_404(
             WhiskyStorageItem, pk=self.kwargs["pk"], household=household
         )
+
+        old_fill_level = item.fill_level
+        new_fill_level = form.cleaned_data["fill_level"]
 
         item.storage = form.cleaned_data["storage"]
         item.row = form.cleaned_data.get("row")
@@ -1391,7 +1571,14 @@ class StorageItemUpdateView(FormView):
         item.gift_from = form.cleaned_data.get("gift_from")
         item.occasion = form.cleaned_data.get("occasion")
         item.rating = form.cleaned_data.get("rating")
-        item.fill_level = form.cleaned_data["fill_level"]
+        item.fill_level = new_fill_level
+
+        # Track dreg_date transitions
+        if new_fill_level == FillLevel.DREG and old_fill_level != FillLevel.DREG:
+            item.dreg_date = datetime.date.today()
+        elif new_fill_level != FillLevel.DREG and old_fill_level == FillLevel.DREG:
+            item.dreg_date = None
+
         item.save()
 
         self.success_url = reverse_lazy("whisky-detail", kwargs={"pk": item.whisky.pk})

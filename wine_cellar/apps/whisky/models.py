@@ -67,12 +67,9 @@ class PeatedLevel(models.TextChoices):
 
 
 class FillLevel(models.TextChoices):
-    FULL = "FU", _("Full (sealed)")
-    THREE_QUARTERS = "3Q", _("3/4")
-    HALF = "HA", _("Half")
-    QUARTER = "1Q", _("1/4")
-    NEARLY_EMPTY = "NE", _("Nearly Empty")
-    EMPTY = "EM", _("Empty")
+    UNOPENED = "UN", _("Unopened")
+    OPENED = "OP", _("Opened")
+    DREG = "DR", _("Dreg")
 
 
 COMMON_CASK_TYPES = [
@@ -323,6 +320,14 @@ class Whisky(UserContentModel):
         verbose_name=_("Bottler"),
         help_text=_("Leave blank for Official Bottling (OB)."),
     )
+    source = models.ForeignKey(
+        "whisky.WhiskySource",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Source"),
+        help_text=_("Where this whisky was purchased."),
+    )
     bottler_series = models.CharField(
         max_length=200,
         blank=True,
@@ -393,6 +398,12 @@ class Whisky(UserContentModel):
         blank=True,
         default="",
         verbose_name=_("Comment"),
+    )
+    owner = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name=_("Owner"),
     )
 
     # Relations
@@ -665,13 +676,18 @@ class WhiskyStorageItem(UserContentModel):
     fill_level = models.CharField(
         max_length=2,
         choices=FillLevel.choices,
-        default=FillLevel.FULL,
+        default=FillLevel.UNOPENED,
         verbose_name=_("Fill Level"),
     )
     opened_date = models.DateField(
         null=True,
         blank=True,
         verbose_name=_("Date Opened"),
+    )
+    dreg_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name=_("Date Entered Dreg"),
     )
 
     class Meta:
@@ -690,6 +706,24 @@ class WhiskyStorageItem(UserContentModel):
             else "Unassigned"
         )
         return f"{self.whisky.name} - {self.storage.name} ({location})"
+
+    @property
+    def dreg_warning(self):
+        """True if dreg for >335 days (warn 30 days before 1 year)."""
+        import datetime
+
+        if self.fill_level != FillLevel.DREG or not self.dreg_date:
+            return False
+        return (datetime.date.today() - self.dreg_date).days > 335
+
+    @property
+    def dreg_expired(self):
+        """True if dreg for >365 days."""
+        import datetime
+
+        if self.fill_level != FillLevel.DREG or not self.dreg_date:
+            return False
+        return (datetime.date.today() - self.dreg_date).days > 365
 
 
 # ---------------------------------------------------------------------------

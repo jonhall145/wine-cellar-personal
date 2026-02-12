@@ -17,6 +17,7 @@ from wine_cellar.apps.whisky.models import (
     Distillery,
     FillLevel,
     PeatedLevel,
+    Whisky,
     WhiskyRegion,
     WhiskySource,
     WhiskyStorageItem,
@@ -72,6 +73,22 @@ class WhiskyBaseForm(TomSelectMixin, forms.Form):
         self.fields["rrp"].help_text = _("Enter the RRP in %(currency)s.") % {
             "currency": settings.CURRENCY_SYMBOLS[user_settings.currency]
         }
+
+        # Configure source queryset for household
+        self.fields["source"].queryset = WhiskySource.objects.filter(
+            household=household
+        ).order_by("name")
+
+        # Populate owner choices from existing values
+        existing_owners = (
+            Whisky.objects.filter(household=household)
+            .exclude(owner="")
+            .values_list("owner", flat=True)
+            .distinct()
+            .order_by("owner")
+        )
+        owner_choices = [("", "---------")] + [(o, o) for o in existing_owners]
+        self.fields["owner"].widget.choices = owner_choices
 
         # Configure storage field for household's storages
         if "storage" in self.fields:
@@ -177,6 +194,19 @@ class WhiskyBaseForm(TomSelectMixin, forms.Form):
         queryset=Bottler.objects.all().order_by("name"),
         required=False,
         help_text=_("Leave blank for Official Bottling (OB)."),
+    )
+    source = forms.ModelChoiceField(
+        queryset=WhiskySource.objects.none(),
+        required=False,
+        label=_("Source"),
+        help_text=_("Where was this whisky purchased?"),
+    )
+    owner = forms.CharField(
+        max_length=100,
+        required=False,
+        label=_("Owner"),
+        help_text=_("Who owns this bottle?"),
+        widget=forms.Select(),
     )
     bottler_series = forms.CharField(
         max_length=200,
@@ -290,6 +320,13 @@ class WhiskyBaseForm(TomSelectMixin, forms.Form):
         label=_("Occasion"),
         help_text=_("Enter a special occasion this bottle is reserved for."),
     )
+    fill_level = forms.ChoiceField(
+        choices=FillLevel.choices,
+        initial=FillLevel.UNOPENED,
+        required=False,
+        label=_("Fill Level"),
+        help_text=_("Current fill level of the bottle."),
+    )
 
     def clean_cask_type(self):
         """Accept user-created cask types from TomSelect."""
@@ -318,6 +355,66 @@ class WhiskyBaseForm(TomSelectMixin, forms.Form):
         # Otherwise, standard ModelChoiceField validation
         return self.fields["region"].clean(value)
 
+    def clean_distillery(self):
+        """Allow creating new distilleries on the fly via TomSelect."""
+        value = self.data.get("distillery", "")
+        if not value:
+            return None
+        if isinstance(value, str) and value.startswith("tom_new_opt"):
+            name = value.removeprefix("tom_new_opt").strip()
+            if not name:
+                return None
+            country = self.data.get("country", "XS") or "XS"
+            distillery, _ = Distillery.objects.get_or_create(
+                name=name,
+                country=country,
+                defaults={"is_user_created": True},
+            )
+            return distillery
+        return self.fields["distillery"].clean(value)
+
+    def clean_bottler(self):
+        """Allow creating new bottlers on the fly via TomSelect."""
+        value = self.data.get("bottler", "")
+        if not value:
+            return None
+        if isinstance(value, str) and value.startswith("tom_new_opt"):
+            name = value.removeprefix("tom_new_opt").strip()
+            if not name:
+                return None
+            bottler, _ = Bottler.objects.get_or_create(
+                name=name,
+                defaults={"is_user_created": True},
+            )
+            return bottler
+        return self.fields["bottler"].clean(value)
+
+    def clean_source(self):
+        """Allow creating new sources on the fly via TomSelect."""
+        value = self.data.get("source", "")
+        if not value:
+            return None
+        if isinstance(value, str) and value.startswith("tom_new_opt"):
+            name = value.removeprefix("tom_new_opt").strip()
+            if not name:
+                return None
+            source, _ = WhiskySource.objects.get_or_create(
+                name=name,
+                user=self.user,
+                defaults={"household": self.household},
+            )
+            return source
+        return self.fields["source"].clean(value)
+
+    def clean_owner(self):
+        """Accept user-created owner values from TomSelect."""
+        value = self.data.get("owner", "")
+        if not value:
+            return ""
+        if isinstance(value, str) and value.startswith("tom_new_opt"):
+            return value.removeprefix("tom_new_opt").strip()
+        return value.strip()
+
 
 class WhiskyForm(WhiskyBaseForm):
     def __init__(self, *args, **kwargs):
@@ -328,7 +425,8 @@ class WhiskyForm(WhiskyBaseForm):
             max_items=1,
             max_options=-1,
             search=True,
-            placeholder=str(_("Search distilleries...")),
+            create=True,
+            placeholder=str(_("Search or add distillery...")),
         )
         self.set_tom_config(
             name="region",
@@ -343,7 +441,8 @@ class WhiskyForm(WhiskyBaseForm):
             max_items=1,
             max_options=-1,
             search=True,
-            placeholder=str(_("Search bottlers...")),
+            create=True,
+            placeholder=str(_("Search or add bottler...")),
         )
         self.set_tom_config(
             name="country",
@@ -358,6 +457,22 @@ class WhiskyForm(WhiskyBaseForm):
             search=True,
             create=True,
             placeholder=str(_("Search or add cask type...")),
+        )
+        self.set_tom_config(
+            name="source",
+            max_items=1,
+            max_options=-1,
+            search=True,
+            create=True,
+            placeholder=str(_("Search or add source...")),
+        )
+        self.set_tom_config(
+            name="owner",
+            max_items=1,
+            max_options=-1,
+            search=True,
+            create=True,
+            placeholder=str(_("Search or add owner...")),
         )
 
 
@@ -386,6 +501,15 @@ class WhiskyEditForm(WhiskyBaseForm):
         else:
             bottler_items = []
 
+        source = initial.get("source")
+        if source:
+            source_items = [source.pk if hasattr(source, "pk") else source]
+        else:
+            source_items = []
+
+        owner = initial.get("owner", "")
+        owner_items = [owner] if owner else []
+
         country = initial.get("country", "GB")
 
         self.set_tom_config(
@@ -394,6 +518,7 @@ class WhiskyEditForm(WhiskyBaseForm):
             max_items=1,
             max_options=-1,
             search=True,
+            create=True,
         )
         self.set_tom_config(
             name="region",
@@ -409,6 +534,7 @@ class WhiskyEditForm(WhiskyBaseForm):
             max_items=1,
             max_options=-1,
             search=True,
+            create=True,
         )
         self.set_tom_config(
             name="country",
@@ -427,6 +553,25 @@ class WhiskyEditForm(WhiskyBaseForm):
             search=True,
             create=True,
             placeholder=str(_("Search or add cask type...")),
+        )
+        self.set_tom_config(
+            name="source",
+            items=source_items,
+            max_items=1,
+            max_options=-1,
+            search=True,
+            create=True,
+            placeholder=str(_("Search or add source...")),
+        )
+        self.set_tom_config(
+            name="owner",
+            items=owner_items,
+            max_items=1,
+            max_options=-1,
+            search=True,
+            create=True,
+            clear=bool(not owner),
+            placeholder=str(_("Search or add owner...")),
         )
 
 
@@ -488,7 +633,7 @@ class WhiskyStockAddForm(forms.Form):
     )
     fill_level = forms.ChoiceField(
         choices=FillLevel.choices,
-        initial=FillLevel.FULL,
+        initial=FillLevel.UNOPENED,
         label=_("Fill Level"),
         help_text=_("Current fill level of the bottle."),
     )

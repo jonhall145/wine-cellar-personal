@@ -90,7 +90,19 @@
                                     {% blocktranslate count counter=low_stock_count %}{{ counter }} whisky needs reorder{% plural %}{{ counter }} whiskies need reorder{% endblocktranslate %}
                                 </p>
                             {% endif %}
-                            {% if overdue_count == 0 and upcoming_count == 0 and low_stock_count == 0 %}
+                            {% if dreg_expired_count > 0 %}
+                                <p class="widget-alert widget-alert--danger">
+                                    <i class="fa-solid fa-exclamation-triangle"></i>
+                                    {% blocktranslate count counter=dreg_expired_count %}{{ counter }} bottle dreg over 1 year{% plural %}{{ counter }} bottles dreg over 1 year{% endblocktranslate %}
+                                </p>
+                            {% endif %}
+                            {% if dreg_warning_count > 0 %}
+                                <p class="widget-alert widget-alert--warning">
+                                    <i class="fa-solid fa-clock"></i>
+                                    {% blocktranslate count counter=dreg_warning_count %}{{ counter }} bottle dreg approaching 1 year{% plural %}{{ counter }} bottles dreg approaching 1 year{% endblocktranslate %}
+                                </p>
+                            {% endif %}
+                            {% if overdue_count == 0 and upcoming_count == 0 and low_stock_count == 0 and dreg_expired_count == 0 and dreg_warning_count == 0 %}
                                 <div class="widget-empty"><i class="fa-solid fa-check"></i><span>{% translate "No alerts" %}</span></div>
                             {% endif %}
                         </div>

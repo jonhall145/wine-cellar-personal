@@ -30,30 +30,21 @@ PEATED_LEVEL_LABELS = {
 }
 
 FILL_LEVEL_ICONS = {
-    "FU": "fa-solid fa-battery-full",
-    "3Q": "fa-solid fa-battery-three-quarters",
-    "HA": "fa-solid fa-battery-half",
-    "1Q": "fa-solid fa-battery-quarter",
-    "NE": "fa-solid fa-battery-empty",
-    "EM": "fa-solid fa-battery-empty",
+    "UN": "fa-solid fa-battery-full",
+    "OP": "fa-solid fa-battery-half",
+    "DR": "fa-solid fa-battery-empty",
 }
 
 FILL_LEVEL_LABELS = {
-    "FU": _("Full (sealed)"),
-    "3Q": _("3/4"),
-    "HA": _("Half"),
-    "1Q": _("1/4"),
-    "NE": _("Nearly Empty"),
-    "EM": _("Empty"),
+    "UN": _("Unopened"),
+    "OP": _("Opened"),
+    "DR": _("Dreg"),
 }
 
 FILL_LEVEL_CLASSES = {
-    "FU": "full",
-    "3Q": "three-quarters",
-    "HA": "half",
-    "1Q": "quarter",
-    "NE": "nearly-empty",
-    "EM": "empty",
+    "UN": "unopened",
+    "OP": "opened",
+    "DR": "dreg",
 }
 
 
