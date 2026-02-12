@@ -575,7 +575,7 @@ class WhiskyEditForm(WhiskyBaseForm):
         )
 
 
-class WhiskyStockAddForm(forms.Form):
+class WhiskyStockAddForm(TomSelectMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user")
         kwargs.pop("whisky", None)
@@ -596,6 +596,27 @@ class WhiskyStockAddForm(forms.Form):
         )
         owner_choices = [("", "---------")] + [(o, o) for o in existing_owners]
         self.fields["owner"].widget.choices = owner_choices
+
+        # Also include owners from Whisky model
+        whisky_owners = (
+            Whisky.objects.filter(household=household)
+            .exclude(owner="")
+            .values_list("owner", flat=True)
+            .distinct()
+        )
+        all_owners = sorted(set(existing_owners) | set(whisky_owners))
+        owner_choices = [("", "---------")] + [(o, o) for o in all_owners]
+        self.fields["owner"].widget.choices = owner_choices
+
+        owner_val = self.initial.get("owner", "")
+        owner_items = [owner_val] if owner_val else []
+        self.set_tom_config(
+            name="owner",
+            create=True,
+            items=owner_items,
+            clear=bool(not owner_val),
+            placeholder=str(_("Search or add owner...")),
+        )
 
     storage = forms.ModelChoiceField(
         queryset=Storage.objects.none(),
