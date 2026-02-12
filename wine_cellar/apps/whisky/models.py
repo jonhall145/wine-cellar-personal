@@ -461,6 +461,12 @@ class Whisky(UserContentModel):
         return self.whiskystorageitem_set.filter(deleted=False).count()
 
     @property
+    def get_stock(self):
+        return self.whiskystorageitem_set.filter(deleted=False).select_related(
+            "storage"
+        )
+
+    @property
     def country_name(self):
         return get_country_name(self.country)
 

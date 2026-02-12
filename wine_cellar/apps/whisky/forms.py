@@ -583,7 +583,7 @@ class WhiskyStockAddForm(forms.Form):
         household = get_active_household(user)
 
         self.fields["storage"].queryset = Storage.objects.filter(
-            household=household
+            household=household, app_type=get_app_type()
         ).order_by("order", "created")
 
     storage = forms.ModelChoiceField(
