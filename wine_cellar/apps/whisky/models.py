@@ -695,6 +695,12 @@ class WhiskyStorageItem(UserContentModel):
         blank=True,
         verbose_name=_("Date Entered Dreg"),
     )
+    owner = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name=_("Owner"),
+    )
 
     class Meta:
         verbose_name = _("Whisky Bottle")

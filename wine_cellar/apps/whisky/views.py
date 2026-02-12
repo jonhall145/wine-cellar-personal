@@ -1579,6 +1579,7 @@ class StorageItemUpdateView(FormView):
         elif new_fill_level != FillLevel.DREG and old_fill_level == FillLevel.DREG:
             item.dreg_date = None
 
+        item.owner = form.cleaned_data.get("owner", "")
         item.save()
 
         self.success_url = reverse_lazy("whisky-detail", kwargs={"pk": item.whisky.pk})

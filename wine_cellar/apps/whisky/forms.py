@@ -586,6 +586,17 @@ class WhiskyStockAddForm(forms.Form):
             household=household, app_type=get_app_type()
         ).order_by("order", "created")
 
+        # Populate owner choices from existing values
+        existing_owners = (
+            WhiskyStorageItem.objects.filter(household=household)
+            .exclude(owner="")
+            .values_list("owner", flat=True)
+            .distinct()
+            .order_by("owner")
+        )
+        owner_choices = [("", "---------")] + [(o, o) for o in existing_owners]
+        self.fields["owner"].widget.choices = owner_choices
+
     storage = forms.ModelChoiceField(
         queryset=Storage.objects.none(),
         help_text=_("Select where to store this bottle."),
@@ -637,6 +648,17 @@ class WhiskyStockAddForm(forms.Form):
         label=_("Fill Level"),
         help_text=_("Current fill level of the bottle."),
     )
+    owner = forms.CharField(
+        max_length=100,
+        required=False,
+        label=_("Owner"),
+        widget=forms.Select(),
+    )
+
+    def clean_owner(self):
+        """Accept user-created owner values from TomSelect."""
+        value = self.data.get("owner", "")
+        return value.strip() if value else ""
 
 
 class WhiskyDrinkRecordForm(forms.Form):
