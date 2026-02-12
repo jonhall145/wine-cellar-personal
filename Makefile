@@ -54,6 +54,34 @@ whisky-watch:
 	npm run watch & \
 	CELLAR_APP_TYPE=whisky $(VIRTUAL_ENV)/bin/python3 manage.py runserver 8004
 
+.PHONY: whisky-pytest
+whisky-pytest:
+	CELLAR_APP_TYPE=whisky $(VIRTUAL_ENV)/bin/py.test tests/whisky/ --reuse-db
+
+.PHONY: whisky-deploy
+whisky-deploy:
+	./deploy-whisky-to-prod.sh
+
+.PHONY: whisky-prod-start
+whisky-prod-start:
+	docker compose -f docker-compose.prod.yml up -d whisky-web
+
+.PHONY: whisky-prod-stop
+whisky-prod-stop:
+	docker compose -f docker-compose.prod.yml stop whisky-web
+
+.PHONY: whisky-prod-restart
+whisky-prod-restart:
+	docker compose -f docker-compose.prod.yml restart whisky-web
+
+.PHONY: whisky-prod-status
+whisky-prod-status:
+	docker compose -f docker-compose.prod.yml ps whisky-web
+
+.PHONY: whisky-prod-logs
+whisky-prod-logs:
+	docker compose -f docker-compose.prod.yml logs -f whisky-web
+
 .PHONY: pytest
 pytest:
 	$(VIRTUAL_ENV)/bin/py.test --reuse-db

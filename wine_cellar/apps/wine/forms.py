@@ -10,7 +10,7 @@ from django.db.models import Q
 from django.forms import ImageField
 from django.utils.translation import gettext_lazy as _
 
-from wine_cellar.apps.storage.models import Storage, StorageItem
+from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 from wine_cellar.apps.wine.fields import OpenMultipleChoiceField
 from wine_cellar.apps.wine.models import (
@@ -171,7 +171,7 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         # Configure storage field for household's storages
         if "storage" in self.fields:
             self.fields["storage"].queryset = Storage.objects.filter(
-                household=household
+                household=household, app_type=get_app_type()
             ).order_by("order", "created")
 
         # Pass appellation->country mapping for JS-based country filtering

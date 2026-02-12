@@ -106,7 +106,7 @@ class WhiskyFilter(django_filters.FilterSet):
 
     peated_level = ChoiceFilter(
         choices=[("", _("Any"))] + list(PeatedLevel.choices),
-        label=_("Peated Level"),
+        label=_("Peated"),
     )
 
     has_stock = ChoiceFilter(

@@ -24,7 +24,9 @@
                 {% include 'forms/form_field.html' with field=form.location %}
                 {% include 'forms/form_field.html' with field=form.rows %}
                 {% include 'forms/form_field.html' with field=form.columns %}
-                {% include 'forms/form_field.html' with field=form.is_cold %}
+                {% if form.is_cold %}
+                    {% include 'forms/form_field.html' with field=form.is_cold %}
+                {% endif %}
                 {% include 'forms/form_field.html' with field=form.is_default %}
                 <div class="pure-controls">
                     <div class="pure-g">

@@ -3,7 +3,7 @@ from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils.translation import gettext_lazy as _
 
-from wine_cellar.apps.storage.models import Storage
+from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 
 
@@ -24,6 +24,11 @@ class StarRatingWidget(forms.RadioSelect):
 
 
 class StorageForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if get_app_type() == "whisky":
+            del self.fields["is_cold"]
+
     name = forms.CharField(
         max_length=100,
         help_text=_("Enter the name of the storage."),
@@ -62,7 +67,7 @@ class StockAddForm(forms.Form):
         super().__init__(*args, **kwargs)
         household = get_active_household(self.user)
         self.fields["storage"].queryset = Storage.objects.filter(
-            household=household
+            household=household, app_type=get_app_type()
         ).order_by("order", "created")
         self.fields["storage"].user = self.user
         user_settings = get_user_settings(self.user)
@@ -181,7 +186,7 @@ class StorageItemEditForm(forms.Form):
         super().__init__(*args, **kwargs)
         household = get_active_household(self.user)
         self.fields["storage"].queryset = Storage.objects.filter(
-            household=household
+            household=household, app_type=get_app_type()
         ).order_by("order", "created")
         user_settings = get_user_settings(self.user)
         self.fields["price"].help_text = _(

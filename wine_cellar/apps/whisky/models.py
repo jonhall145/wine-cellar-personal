@@ -13,6 +13,43 @@ from wine_cellar.apps.core.models import (
 )
 
 # ---------------------------------------------------------------------------
+# Custom country codes for UK nations (X prefix = ISO private use)
+# ---------------------------------------------------------------------------
+
+WHISKY_COUNTRIES = {
+    "XS": "Scotland",
+    "XE": "England",
+    "XW": "Wales",
+}
+
+# Flag emoji fallbacks for custom codes
+WHISKY_COUNTRY_FLAGS = {
+    "XS": "\U0001f3f4\U000e0067\U000e0062\U000e0073\U000e0063\U000e0074\U000e007f",
+    "XE": "\U0001f3f4\U000e0067\U000e0062\U000e0065\U000e006e\U000e0067\U000e007f",
+    "XW": "\U0001f3f4\U000e0067\U000e0062\U000e0077\U000e006c\U000e0073\U000e007f",
+}
+
+
+def get_country_name(code):
+    """Resolve country code to display name, including custom whisky codes."""
+    if code in WHISKY_COUNTRIES:
+        return WHISKY_COUNTRIES[code]
+    try:
+        return pycountry.countries.get(alpha_2=code).name
+    except (AttributeError, LookupError):
+        return code
+
+
+def get_country_icon(code):
+    """Resolve country code to flag emoji, including custom whisky codes."""
+    if not code:
+        return ""
+    if code in WHISKY_COUNTRY_FLAGS:
+        return WHISKY_COUNTRY_FLAGS[code]
+    return "".join(chr(0x1F1E6 + ord(c) - ord("A")) for c in code.upper())
+
+
+# ---------------------------------------------------------------------------
 # Choice enums
 # ---------------------------------------------------------------------------
 
@@ -26,9 +63,7 @@ class WhiskyType(models.TextChoices):
 
 class PeatedLevel(models.TextChoices):
     UNPEATED = "UP", _("Unpeated")
-    LIGHTLY_PEATED = "LP", _("Lightly Peated")
     PEATED = "PE", _("Peated")
-    HEAVILY_PEATED = "HP", _("Heavily Peated")
 
 
 class FillLevel(models.TextChoices):
@@ -40,15 +75,27 @@ class FillLevel(models.TextChoices):
     EMPTY = "EM", _("Empty")
 
 
-class CaskTypeChoice(models.TextChoices):
-    BARREL = "BR", _("Barrel (190L)")
-    HOGSHEAD = "HH", _("Hogshead (250L)")
-    BUTT = "BU", _("Butt (500L)")
-    PUNCHEON = "PU", _("Puncheon (500L)")
-    QUARTER_CASK = "QC", _("Quarter Cask (125L)")
-    PIPE = "PI", _("Pipe (650L)")
-    OCTAVE = "OC", _("Octave (50L)")
-    OTHER = "OT", _("Other")
+COMMON_CASK_TYPES = [
+    "Bourbon",
+    "Sherry (Oloroso)",
+    "Sherry (Pedro Ximénez)",
+    "Sherry (Fino)",
+    "Port",
+    "Rum",
+    "Wine (Red)",
+    "Wine (White)",
+    "Madeira",
+    "Marsala",
+    "Cognac",
+    "Beer / Ale",
+    "Sauternes",
+    "Moscatel",
+    "Virgin Oak",
+    "First Fill Bourbon",
+    "Refill Bourbon",
+    "First Fill Sherry",
+    "Refill Sherry",
+]
 
 
 class WoodType(models.TextChoices):
@@ -152,10 +199,7 @@ class Distillery(models.Model):
 
     @property
     def country_name(self):
-        try:
-            return pycountry.countries.get(alpha_2=self.country).name
-        except (AttributeError, LookupError):
-            return self.country
+        return get_country_name(self.country)
 
 
 class Bottler(models.Model):
@@ -216,7 +260,7 @@ class Whisky(UserContentModel):
         blank=True,
         verbose_name=_("Region"),
     )
-    country = models.CharField(max_length=2, default="GB", verbose_name=_("Country"))
+    country = models.CharField(max_length=2, default="XS", verbose_name=_("Country"))
 
     # Age & dates
     age_statement = models.PositiveIntegerField(
@@ -254,7 +298,14 @@ class Whisky(UserContentModel):
         choices=PeatedLevel.choices,
         null=True,
         blank=True,
-        verbose_name=_("Peated Level"),
+        verbose_name=_("Peated"),
+    )
+    cask_type = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name=_("Cask Type"),
+        help_text=_("e.g. Bourbon, Sherry (Oloroso), Virgin Oak"),
     )
     color = models.CharField(
         max_length=100,
@@ -400,16 +451,11 @@ class Whisky(UserContentModel):
 
     @property
     def country_name(self):
-        try:
-            return pycountry.countries.get(alpha_2=self.country).name
-        except (AttributeError, LookupError):
-            return self.country
+        return get_country_name(self.country)
 
     @property
     def country_icon(self):
-        if not self.country:
-            return ""
-        return "".join(chr(0x1F1E6 + ord(c) - ord("A")) for c in self.country.upper())
+        return get_country_icon(self.country)
 
     @property
     def image_thumbnail(self):
@@ -466,8 +512,9 @@ class CaskHistory(models.Model):
         help_text=_("1 = primary cask, 2+ = subsequent casks/finishes"),
     )
     cask_type = models.CharField(
-        max_length=2,
-        choices=CaskTypeChoice.choices,
+        max_length=100,
+        blank=True,
+        default="",
         verbose_name=_("Cask Type"),
     )
     wood_type = models.CharField(
@@ -512,7 +559,7 @@ class CaskHistory(models.Model):
         verbose_name_plural = "cask histories"
 
     def __str__(self):
-        parts = [self.get_previous_contents_display(), self.get_cask_type_display()]
+        parts = [self.get_previous_contents_display(), self.cask_type or ""]
         if self.is_finish:
             parts.append("(finish)")
         if self.duration_years:

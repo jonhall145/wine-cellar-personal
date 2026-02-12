@@ -89,8 +89,14 @@
                     </tr>
                     {% if whisky.peated_level %}
                         <tr>
-                            <th>{% translate "Peated Level" %}</th>
+                            <th>{% translate "Peated" %}</th>
                             <td>{% peated_badge whisky.peated_level %}</td>
+                        </tr>
+                    {% endif %}
+                    {% if whisky.cask_type %}
+                        <tr>
+                            <th>{% translate "Cask Type" %}</th>
+                            <td>{{ whisky.cask_type }}</td>
                         </tr>
                     {% endif %}
                     {% if whisky.vintage_year %}

@@ -79,11 +79,14 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
         cask_type = CaskTypeChoice.HOGSHEAD
         previous_contents = PreviousContents.BOURBON
 
+    class WhiskyStorageFactory(StorageFactory):
+        app_type = "whisky"
+
     class WhiskyStorageItemFactory(DjangoModelFactory):
         class Meta:
             model = WhiskyStorageItem
 
-        storage = factory.SubFactory(StorageFactory)
+        storage = factory.SubFactory(WhiskyStorageFactory)
         whisky = factory.SubFactory(WhiskyFactory)
         fill_level = FillLevel.FULL
 

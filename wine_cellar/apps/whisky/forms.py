@@ -5,11 +5,13 @@ import pycountry
 from django import forms
 from django.conf import settings
 from django.core import validators
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
-from wine_cellar.apps.storage.models import Storage
+from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 from wine_cellar.apps.whisky.models import (
+    COMMON_CASK_TYPES,
     Bottler,
     BottleSize,
     Distillery,
@@ -74,7 +76,7 @@ class WhiskyBaseForm(TomSelectMixin, forms.Form):
         # Configure storage field for household's storages
         if "storage" in self.fields:
             self.fields["storage"].queryset = Storage.objects.filter(
-                household=household
+                household=household, app_type=get_app_type()
             ).order_by("order", "created")
 
     name = forms.CharField(
@@ -97,9 +99,24 @@ class WhiskyBaseForm(TomSelectMixin, forms.Form):
         help_text=_("Select the whisky region."),
     )
     country = forms.ChoiceField(
-        choices=[("", "---------")]
-        + [(c.alpha_2, c.name) for c in pycountry.countries],
-        initial="GB",
+        choices=(
+            lambda: [("", "---------")]
+            + [
+                ("XS", "Scotland"),
+                ("IE", "Ireland"),
+                ("JP", "Japan"),
+                ("XE", "England"),
+                ("US", "United States"),
+                ("XW", "Wales"),
+            ]
+            + [("", "───────────")]
+            + [
+                (c.alpha_2, c.name)
+                for c in pycountry.countries
+                if c.alpha_2 not in ("IE", "JP", "US")
+            ]
+        )(),
+        initial="XS",
         help_text=_("Select the country of origin."),
     )
     age_statement = forms.IntegerField(
@@ -143,7 +160,13 @@ class WhiskyBaseForm(TomSelectMixin, forms.Form):
     peated_level = forms.ChoiceField(
         choices=[("", "---------")] + list(PeatedLevel.choices),
         required=False,
-        help_text=_("Select the peat level."),
+        label=_("Peated"),
+        help_text=_("Is this whisky peated?"),
+    )
+    cask_type = forms.ChoiceField(
+        choices=[("", "---------")] + [(c, c) for c in COMMON_CASK_TYPES],
+        required=False,
+        help_text=_("e.g. Bourbon, Sherry (Oloroso). Type to add custom."),
     )
     color = forms.CharField(
         max_length=100,
@@ -268,6 +291,33 @@ class WhiskyBaseForm(TomSelectMixin, forms.Form):
         help_text=_("Enter a special occasion this bottle is reserved for."),
     )
 
+    def clean_cask_type(self):
+        """Accept user-created cask types from TomSelect."""
+        value = self.data.get("cask_type", "")
+        if not value:
+            return ""
+        return value.strip()
+
+    def clean_region(self):
+        """Allow creating new regions on the fly via TomSelect."""
+        value = self.data.get("region", "")
+        if not value:
+            return None
+        # TomSelect sends new items with "tom_new_opt" prefix
+        if isinstance(value, str) and value.startswith("tom_new_opt"):
+            name = value.removeprefix("tom_new_opt").strip()
+            if not name:
+                return None
+            slug = slugify(name)
+            country = self.data.get("country", "GB") or "GB"
+            region, _ = WhiskyRegion.objects.get_or_create(
+                slug=slug,
+                defaults={"name": name, "country": country},
+            )
+            return region
+        # Otherwise, standard ModelChoiceField validation
+        return self.fields["region"].clean(value)
+
 
 class WhiskyForm(WhiskyBaseForm):
     def __init__(self, *args, **kwargs):
@@ -285,7 +335,8 @@ class WhiskyForm(WhiskyBaseForm):
             max_items=1,
             max_options=-1,
             search=True,
-            placeholder=str(_("Search regions...")),
+            create=True,
+            placeholder=str(_("Search or add region...")),
         )
         self.set_tom_config(
             name="bottler",
@@ -299,6 +350,14 @@ class WhiskyForm(WhiskyBaseForm):
             max_items=1,
             max_options=-1,
             search=True,
+        )
+        self.set_tom_config(
+            name="cask_type",
+            max_items=1,
+            max_options=-1,
+            search=True,
+            create=True,
+            placeholder=str(_("Search or add cask type...")),
         )
 
 
@@ -342,6 +401,7 @@ class WhiskyEditForm(WhiskyBaseForm):
             max_items=1,
             max_options=-1,
             search=True,
+            create=True,
         )
         self.set_tom_config(
             name="bottler",
@@ -356,6 +416,17 @@ class WhiskyEditForm(WhiskyBaseForm):
             max_items=1,
             max_options=-1,
             search=True,
+        )
+
+        cask_type = initial.get("cask_type", "")
+        self.set_tom_config(
+            name="cask_type",
+            items=[cask_type] if cask_type else [],
+            max_items=1,
+            max_options=-1,
+            search=True,
+            create=True,
+            placeholder=str(_("Search or add cask type...")),
         )
 
 

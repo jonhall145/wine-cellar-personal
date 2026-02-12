@@ -15,11 +15,17 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.utils.formats import number_format
-from django.views.generic import DeleteView, DetailView, FormView, TemplateView
+from django.views.generic import (
+    DeleteView,
+    DetailView,
+    FormView,
+    ListView,
+    TemplateView,
+)
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
-from wine_cellar.apps.storage.models import Storage
+from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 from wine_cellar.apps.whisky.filters import WhiskyFilter
 from wine_cellar.apps.whisky.forms import (
@@ -240,7 +246,9 @@ class WhiskyCreateView(FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         household = get_active_household(self.request.user)
-        user_storages = Storage.objects.filter(household=household)
+        user_storages = Storage.objects.filter(
+            household=household, app_type=get_app_type()
+        )
         free_cells_by_storage = {
             storage.pk: storage.get_free_cells_by_row() for storage in user_storages
         }
@@ -279,6 +287,7 @@ class WhiskyCreateView(FormView):
         vintage_year = cleaned_data.get("vintage_year")
         bottled_year = cleaned_data.get("bottled_year")
         peated_level = cleaned_data.get("peated_level") or None
+        cask_type = cleaned_data.get("cask_type") or None
         color = cleaned_data.get("color")
         bottler = cleaned_data.get("bottler")
         bottler_series = cleaned_data.get("bottler_series")
@@ -304,6 +313,7 @@ class WhiskyCreateView(FormView):
                 "country": country,
                 "age_statement": age_statement,
                 "peated_level": peated_level,
+                "cask_type": cask_type,
                 "color": color,
                 "bottler": bottler,
                 "bottler_series": bottler_series,
@@ -427,6 +437,7 @@ class WhiskyUpdateView(FormView):
         vintage_year = cleaned_data.get("vintage_year")
         bottled_year = cleaned_data.get("bottled_year")
         peated_level = cleaned_data.get("peated_level") or None
+        cask_type = cleaned_data.get("cask_type") or None
         color = cleaned_data.get("color")
         bottler = cleaned_data.get("bottler")
         bottler_series = cleaned_data.get("bottler_series")
@@ -449,6 +460,7 @@ class WhiskyUpdateView(FormView):
         whisky.vintage_year = vintage_year
         whisky.bottled_year = bottled_year
         whisky.peated_level = peated_level
+        whisky.cask_type = cask_type
         whisky.color = color
         whisky.bottler = bottler
         whisky.bottler_series = bottler_series
@@ -1262,7 +1274,9 @@ class StorageItemAddView(FormView):
         context["whisky"] = whisky
 
         # Provide free cells for storage dropdown
-        user_storages = Storage.objects.filter(household=household)
+        user_storages = Storage.objects.filter(
+            household=household, app_type=get_app_type()
+        )
         free_cells_by_storage = {
             storage.pk: storage.get_free_cells_by_row() for storage in user_storages
         }
@@ -1354,7 +1368,9 @@ class StorageItemUpdateView(FormView):
         context["whisky"] = item.whisky
 
         # Provide free cells for storage dropdown
-        user_storages = Storage.objects.filter(household=household)
+        user_storages = Storage.objects.filter(
+            household=household, app_type=get_app_type()
+        )
         free_cells_by_storage = {
             storage.pk: storage.get_free_cells_by_row() for storage in user_storages
         }
@@ -1382,21 +1398,21 @@ class StorageItemUpdateView(FormView):
         return super().form_valid(form)
 
 
-class StorageItemHistoryView(TemplateView):
-    """View bottle history (notes, fill level changes, etc.)."""
+class StorageItemHistoryView(ListView):
+    """List deleted (removed) whisky storage items."""
 
+    model = WhiskyStorageItem
     template_name = "whisky/stock_history.html"
+    context_object_name = "storage_items"
+    paginate_by = 10
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+    def get_queryset(self):
         household = get_active_household(self.request.user)
-        item = get_object_or_404(
-            WhiskyStorageItem, pk=self.kwargs["pk"], household=household
+        return (
+            WhiskyStorageItem.objects.filter(household=household, deleted=True)
+            .select_related("whisky", "storage")
+            .order_by("-created")
         )
-        context["storage_item"] = item
-        context["whisky"] = item.whisky
-        context["notes"] = item.notes.all()
-        return context
 
 
 class WhiskyMergeConfirmView(TemplateView):

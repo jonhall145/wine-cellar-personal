@@ -19,7 +19,7 @@ from django.views.generic import DeleteView, DetailView, FormView, TemplateView
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
-from wine_cellar.apps.storage.models import Storage, StorageItem
+from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 from wine_cellar.apps.wine.filters import WineFilter
 from wine_cellar.apps.wine.forms import WineEditForm, WineForm, image_fields_map
@@ -340,7 +340,9 @@ class WineCreateView(FormView):
         context = super().get_context_data(**kwargs)
         # Provide free cells for storage dropdown (for stock_add.js)
         household = get_active_household(self.request.user)
-        user_storages = Storage.objects.filter(household=household)
+        user_storages = Storage.objects.filter(
+            household=household, app_type=get_app_type()
+        )
         free_cells_by_storage = {
             storage.pk: storage.get_free_cells_by_row() for storage in user_storages
         }

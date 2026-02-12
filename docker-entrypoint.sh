@@ -25,8 +25,14 @@ if [ "$1" = "python" ] || [ "$1" = "gunicorn" ]; then
     echo "Running migrations..."
     python manage.py migrate --no-input
 
-    # Load initial fixture data (grapes) - safe to re-run
-    python manage.py loaddata fixtures/grapes.json 2>/dev/null || true
+    # Load initial fixture data based on app type - safe to re-run
+    if [ "$CELLAR_APP_TYPE" = "whisky" ]; then
+        python manage.py loaddata fixtures/whisky_regions.json 2>/dev/null || true
+        python manage.py loaddata fixtures/distilleries.json 2>/dev/null || true
+        python manage.py loaddata fixtures/bottlers.json 2>/dev/null || true
+    else
+        python manage.py loaddata fixtures/grapes.json 2>/dev/null || true
+    fi
 
     # Create superuser if configured
     if [ -n "$ADMIN_USER" ] && [ -n "$ADMIN_USER_PASSWORD" ]; then

@@ -21,16 +21,12 @@ WHISKY_TYPE_LABELS = {
 
 PEATED_LEVEL_CLASSES = {
     "UP": "unpeated",
-    "LP": "lightly-peated",
     "PE": "peated",
-    "HP": "heavily-peated",
 }
 
 PEATED_LEVEL_LABELS = {
     "UP": _("Unpeated"),
-    "LP": _("Lightly Peated"),
     "PE": _("Peated"),
-    "HP": _("Heavily Peated"),
 }
 
 FILL_LEVEL_ICONS = {

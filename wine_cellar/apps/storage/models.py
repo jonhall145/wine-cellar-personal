@@ -6,6 +6,10 @@ from django.utils.translation import gettext_lazy as _
 from wine_cellar.apps.core.models import UserContentModel
 
 
+def get_app_type():
+    return getattr(settings, "CELLAR_APP_TYPE", "wine")
+
+
 class Storage(UserContentModel):
     name = models.CharField(max_length=100, verbose_name=_("Storage Name"))
     description = models.TextField(
@@ -19,6 +23,7 @@ class Storage(UserContentModel):
     is_cold = models.BooleanField(default=False, verbose_name=_("Cold Storage"))
     order = models.PositiveIntegerField(default=0, verbose_name=_("Display Order"))
     is_default = models.BooleanField(default=False, verbose_name=_("Default Storage"))
+    app_type = models.CharField(max_length=10, default="wine")
 
     class Meta:
         verbose_name = _("Storage")
@@ -27,9 +32,9 @@ class Storage(UserContentModel):
     def save(self, *args, **kwargs):
         if self.is_default:
             # Ensure only one default storage per user
-            Storage.objects.filter(user=self.user, is_default=True).update(
-                is_default=False
-            )
+            Storage.objects.filter(
+                user=self.user, app_type=self.app_type, is_default=True
+            ).update(is_default=False)
         super().save(*args, **kwargs)
 
     def __str__(self):

@@ -15,7 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from django.views.generic import TemplateView
 
-from wine_cellar.apps.storage.models import Storage, StorageItem
+from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.models import (
     Grape,
@@ -908,7 +908,7 @@ class DeviceSettingsView(LoginRequiredMixin, TemplateView):
             .order_by("-created")
         )
 
-        storages = Storage.objects.filter(household=household)
+        storages = Storage.objects.filter(household=household, app_type=get_app_type())
 
         context["devices"] = devices
         context["storages"] = storages
@@ -986,7 +986,9 @@ class RackConfigView(LoginRequiredMixin, TemplateView):
             },
         )
 
-        storages = Storage.objects.filter(user=self.request.user)
+        storages = Storage.objects.filter(
+            user=self.request.user, app_type=get_app_type()
+        )
 
         context["config"] = config
         context["storages"] = storages

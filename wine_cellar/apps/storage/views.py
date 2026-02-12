@@ -19,7 +19,7 @@ from wine_cellar.apps.storage.forms import (
     StorageForm,
     StorageItemEditForm,
 )
-from wine_cellar.apps.storage.models import Storage, StorageItem
+from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.models import Wine
 
@@ -45,7 +45,7 @@ class StorageListView(ListView):
     def get_queryset(self):
         qs = super().get_queryset().order_by("order", "created")
         household = get_active_household(self.request.user)
-        return qs.filter(household=household)
+        return qs.filter(household=household, app_type=get_app_type())
 
 
 class StorageDetailView(DetailView, MultipleObjectMixin):
@@ -64,7 +64,7 @@ class StorageDetailView(DetailView, MultipleObjectMixin):
     def get_queryset(self):
         qs = super().get_queryset()
         household = get_active_household(self.request.user)
-        return qs.filter(household=household)
+        return qs.filter(household=household, app_type=get_app_type())
 
 
 class StorageCreateView(FormView):
@@ -88,7 +88,10 @@ class StorageCreateView(FormView):
         is_default = cleaned_data.get("is_default", False)
 
         # Get max order for this household
-        max_order = Storage.objects.filter(household=household).count()
+        app_type = get_app_type()
+        max_order = Storage.objects.filter(
+            household=household, app_type=app_type
+        ).count()
 
         Storage.objects.create(
             location=location,
@@ -101,6 +104,7 @@ class StorageCreateView(FormView):
             order=max_order,
             user=user,
             household=household,
+            app_type=app_type,
         )
 
 
@@ -151,7 +155,9 @@ class StorageDeleteView(DeleteView):
 
     def form_valid(self, form):
         household = get_active_household(self.request.user)
-        storages = Storage.objects.filter(household=household).count()
+        storages = Storage.objects.filter(
+            household=household, app_type=get_app_type()
+        ).count()
         if storages <= 1:
             form.add_error(
                 None,
@@ -166,7 +172,7 @@ class StorageDeleteView(DeleteView):
     def get_queryset(self):
         qs = super().get_queryset()
         household = get_active_household(self.request.user)
-        return qs.filter(household=household)
+        return qs.filter(household=household, app_type=get_app_type())
 
 
 class StorageItemAddView(FormView):
@@ -200,7 +206,9 @@ class StorageItemAddView(FormView):
         wine = self.get_wine()
         context["wine"] = wine
         household = get_active_household(self.request.user)
-        user_storages = Storage.objects.filter(household=household)
+        user_storages = Storage.objects.filter(
+            household=household, app_type=get_app_type()
+        )
         free_cells_by_storage = {
             storage.pk: storage.get_free_cells_by_row() for storage in user_storages
         }
@@ -377,7 +385,9 @@ class StorageItemUpdateView(FormView):
 
         # Free cells calculation - exclude current item so it can be moved
         household = get_active_household(self.request.user)
-        user_storages = Storage.objects.filter(household=household)
+        user_storages = Storage.objects.filter(
+            household=household, app_type=get_app_type()
+        )
         free_cells_by_storage = {
             storage.pk: storage.get_free_cells_by_row(exclude_item=item)
             for storage in user_storages
@@ -420,7 +430,9 @@ class StorageItemUpdateView(FormView):
 def storage_grid_data(request):
     """API endpoint to get storage grid data for React component."""
     household = get_active_household(request.user)
-    storages = Storage.objects.filter(household=household).order_by("name")
+    storages = Storage.objects.filter(
+        household=household, app_type=get_app_type()
+    ).order_by("name")
 
     # Get current storage from query param or use first one
     current_storage_id = request.GET.get("storage_id")
@@ -532,7 +544,9 @@ def move_bottle(request):
         # Get target storage
         try:
             target_storage = Storage.objects.get(
-                pk=target_storage_id, household=household
+                pk=target_storage_id,
+                household=household,
+                app_type=get_app_type(),
             )
         except Storage.DoesNotExist:
             return JsonResponse({"error": "Storage not found"}, status=404)
@@ -581,7 +595,9 @@ def storage_move_up(request, pk):
     household = get_active_household(request.user)
     storage = get_object_or_404(Storage, pk=pk, household=household)
     prev_storage = (
-        Storage.objects.filter(household=household, order__lt=storage.order)
+        Storage.objects.filter(
+            household=household, app_type=get_app_type(), order__lt=storage.order
+        )
         .order_by("-order")
         .first()
     )
@@ -598,7 +614,9 @@ def storage_move_down(request, pk):
     household = get_active_household(request.user)
     storage = get_object_or_404(Storage, pk=pk, household=household)
     next_storage = (
-        Storage.objects.filter(household=household, order__gt=storage.order)
+        Storage.objects.filter(
+            household=household, app_type=get_app_type(), order__gt=storage.order
+        )
         .order_by("order")
         .first()
     )

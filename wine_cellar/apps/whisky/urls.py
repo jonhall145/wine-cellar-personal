@@ -76,7 +76,7 @@ urlpatterns = [
         name="bottle-edit",
     ),
     path(
-        "stock/<int:pk>/history/",
+        "storage/history/",
         views.StorageItemHistoryView.as_view(),
         name="stock-history",
     ),
