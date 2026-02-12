@@ -41,6 +41,11 @@
                             {# djlint:on #}
                         </label>
                         <a href="{% url 'homepage' %}" class="pure-menu-heading pure-menu-link">{{ APP_NAME }}</a>
+                        {% if SWITCH_APP_URL %}
+                            <a href="{{ SWITCH_APP_URL }}" class="app-switch-btn" title="{{ SWITCH_APP_NAME }}">
+                                <i class="fa-solid {{ SWITCH_APP_ICON }}"></i>
+                            </a>
+                        {% endif %}
                         <div class="pure-menu">
                             <ul class="pure-menu-list">
                                 {% include "includes/navigation_items.html" %}

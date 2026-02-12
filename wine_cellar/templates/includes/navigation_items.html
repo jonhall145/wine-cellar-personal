@@ -88,6 +88,13 @@
             <a href="{% url 'household-list' %}" class="pure-menu-link">{{ active_household.name|truncatechars:15 }}</a>
         </li>
     {% endif %}
+    {% if SWITCH_APP_URL %}
+        <li class="pure-menu-item">
+            <a href="{{ SWITCH_APP_URL }}" class="pure-menu-link app-switch-link">
+                <i class="fa-solid {{ SWITCH_APP_ICON }}"></i> {{ SWITCH_APP_NAME }}
+            </a>
+        </li>
+    {% endif %}
     <li class="pure-menu-item">
         <a href="{% url 'user-settings' %}" class="pure-menu-link">{% translate "Settings" %}</a>
     </li>
