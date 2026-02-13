@@ -72,18 +72,6 @@
                             <i class="fa-solid fa-bell"></i> {% translate "Alerts" %}
                         </h3>
                         <div class="widget-card__content">
-                            {% if overdue_count > 0 %}
-                                <p class="widget-alert widget-alert--danger">
-                                    <i class="fa-solid fa-exclamation-triangle"></i>
-                                    {% blocktranslate count counter=overdue_count %}{{ counter }} whisky past drink-by date{% plural %}{{ counter }} whiskies past drink-by date{% endblocktranslate %}
-                                </p>
-                            {% endif %}
-                            {% if upcoming_count > 0 %}
-                                <p class="widget-alert widget-alert--warning">
-                                    <i class="fa-solid fa-clock"></i>
-                                    {% blocktranslate count counter=upcoming_count %}{{ counter }} whisky approaching drink-by{% plural %}{{ counter }} whiskies approaching drink-by{% endblocktranslate %}
-                                </p>
-                            {% endif %}
                             {% if low_stock_count > 0 %}
                                 <p class="widget-alert widget-alert--warning">
                                     <i class="fa-solid fa-arrow-down"></i>
@@ -102,7 +90,7 @@
                                     {% blocktranslate count counter=dreg_warning_count %}{{ counter }} bottle dreg approaching 1 year{% plural %}{{ counter }} bottles dreg approaching 1 year{% endblocktranslate %}
                                 </p>
                             {% endif %}
-                            {% if overdue_count == 0 and upcoming_count == 0 and low_stock_count == 0 and dreg_expired_count == 0 and dreg_warning_count == 0 %}
+                            {% if low_stock_count == 0 and dreg_expired_count == 0 and dreg_warning_count == 0 %}
                                 <div class="widget-empty"><i class="fa-solid fa-check"></i><span>{% translate "No alerts" %}</span></div>
                             {% endif %}
                         </div>

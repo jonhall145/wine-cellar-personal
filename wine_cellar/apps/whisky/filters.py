@@ -1,10 +1,13 @@
 import django_filters
+import pycountry
 from django.core.cache import cache
+from django.db.models import F
 from django.utils.translation import gettext_lazy as _
 from django_filters import ChoiceFilter, OrderingFilter
 
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.models import (
+    WHISKY_COUNTRIES,
     Distillery,
     PeatedLevel,
     Whisky,
@@ -84,6 +87,61 @@ def get_region_choices(user=None):
     return choices
 
 
+DEFAULT_WHISKY_FAVOURITES = ["XS", "IE", "JP", "US", "XE", "XW"]
+
+
+def get_country_choices(user=None):
+    """
+    Build country choices with whisky-relevant favourites at the top.
+    Only includes countries that have whiskies in stock.
+    """
+    household = get_active_household(user) if user and user.is_authenticated else None
+    household_id = household.id if household else "anon"
+    cache_key = f"whisky_country_choices_{household_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    favourites = list(DEFAULT_WHISKY_FAVOURITES)
+    countries_in_stock = set()
+
+    if household:
+        countries_in_stock = set(
+            Whisky.objects.filter(
+                household=household,
+                whiskystorageitem__isnull=False,
+                whiskystorageitem__deleted=False,
+            )
+            .values_list("country", flat=True)
+            .distinct()
+        )
+
+    all_countries = {c.alpha_2: c.name for c in pycountry.countries}
+    all_countries.update(WHISKY_COUNTRIES)
+
+    favourite_choices = []
+    other_choices = []
+
+    for code in favourites:
+        if code in all_countries and code in countries_in_stock:
+            favourite_choices.append((code, all_countries[code]))
+
+    for code in sorted(countries_in_stock - set(favourites)):
+        name = all_countries.get(code, code)
+        other_choices.append((code, name))
+
+    choices = [("", _("Any"))]
+    if favourite_choices:
+        choices += favourite_choices
+    if other_choices:
+        if favourite_choices:
+            choices.append(("", "───────────"))
+        choices += other_choices
+
+    cache.set(cache_key, choices, FILTER_CACHE_TIMEOUT)
+    return choices
+
+
 class WhiskyFilter(django_filters.FilterSet):
     name = django_filters.CharFilter(field_name="name", lookup_expr="icontains")
 
@@ -102,6 +160,11 @@ class WhiskyFilter(django_filters.FilterSet):
         choices=[],
         label=_("Region"),
         method="filter_region",
+    )
+
+    country = ChoiceFilter(
+        choices=[],
+        label=_("Country"),
     )
 
     peated_level = ChoiceFilter(
@@ -165,11 +228,25 @@ class WhiskyFilter(django_filters.FilterSet):
             ("age_statement", _("Youngest Age Statement")),
             ("-abv", _("Highest ABV")),
             ("abv", _("Lowest ABV")),
+            ("-effective_price", _("Highest Price (Avg)")),
+            ("effective_price", _("Lowest Price (Avg)")),
         ),
         label=_("Sorting"),
         empty_label=None,
         null_label=None,
+        method="filter_order",
     )
+
+    def filter_order(self, queryset, name, value):
+        """Custom ordering that puts NULLs at the end."""
+        if not value:
+            return queryset
+        ordering = value[0] if isinstance(value, list) else value
+        if ordering.lstrip("-") == "age_statement":
+            if ordering.startswith("-"):
+                return queryset.order_by(F("age_statement").desc(nulls_last=True))
+            return queryset.order_by(F("age_statement").asc(nulls_last=True))
+        return queryset.order_by(ordering)
 
     def filter_distillery(self, queryset, name, value):
         if value:
@@ -217,6 +294,7 @@ class WhiskyFilter(django_filters.FilterSet):
             "whisky_type",
             "distillery",
             "region",
+            "country",
             "peated_level",
             "has_stock",
             "abv_min",
@@ -237,3 +315,6 @@ class WhiskyFilter(django_filters.FilterSet):
 
         # Update region filter with choices from user's whiskies
         self.filters["region"].extra["choices"] = get_region_choices(user)
+
+        # Update country filter with favourites-ordered choices
+        self.filters["country"].extra["choices"] = get_country_choices(user)

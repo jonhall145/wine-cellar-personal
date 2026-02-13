@@ -77,10 +77,16 @@
                             {% for bottle in bottles %}
                                 <tr>
                                     <td>
-                                        <a href="{% url 'wine-detail' bottle.wine.pk %}">
-                                            {{ bottle.wine.name }}
-                                            {% if bottle.wine.vintage %}({{ bottle.wine.vintage }}){% endif %}
-                                        </a>
+                                        {% if CELLAR_APP_TYPE == "whisky" %}
+                                            <a href="{% url 'whisky-detail' bottle.whisky.pk %}">
+                                                {{ bottle.whisky.name }}
+                                            </a>
+                                        {% else %}
+                                            <a href="{% url 'wine-detail' bottle.wine.pk %}">
+                                                {{ bottle.wine.name }}
+                                                {% if bottle.wine.vintage %}({{ bottle.wine.vintage }}){% endif %}
+                                            </a>
+                                        {% endif %}
                                     </td>
                                     <td>{{ bottle.storage.name }}</td>
                                     <td>

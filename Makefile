@@ -38,6 +38,30 @@ fixtures:
 	$(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/wines.json
 	$(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/stock.json
 
+.PHONY: wine-deploy
+wine-deploy:
+	./deploy-wine-to-prod.sh
+
+.PHONY: wine-prod-start
+wine-prod-start:
+	docker compose -f docker-compose.prod.yml up -d wine-web
+
+.PHONY: wine-prod-stop
+wine-prod-stop:
+	docker compose -f docker-compose.prod.yml stop wine-web
+
+.PHONY: wine-prod-restart
+wine-prod-restart:
+	docker compose -f docker-compose.prod.yml restart wine-web
+
+.PHONY: wine-prod-status
+wine-prod-status:
+	docker compose -f docker-compose.prod.yml ps wine-web
+
+.PHONY: wine-prod-logs
+wine-prod-logs:
+	docker compose -f docker-compose.prod.yml logs -f wine-web
+
 .PHONY: whisky-fixtures
 whisky-fixtures:
 	CELLAR_APP_TYPE=whisky $(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/whisky_regions.json

@@ -5,9 +5,11 @@ from wine_cellar.apps.whisky.models import (
     CaskHistory,
     Distillery,
     Whisky,
+    WhiskyAttribute,
     WhiskyBarcode,
     WhiskyImage,
     WhiskyRegion,
+    WhiskySource,
     WhiskyStorageItem,
 )
 
@@ -59,3 +61,15 @@ class WhiskyBarcodeAdmin(admin.ModelAdmin):
 class WhiskyStorageItemAdmin(admin.ModelAdmin):
     list_display = ["whisky", "storage", "fill_level", "deleted", "user"]
     list_filter = ["fill_level", "deleted"]
+
+
+@admin.register(WhiskyAttribute)
+class WhiskyAttributeAdmin(admin.ModelAdmin):
+    list_display = ["name"]
+    search_fields = ["name"]
+
+
+@admin.register(WhiskySource)
+class WhiskySourceAdmin(admin.ModelAdmin):
+    list_display = ["name", "url", "user"]
+    search_fields = ["name"]

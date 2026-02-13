@@ -18,7 +18,7 @@
             <div class="pure-u-1 pure-u-md-1-2">
                 {% if whisky.image_thumbnail %}
                     <div class="wine-detail__image-wrapper"
-                         data-images='[{% for img in whisky.image_thumbnails %}"{{ img }}"{% if not forloop.last %},{% endif %}{% endfor %}]'>
+                         data-images='[{% for img in whisky.all_images %}"{{ img }}"{% if not forloop.last %},{% endif %}{% endfor %}]'>
                         <div class="image wine-detail__image" id="wine-image-wrapper">
                             <img id="wine-image"
                                  src="{{ whisky.image_thumbnail }}"
@@ -157,16 +157,6 @@
                             <td>{{ whisky.get_rrp_with_currency }}</td>
                         </tr>
                     {% endif %}
-                    {% if whisky.drink_from or whisky.drink_to %}
-                        <tr>
-                            <th>{% translate "Drinking Window" %}</th>
-                            <td>
-                                {% if whisky.drink_from %}{{ whisky.drink_from }}{% endif %}
-                                {% if whisky.drink_from and whisky.drink_to %}–{% endif %}
-                                {% if whisky.drink_to %}{{ whisky.drink_to }}{% endif %}
-                            </td>
-                        </tr>
-                    {% endif %}
                     <tr>
                         <th>{% translate "Rating" %}</th>
                         <td>
@@ -263,6 +253,7 @@
                 </div>
                 <div class="pure-u-1 pure-u-md-1">
                     {% if whisky.get_stock %}
+                        <div class="table-responsive">
                         <table class="pure-table pure-table-horizontal pure-table-striped wine-detail__stock-table">
                             <thead>
                                 <tr>
@@ -271,6 +262,7 @@
                                     <th>{% translate "Cell" %}</th>
                                     <th>{% translate "Fill Level" %}</th>
                                     <th>{% translate "Opened" %}</th>
+                                    <th>{% translate "Owner" %}</th>
                                     <th>{% translate "Gift" %}</th>
                                     <th>{% translate "Occasion" %}</th>
                                     <th></th>
@@ -290,15 +282,30 @@
                                         {% endif %}
                                     </td>
                                     <td>{{ item.opened_date|default_if_none:"" }}</td>
+                                    <td>{{ item.owner|default_if_none:"" }}</td>
                                     <td>{% if item.is_gift %}<i class="fa-solid fa-gift" title="{{ item.gift_from|default:'' }}"></i>{% if item.gift_from %} {{ item.gift_from }}{% endif %}{% endif %}</td>
                                     <td>{{ item.occasion|default_if_none:"" }}</td>
                                     <td>
+                                        <a class="pure-button" href="{% url 'bottle-note-add' item.pk %}" title="{% translate 'Add note' %}"><i class="fa-regular fa-note-sticky"></i></a>
                                         <a class="pure-button" href="{% url 'bottle-edit' item.pk %}" title="{% translate 'Edit bottle' %}"><i class="fa-regular fa-pen-to-square"></i></a>
                                         <a class="pure-button" href="{% url 'stock-delete' item.pk %}" title="{% translate 'Remove bottle' %}"><i class="fa-regular fa-trash-can"></i></a>
                                     </td>
                                 </tr>
+                                {% if item.notes.all %}
+                                    <tr>
+                                        <td colspan="9" class="bottle-notes">
+                                            <strong>{% translate "Notes" %}:</strong>
+                                            <ul>
+                                                {% for note in item.notes.all %}
+                                                    <li><em>{{ note.note_date }}</em>: {{ note.note }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                {% endif %}
                             {% endfor %}
                         </table>
+                        </div>
                     {% else %}
                         <div class="empty-state">
                             <div class="empty-state__icon"><i class="fa-solid fa-box-open"></i></div>

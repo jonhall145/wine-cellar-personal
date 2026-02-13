@@ -20,9 +20,9 @@ def app_context(request):
             "SWITCH_APP_ICON": "fa-wine-bottle",
         }
     switch_url = (
-        site_url.replace("wine.", "whisky.").replace(
-            "://jonandem.com", "://whisky.jonandem.com"
-        )
+        site_url.replace("wine.", "whisky.")
+        .replace("test.", "whisky.")
+        .replace("://jonandem.com", "://whisky.jonandem.com")
         if site_url
         else ""
     )
