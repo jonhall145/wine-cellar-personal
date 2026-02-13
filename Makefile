@@ -38,9 +38,13 @@ fixtures:
 	$(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/wines.json
 	$(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/stock.json
 
+.PHONY: deploy
+deploy:
+	./deploy-docker.sh $(ARGUMENTS)
+
 .PHONY: wine-deploy
 wine-deploy:
-	./deploy-wine-to-prod.sh
+	./deploy-docker.sh wine
 
 .PHONY: wine-prod-start
 wine-prod-start:
@@ -84,7 +88,7 @@ whisky-pytest:
 
 .PHONY: whisky-deploy
 whisky-deploy:
-	./deploy-whisky-to-prod.sh
+	./deploy-docker.sh whisky
 
 .PHONY: whisky-prod-start
 whisky-prod-start:
