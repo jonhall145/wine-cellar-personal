@@ -547,36 +547,53 @@ class WhiskyBaseForm(WhiskyFormPostCleanMixin, TomSelectMixin, forms.Form):
 class WhiskyForm(WhiskyBaseForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Configure TomSelect dropdowns
+        initial = self.initial
+
+        # Configure TomSelect dropdowns, preserving initial values
+        distillery = initial.get("distillery")
+        distillery_items = [distillery] if distillery else []
         self.set_tom_config(
             name="distillery",
+            items=distillery_items,
             max_items=1,
             max_options=-1,
             search=True,
             create=True,
+            clear=not distillery,
             placeholder=str(_("Search or add distillery...")),
         )
+        region = initial.get("region")
+        region_items = [region] if region else []
         self.set_tom_config(
             name="region",
+            items=region_items,
             max_items=1,
             max_options=-1,
             search=True,
             create=True,
+            clear=not region,
             placeholder=str(_("Search or add region...")),
         )
+        bottler = initial.get("bottler")
+        bottler_items = [bottler] if bottler else []
         self.set_tom_config(
             name="bottler",
+            items=bottler_items,
             max_items=1,
             max_options=-1,
             search=True,
             create=True,
+            clear=not bottler,
             placeholder=str(_("Search or add bottler...")),
         )
+        country = initial.get("country")
         self.set_tom_config(
             name="country",
+            items=[country] if country else [],
             max_items=1,
             max_options=-1,
             search=True,
+            clear=not country,
         )
         self.set_tom_config(
             name="cask_type",
@@ -585,20 +602,28 @@ class WhiskyForm(WhiskyBaseForm):
             create=True,
             placeholder=str(_("Search or add cask type...")),
         )
+        source = initial.get("source")
+        source_items = [source] if source else []
         self.set_tom_config(
             name="source",
+            items=source_items,
             max_items=1,
             max_options=-1,
             search=True,
             create=True,
+            clear=not source,
             placeholder=str(_("Search or add source...")),
         )
+        owner = initial.get("owner", "")
+        owner_items = [owner] if owner else []
         self.set_tom_config(
             name="owner",
+            items=owner_items,
             max_items=1,
             max_options=-1,
             search=True,
             create=True,
+            clear=not owner,
             placeholder=str(_("Search or add owner...")),
         )
 
