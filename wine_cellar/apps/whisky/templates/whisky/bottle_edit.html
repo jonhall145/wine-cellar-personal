@@ -9,8 +9,8 @@
         document.addEventListener('DOMContentLoaded', function() {
             var rowSelect = document.getElementById('id_row');
             var columnSelect = document.getElementById('id_column');
-            if (rowSelect) rowSelect.dataset.initialValue = '{{ item.row|default:"" }}';
-            if (columnSelect) columnSelect.dataset.initialValue = '{{ item.column|default:"" }}';
+            if (rowSelect) rowSelect.dataset.initialValue = '{{ storage_item.row|default:"" }}';
+            if (columnSelect) columnSelect.dataset.initialValue = '{{ storage_item.column|default:"" }}';
         });
     </script>
 {% endblock extra_js %}

@@ -164,6 +164,31 @@ document.addEventListener('DOMContentLoaded', function() {
             'barcode': 'barcode',
         };
 
+        // Handle unresolved FK fields (server returns _name suffix when no DB match)
+        const fkNameFields = {
+            'distillery_name': 'distillery',
+            'region_name': 'region',
+            'bottler_name': 'bottler',
+        };
+
+        Object.entries(fkNameFields).forEach(([nameField, formField]) => {
+            if (data[nameField]) {
+                const input = form.querySelector(`[name="${formField}"]`);
+                if (input) {
+                    const setNewValue = (attempts = 0) => {
+                        if (input.tomselect) {
+                            const name = data[nameField];
+                            input.tomselect.createItem(name);
+                            console.log(`Created new ${formField}:`, name);
+                        } else if (attempts < 5) {
+                            setTimeout(() => setNewValue(attempts + 1), 100);
+                        }
+                    };
+                    setNewValue();
+                }
+            }
+        });
+
         Object.entries(fieldMap).forEach(([apiField, formField]) => {
             if (data[apiField] !== undefined) {
                 const input = form.querySelector(`[name="${formField}"]`);
@@ -180,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 if (Array.isArray(value)) {
                                     input.tomselect.setValue(value);
                                 } else {
-                                    input.tomselect.setValue(value);
+                                    input.tomselect.setValue(String(value));
                                 }
                                 console.log(`Set ${formField} to:`, value);
                             } else if (attempts < 5) {

@@ -1,9 +1,13 @@
+from decimal import Decimal
+
 import pycountry
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.templatetags.static import static
 from django.urls import reverse
+from django.utils.formats import number_format
 from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.core.models import (
@@ -129,7 +133,9 @@ class DistilleryStatus(models.TextChoices):
 class BottleSize(models.TextChoices):
     MINIATURE = "0.05", _("Miniature (50ml)")
     SAMPLE = "0.10", _("Sample (100ml)")
+    SMALL = "0.20", _("Small (200ml)")
     HALF = "0.35", _("Half Bottle (350ml)")
+    HALF_LITRE = "0.50", _("Half Litre (500ml)")
     STANDARD = "0.70", _("Standard (700ml)")
     LITRE = "1.00", _("Litre (1000ml)")
     MAGNUM = "1.50", _("Magnum (1500ml)")
@@ -384,16 +390,6 @@ class Whisky(UserContentModel):
         blank=True,
         verbose_name=_("RRP"),
     )
-    drink_from = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name=_("Drink From Year"),
-    )
-    drink_to = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name=_("Drink To Year"),
-    )
     comment = models.TextField(
         blank=True,
         default="",
@@ -495,7 +491,7 @@ class Whisky(UserContentModel):
                 return versioned_media_url(first.thumbnail) or first.thumbnail.url
             return versioned_media_url(first.image) or first.image.url
 
-        return static("images/default_wine.svg")
+        return static(settings.DEFAULT_WINE_IMAGE)
 
     @property
     def all_images(self):
@@ -511,6 +507,50 @@ class Whisky(UserContentModel):
     @property
     def display_type(self):
         return self.get_whisky_type_display()
+
+    @property
+    def get_price_with_currency(self):
+        from wine_cellar.apps.user.views import get_user_settings
+
+        if self.price is None:
+            return None
+        user_settings = get_user_settings(self.user)
+        currency = settings.CURRENCY_SYMBOLS.get(
+            getattr(user_settings, "currency", "EUR"), "€"
+        )
+        formatted_price = number_format(self.price, use_l10n=True)
+        return f"{currency}{formatted_price}"
+
+    @property
+    def get_rrp_with_currency(self):
+        from wine_cellar.apps.user.views import get_user_settings
+
+        if self.rrp is None:
+            return None
+        user_settings = get_user_settings(self.user)
+        currency = settings.CURRENCY_SYMBOLS.get(
+            getattr(user_settings, "currency", "EUR"), "€"
+        )
+        formatted_price = number_format(self.rrp, use_l10n=True)
+        return f"{currency}{formatted_price}"
+
+    @property
+    def get_average_price_with_currency(self):
+        from wine_cellar.apps.user.views import get_user_settings
+
+        user_settings = get_user_settings(self.user)
+        currency = settings.CURRENCY_SYMBOLS.get(
+            getattr(user_settings, "currency", "EUR"), "€"
+        )
+        avg_price = self.whiskystorageitem_set.aggregate(avg_price=models.Avg("price"))[
+            "avg_price"
+        ]
+
+        if avg_price is None:
+            return None
+        avg_price = avg_price.quantize(Decimal("0.00"))
+        formatted_price = number_format(avg_price, use_l10n=True)
+        return f"{currency}{formatted_price}"
 
 
 # ---------------------------------------------------------------------------

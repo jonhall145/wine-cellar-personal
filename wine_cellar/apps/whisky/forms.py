@@ -5,6 +5,7 @@ import pycountry
 from django import forms
 from django.conf import settings
 from django.core import validators
+from django.forms import ImageField
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
@@ -18,11 +19,18 @@ from wine_cellar.apps.whisky.models import (
     FillLevel,
     PeatedLevel,
     Whisky,
+    WhiskyImage,
     WhiskyRegion,
     WhiskySource,
     WhiskyStorageItem,
     WhiskyType,
 )
+from wine_cellar.apps.wine.widgets import NoFilenameClearableFileInput
+
+image_fields_map = {
+    "image_front_label": WhiskyImage.ImageType.LABEL_FRONT,
+    "image_back_label": WhiskyImage.ImageType.LABEL_BACK,
+}
 
 
 class TomSelectMixin:
@@ -59,7 +67,68 @@ class TomSelectMixin:
         )
 
 
-class WhiskyBaseForm(TomSelectMixin, forms.Form):
+class WhiskyFormPostCleanMixin:
+    def _post_clean(self):
+        """Update tom-select config to prevent data loss on validation errors."""
+        if hasattr(self, "cleaned_data"):
+            distillery = self.cleaned_data.get("distillery")
+            if distillery:
+                self.set_tom_config(
+                    name="distillery",
+                    create=True,
+                    items=[distillery.pk],
+                    clear=False,
+                )
+            region = self.cleaned_data.get("region")
+            if region:
+                self.set_tom_config(
+                    name="region",
+                    create=True,
+                    items=[region.pk],
+                    clear=False,
+                )
+            bottler = self.cleaned_data.get("bottler")
+            if bottler:
+                self.set_tom_config(
+                    name="bottler",
+                    create=True,
+                    items=[bottler.pk],
+                    clear=False,
+                )
+            country = self.cleaned_data.get("country")
+            if country:
+                self.set_tom_config(
+                    name="country",
+                    items=[country],
+                    clear=False,
+                )
+            cask_type = self.cleaned_data.get("cask_type")
+            if cask_type:
+                self.set_tom_config(
+                    name="cask_type",
+                    create=True,
+                    items=[cask_type],
+                    clear=False,
+                )
+            source = self.cleaned_data.get("source")
+            if source:
+                self.set_tom_config(
+                    name="source",
+                    create=True,
+                    items=[source.pk],
+                    clear=False,
+                )
+            owner = self.cleaned_data.get("owner")
+            if owner:
+                self.set_tom_config(
+                    name="owner",
+                    create=True,
+                    items=[owner],
+                    clear=False,
+                )
+
+
+class WhiskyBaseForm(WhiskyFormPostCleanMixin, TomSelectMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user")
         super().__init__(*args, **kwargs)
@@ -95,6 +164,32 @@ class WhiskyBaseForm(TomSelectMixin, forms.Form):
             self.fields["storage"].queryset = Storage.objects.filter(
                 household=household, app_type=get_app_type()
             ).order_by("order", "created")
+
+        # Populate image fields with existing images for edit forms
+        for field_name, image_type_code in image_fields_map.items():
+            field = self.fields.get(field_name)
+            if not field:
+                continue
+            if getattr(self, "initial", None):
+                whisky_id = self.initial.get("id")
+                if whisky_id:
+                    image_obj = (
+                        WhiskyImage.objects.filter(
+                            whisky=whisky_id, image_type=image_type_code
+                        )
+                        .order_by("-id")
+                        .first()
+                    )
+                    if image_obj:
+                        self.initial[field_name] = image_obj.image
+                        preview_url = (
+                            image_obj.thumbnail.url
+                            if image_obj.thumbnail
+                            else image_obj.image.url
+                        )
+                        self.fields[field_name].widget.attrs[
+                            "data-existing-url"
+                        ] = preview_url
 
     name = forms.CharField(
         max_length=200,
@@ -180,9 +275,10 @@ class WhiskyBaseForm(TomSelectMixin, forms.Form):
         label=_("Peated"),
         help_text=_("Is this whisky peated?"),
     )
-    cask_type = forms.ChoiceField(
-        choices=[("", "---------")] + [(c, c) for c in COMMON_CASK_TYPES],
+    cask_type = forms.MultipleChoiceField(
+        choices=[(c, c) for c in COMMON_CASK_TYPES],
         required=False,
+        widget=forms.SelectMultiple(),
         help_text=_("e.g. Bourbon, Sherry (Oloroso). Type to add custom."),
     )
     color = forms.CharField(
@@ -259,17 +355,24 @@ class WhiskyBaseForm(TomSelectMixin, forms.Form):
         decimal_places=2,
         localize=True,
     )
+    barcode = forms.CharField(
+        max_length=100,
+        required=False,
+        help_text=_("Enter the barcode number."),
+    )
     comment = forms.CharField(
         max_length=1000,
         required=False,
         widget=forms.Textarea,
         help_text=_("Your thoughts and tasting notes."),
     )
-    image_front_label = forms.ImageField(
+    image_front_label = ImageField(
+        widget=NoFilenameClearableFileInput,
         required=False,
         help_text=_("Upload a photo of the front label."),
     )
-    image_back_label = forms.ImageField(
+    image_back_label = ImageField(
+        widget=NoFilenameClearableFileInput,
         required=False,
         help_text=_("Upload a photo of the back label."),
     )
@@ -329,11 +432,21 @@ class WhiskyBaseForm(TomSelectMixin, forms.Form):
     )
 
     def clean_cask_type(self):
-        """Accept user-created cask types from TomSelect."""
-        value = self.data.get("cask_type", "")
-        if not value:
-            return ""
-        return value.strip()
+        """Accept user-created cask types from TomSelect (supports multiple)."""
+        values = self.data.getlist("cask_type", [])
+        if not values:
+            value = self.data.get("cask_type", "")
+            values = [value] if value else []
+        cleaned = []
+        for v in values:
+            v = v.strip()
+            if not v:
+                continue
+            if v.startswith("tom_new_opt"):
+                v = v.removeprefix("tom_new_opt").strip()
+            if v:
+                cleaned.append(v)
+        return ", ".join(cleaned)
 
     def clean_region(self):
         """Allow creating new regions on the fly via TomSelect."""
@@ -452,7 +565,6 @@ class WhiskyForm(WhiskyBaseForm):
         )
         self.set_tom_config(
             name="cask_type",
-            max_items=1,
             max_options=-1,
             search=True,
             create=True,
@@ -545,10 +657,18 @@ class WhiskyEditForm(WhiskyBaseForm):
         )
 
         cask_type = initial.get("cask_type", "")
+        cask_type_items = (
+            [c.strip() for c in cask_type.split(",") if c.strip()] if cask_type else []
+        )
+        self.initial["cask_type"] = cask_type_items
+        # Add any custom cask types as valid choices
+        existing_choices = {c[0] for c in self.fields["cask_type"].choices}
+        for ct in cask_type_items:
+            if ct not in existing_choices:
+                self.fields["cask_type"].choices.append((ct, ct))
         self.set_tom_config(
             name="cask_type",
-            items=[cask_type] if cask_type else [],
-            max_items=1,
+            items=cask_type_items,
             max_options=-1,
             search=True,
             create=True,
@@ -578,8 +698,12 @@ class WhiskyEditForm(WhiskyBaseForm):
 class WhiskyStockAddForm(TomSelectMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user")
-        kwargs.pop("whisky", None)
+        whisky = kwargs.pop("whisky", None)
         super().__init__(*args, **kwargs)
+
+        # Default bottle price from whisky RRP or price
+        if whisky and not self.initial.get("price"):
+            self.initial["price"] = whisky.rrp or whisky.price
         household = get_active_household(user)
 
         self.fields["storage"].queryset = Storage.objects.filter(
@@ -679,7 +803,11 @@ class WhiskyStockAddForm(TomSelectMixin, forms.Form):
     def clean_owner(self):
         """Accept user-created owner values from TomSelect."""
         value = self.data.get("owner", "")
-        return value.strip() if value else ""
+        if not value:
+            return ""
+        if isinstance(value, str) and value.startswith("tom_new_opt"):
+            return value.removeprefix("tom_new_opt").strip()
+        return value.strip()
 
 
 class WhiskyDrinkRecordForm(forms.Form):

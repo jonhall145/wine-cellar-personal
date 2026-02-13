@@ -39,6 +39,8 @@ from wine_cellar.apps.whisky.forms import (
     WhiskyWishlistForm,
 )
 from wine_cellar.apps.whisky.models import (
+    Bottler,
+    Distillery,
     FillLevel,
     Whisky,
     WhiskyBarcode,
@@ -47,6 +49,7 @@ from wine_cellar.apps.whisky.models import (
     WhiskyDrinkRecord,
     WhiskyImage,
     WhiskyPriceHistory,
+    WhiskyRegion,
     WhiskyReorderReminder,
     WhiskySaleAlert,
     WhiskyStorageItem,
@@ -133,31 +136,9 @@ class HomePageView(TemplateView):
         ).aggregate(Max("age_statement"))
         oldest_age = oldest_age_result["age_statement__max"] or 0
 
-        # Drinking window alerts (drink_to is a year integer)
+        # Dreg alerts
         import datetime
 
-        current_year = datetime.date.today().year
-        overdue_count = (
-            Whisky.objects.filter(
-                household=household,
-                drink_to__lt=current_year,
-                whiskystorageitem__deleted=False,
-            )
-            .distinct()
-            .count()
-        )
-        upcoming_count = (
-            Whisky.objects.filter(
-                household=household,
-                drink_to__gte=current_year,
-                drink_to__lte=current_year + 1,
-                whiskystorageitem__deleted=False,
-            )
-            .distinct()
-            .count()
-        )
-
-        # Dreg alerts
         dreg_cutoff_warning = datetime.date.today() - datetime.timedelta(days=335)
         dreg_cutoff_expired = datetime.date.today() - datetime.timedelta(days=365)
         dreg_expired_count = WhiskyStorageItem.objects.filter(
@@ -185,8 +166,6 @@ class HomePageView(TemplateView):
                 "oldest": oldest,
                 "youngest": youngest,
                 "total_value": total_value,
-                "overdue_count": overdue_count,
-                "upcoming_count": upcoming_count,
                 "dreg_expired_count": dreg_expired_count,
                 "dreg_warning_count": dreg_warning_count,
             }
@@ -251,6 +230,91 @@ class WhiskyCreateView(FormView):
     form_class = WhiskyForm
     success_url = reverse_lazy("whisky-list")
 
+    def get_initial(self):
+        """Pre-fill form with data from scanned whisky label if available."""
+        initial = super().get_initial()
+
+        scanned_label = self.request.session.get("scanned_label")
+        extraction_result = self.request.session.get("extraction_result")
+
+        should_extract = scanned_label and (
+            not extraction_result or extraction_result.get("errors")
+        )
+
+        if should_extract:
+            try:
+                from wine_cellar.apps.whisky.services import WhiskyVisionExtractor
+
+                extractor = WhiskyVisionExtractor()
+                image_data = scanned_label.get("data")
+                user = self.request.user
+                if isinstance(image_data, list):
+                    result = extractor.extract_from_images(image_data, user=user)
+                else:
+                    result = extractor.extract_from_images([image_data], user=user)
+
+                self.request.session["extraction_result"] = {
+                    "confidence": result.get("confidence", "low"),
+                    "extracted_fields": result.get("extracted_fields", []),
+                    "errors": result.get("errors", []),
+                    "scanned_image": (
+                        image_data[0] if isinstance(image_data, list) else image_data
+                    ),
+                    "image_count": (
+                        len(image_data) if isinstance(image_data, list) else 1
+                    ),
+                    "extracted_data": result.get("data", {}),
+                }
+                extraction_result = self.request.session["extraction_result"]
+
+            except Exception as e:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.exception("Error extracting whisky data from scanned label")
+                self.request.session["extraction_result"] = {
+                    "confidence": "low",
+                    "extracted_fields": [],
+                    "errors": [f"Extraction failed: {str(e)}"],
+                    "scanned_image": scanned_label.get("data"),
+                    "extracted_data": {},
+                }
+                extraction_result = self.request.session["extraction_result"]
+
+        if extraction_result:
+            result_data = extraction_result.get("extracted_data", {})
+            if result_data:
+                # Resolve FK fields to PKs for form initial values
+                if "distillery" in result_data and isinstance(
+                    result_data["distillery"], str
+                ):
+                    match = Distillery.objects.filter(
+                        name__iexact=result_data["distillery"]
+                    ).first()
+                    if match:
+                        result_data["distillery"] = match.pk
+                    else:
+                        result_data.pop("distillery")
+                if "region" in result_data and isinstance(result_data["region"], str):
+                    match = WhiskyRegion.objects.filter(
+                        name__iexact=result_data["region"]
+                    ).first()
+                    if match:
+                        result_data["region"] = match.pk
+                    else:
+                        result_data.pop("region")
+                if "bottler" in result_data and isinstance(result_data["bottler"], str):
+                    match = Bottler.objects.filter(
+                        name__iexact=result_data["bottler"]
+                    ).first()
+                    if match:
+                        result_data["bottler"] = match.pk
+                    else:
+                        result_data.pop("bottler")
+                initial.update(result_data)
+
+        return initial
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         if "user" not in kwargs:
@@ -273,13 +337,64 @@ class WhiskyCreateView(FormView):
             storage.pk: storage.get_free_cells_by_row() for storage in user_storages
         }
         context["free_cells_by_storage"] = free_cells_by_storage
+
+        # Add extraction result to context if available
+        extraction_result = self.request.session.get("extraction_result")
+        if extraction_result:
+            context["extraction_result"] = extraction_result
+            context["scanned_image"] = extraction_result.get("scanned_image")
+            context["extracted_fields"] = extraction_result.get("extracted_fields", [])
+            context["confidence"] = extraction_result.get("confidence", "low")
+
+        # Pass scanned images for automatic attachment
+        scanned_label = self.request.session.get("scanned_label")
+        if scanned_label:
+            image_data = scanned_label.get("data")
+            if isinstance(image_data, list):
+                if len(image_data) > 1:
+                    context["scanned_back_image"] = image_data[1]
+                if len(image_data) > 2:
+                    context["scanned_front_image"] = image_data[2]
+
         return context
 
     def form_valid(self, form):
+        # Use scanned images if available and user hasn't uploaded their own
+        scanned_label = self.request.session.get("scanned_label")
+        if scanned_label:
+            image_data = scanned_label.get("data")
+            if isinstance(image_data, list):
+                use_scanned_front = self.request.POST.get("use_scanned_front", "0")
+                use_scanned_back = self.request.POST.get("use_scanned_back", "0")
+
+                if (
+                    use_scanned_back == "1"
+                    and len(image_data) > 1
+                    and not form.cleaned_data.get("image_back_label")
+                ):
+                    form.cleaned_data["image_back_label"] = base64_to_uploaded_file(
+                        image_data[1], "scanned_back_label.jpg"
+                    )
+
+                if (
+                    use_scanned_front == "1"
+                    and len(image_data) > 2
+                    and not form.cleaned_data.get("image_front_label")
+                ):
+                    form.cleaned_data["image_front_label"] = base64_to_uploaded_file(
+                        image_data[2], "scanned_front_label.jpg"
+                    )
+
         household = get_active_household(self.request.user)
         whisky, created = self.process_form_data(
             self.request.user, household, form.cleaned_data
         )
+
+        # Clear scanned label data from session after successful save
+        if "scanned_label" in self.request.session:
+            del self.request.session["scanned_label"]
+        if "extraction_result" in self.request.session:
+            del self.request.session["extraction_result"]
 
         if not created:
             messages.info(
@@ -696,8 +811,6 @@ class WhiskyMapView(TemplateView):
     def get_context_data(self, **kwargs):
         import json as json_module
 
-        from wine_cellar.apps.whisky.models import Distillery
-
         context = super().get_context_data(**kwargs)
         household = get_active_household(self.request.user)
 
@@ -752,6 +865,54 @@ class WhiskyMapView(TemplateView):
 
 class LabelScanView(TemplateView):
     template_name = "whisky/label_scan.html"
+
+    def post(self, request, *args, **kwargs):
+        import base64
+
+        # Clear any previous extraction results
+        if "extraction_result" in request.session:
+            del request.session["extraction_result"]
+
+        # Handle camera capture data (multiple images from React component)
+        image_count = request.POST.get("image_count")
+        if image_count:
+            images = []
+            for i in range(int(image_count)):
+                image_data = request.POST.get(f"image_data_{i}")
+                if image_data:
+                    if "," in image_data:
+                        image_data = image_data.split(",")[1]
+                    images.append(image_data)
+
+            if images:
+                request.session["scanned_label"] = {
+                    "filename": "camera_captures.jpg",
+                    "size": sum(len(base64.b64decode(img)) for img in images),
+                    "data": images,
+                    "multi_image": True,
+                }
+                return redirect("whisky-add")
+
+        # Handle file uploads
+        images = []
+        for field_name in ["barcode_image", "front_image", "back_image"]:
+            image = request.FILES.get(field_name)
+            if image:
+                image_data = image.read()
+                base64_image = base64.b64encode(image_data).decode("utf-8")
+                images.append(base64_image)
+
+        if images:
+            request.session["scanned_label"] = {
+                "filename": "uploaded_images",
+                "size": sum(len(base64.b64decode(img)) for img in images),
+                "data": images,
+                "multi_image": len(images) > 1,
+            }
+            return redirect("whisky-add")
+
+        # No images submitted, re-render the page
+        return self.get(request, *args, **kwargs)
 
 
 @ratelimit(key="user", rate="10/m", method="POST", block=True)
@@ -847,9 +1008,30 @@ def extract_whisky_vision_ajax(request):
         extractor = WhiskyVisionExtractor()
         result = extractor.extract_from_images(images, user=request.user)
 
+        # Resolve FK fields (distillery, region, bottler) to PKs for TomSelect
+        data = result.get("data", {})
+        if "distillery" in data and isinstance(data["distillery"], str):
+            match = Distillery.objects.filter(name__iexact=data["distillery"]).first()
+            if match:
+                data["distillery"] = match.pk
+            else:
+                data["distillery_name"] = data.pop("distillery")
+        if "region" in data and isinstance(data["region"], str):
+            match = WhiskyRegion.objects.filter(name__iexact=data["region"]).first()
+            if match:
+                data["region"] = match.pk
+            else:
+                data["region_name"] = data.pop("region")
+        if "bottler" in data and isinstance(data["bottler"], str):
+            match = Bottler.objects.filter(name__iexact=data["bottler"]).first()
+            if match:
+                data["bottler"] = match.pk
+            else:
+                data["bottler_name"] = data.pop("bottler")
+
         response_data = {
             "success": True,
-            "data": result.get("data", {}),
+            "data": data,
             "confidence": result.get("confidence", "low"),
             "extracted_fields": result.get("extracted_fields", []),
             "errors": result.get("errors", []),
@@ -1255,17 +1437,48 @@ class DrinkingWindowAlertsView(TemplateView):
     template_name = "whisky/drinking_window_alerts.html"
 
     def get_context_data(self, **kwargs):
+        import datetime
+
         context = super().get_context_data(**kwargs)
         household = get_active_household(self.request.user)
 
-        # Get existing alerts
-        alerts = WhiskyDrinkingWindowAlert.objects.filter(
-            household=household, is_read=False
-        ).select_related("whisky")
+        # Dreg alerts
+        dreg_cutoff_warning = datetime.date.today() - datetime.timedelta(days=335)
+        dreg_cutoff_expired = datetime.date.today() - datetime.timedelta(days=365)
+
+        dreg_expired = WhiskyStorageItem.objects.filter(
+            household=household,
+            deleted=False,
+            fill_level="DR",
+            dreg_date__lte=dreg_cutoff_expired,
+        ).select_related("whisky", "storage")
+
+        dreg_warning = WhiskyStorageItem.objects.filter(
+            household=household,
+            deleted=False,
+            fill_level="DR",
+            dreg_date__lte=dreg_cutoff_warning,
+            dreg_date__gt=dreg_cutoff_expired,
+        ).select_related("whisky", "storage")
+
+        # Low stock reminders
+        reminders = (
+            WhiskyReorderReminder.objects.filter(household=household, is_active=True)
+            .select_related("whisky")
+            .annotate(
+                current_stock=Count(
+                    "whisky__whiskystorageitem",
+                    filter=Q(whisky__whiskystorageitem__deleted=False),
+                )
+            )
+        )
+        needs_reorder = [r for r in reminders if r.current_stock <= r.min_stock]
 
         context.update(
             {
-                "alerts": alerts,
+                "dreg_expired": dreg_expired,
+                "dreg_warning": dreg_warning,
+                "needs_reorder": needs_reorder,
             }
         )
         return context
@@ -1475,6 +1688,7 @@ class StorageItemAddView(FormView):
             rating=form.cleaned_data.get("rating"),
             fill_level=fill_level,
             dreg_date=dreg_date,
+            owner=form.cleaned_data.get("owner", ""),
         )
 
         self.success_url = reverse_lazy("whisky-detail", kwargs={"pk": whisky.pk})
@@ -1720,6 +1934,8 @@ def crop_whisky_image(request, pk):
     """Apply manual crop to a WhiskyImage and create a new thumbnail."""
     import json
 
+    from wine_cellar.apps.wine.utils import apply_manual_crop
+
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
 
@@ -1727,6 +1943,8 @@ def crop_whisky_image(request, pk):
 
     try:
         data = json.loads(request.body)
+        x = int(data.get("x", 0))
+        y = int(data.get("y", 0))
         width = int(data.get("width", 100))
         height = int(data.get("height", 100))
 
@@ -1742,12 +1960,17 @@ def crop_whisky_image(request, pk):
             except Exception:
                 pass
 
-        # Apply the crop (placeholder - implement crop logic)
-        # For now, just return success
+        # Apply the crop
+        thumb_path = apply_manual_crop(whisky_image, x, y, width, height)
+
+        # Update the thumbnail field
+        whisky_image.thumbnail = thumb_path
+        whisky_image.save(update_fields=["thumbnail"])
+
         return JsonResponse(
             {
                 "success": True,
-                "message": "Crop not yet implemented",
+                "thumbnail_url": whisky_image.thumbnail.url,
             }
         )
     except (json.JSONDecodeError, ValueError) as e:
