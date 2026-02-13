@@ -27,6 +27,21 @@ from wine_cellar.apps.whisky.models import (
 )
 from wine_cellar.apps.wine.widgets import NoFilenameClearableFileInput
 
+
+class CreatableModelChoiceField(forms.ModelChoiceField):
+    """ModelChoiceField that allows TomSelect-created values."""
+
+    def to_python(self, value):
+        if isinstance(value, str) and value.startswith("tom_new_opt"):
+            return value
+        return super().to_python(value)
+
+    def validate(self, value):
+        if isinstance(value, str) and value.startswith("tom_new_opt"):
+            return
+        super().validate(value)
+
+
 image_fields_map = {
     "image_front_label": WhiskyImage.ImageType.LABEL_FRONT,
     "image_back_label": WhiskyImage.ImageType.LABEL_BACK,
@@ -200,12 +215,12 @@ class WhiskyBaseForm(WhiskyFormPostCleanMixin, TomSelectMixin, forms.Form):
         initial=WhiskyType.SINGLE_MALT,
         help_text=_("Select the type of whisky."),
     )
-    distillery = forms.ModelChoiceField(
+    distillery = CreatableModelChoiceField(
         queryset=Distillery.objects.all().order_by("name"),
         required=False,
         help_text=_("Select the distillery."),
     )
-    region = forms.ModelChoiceField(
+    region = CreatableModelChoiceField(
         queryset=WhiskyRegion.objects.all().order_by("order", "name"),
         required=False,
         help_text=_("Select the whisky region."),
@@ -286,12 +301,12 @@ class WhiskyBaseForm(WhiskyFormPostCleanMixin, TomSelectMixin, forms.Form):
         required=False,
         help_text=_("Color description."),
     )
-    bottler = forms.ModelChoiceField(
+    bottler = CreatableModelChoiceField(
         queryset=Bottler.objects.all().order_by("name"),
         required=False,
         help_text=_("Leave blank for Official Bottling (OB)."),
     )
-    source = forms.ModelChoiceField(
+    source = CreatableModelChoiceField(
         queryset=WhiskySource.objects.none(),
         required=False,
         label=_("Source"),
