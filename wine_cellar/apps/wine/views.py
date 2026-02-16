@@ -1,4 +1,5 @@
 import base64
+import logging
 from decimal import Decimal
 from io import BytesIO
 
@@ -25,6 +26,8 @@ from wine_cellar.apps.wine.filters import WineFilter
 from wine_cellar.apps.wine.forms import WineEditForm, WineForm, image_fields_map
 from wine_cellar.apps.wine.models import Wine, WineBarcode, WineImage
 from wine_cellar.apps.wine.services import BarcodeScanner, WineVisionExtractor
+
+logger = logging.getLogger(__name__)
 
 # Form step constants - no longer used for multi-step, kept for compatibility
 FINAL_FORM_STEP = 4
@@ -1891,9 +1894,6 @@ def crop_wine_image(request, pk):
         # Return a generic error message to avoid exposing internal details
         return JsonResponse({"error": "Invalid request data"}, status=400)
     except Exception as e:
-        import logging
-
-        logger = logging.getLogger(__name__)
         logger.exception("Error cropping image")
         # Do not expose the raw exception message to the client
         return JsonResponse(
