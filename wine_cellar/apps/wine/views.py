@@ -35,6 +35,8 @@ FINAL_FORM_STEP = 4
 # Maximum allowed image upload size (10MB) to prevent memory exhaustion
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
 
+logger = logging.getLogger(__name__)
+
 
 def base64_to_uploaded_file(base64_data: str, filename: str) -> InMemoryUploadedFile:
     """Convert base64 string to Django InMemoryUploadedFile.
@@ -1819,11 +1821,11 @@ def scan_barcode_ajax(request):
             )
 
     except Exception as e:
-        import logging
-
-        logger = logging.getLogger(__name__)
         logger.exception("Error in barcode scanning")
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse(
+            {"error": "An internal error occurred while scanning the barcode."},
+            status=500,
+        )
 
 
 @login_required
