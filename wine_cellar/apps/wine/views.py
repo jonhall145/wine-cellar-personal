@@ -1888,13 +1888,18 @@ def crop_wine_image(request, pk):
             }
         )
     except (json.JSONDecodeError, ValueError) as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        # Return a generic error message to avoid exposing internal details
+        return JsonResponse({"error": "Invalid request data"}, status=400)
     except Exception as e:
         import logging
 
         logger = logging.getLogger(__name__)
         logger.exception("Error cropping image")
-        return JsonResponse({"error": str(e)}, status=500)
+        # Do not expose the raw exception message to the client
+        return JsonResponse(
+            {"error": "An internal error occurred while processing the image."},
+            status=500,
+        )
 
 
 class SaleAlertsView(TemplateView):
