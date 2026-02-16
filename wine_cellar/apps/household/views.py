@@ -5,6 +5,7 @@ from django.db import transaction
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import (
     CreateView,
@@ -233,6 +234,12 @@ class HouseholdSwitchView(LoginRequiredMixin, View):
 
         # Redirect to referring page or home
         next_url = request.POST.get("next") or request.META.get("HTTP_REFERER", "/")
+        if not url_has_allowed_host_and_scheme(
+            url=next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            next_url = "/"
         return redirect(next_url)
 
 
