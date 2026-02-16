@@ -3,6 +3,7 @@
 import json
 import secrets
 from datetime import datetime
+import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -37,6 +38,8 @@ from .models import (
     RackVisionConfig,
     ReviewStatus,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def get_device_from_token(request):
@@ -238,7 +241,8 @@ def report_position_change(request):
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
     except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        logger.warning("Invalid data in report_position_change", exc_info=e)
+        return JsonResponse({"error": "Invalid data"}, status=400)
 
 
 def _apply_position_change(review):
