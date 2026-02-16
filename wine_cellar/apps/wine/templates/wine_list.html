@@ -67,12 +67,25 @@
             {% if wines %}
             <div class="per-page-selector">
                 <label for="per-page" class="per-page-selector__label">{% translate "Per page:" %}</label>
-                <select id="per-page" class="per-page-selector__select" onchange="window.location.href=this.value">
+                <select id="per-page" class="per-page-selector__select">
                     {% for option in per_page_options %}
                         <option value="{% querystring per_page=option page=1 %}" {% if option == current_per_page %}selected{% endif %}>{{ option }}</option>
                     {% endfor %}
                 </select>
             </div>
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    var perPageSelect = document.getElementById("per-page");
+                    if (perPageSelect) {
+                        perPageSelect.addEventListener("change", function (event) {
+                            var value = event.target && event.target.value;
+                            if (typeof value === "string" && value.length > 0) {
+                                window.location.href = value;
+                            }
+                        });
+                    }
+                });
+            </script>
             {% endif %}
             <ul class="wine-card__list">
                 {% for wine in wines %}
