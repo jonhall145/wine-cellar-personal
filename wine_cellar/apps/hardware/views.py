@@ -491,9 +491,16 @@ def sync_operations(request):
                 offline_op.save(update_fields=["applied"])
                 results.append({"id": offline_op.pk, "success": True})
             except Exception as e:
+                # Store detailed error server-side, but do not expose it to the client
                 offline_op.error = str(e)
                 offline_op.save(update_fields=["error"])
-                results.append({"id": offline_op.pk, "success": False, "error": str(e)})
+                results.append(
+                    {
+                        "id": offline_op.pk,
+                        "success": False,
+                        "error": "Failed to apply operation",
+                    }
+                )
 
         return JsonResponse(
             {
