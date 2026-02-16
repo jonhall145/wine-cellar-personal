@@ -1,6 +1,7 @@
 """API views for hardware (Raspberry Pi) integration."""
 
 import json
+import logging
 import secrets
 from datetime import datetime
 
@@ -37,6 +38,8 @@ from .models import (
     RackVisionConfig,
     ReviewStatus,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def get_device_from_token(request):
@@ -492,6 +495,7 @@ def sync_operations(request):
                 results.append({"id": offline_op.pk, "success": True})
             except Exception as e:
                 # Store detailed error server-side, but do not expose it to the client
+                logger.exception("Failed to apply offline operation")
                 offline_op.error = str(e)
                 offline_op.save(update_fields=["error"])
                 results.append(
