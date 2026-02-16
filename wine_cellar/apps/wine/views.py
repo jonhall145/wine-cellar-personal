@@ -1820,7 +1820,10 @@ def scan_barcode_ajax(request):
 
         logger = logging.getLogger(__name__)
         logger.exception("Error in barcode scanning")
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse(
+            {"error": "An internal error occurred while scanning the barcode."},
+            status=500,
+        )
 
 
 @login_required
