@@ -1,4 +1,5 @@
 import json
+import logging
 
 from django.contrib.auth.decorators import login_required
 from django.db import models
@@ -21,6 +22,9 @@ from wine_cellar.apps.storage.forms import (
 from wine_cellar.apps.storage.models import Storage, StorageItem
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.models import Wine
+
+
+logger = logging.getLogger(__name__)
 
 
 class StorageListView(ListView):
@@ -528,8 +532,12 @@ def move_bottle(request):
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+    except Exception:
+        logger.exception("Unexpected error while moving bottle.")
+        return JsonResponse(
+            {"error": "An internal error occurred while moving the bottle."},
+            status=500,
+        )
 
 
 @login_required
