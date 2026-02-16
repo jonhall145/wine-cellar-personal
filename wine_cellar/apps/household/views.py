@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -236,7 +237,7 @@ class HouseholdSwitchView(LoginRequiredMixin, View):
         next_url = request.POST.get("next") or request.META.get("HTTP_REFERER", "/")
         if not url_has_allowed_host_and_scheme(
             url=next_url,
-            allowed_hosts={request.get_host()},
+            allowed_hosts=settings.ALLOWED_HOSTS,
             require_https=request.is_secure(),
         ):
             next_url = "/"
