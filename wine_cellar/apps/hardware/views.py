@@ -241,7 +241,8 @@ def report_position_change(request):
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
     except ValueError:
-        return JsonResponse({"error": "Invalid request"}, status=400)
+        logger.warning("Invalid data in report_position_change", exc_info=True)
+        return JsonResponse({"error": "Invalid data"}, status=400)
 
 
 def _apply_position_change(review):

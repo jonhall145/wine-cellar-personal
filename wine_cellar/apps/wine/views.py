@@ -27,6 +27,8 @@ from wine_cellar.apps.wine.forms import WineEditForm, WineForm, image_fields_map
 from wine_cellar.apps.wine.models import Wine, WineBarcode, WineImage
 from wine_cellar.apps.wine.services import BarcodeScanner, WineVisionExtractor
 
+logger = logging.getLogger(__name__)
+
 # Form step constants - no longer used for multi-step, kept for compatibility
 FINAL_FORM_STEP = 4
 
@@ -1816,7 +1818,10 @@ def scan_barcode_ajax(request):
 
     except Exception:
         logger.exception("Error in barcode scanning")
-        return JsonResponse({"error": "Barcode scanning failed"}, status=500)
+        return JsonResponse(
+            {"error": "An internal error occurred while scanning the barcode."},
+            status=500,
+        )
 
 
 @login_required
@@ -1883,13 +1888,16 @@ def crop_wine_image(request, pk):
                 "thumbnail_url": wine_image.thumbnail.url,
             }
         )
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
-    except ValueError:
-        return JsonResponse({"error": "Invalid crop parameters"}, status=400)
+    except (json.JSONDecodeError, ValueError):
+        # Return a generic error message to avoid exposing internal details
+        return JsonResponse({"error": "Invalid request data"}, status=400)
     except Exception:
         logger.exception("Error cropping image")
-        return JsonResponse({"error": "Unable to crop image"}, status=500)
+        # Do not expose the raw exception message to the client
+        return JsonResponse(
+            {"error": "An internal error occurred while processing the image."},
+            status=500,
+        )
 
 
 class SaleAlertsView(TemplateView):

@@ -39,6 +39,9 @@ def _get_storage_item_model():
     return StorageItem
 
 
+logger = logging.getLogger(__name__)
+
+
 class StorageListView(ListView):
     model = Storage
     template_name = "storage_list.html"
@@ -610,8 +613,11 @@ def move_bottle(request):
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
     except Exception:
-        logger.exception("Error moving bottle")
-        return JsonResponse({"error": "Unable to move bottle"}, status=500)
+        logger.exception("Unexpected error while moving bottle.")
+        return JsonResponse(
+            {"error": "An internal error occurred while moving the bottle."},
+            status=500,
+        )
 
 
 @login_required
