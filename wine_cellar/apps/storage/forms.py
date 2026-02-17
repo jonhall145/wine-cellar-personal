@@ -1,3 +1,5 @@
+import json
+
 from django import forms
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -59,6 +61,31 @@ class StorageForm(forms.Form):
         required=False,
         help_text=_("Check to make this the default storage for new bottles."),
     )
+    cell_mask = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput(),
+    )
+
+    def clean_cell_mask(self):
+        raw = self.cleaned_data.get("cell_mask")
+        if not raw:
+            return None
+        try:
+            mask = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            raise forms.ValidationError(_("Invalid cell mask data."))
+        if not isinstance(mask, list):
+            raise forms.ValidationError(_("Cell mask must be a list."))
+        for item in mask:
+            if (
+                not isinstance(item, list)
+                or len(item) != 2
+                or not all(isinstance(v, int) for v in item)
+            ):
+                raise forms.ValidationError(
+                    _("Each cell in mask must be a [row, column] pair.")
+                )
+        return mask
 
 
 class StockAddForm(forms.Form):
@@ -164,6 +191,15 @@ class StockAddForm(forms.Form):
                             " storage."
                         ),
                         code="row_column_required",
+                    )
+                if not storage.is_cell_active(row, column):
+                    raise forms.ValidationError(
+                        _(
+                            "The selected slot (row: %(row)s, column: %(column)s)"
+                            " is not active in this storage."
+                        ),
+                        code="cell_inactive",
+                        params={"row": row, "column": column},
                     )
                 if storage.is_slot_occupied(row, column):
                     raise forms.ValidationError(
@@ -284,6 +320,15 @@ class StorageItemEditForm(forms.Form):
                             " storage."
                         ),
                         code="row_column_required",
+                    )
+                if not storage.is_cell_active(row, column):
+                    raise forms.ValidationError(
+                        _(
+                            "The selected slot (row: %(row)s, column: %(column)s)"
+                            " is not active in this storage."
+                        ),
+                        code="cell_inactive",
+                        params={"row": row, "column": column},
                     )
                 # Check slot occupation, excluding current item
                 occupied_query = storage.items.filter(

@@ -186,9 +186,14 @@ class Appellation(models.Model):
     class Meta:
         verbose_name = _("Appellation")
         verbose_name_plural = _("Appellations")
-        unique_together = ["name", "country"]
         indexes = [
             models.Index(fields=["country"], name="appellation_country_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "country"],
+                name="unique_appellation_name_country",
+            ),
         ]
 
     def __str__(self):

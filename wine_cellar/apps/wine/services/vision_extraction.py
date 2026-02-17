@@ -438,9 +438,9 @@ class WineVisionExtractor:
                 result["errors"].append(vision_result.get("error", "Unknown error"))
                 logger.error(f"Vision extraction failed: {vision_result.get('error')}")
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error during vision extraction")
-            result["errors"].append(f"Extraction error: {str(e)}")
+            result["errors"].append("Extraction error")
 
         # Calculate processing time
         processing_time_ms = int((time.time() - start_time) * 1000)
@@ -555,11 +555,11 @@ class WineVisionExtractor:
                 "extracted_fields": extracted_data["extracted_fields"],
             }
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error calling Claude Vision API")
             return {
                 "success": False,
-                "error": f"API call failed: {str(e)}",
+                "error": "API call failed",
             }
 
     def _build_extraction_prompt(self) -> str:

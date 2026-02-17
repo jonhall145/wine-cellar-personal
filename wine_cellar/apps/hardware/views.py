@@ -1,6 +1,7 @@
 """API views for hardware (Raspberry Pi) integration."""
 
 import json
+import logging
 import secrets
 from datetime import datetime
 
@@ -37,6 +38,8 @@ from .models import (
     RackVisionConfig,
     ReviewStatus,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def get_device_from_token(request):
@@ -237,8 +240,8 @@ def report_position_change(request):
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
-    except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
+    except ValueError:
+        return JsonResponse({"error": "Invalid request"}, status=400)
 
 
 def _apply_position_change(review):
@@ -490,10 +493,16 @@ def sync_operations(request):
                 offline_op.applied = True
                 offline_op.save(update_fields=["applied"])
                 results.append({"id": offline_op.pk, "success": True})
-            except Exception as e:
-                offline_op.error = str(e)
+            except Exception:
+                logger.exception(
+                    "Error applying offline operation",
+                    extra={"operation_type": op_type, "operation_id": offline_op.pk},
+                )
+                offline_op.error = "Operation failed"
                 offline_op.save(update_fields=["error"])
-                results.append({"id": offline_op.pk, "success": False, "error": str(e)})
+                results.append(
+                    {"id": offline_op.pk, "success": False, "error": "Operation failed"}
+                )
 
         return JsonResponse(
             {

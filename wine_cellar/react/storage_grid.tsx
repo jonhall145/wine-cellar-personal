@@ -50,6 +50,7 @@ interface CellData {
     row: number;
     column: number;
     wine: WineInfo | null;
+    active: boolean;
 }
 
 interface StorageData {
@@ -57,6 +58,7 @@ interface StorageData {
     name: string;
     rows: number;
     columns: number;
+    cell_mask: [number, number][] | null;
     items: CellData[];
 }
 
@@ -191,17 +193,18 @@ const DraggableCell: React.FC<DraggableCellProps> = ({
 }) => {
     const id = `cell-${storageId}-${cell.row}-${cell.column}`;
     const hasWine = cell.wine !== null;
+    const isInactive = !cell.active;
 
     const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
         id,
         data: { cell, storageId },
-        disabled: !hasWine,
+        disabled: !hasWine || isInactive,
     });
 
     const { setNodeRef: setDropRef, isOver } = useDroppable({
         id,
         data: { cell, storageId },
-        disabled: hasWine, // Can't drop on occupied cell
+        disabled: hasWine || isInactive, // Can't drop on occupied or inactive cell
     });
 
     // Combine refs
@@ -225,13 +228,15 @@ const DraggableCell: React.FC<DraggableCellProps> = ({
     };
 
     let className = 'storage-grid__cell';
-    if (hasWine) {
+    if (isInactive) {
+        className += ' storage-grid__cell--inactive';
+    } else if (hasWine) {
         className += ' storage-grid__cell--filled';
         const wineTypeClass = getWineTypeClass(cell.wine?.wine_type);
         if (wineTypeClass) className += ` storage-grid__cell--${wineTypeClass}`;
     }
     if (isDragging) className += ' storage-grid__cell--dragging';
-    if (isOver && !hasWine) className += ' storage-grid__cell--drag-over';
+    if (isOver && !hasWine && !isInactive) className += ' storage-grid__cell--drag-over';
 
     return (
         <div
@@ -459,15 +464,20 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
 
     // Build grid helper - memoized
     const buildGrid = useCallback((storage: StorageData): CellData[][] => {
+        const maskSet: Set<string> | null = storage.cell_mask
+            ? new Set(storage.cell_mask.map(([r, c]) => `${r},${c}`))
+            : null;
         const grid: CellData[][] = [];
         for (let row = 1; row <= storage.rows; row++) {
             const rowCells: CellData[] = [];
             for (let col = 1; col <= storage.columns; col++) {
                 const item = storage.items.find(i => i.row === row && i.column === col);
+                const active = maskSet === null || maskSet.has(`${row},${col}`);
                 rowCells.push({
                     row,
                     column: col,
                     wine: item?.wine || null,
+                    active,
                 });
             }
             grid.push(rowCells);
@@ -528,11 +538,13 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
 
                             const wineTypeClass = cell.wine ? getWineTypeClass(cell.wine.wine_type) : '';
 
+                            const isInactive = !cell.active;
+
                             return (
                                 <div
                                     key={`${rowIdx}-${colIdx}`}
-                                    className={`storage-grid__cell${cell.wine ? ' storage-grid__cell--filled' : ''}${wineTypeClass ? ` storage-grid__cell--${wineTypeClass}` : ''}${isSelectedForMove ? ' storage-grid__cell--selected-for-move' : ''}${!isSource && !cell.wine && selectedBottle ? ' storage-grid__cell--drop-target' : ''}`}
-                                    onClick={() => handleMoveModeClick(cell, storage.id, isSource)}
+                                    className={`storage-grid__cell${isInactive ? ' storage-grid__cell--inactive' : ''}${!isInactive && cell.wine ? ' storage-grid__cell--filled' : ''}${!isInactive && wineTypeClass ? ` storage-grid__cell--${wineTypeClass}` : ''}${isSelectedForMove ? ' storage-grid__cell--selected-for-move' : ''}${!isSource && !cell.wine && !isInactive && selectedBottle ? ' storage-grid__cell--drop-target' : ''}`}
+                                    onClick={() => !isInactive && handleMoveModeClick(cell, storage.id, isSource)}
                                     onMouseEnter={(e) => cell.wine && handleShowTooltip(cell.wine, e)}
                                     onMouseLeave={handleHideTooltip}
                                     onTouchStart={(e) => {

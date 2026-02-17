@@ -1,4 +1,5 @@
 import base64
+import logging
 from decimal import Decimal
 from io import BytesIO
 
@@ -31,6 +32,8 @@ FINAL_FORM_STEP = 4
 
 # Maximum allowed image upload size (10MB) to prevent memory exhaustion
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
+
+logger = logging.getLogger(__name__)
 
 
 def base64_to_uploaded_file(base64_data: str, filename: str) -> InMemoryUploadedFile:
@@ -271,16 +274,13 @@ class WineCreateView(FormView):
                 # Update local variable for use below
                 extraction_result = self.request.session["extraction_result"]
 
-            except Exception as e:
+            except Exception:
                 # Log error but don't break the page
-                import logging
-
-                logger = logging.getLogger(__name__)
                 logger.exception("Error extracting wine data from scanned label")
                 self.request.session["extraction_result"] = {
                     "confidence": "low",
                     "extracted_fields": [],
-                    "errors": [f"Extraction failed: {str(e)}"],
+                    "errors": ["Extraction failed"],
                     "scanned_image": scanned_label.get("data"),
                     "extracted_data": {},
                 }
@@ -1745,12 +1745,9 @@ def extract_wine_vision_ajax(request):
 
         return JsonResponse(response_data)
 
-    except Exception as e:
-        import logging
-
-        logger = logging.getLogger(__name__)
+    except Exception:
         logger.exception("Error in AJAX vision extraction")
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({"error": "Vision extraction failed"}, status=500)
 
 
 @ratelimit(key="user", rate="30/m", method="POST", block=True)
@@ -1817,12 +1814,9 @@ def scan_barcode_ajax(request):
                 }
             )
 
-    except Exception as e:
-        import logging
-
-        logger = logging.getLogger(__name__)
+    except Exception:
         logger.exception("Error in barcode scanning")
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({"error": "Barcode scanning failed"}, status=500)
 
 
 @login_required
@@ -1889,14 +1883,13 @@ def crop_wine_image(request, pk):
                 "thumbnail_url": wine_image.thumbnail.url,
             }
         )
-    except (json.JSONDecodeError, ValueError) as e:
-        return JsonResponse({"error": str(e)}, status=400)
-    except Exception as e:
-        import logging
-
-        logger = logging.getLogger(__name__)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except ValueError:
+        return JsonResponse({"error": "Invalid crop parameters"}, status=400)
+    except Exception:
         logger.exception("Error cropping image")
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({"error": "Unable to crop image"}, status=500)
 
 
 class SaleAlertsView(TemplateView):

@@ -70,6 +70,9 @@ module.exports = {
     },
     storage_grid: {
       import: ['./wine_cellar/react/storage_grid.tsx'],
+    },
+    mask_editor: {
+      import: ['./wine_cellar/assets/js/mask_editor.ts'],
     }
   },
   output: {

@@ -1,8 +1,8 @@
 beautifulsoup4==4.12.3
-Django==5.2.9
+Django==6.0.2
 celery==5.6.1
 django-allauth[socialaccount]==65.13.1
-django-celery-beat==2.8.1
+django-celery-beat @ git+https://github.com/celery/django-celery-beat.git@main
 django-extensions==4.1
 django-filter==25.2
 django-widget-tweaks==1.5.1

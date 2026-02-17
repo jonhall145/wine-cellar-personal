@@ -158,7 +158,12 @@ class WhiskyRegion(models.Model):
 
     class Meta:
         ordering = ["order", "name"]
-        unique_together = [("name", "country")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "country"],
+                name="unique_whiskyregion_name_country",
+            ),
+        ]
 
     def __str__(self):
         return self.name
@@ -189,11 +194,16 @@ class Distillery(models.Model):
 
     class Meta:
         ordering = ["name"]
-        unique_together = [("name", "country")]
         verbose_name_plural = "distilleries"
         indexes = [
             models.Index(
                 fields=["region", "status"], name="distillery_region_status_idx"
+            ),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "country"],
+                name="unique_distillery_name_country",
             ),
         ]
 
@@ -230,7 +240,12 @@ class WhiskyAttribute(UserContentModel):
 
     class Meta:
         ordering = ["name"]
-        unique_together = [("name", "user")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "user"],
+                name="unique_whiskyattribute_name_user",
+            ),
+        ]
 
     def __str__(self):
         return self.name
@@ -412,15 +427,18 @@ class Whisky(UserContentModel):
     class Meta:
         verbose_name_plural = "whiskies"
         ordering = ["-created"]
-        unique_together = [
-            (
-                "name",
-                "whisky_type",
-                "abv",
-                "size",
-                "vintage_year",
-                "bottled_year",
-                "user",
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "name",
+                    "whisky_type",
+                    "abv",
+                    "size",
+                    "vintage_year",
+                    "bottled_year",
+                    "user",
+                ],
+                name="unique_whisky_natural_key",
             ),
         ]
         indexes = [
@@ -612,8 +630,13 @@ class CaskHistory(models.Model):
 
     class Meta:
         ordering = ["whisky", "order"]
-        unique_together = [("whisky", "order")]
         verbose_name_plural = "cask histories"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["whisky", "order"],
+                name="unique_caskhistory_whisky_order",
+            ),
+        ]
 
     def __str__(self):
         parts = [self.get_previous_contents_display(), self.cask_type or ""]
@@ -684,7 +707,12 @@ class WhiskyBarcode(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = [("barcode", "user")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["barcode", "user"],
+                name="unique_whiskybarcode_barcode_user",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.barcode} -> {self.whisky.name}"
@@ -904,7 +932,12 @@ class WhiskyReorderReminder(UserContentModel):
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        unique_together = [("whisky", "user")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["whisky", "user"],
+                name="unique_whiskyreorderreminder_whisky_user",
+            ),
+        ]
 
     def __str__(self):
         return f"Reorder: {self.whisky.name} (min {self.min_stock})"
@@ -951,7 +984,12 @@ class WhiskySource(UserContentModel):
 
     class Meta:
         ordering = ["name"]
-        unique_together = [("name", "user")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "user"],
+                name="unique_whiskysource_name_user",
+            ),
+        ]
 
     def __str__(self):
         return self.name

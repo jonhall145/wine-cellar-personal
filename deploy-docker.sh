@@ -89,7 +89,7 @@ echo ""
 
 # Step 1: Run tests (unless skipped)
 if [ "$SKIP_TESTS" = false ]; then
-    log "Step 1/5: Running tests..."
+    log "Step 1/3: Running tests..."
     if [ -d "venv" ]; then
         if [ "$APP_TYPE" = "whisky" ]; then
             if ! CELLAR_APP_TYPE=whisky venv/bin/py.test tests/whisky/ --reuse-db -q; then
@@ -105,43 +105,23 @@ if [ "$SKIP_TESTS" = false ]; then
         warn "No venv found, skipping local tests"
     fi
 else
-    warn "Step 1/5: Skipping tests (--skip-tests flag)"
+    warn "Step 1/3: Skipping tests (--skip-tests flag)"
 fi
 
-# Step 2: Build frontend assets
-log "Step 2/5: Building frontend assets..."
-if [ -d "node_modules" ]; then
-    if ! npm run build:prod; then
-        error "Frontend build failed."
-    fi
-    success "Frontend build complete"
-else
-    warn "No node_modules found, skipping frontend build"
-fi
-
-# Step 3: Collect static files
-log "Step 3/5: Collecting static files..."
-if [ -d "venv" ]; then
-    CELLAR_APP_TYPE="$APP_TYPE" venv/bin/python3 manage.py collectstatic --noinput
-    success "Static files collected"
-else
-    warn "No venv found, skipping collectstatic (will run in Docker entrypoint)"
-fi
-
-# Step 4: Rebuild Docker image
-log "Step 4/5: Rebuilding Docker image..."
+# Step 2: Rebuild Docker image (includes frontend build + collectstatic)
+log "Step 2/3: Rebuilding Docker image..."
 if ! docker compose -f docker-compose.prod.yml build wine-web; then
     error "Docker image build failed."
 fi
 success "Docker image rebuilt"
 
-# Step 5: Restart container (unless build-only)
+# Step 3: Restart container (unless build-only)
 if [ "$BUILD_ONLY" = false ]; then
-    log "Step 5/5: Restarting ${CONTAINER} container..."
+    log "Step 3/3: Restarting ${CONTAINER} container..."
     docker compose -f docker-compose.prod.yml up -d "$CONTAINER"
     success "${APP_LABEL} container restarted"
 else
-    warn "Step 5/5: Skipping restart (--build-only flag)"
+    warn "Step 3/3: Skipping restart (--build-only flag)"
 fi
 
 echo ""

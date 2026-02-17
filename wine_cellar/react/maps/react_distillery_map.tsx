@@ -76,7 +76,7 @@ const DistilleryPopup: React.FC<{ distillery: DistilleryData }> = ({ distillery 
     </div>
 )
 
-const DistilleryMap: React.FC<{ distilleries: DistilleryData[] }> = ({ distilleries }) => {
+const DistilleryMap: React.FC<{ distilleries: DistilleryData[], baseUrl: string }> = ({ distilleries, baseUrl }) => {
     const [selectedRegion, setSelectedRegion] = useState<number | null>(null)
 
     // Build region options from distillery data
@@ -118,11 +118,21 @@ const DistilleryMap: React.FC<{ distilleries: DistilleryData[] }> = ({ distiller
         )
     })
 
-    // Scotland-centered map defaults
-    const mapProps = {
-        center: [56.8, -4.5] as [number, number],
-        zoom: 6,
-        style: { height: '500px', width: '100%' },
+    const mapAttribution = '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> <a href="https://www.openmaptiles.org/" target="_blank">\u00a9 OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
+
+    // Fit map to actual distillery locations
+    const boundsProps: Record<string, unknown> = {}
+    if (mappable.length > 0) {
+        const lats = mappable.map(d => d.latitude!)
+        const lngs = mappable.map(d => d.longitude!)
+        boundsProps.bounds = [
+            [Math.min(...lats), Math.min(...lngs)],
+            [Math.max(...lats), Math.max(...lngs)],
+        ]
+        boundsProps.boundsOptions = { padding: [30, 30] }
+    } else {
+        boundsProps.center = [50, 10] as [number, number]
+        boundsProps.zoom = 4
     }
 
     return (
@@ -141,7 +151,7 @@ const DistilleryMap: React.FC<{ distilleries: DistilleryData[] }> = ({ distiller
             </div>
 
             <div id="distillery-map-container">
-                <BaseMap {...mapProps}>
+                <BaseMap baseUrl={baseUrl} attribution={mapAttribution} {...boundsProps}>
                     {markers.length > 1 ? (
                         <MarkerClusterLayer>{markers}</MarkerClusterLayer>
                     ) : (
@@ -160,10 +170,11 @@ function init() {
             const distilleries: DistilleryData[] = JSON.parse(
                 container.getAttribute('data-distilleries') || '[]'
             )
+            const baseUrl = container.getAttribute('data-base-url') || ''
             const root = createRoot(container)
             root.render(
                 <React.StrictMode>
-                    <DistilleryMap distilleries={distilleries} />
+                    <DistilleryMap distilleries={distilleries} baseUrl={baseUrl} />
                 </React.StrictMode>
             )
         } catch (e) {

@@ -24,6 +24,7 @@ class Storage(UserContentModel):
     order = models.PositiveIntegerField(default=0, verbose_name=_("Display Order"))
     is_default = models.BooleanField(default=False, verbose_name=_("Default Storage"))
     app_type = models.CharField(max_length=10, default="wine")
+    cell_mask = models.JSONField(null=True, blank=True, default=None)
 
     class Meta:
         verbose_name = _("Storage")
@@ -46,8 +47,23 @@ class Storage(UserContentModel):
             return self.whisky_items
         return self.items
 
+    def is_cell_active(self, row, column):
+        """Check if a cell is active. Returns True if no mask (all cells active)."""
+        if self.cell_mask is None:
+            return True
+        return [row, column] in self.cell_mask
+
+    @property
+    def _active_cells_set(self):
+        """Return a set of active (row, col) tuples for O(1) lookup."""
+        if self.cell_mask is None:
+            return None
+        return {(r, c) for r, c in self.cell_mask}
+
     @property
     def total_slots(self):
+        if self.cell_mask is not None:
+            return len(self.cell_mask)
         return self.rows * self.columns
 
     @property
@@ -85,6 +101,7 @@ class Storage(UserContentModel):
             occupied_query = occupied_query.exclude(pk=exclude_item.pk)
 
         used_cells = set(occupied_query.values_list("row", "column"))
+        active_set = self._active_cells_set
 
         free_cells = {}
         for row in range(1, self.rows + 1):
@@ -92,6 +109,7 @@ class Storage(UserContentModel):
                 col
                 for col in range(1, self.columns + 1)
                 if (row, col) not in used_cells
+                and (active_set is None or (row, col) in active_set)
             ]
         return free_cells
 

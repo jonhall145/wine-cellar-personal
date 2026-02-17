@@ -1,4 +1,5 @@
 import json
+import logging
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -22,6 +23,8 @@ from wine_cellar.apps.storage.forms import (
 from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.models import Wine
+
+logger = logging.getLogger(__name__)
 
 
 def _is_whisky_mode():
@@ -93,6 +96,8 @@ class StorageCreateView(FormView):
             household=household, app_type=app_type
         ).count()
 
+        cell_mask = cleaned_data.get("cell_mask")
+
         Storage.objects.create(
             location=location,
             description=description,
@@ -105,6 +110,7 @@ class StorageCreateView(FormView):
             user=user,
             household=household,
             app_type=app_type,
+            cell_mask=cell_mask,
         )
 
 
@@ -118,6 +124,10 @@ class StorageUpdateView(FormView):
         household = get_active_household(self.request.user)
         storage = get_object_or_404(Storage, pk=self.kwargs["pk"], household=household)
         initial.update(model_to_dict(storage))
+        if storage.cell_mask is not None:
+            initial["cell_mask"] = json.dumps(storage.cell_mask)
+        else:
+            initial["cell_mask"] = ""
         return initial
 
     def form_valid(self, form):
@@ -136,6 +146,16 @@ class StorageUpdateView(FormView):
         columns = cleaned_data["columns"]
         is_cold = cleaned_data.get("is_cold", False)
         is_default = cleaned_data.get("is_default", False)
+        cell_mask = cleaned_data.get("cell_mask")
+
+        # Clip mask to new bounds if rows/columns changed
+        if cell_mask is not None and rows and columns:
+            cell_mask = [
+                [r, c] for r, c in cell_mask if 1 <= r <= rows and 1 <= c <= columns
+            ]
+            # If all cells are active, set mask to null
+            if len(cell_mask) == rows * columns:
+                cell_mask = None
 
         storage.location = location
         storage.description = description
@@ -144,6 +164,7 @@ class StorageUpdateView(FormView):
         storage.columns = columns
         storage.is_cold = is_cold
         storage.is_default = is_default
+        storage.cell_mask = cell_mask
         storage.user = user
         storage.save()
 
@@ -504,6 +525,7 @@ def storage_grid_data(request):
                 "name": storage.name,
                 "rows": storage.rows,
                 "columns": storage.columns,
+                "cell_mask": storage.cell_mask,
                 "items": items,
             }
         )
@@ -556,6 +578,8 @@ def move_bottle(request):
             return JsonResponse({"error": "Invalid row"}, status=400)
         if target_column < 1 or target_column > target_storage.columns:
             return JsonResponse({"error": "Invalid column"}, status=400)
+        if not target_storage.is_cell_active(target_row, target_column):
+            return JsonResponse({"error": "Target cell is not active"}, status=400)
 
         # Check if target position is occupied
         if target_storage.is_slot_occupied(target_row, target_column):
@@ -585,8 +609,9 @@ def move_bottle(request):
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+    except Exception:
+        logger.exception("Error moving bottle")
+        return JsonResponse({"error": "Unable to move bottle"}, status=500)
 
 
 @login_required

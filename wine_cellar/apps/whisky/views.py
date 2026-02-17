@@ -1,4 +1,5 @@
 import base64
+import logging
 from decimal import Decimal
 from io import BytesIO
 
@@ -59,6 +60,8 @@ from wine_cellar.apps.whisky.models import (
 
 # Maximum allowed image upload size (10MB)
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
+
+logger = logging.getLogger(__name__)
 
 
 def base64_to_uploaded_file(base64_data: str, filename: str) -> InMemoryUploadedFile:
@@ -267,15 +270,12 @@ class WhiskyCreateView(FormView):
                 }
                 extraction_result = self.request.session["extraction_result"]
 
-            except Exception as e:
-                import logging
-
-                logger = logging.getLogger(__name__)
+            except Exception:
                 logger.exception("Error extracting whisky data from scanned label")
                 self.request.session["extraction_result"] = {
                     "confidence": "low",
                     "extracted_fields": [],
-                    "errors": [f"Extraction failed: {str(e)}"],
+                    "errors": ["Extraction failed"],
                     "scanned_image": scanned_label.get("data"),
                     "extracted_data": {},
                 }
@@ -860,6 +860,7 @@ class WhiskyMapView(TemplateView):
         )
 
         context["distilleries_json"] = distilleries_json
+        context["map_base_url"] = settings.MAP_BASEURL
         return context
 
 
@@ -1048,12 +1049,9 @@ def extract_whisky_vision_ajax(request):
 
         return JsonResponse(response_data)
 
-    except Exception as e:
-        import logging
-
-        logger = logging.getLogger(__name__)
+    except Exception:
         logger.exception("Error in whisky AJAX vision extraction")
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({"error": "Vision extraction failed"}, status=500)
 
 
 @ratelimit(key="user", rate="30/m", method="POST", block=True)
@@ -1109,12 +1107,9 @@ def scan_barcode_ajax(request):
             }
         )
 
-    except Exception as e:
-        import logging
-
-        logger = logging.getLogger(__name__)
+    except Exception:
         logger.exception("Error in whisky barcode scanning")
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({"error": "Barcode scanning failed"}, status=500)
 
 
 class DrinkRecordCreateView(FormView):
@@ -1756,12 +1751,14 @@ class StorageItemUpdateView(FormView):
         context["storage_item"] = item
         context["whisky"] = item.whisky
 
-        # Provide free cells for storage dropdown
+        # Provide free cells for storage dropdown - exclude current item so its
+        # position shows as available
         user_storages = Storage.objects.filter(
             household=household, app_type=get_app_type()
         )
         free_cells_by_storage = {
-            storage.pk: storage.get_free_cells_by_row() for storage in user_storages
+            storage.pk: storage.get_free_cells_by_row(exclude_item=item)
+            for storage in user_storages
         }
         context["free_cells_by_storage"] = free_cells_by_storage
         return context
@@ -1973,11 +1970,10 @@ def crop_whisky_image(request, pk):
                 "thumbnail_url": whisky_image.thumbnail.url,
             }
         )
-    except (json.JSONDecodeError, ValueError) as e:
-        return JsonResponse({"error": str(e)}, status=400)
-    except Exception as e:
-        import logging
-
-        logger = logging.getLogger(__name__)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except ValueError:
+        return JsonResponse({"error": "Invalid crop parameters"}, status=400)
+    except Exception:
         logger.exception("Error cropping image")
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({"error": "Unable to crop image"}, status=500)
