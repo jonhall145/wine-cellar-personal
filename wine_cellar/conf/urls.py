@@ -5,6 +5,7 @@ The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.0/topics/http/urls/
 """
 
+import logging
 import os
 from email.utils import formatdate, parsedate_to_datetime
 
@@ -31,7 +32,11 @@ from wine_cellar.apps.storage.views import (
 )
 from wine_cellar.apps.user.views import UserSettingsView
 
+logger = logging.getLogger(__name__)
+
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".svg"}
+# Health check disk space threshold in GB
+CRITICAL_DISK_SPACE_GB = 0.1
 
 
 @login_not_required
@@ -98,11 +103,11 @@ def health_check(request):
         media_root = getattr(settings, "MEDIA_ROOT", "/tmp")
         disk_usage = shutil.disk_usage(media_root)
         free_gb = disk_usage.free / (1024**3)
-        if free_gb < 0.1:
+        if free_gb < CRITICAL_DISK_SPACE_GB:
             status_code = 503
     except Exception:
-        # Disk check failure shouldn't fail health check
-        pass
+        # Disk check failure shouldn't fail health check, but log it
+        logger.exception("Disk check failed in health_check endpoint")
 
     # Return minimal response - rely primarily on HTTP status code
     response_data = {"status": "ok" if status_code == 200 else "unhealthy"}
