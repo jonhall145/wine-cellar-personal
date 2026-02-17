@@ -67,6 +67,7 @@ def serve_media(request, path):
     return response
 
 
+@login_not_required
 def health_check(request):
     """Health check endpoint for container orchestration and monitoring."""
     import shutil
