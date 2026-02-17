@@ -90,7 +90,7 @@ A test user exists for UI testing:
 ### Technology Stack
 
 **Backend:**
-- Django 5.2.9 with Python 3.11+
+- Django 5.2.9 with Python 3.12+
 - PostgreSQL 16 (production) / SQLite (development)
 - Celery 5.6.0 with django-celery-beat for background tasks
 

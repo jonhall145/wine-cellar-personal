@@ -74,7 +74,7 @@ python manage.py createsuperuser
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.12+
 - Node.js 20+
 - Domain name (optional, for HTTPS)
 - PostgreSQL (recommended) or SQLite

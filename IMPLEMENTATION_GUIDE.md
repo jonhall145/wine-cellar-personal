@@ -68,13 +68,13 @@ A self-hosted web application for managing a personal wine collection. Users can
 
 ### Hardware
 
-Any machine that can run Python 3.11+ and Node.js 20+. This project runs on everything from a Raspberry Pi 4 to a cloud VM. 2GB RAM minimum, 4GB recommended.
+Any machine that can run Python 3.12+ and Node.js 20+. This project runs on everything from a Raspberry Pi 4 to a cloud VM. 2GB RAM minimum, 4GB recommended.
 
 ### Software to Install
 
 | Software | Version | Purpose |
 |----------|---------|---------|
-| Python | 3.11+ | Backend runtime |
+| Python | 3.12+ | Backend runtime |
 | Node.js | 20+ | Frontend build toolchain |
 | npm | 10+ | JavaScript package manager |
 | Git | 2.x | Version control |
@@ -114,7 +114,7 @@ sudo apt install -y python3.11 python3.11-venv python3-pip \
 sudo apt install -y postgresql-16 redis-server libpq-dev
 
 # Verify versions
-python3 --version   # 3.11+
+python3 --version   # 3.12+
 node --version      # v20+
 npm --version       # 10+
 ```
@@ -1416,7 +1416,7 @@ POSTGRES_PASSWORD=django_dev_password
 
 **`Dockerfile`** -- multi-stage build:
 1. Stage 1 (Node 20-slim): Install npm deps, run `npm run build:prod`
-2. Stage 2 (Python 3.11-slim): Install system deps (libzbar0, libpq5, curl), install Python deps, copy code + built frontend, create non-root user
+2. Stage 2 (Python 3.12-slim): Install system deps (libzbar0, libpq5, curl), install Python deps, copy code + built frontend, create non-root user
 
 **`docker-entrypoint.sh`:**
 1. Wait for PostgreSQL to be ready

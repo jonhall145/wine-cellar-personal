@@ -28,7 +28,7 @@ Wine Cellar is a self-hosted wine management application built with Django and R
 
 ### Technology Stack
 
-- **Backend:** Django 5.2, Python 3.11+, PostgreSQL/SQLite
+- **Backend:** Django 5.2, Python 3.12+, PostgreSQL/SQLite
 - **Frontend:** React 19, TypeScript, Webpack
 - **Testing:** pytest, factory-boy, coverage
 - **Deployment:** Gunicorn, Whitenoise, optional Caddy/Nginx

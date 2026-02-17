@@ -22,7 +22,7 @@ RUN --mount=type=cache,target=/app/node_modules/.cache \
 # ============================================================
 # Stage 2: Python application
 # ============================================================
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -43,6 +43,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libpng16-16 \
     libwebp7 \
     curl \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
