@@ -73,42 +73,40 @@ def serve_media(request, path):
 @require_http_methods(["GET", "HEAD"])
 @cache_page(60)  # Cache for 60 seconds to reduce DB/disk I/O from health check polling
 def health_check(request):
-    """Health check endpoint for container orchestration and monitoring."""
+    """Health check endpoint for container orchestration and monitoring.
+
+    Returns minimal status to avoid information disclosure on this public
+    endpoint. Performs DB and disk checks internally but only returns
+    HTTP 200 (healthy) or 503 (unhealthy).
+    """
     import shutil
 
     from django.db import connections
     from django.http import JsonResponse
 
-    health = {
-        "status": "ok",
-        "database": "ok",
-        "disk": "ok",
-    }
     status_code = 200
 
+    # Check database connectivity
     try:
         for conn in connections.all():
             conn.ensure_connection()
     except Exception:
-        health["database"] = "unhealthy"
-        health["status"] = "unhealthy"
         status_code = 503
 
+    # Check disk space
     try:
         media_root = getattr(settings, "MEDIA_ROOT", "/tmp")
         disk_usage = shutil.disk_usage(media_root)
         free_gb = disk_usage.free / (1024**3)
-        health["disk_free_gb"] = round(free_gb, 2)
         if free_gb < 0.1:
-            health["disk"] = "critical"
-            health["status"] = "unhealthy"
             status_code = 503
-        elif free_gb < 1:
-            health["disk"] = "low"
     except Exception:
-        health["disk"] = "unknown"
+        # Disk check failure shouldn't fail health check
+        pass
 
-    return JsonResponse(health, status=status_code)
+    # Return minimal response - rely primarily on HTTP status code
+    response_data = {"status": "ok" if status_code == 200 else "unhealthy"}
+    return JsonResponse(response_data, status=status_code)
 
 
 urlpatterns = [
