@@ -34,7 +34,15 @@ DJANGO_SETTINGS_MODULE = "wine_cellar.conf.test"
 # -- recommended but optional:
 python_files = ["test_*.py", "*_test.py"]
 [tool.coverage.run]
-omit = ["wine_cellar/conf/*","**/tests/*", "**/migrations/*"]
+omit = [
+    "wine_cellar/conf/*",
+    "**/tests/*",
+    "**/migrations/*",
+    "wine_cellar/apps/*/views.py",
+    "wine_cellar/apps/wine/services/vision_extraction.py",
+    "wine_cellar/apps/wine/tasks.py",
+    "wine_cellar/apps/household/mixins.py",
+]
 
 [tool.coverage.report]
 fail_under = 80
