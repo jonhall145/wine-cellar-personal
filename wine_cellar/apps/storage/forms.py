@@ -93,11 +93,17 @@ class StorageForm(forms.Form):
         # Validate that all coordinates fall within the provided rows/columns.
         rows = self.cleaned_data.get("rows")
         columns = self.cleaned_data.get("columns")
-        if not rows or not columns:
+        # Distinguish "not provided" (None) from a provided value of 0.
+        if rows is None or columns is None:
             raise forms.ValidationError(
                 _(
                     "Rows and columns must be specified when providing a cell mask."
                 )
+            )
+        # When a cell mask is provided, require at least one row and one column.
+        if rows < 1 or columns < 1:
+            raise forms.ValidationError(
+                _("Rows and columns must be at least 1 when providing a cell mask.")
             )
 
         for row, column in mask:
