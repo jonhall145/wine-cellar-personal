@@ -382,7 +382,7 @@ const initScanner = () => {
         // @ts-ignore
         locateFile: (path, prefix) => {
           if (path.endsWith('.wasm')) {
-            return container.dataset.zxing_wasm_url
+            return container.dataset['zxing-wasm-url']
           }
           return prefix + path
         },
