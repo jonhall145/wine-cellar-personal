@@ -33,11 +33,11 @@ def wine_to_json(wine: Wine):
 @register.simple_tag()
 def react_map(wines):
     map_settings = {
-        "attribution": '<a href="https://openfreemap.org" target="_blank">'
+        "attribution": '<a href="https://openfreemap.org" target="_blank" rel="noopener noreferrer">'
         + 'OpenFreeMap</a> <a href="https://www.openmaptiles.org/" '
-        + 'target="_blank">© OpenMapTiles</a> Data from '
+        + 'target="_blank" rel="noopener noreferrer">© OpenMapTiles</a> Data from '
         + '<a href="https://www.openstreetmap.org/copyright" '
-        + 'target="_blank">OpenStreetMap</a>',
+        + 'target="_blank" rel="noopener noreferrer">OpenStreetMap</a>',
         "baseUrl": settings.MAP_BASEURL,
     }
     # Get unique country codes from wines currently in stock
