@@ -139,7 +139,8 @@ function initMaskEditor(): void {
         cell.className = `mask-editor__cell${active ? ' mask-editor__cell--active' : ''}`;
         cell.dataset.row = String(r);
         cell.dataset.col = String(c);
-        cell.title = gettext('Row') + ` ${r}, ` + gettext('Col') + ` ${c}`;
+        const titleTemplate = gettext('Row %s, Col %s');
+        cell.title = titleTemplate.replace('%s', String(r)).replace('%s', String(c));
 
         cell.addEventListener('click', () => {
           if (state.activeCells.has(key)) {
