@@ -32,7 +32,7 @@ from wine_cellar.apps.storage.views import (
 )
 from wine_cellar.apps.user.views import UserSettingsView
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("wine_cellar.health_check")
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".svg"}
 # Health check disk space threshold in GB
