@@ -13,6 +13,8 @@ from django.contrib import admin
 from django.contrib.auth.decorators import login_not_required
 from django.http import HttpResponseNotModified
 from django.urls import include, path, re_path
+from django.views.decorators.cache import cache_page
+from django.views.decorators.http import require_http_methods
 from django.views.i18n import JavaScriptCatalog
 from django.views.static import serve
 
@@ -68,6 +70,8 @@ def serve_media(request, path):
 
 
 @login_not_required
+@require_http_methods(["GET", "HEAD"])
+@cache_page(60)  # Cache for 60 seconds to reduce DB/disk I/O from health check polling
 def health_check(request):
     """Health check endpoint for container orchestration and monitoring."""
     import shutil
