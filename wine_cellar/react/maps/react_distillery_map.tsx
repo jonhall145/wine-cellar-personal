@@ -118,7 +118,7 @@ const DistilleryMap: React.FC<{ distilleries: DistilleryData[], baseUrl: string 
         )
     })
 
-    const mapAttribution = '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> <a href="https://www.openmaptiles.org/" target="_blank">\u00a9 OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
+    const mapAttribution = '<a href="https://openfreemap.org" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener noreferrer">\u00a9 OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>'
 
     // Fit map to actual distillery locations
     const boundsProps: Record<string, unknown> = {}
