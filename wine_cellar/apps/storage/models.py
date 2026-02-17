@@ -51,7 +51,7 @@ class Storage(UserContentModel):
         """Check if a cell is active. Returns True if no mask (all cells active)."""
         if self.cell_mask is None:
             return True
-        return [row, column] in self.cell_mask
+        return (row, column) in self._active_cells_set
 
     @property
     def _active_cells_set(self):
