@@ -85,6 +85,37 @@ class StorageForm(forms.Form):
                 raise forms.ValidationError(
                     _("Each cell in mask must be a [row, column] pair.")
                 )
+
+        # Treat an empty list as no mask, instead of a mask with zero usable slots.
+        if not mask:
+            return None
+
+        # Validate that all coordinates fall within the provided rows/columns.
+        rows = self.cleaned_data.get("rows")
+        columns = self.cleaned_data.get("columns")
+        # Distinguish "not provided" (None) from a provided value of 0.
+        if rows is None or columns is None:
+            raise forms.ValidationError(
+                _(
+                    "Rows and columns must be specified when providing a cell mask."
+                )
+            )
+        # When a cell mask is provided, require at least one row and one column.
+        if rows < 1 or columns < 1:
+            raise forms.ValidationError(
+                _("Rows and columns must be at least 1 when providing a cell mask.")
+            )
+
+        for row, column in mask:
+            # Coordinates are 1-based: require them to be within [1, rows] and [1, columns].
+            if row < 1 or column < 1 or row > rows or column > columns:
+                raise forms.ValidationError(
+                    _(
+                        "Cell mask contains an out-of-bounds coordinate: "
+                        "[row: %(row)s, column: %(column)s]."
+                    ),
+                    params={"row": row, "column": column},
+                )
         return mask
 
 

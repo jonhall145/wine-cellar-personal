@@ -109,9 +109,9 @@ const Scanner = () => {
 
   // Read URLs from data attributes (set by Django template)
   const container = document.getElementById('scanner')
-  const scanUrlTemplate = container?.dataset.scan_url || '/wine/scan/__CODE__/'
-  const scanBarcodeUrl = container?.dataset.scan_barcode_url || '/wine/scan-barcode/'
-  const labelScanUrl = container?.dataset.label_scan_url || '/label-scan/'
+  const scanUrlTemplate = container?.dataset['scan-url'] || '/wine/scan/__CODE__/'
+  const scanBarcodeUrl = container?.dataset['scan-barcode-url'] || '/wine/scan-barcode/'
+  const labelScanUrl = container?.dataset['label-scan-url'] || '/label-scan/'
 
   useEffect(() => {
     // Check if we're on HTTPS or localhost
@@ -382,7 +382,7 @@ const initScanner = () => {
         // @ts-ignore
         locateFile: (path, prefix) => {
           if (path.endsWith('.wasm')) {
-            return container.dataset.zxing_wasm_url
+            return container.dataset['zxing-wasm-url']
           }
           return prefix + path
         },

@@ -43,7 +43,7 @@ class Storage(UserContentModel):
 
     def _get_items(self):
         """Get the related items queryset based on app type."""
-        if getattr(settings, "CELLAR_APP_TYPE", "wine") == "whisky":
+        if self.app_type == "whisky":
             return self.whisky_items
         return self.items
 

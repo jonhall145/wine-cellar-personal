@@ -93,7 +93,7 @@ function initMaskEditor(): void {
 
     const label = document.createElement('span');
     label.className = 'mask-editor__label';
-    label.textContent = 'Cell Layout';
+    label.textContent = gettext('Cell Layout');
     header.appendChild(label);
 
     const btnGroup = document.createElement('div');
@@ -102,7 +102,7 @@ function initMaskEditor(): void {
     const selectAllBtn = document.createElement('button');
     selectAllBtn.type = 'button';
     selectAllBtn.className = 'mask-editor__btn';
-    selectAllBtn.textContent = 'Select All';
+    selectAllBtn.textContent = gettext('Select All');
     selectAllBtn.addEventListener('click', () => {
       initAllActive(state);
       serializeMask();
@@ -112,7 +112,7 @@ function initMaskEditor(): void {
     const clearAllBtn = document.createElement('button');
     clearAllBtn.type = 'button';
     clearAllBtn.className = 'mask-editor__btn';
-    clearAllBtn.textContent = 'Clear All';
+    clearAllBtn.textContent = gettext('Clear All');
     clearAllBtn.addEventListener('click', () => {
       state.activeCells.clear();
       serializeMask();
@@ -139,7 +139,8 @@ function initMaskEditor(): void {
         cell.className = `mask-editor__cell${active ? ' mask-editor__cell--active' : ''}`;
         cell.dataset.row = String(r);
         cell.dataset.col = String(c);
-        cell.title = `Row ${r}, Col ${c}`;
+        const titleTemplate = gettext('Row %s, Col %s');
+        cell.title = titleTemplate.replace('%s', String(r)).replace('%s', String(c));
 
         cell.addEventListener('click', () => {
           if (state.activeCells.has(key)) {
@@ -161,7 +162,7 @@ function initMaskEditor(): void {
 
     const hint = document.createElement('div');
     hint.className = 'mask-editor__hint';
-    hint.textContent = 'Click cells to toggle active/inactive. Inactive cells cannot hold bottles.';
+    hint.textContent = gettext('Click cells to toggle active/inactive. Inactive cells cannot hold bottles.');
     wrapper.appendChild(hint);
 
     container!.appendChild(wrapper);
