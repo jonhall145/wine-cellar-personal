@@ -1,6 +1,8 @@
 name: Django CI
 
 on:
+  pull_request:
+    branches: [ main ]
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
@@ -11,7 +13,7 @@ permissions:
 
 jobs:
   precheck:
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     outputs:
       should_run: ${{ steps.should_run.outputs.should_run }}
@@ -21,6 +23,10 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
+            if (context.eventName === 'pull_request') {
+              core.setOutput('should_run', 'true');
+              return;
+            }
             const { owner, repo } = context.repo;
             const runs = await github.rest.actions.listWorkflowRuns({
               owner,
