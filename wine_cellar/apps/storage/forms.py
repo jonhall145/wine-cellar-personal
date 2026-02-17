@@ -96,9 +96,7 @@ class StorageForm(forms.Form):
         # Distinguish "not provided" (None) from a provided value of 0.
         if rows is None or columns is None:
             raise forms.ValidationError(
-                _(
-                    "Rows and columns must be specified when providing a cell mask."
-                )
+                _("Rows and columns must be specified when providing a cell mask.")
             )
         # When a cell mask is provided, require at least one row and one column.
         if rows < 1 or columns < 1:
@@ -107,7 +105,7 @@ class StorageForm(forms.Form):
             )
 
         for row, column in mask:
-            # Coordinates are 1-based: require them to be within [1, rows] and [1, columns].
+            # Coordinates are 1-based and must be within [1, rows] and [1, columns].
             if row < 1 or column < 1 or row > rows or column > columns:
                 raise forms.ValidationError(
                     _(

@@ -10,6 +10,11 @@ from wine_cellar.apps.hardware.tests.factories import (
     HardwareDeviceFactory,
     OfflineOperationFactory,
 )
+from wine_cellar.apps.household.tests.factories import (
+    HouseholdFactory,
+    HouseholdMembershipFactory,
+    HouseholdSettingsFactory,
+)
 from wine_cellar.apps.storage.tests.factories import StorageFactory, StorageItemFactory
 from wine_cellar.apps.user.tests.factories import UserFactory
 from wine_cellar.apps.wine.tests.factories import (
@@ -30,6 +35,9 @@ if os.environ.get("CELLAR_APP_TYPE") != "whisky":
     collect_ignore_glob.append("whisky/*")
 
 register(UserFactory)
+register(HouseholdFactory)
+register(HouseholdMembershipFactory)
+register(HouseholdSettingsFactory)
 register(WineFactory)
 register(WineBarcodeFactory)
 register(GrapeFactory)

@@ -78,7 +78,7 @@ def check_sale_alerts():
 
         # Get wines with recent price entries
         last_notified = alert.last_notified or timezone.datetime.min.replace(
-            tzinfo=timezone.utc
+            tzinfo=timezone.UTC
         )
         wines_with_prices = (
             price_query.values("wine", "source")
