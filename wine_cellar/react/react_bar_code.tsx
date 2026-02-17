@@ -107,6 +107,12 @@ const Scanner = () => {
   const hasDetectedRef = useRef(false)
   const defaultFormats = ['ean_13', 'ean_8', 'upc_a', 'code_39', 'itf']
 
+  // Read URLs from data attributes (set by Django template)
+  const container = document.getElementById('scanner')
+  const scanUrlTemplate = container?.dataset['scan-url'] || '/wine/scan/__CODE__/'
+  const scanBarcodeUrl = container?.dataset['scan-barcode-url'] || '/wine/scan-barcode/'
+  const labelScanUrl = container?.dataset['label-scan-url'] || '/label-scan/'
+
   useEffect(() => {
     // Check if we're on HTTPS or localhost
     const isSecureContext = window.isSecureContext
@@ -155,7 +161,7 @@ const Scanner = () => {
     }
     // Brief delay to show success animation
     setTimeout(() => {
-      window.location.href = '/wine/scan/' + barcodes[0].rawValue
+      window.location.href = scanUrlTemplate.replace('__CODE__', barcodes[0].rawValue)
     }, 300)
   }
 
@@ -228,7 +234,7 @@ const Scanner = () => {
         || ''
 
       // Send multiple images to server for analysis
-      const response = await fetch('/wine/scan-barcode/', {
+      const response = await fetch(scanBarcodeUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -249,7 +255,7 @@ const Scanner = () => {
           navigator.vibrate(200)
         }
         setTimeout(() => {
-          window.location.href = '/wine/scan/' + result.barcode
+          window.location.href = scanUrlTemplate.replace('__CODE__', result.barcode)
         }, 300)
       } else {
         setAnalyzeError(translated.noBarcodeFound)
@@ -352,7 +358,7 @@ const Scanner = () => {
           Captures current camera frame and analyzes it for barcodes
         </span>
         <a
-          href="/label-scan/"
+          href={labelScanUrl}
           className="pure-button button__secondary"
           style={{ width: '100%', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
         >
@@ -376,7 +382,7 @@ const initScanner = () => {
         // @ts-ignore
         locateFile: (path, prefix) => {
           if (path.endsWith('.wasm')) {
-            return container.dataset.zxing_wasm_url
+            return container.dataset['zxing-wasm-url']
           }
           return prefix + path
         },

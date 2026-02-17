@@ -11,7 +11,7 @@ export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
 #   ./backup_to_r2.sh docker       # Force Docker PostgreSQL backup
 #
 # Cron (Docker prod):
-#   0 3 * * * /root/wine-cellar-personal/backup_to_r2.sh docker >> /var/log/wine_backup.log 2>&1
+#   0 3 * * * /root/wine-cellar-personal/backup_to_r2.sh docker >> /mnt/usb/logs/wine_backup.log 2>&1
 
 PROJECT_DIR="/root/wine-cellar-personal"
 COMPOSE_FILE="docker-compose.prod.yml"
@@ -85,7 +85,7 @@ fi
 if [ "$MODE" = "docker" ]; then
     # Extract media from Docker volume
     echo "  Backing up media files from Docker volume..."
-    CONTAINER=$(docker compose -f "${PROJECT_DIR}/${COMPOSE_FILE}" ps -q web 2>/dev/null | head -1)
+    CONTAINER=$(docker compose -f "${PROJECT_DIR}/${COMPOSE_FILE}" ps -q wine-web 2>/dev/null | head -1)
     if [ -n "$CONTAINER" ]; then
         docker cp "${CONTAINER}:/app/media" "${TMP_DIR}/media" 2>/dev/null || true
         if [ -d "${TMP_DIR}/media" ] && [ "$(ls -A "${TMP_DIR}/media" 2>/dev/null)" ]; then
@@ -109,6 +109,23 @@ if [ -f "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" ]; then
     aws s3 cp "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" \
         "s3://${BUCKET}/media/media_${TIMESTAMP}.tar.gz" \
         --endpoint-url "$R2_ENDPOINT" --profile "$AWS_PROFILE"
+fi
+
+# ─── Local USB backup copy ───────────────────────────────────────────
+
+USB_BACKUP_DIR="/mnt/usb/backups"
+if mountpoint -q /mnt/usb 2>/dev/null; then
+    echo "  Saving local copy to USB..."
+    mkdir -p "${USB_BACKUP_DIR}/db" "${USB_BACKUP_DIR}/media"
+    cp "$DB_BACKUP" "${USB_BACKUP_DIR}/db/"
+    if [ -f "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" ]; then
+        cp "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" "${USB_BACKUP_DIR}/media/"
+    fi
+
+    # Prune local USB backups older than 7 days
+    find "${USB_BACKUP_DIR}" -type f -mtime +7 -delete 2>/dev/null || true
+else
+    echo "  Warning: USB not mounted, skipping local backup copy"
 fi
 
 # ─── Prune old backups ───────────────────────────────────────────────

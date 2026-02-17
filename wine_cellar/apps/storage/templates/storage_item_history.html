@@ -10,7 +10,7 @@
                 {% if storage_items %}
                     <table class="storage-list__table">
                         <tr>
-                            <th>{% translate "Wine" %}</th>
+                            <th>{% if CELLAR_APP_TYPE == "whisky" %}{% translate "Whisky" %}{% else %}{% translate "Wine" %}{% endif %}</th>
                             <th>{% translate "Location" %}</th>
                             <th>{% translate "Row" %}</th>
                             <th>{% translate "Cell" %}</th>
@@ -20,7 +20,11 @@
                         {% for item in storage_items %}
                             <tr>
                                 <td>
-                                    <a href="{% url 'wine-detail' item.wine.pk %}">{{ item.wine.name }}</a>
+                                    {% if CELLAR_APP_TYPE == "whisky" %}
+                                        <a href="{% url 'whisky-detail' item.whisky.pk %}">{{ item.whisky.name }}</a>
+                                    {% else %}
+                                        <a href="{% url 'wine-detail' item.wine.pk %}">{{ item.wine.name }}</a>
+                                    {% endif %}
                                 </td>
                                 <td>{{ item.storage.name }}</td>
                                 <td>{{ item.row|default_if_none:"" }}</td>
@@ -31,7 +35,7 @@
                     </table>
                     {% include "includes/pagination.html" %}
                 {% else %}
-                    <p>{% translate "No wines here yet." %}</p>
+                    <p>{% if CELLAR_APP_TYPE == "whisky" %}{% translate "No whiskies here yet." %}{% else %}{% translate "No wines here yet." %}{% endif %}</p>
                 {% endif %}
             </div>
         </div>

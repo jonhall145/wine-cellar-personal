@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load i18n %}
 
-{% block title %}{% translate "Page Not Found" %} - Wine Cellar{% endblock title %}
+{% block title %}{% translate "Page Not Found" %} - {{ APP_NAME }}{% endblock title %}
 
 {% block content %}
 <div class="error-page">
@@ -16,9 +16,15 @@
                 {% translate "Return to Homepage" %}
             </a>
             {% if user.is_authenticated %}
-            <a href="{% url 'wine-list' %}" class="button button--secondary">
-                {% translate "Browse Wines" %}
-            </a>
+                {% if CELLAR_APP_TYPE == 'whisky' %}
+                <a href="{% url 'whisky-list' %}" class="button button--secondary">
+                    {% translate "Browse Whiskies" %}
+                </a>
+                {% else %}
+                <a href="{% url 'wine-list' %}" class="button button--secondary">
+                    {% translate "Browse Wines" %}
+                </a>
+                {% endif %}
             {% endif %}
         </div>
     </div>

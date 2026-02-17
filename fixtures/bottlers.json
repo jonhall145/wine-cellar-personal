@@ -1,0 +1,218 @@
+[
+  {
+    "model": "whisky.bottler",
+    "pk": 1,
+    "fields": {
+      "name": "Gordon & MacPhail",
+      "short_name": "G&M",
+      "country": "GB",
+      "website": "https://www.gordonandmacphail.com",
+      "description": "Founded 1895 in Elgin. One of the most respected independent bottlers, renowned for exceptionally aged and rare expressions.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 2,
+    "fields": {
+      "name": "Signatory Vintage",
+      "short_name": "Signatory",
+      "country": "GB",
+      "website": "https://www.signatoryvintage.com",
+      "description": "Founded 1988. Independent bottler specializing in single cask, cask strength bottlings. Owns Edradour distillery.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 3,
+    "fields": {
+      "name": "Cadenhead's",
+      "short_name": "Cadenhead's",
+      "country": "GB",
+      "website": "https://www.wmcadenhead.com",
+      "description": "Scotland's oldest independent bottler, established 1842. Known for no-chill-filtered, natural colour bottlings.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 4,
+    "fields": {
+      "name": "Douglas Laing",
+      "short_name": "Douglas Laing",
+      "country": "GB",
+      "website": "https://www.douglaslaing.com",
+      "description": "Family-owned since 1948. Known for Old Particular, Provenance, and XOP ranges. Single cask specialists.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 5,
+    "fields": {
+      "name": "Berry Bros. & Rudd",
+      "short_name": "BBR",
+      "country": "GB",
+      "website": "https://www.bbr.com",
+      "description": "Britain's oldest wine and spirits merchant, established 1698. Known for Blue Hanger and Classic Range bottlings.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 6,
+    "fields": {
+      "name": "Compass Box",
+      "short_name": "Compass Box",
+      "country": "GB",
+      "website": "https://www.compassboxwhisky.com",
+      "description": "Founded 2000. Artisan whisky maker known for innovative blended malts and blends. Advocates for transparency.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 7,
+    "fields": {
+      "name": "Adelphi Distillery",
+      "short_name": "Adelphi",
+      "country": "GB",
+      "website": "https://www.adelphidistillery.com",
+      "description": "Re-established 1993. Selects exceptional single casks bottled at natural strength without chill-filtration.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 8,
+    "fields": {
+      "name": "Hunter Laing",
+      "short_name": "Hunter Laing",
+      "country": "GB",
+      "website": "https://www.hunterlaing.com",
+      "description": "Founded 2013 by the Laing family. Known for Old Malt Cask and Hepburn's Choice ranges.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 9,
+    "fields": {
+      "name": "Murray McDavid",
+      "short_name": "Murray McDavid",
+      "country": "GB",
+      "website": "https://www.murray-mcdavid.com",
+      "description": "Founded 1996. Pioneer of cask finishing techniques. Part of Aceo Ltd group.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 10,
+    "fields": {
+      "name": "The Scotch Malt Whisky Society",
+      "short_name": "SMWS",
+      "country": "GB",
+      "website": "https://smws.com",
+      "description": "Founded 1983. Members' club bottling single cask whiskies with cryptic tasting-note names instead of distillery names.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 11,
+    "fields": {
+      "name": "Duncan Taylor",
+      "short_name": "Duncan Taylor",
+      "country": "GB",
+      "website": "https://www.duncantaylor.com",
+      "description": "Founded 1938. Holds one of the largest inventories of rare Scotch casks. Known for Octave and Peerless ranges.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 12,
+    "fields": {
+      "name": "A.D. Rattray",
+      "short_name": "AD Rattray",
+      "country": "GB",
+      "website": "https://www.adrattray.com",
+      "description": "Re-established 2002, originally founded 1868. Cask Collection features single cask bottlings from across Scotland.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 13,
+    "fields": {
+      "name": "Blackadder International",
+      "short_name": "Blackadder",
+      "country": "GB",
+      "website": "https://www.blackadder.se",
+      "description": "Swedish-Scottish independent bottler. Known for Raw Cask series, bottled unfiltered with cask residue.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 14,
+    "fields": {
+      "name": "Ian Macleod Distillers",
+      "short_name": "Ian Macleod",
+      "country": "GB",
+      "website": "https://www.ianmacleod.com",
+      "description": "Family-owned since 1933. Owns Glengoyne and Tamdhu distilleries. Known for Chieftain's and Dun Bheagan ranges.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 15,
+    "fields": {
+      "name": "Wemyss Malts",
+      "short_name": "Wemyss",
+      "country": "GB",
+      "website": "https://www.wemyssmalts.com",
+      "description": "Family-owned. Bottlings named by flavour rather than distillery. Owns Kingsbarns and Darnley's Gin distilleries.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 16,
+    "fields": {
+      "name": "Thompson Brothers",
+      "short_name": "Thompson Bros",
+      "country": "GB",
+      "website": "https://www.thompsonbros.co.uk",
+      "description": "Young independent bottlers known for excellent cask selections. Also own Dornoch Distillery.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 17,
+    "fields": {
+      "name": "Elixir Distillers",
+      "short_name": "Elixir",
+      "country": "GB",
+      "website": "https://www.elixirdistillers.com",
+      "description": "Founded by Sukhinder and Rajbir Singh. Known for The Single Malts of Scotland and Elements of Islay ranges.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.bottler",
+    "pk": 18,
+    "fields": {
+      "name": "That Boutique-y Whisky Company",
+      "short_name": "Boutique-y",
+      "country": "GB",
+      "website": "https://www.thatboutiqueywhiskycompany.com",
+      "description": "Part of Atom Group. Known for distinctive comic-book label art and creative small batch bottlings.",
+      "is_user_created": false
+    }
+  }
+]

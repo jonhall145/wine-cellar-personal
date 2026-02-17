@@ -104,6 +104,7 @@
 .storage-grid__header {
   display: flex;
   align-items: center;
+  gap: var(--spacing-xs);
   margin-bottom: var(--spacing-xs);
 }
 
@@ -571,6 +572,112 @@
   transform: scale(1.1);
   z-index: 1000;
   opacity: 0.95;
+}
+
+/* Inactive cells (masked out) */
+.storage-grid__cell--inactive {
+  background-color: transparent;
+  border: 2px dashed var(--gray-300);
+  opacity: 0.3;
+  cursor: default;
+}
+
+.storage-grid__cell--inactive:hover {
+  background-color: transparent;
+  border-color: var(--gray-300);
+  transform: none;
+}
+
+[data-theme="dark"] .storage-grid__cell--inactive {
+  border-color: var(--gray-200);
+  opacity: 0.25;
+}
+
+/* Mask Editor (storage create/edit forms) */
+.mask-editor {
+  margin: var(--spacing-md) 0;
+}
+
+.mask-editor__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-sm);
+}
+
+.mask-editor__label {
+  font-weight: 600;
+  font-size: var(--font-sm);
+  color: var(--gray-700);
+}
+
+.mask-editor__buttons {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.mask-editor__btn {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--gray-400);
+  background: var(--white);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-size: var(--font-xs);
+}
+
+.mask-editor__btn:hover {
+  background: var(--gray-200);
+}
+
+.mask-editor__grid-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mask-editor__grid {
+  display: grid;
+  gap: 2px;
+  width: fit-content;
+}
+
+.mask-editor__cell {
+  width: 30px;
+  height: 30px;
+  border: 2px dashed var(--gray-300);
+  border-radius: 3px;
+  cursor: pointer;
+  background-color: transparent;
+  transition: all var(--transition-fast);
+}
+
+.mask-editor__cell:hover {
+  border-color: var(--gray-500);
+}
+
+.mask-editor__cell--active {
+  background-color: var(--wine-red, #722f37);
+  border: 2px solid var(--wine-red-dark, #5a252c);
+}
+
+.mask-editor__cell--active:hover {
+  opacity: 0.8;
+}
+
+.mask-editor__hint {
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-xs);
+  color: var(--gray-600);
+}
+
+[data-theme="dark"] .mask-editor__btn {
+  background: var(--gray-50);
+  border-color: var(--gray-300);
+  color: var(--text-color-light);
+}
+
+[data-theme="dark"] .mask-editor__btn:hover {
+  background: var(--gray-200);
 }
 
 /* Touch feedback for mobile */

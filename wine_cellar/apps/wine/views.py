@@ -20,7 +20,7 @@ from django.views.generic import DeleteView, DetailView, FormView, TemplateView
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
-from wine_cellar.apps.storage.models import Storage, StorageItem
+from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 from wine_cellar.apps.wine.filters import WineFilter
 from wine_cellar.apps.wine.forms import WineEditForm, WineForm, image_fields_map
@@ -276,16 +276,13 @@ class WineCreateView(FormView):
                 # Update local variable for use below
                 extraction_result = self.request.session["extraction_result"]
 
-            except Exception as e:
+            except Exception:
                 # Log error but don't break the page
-                import logging
-
-                logger = logging.getLogger(__name__)
                 logger.exception("Error extracting wine data from scanned label")
                 self.request.session["extraction_result"] = {
                     "confidence": "low",
                     "extracted_fields": [],
-                    "errors": [f"Extraction failed: {str(e)}"],
+                    "errors": ["Extraction failed"],
                     "scanned_image": scanned_label.get("data"),
                     "extracted_data": {},
                 }
@@ -345,7 +342,9 @@ class WineCreateView(FormView):
         context = super().get_context_data(**kwargs)
         # Provide free cells for storage dropdown (for stock_add.js)
         household = get_active_household(self.request.user)
-        user_storages = Storage.objects.filter(household=household)
+        user_storages = Storage.objects.filter(
+            household=household, app_type=get_app_type()
+        )
         free_cells_by_storage = {
             storage.pk: storage.get_free_cells_by_row() for storage in user_storages
         }
@@ -1748,12 +1747,9 @@ def extract_wine_vision_ajax(request):
 
         return JsonResponse(response_data)
 
-    except Exception as e:
-        import logging
-
-        logger = logging.getLogger(__name__)
+    except Exception:
         logger.exception("Error in AJAX vision extraction")
-        return JsonResponse({"error": str(e)}, status=500)
+        return JsonResponse({"error": "Vision extraction failed"}, status=500)
 
 
 @ratelimit(key="user", rate="30/m", method="POST", block=True)
@@ -1820,7 +1816,7 @@ def scan_barcode_ajax(request):
                 }
             )
 
-    except Exception as e:
+    except Exception:
         logger.exception("Error in barcode scanning")
         return JsonResponse(
             {"error": "An internal error occurred while scanning the barcode."},
@@ -1892,10 +1888,10 @@ def crop_wine_image(request, pk):
                 "thumbnail_url": wine_image.thumbnail.url,
             }
         )
-    except (json.JSONDecodeError, ValueError) as e:
+    except (json.JSONDecodeError, ValueError):
         # Return a generic error message to avoid exposing internal details
         return JsonResponse({"error": "Invalid request data"}, status=400)
-    except Exception as e:
+    except Exception:
         logger.exception("Error cropping image")
         # Do not expose the raw exception message to the client
         return JsonResponse(

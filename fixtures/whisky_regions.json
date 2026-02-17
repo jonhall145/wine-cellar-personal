@@ -1,0 +1,80 @@
+[
+  {
+    "model": "whisky.whiskyregion",
+    "pk": 1,
+    "fields": {
+      "name": "Speyside",
+      "slug": "speyside",
+      "country": "GB",
+      "latitude": 57.4833,
+      "longitude": -3.2167,
+      "description": "The heart of Scotch whisky production with over 50 distilleries, known for elegant, fruity, and complex single malts.",
+      "order": 1
+    }
+  },
+  {
+    "model": "whisky.whiskyregion",
+    "pk": 2,
+    "fields": {
+      "name": "Highland",
+      "slug": "highland",
+      "country": "GB",
+      "latitude": 57.3,
+      "longitude": -4.5,
+      "description": "The largest whisky-producing region, offering diverse styles from light and floral to rich and full-bodied.",
+      "order": 2
+    }
+  },
+  {
+    "model": "whisky.whiskyregion",
+    "pk": 3,
+    "fields": {
+      "name": "Islay",
+      "slug": "islay",
+      "country": "GB",
+      "latitude": 55.75,
+      "longitude": -6.2,
+      "description": "Famous for heavily peated, smoky whiskies with maritime character. Home to nine active distilleries.",
+      "order": 3
+    }
+  },
+  {
+    "model": "whisky.whiskyregion",
+    "pk": 4,
+    "fields": {
+      "name": "Lowland",
+      "slug": "lowland",
+      "country": "GB",
+      "latitude": 55.8,
+      "longitude": -3.8,
+      "description": "Known for lighter, gentler whiskies with grassy, floral, and citrus notes. Triple distillation is common.",
+      "order": 4
+    }
+  },
+  {
+    "model": "whisky.whiskyregion",
+    "pk": 5,
+    "fields": {
+      "name": "Campbeltown",
+      "slug": "campbeltown",
+      "country": "GB",
+      "latitude": 55.4272,
+      "longitude": -5.6039,
+      "description": "Once the whisky capital of the world with over 30 distilleries, now home to three producing distinctive, briny whiskies.",
+      "order": 5
+    }
+  },
+  {
+    "model": "whisky.whiskyregion",
+    "pk": 6,
+    "fields": {
+      "name": "Islands",
+      "slug": "islands",
+      "country": "GB",
+      "latitude": 57.0,
+      "longitude": -6.5,
+      "description": "Diverse region including Skye, Mull, Jura, Arran, and Orkney. Styles range from maritime and smoky to light and honeyed.",
+      "order": 6
+    }
+  }
+]

@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% load static i18n storage_tags %}
+{% block extra_js %}
+    {{ block.super }}
+    <script src="{% static 'tom_select.js' %}" type="module" defer></script>
+    <script src="{% static 'image_preview.js' %}" type="module" defer></script>
+    <script src="{% static 'stock_add.js' %}" defer></script>
+    <script src="{% static 'whisky_vision_extraction.js' %}" defer></script>
+{% endblock extra_js %}
+{% block extra_head %}
+    {{ block.super }}
+    {% if scanned_image %}
+        {% include 'extraction_badges.html' %}
+    {% endif %}
+{% endblock extra_head %}
+{% block title %}
+    {% translate "Add Whisky" %}
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">{% translate "Add Whisky" %}</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1 pure-u-lg-1-2 m-auto">
+            <!-- Quick Add Section - Image-based methods at top -->
+            {% if not scanned_image %}
+            <div class="quick-add-section">
+                <div class="card quick-add-card">
+                    <h2 class="card__title">
+                        <i class="fa-solid fa-bolt"></i> {% translate "Quick Add" %}
+                    </h2>
+                    <p class="form-hint mb-12">{% translate "Use your camera to scan the whisky label and barcode:" %}</p>
+                    <div class="quick-add-buttons">
+                        <a href="{% url 'whisky-scan' %}" class="pure-button button__primary quick-add-btn">
+                            <i class="fa-solid fa-camera"></i>
+                            {% translate "Scan Whisky" %}
+                        </a>
+                    </div>
+                    <div class="or-divider">
+                        <span>{% translate "or fill in the form manually" %}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if scanned_image %}
+                <div class="scanned-label-preview mb-12">
+                    <div class="pure-g">
+                        <div class="pure-u-1 pure-u-md-1-3">
+                            <img src="data:image/jpeg;base64,{{ scanned_image }}"
+                                 alt="{% translate 'Scanned whisky label' %}"
+                                 class="scanned-label-img"
+                                 width="200"
+                                 height="300">
+                        </div>
+                        <div class="pure-u-1 pure-u-md-2-3 extraction-info-container">
+                            <div class="extraction-info">
+                                <h3>
+                                    {% translate "Auto-filled from Label" %}
+                                    {% if confidence == 'high' %}
+                                        <span class="badge badge-success">{% translate "High Confidence" %}</span>
+                                    {% elif confidence == 'medium' %}
+                                        <span class="badge badge-warning">{% translate "Please Verify" %}</span>
+                                    {% else %}
+                                        <span class="badge badge-info">{% translate "Low Confidence" %}</span>
+                                    {% endif %}
+                                </h3>
+                                {% if extracted_fields %}
+                                    <p class="form-hint">
+                                        {% translate "Extracted fields:" %}
+                                        {% for field in extracted_fields %}{{ field }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                    </p>
+                                {% endif %}
+                                {% if extraction_result.errors %}
+                                    <p class="text--warning">
+                                        {% for error in extraction_result.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                                    </p>
+                                {% endif %}
+                                <a href="{% url 'whisky-scan' %}"
+                                   class="pure-button button__tertiary">
+                                    <i class="fa fa-camera"></i>
+                                    {% translate "Re-scan Label" %}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            {% storage_cells free_cells_by_storage %}
+            <form method="post"
+                  enctype="multipart/form-data"
+                  class="pure-form pure-form-stacked wine-form"
+                  data-loading
+                  novalidate>
+                {% csrf_token %}
+                <!-- Images section first for image-based entry -->
+                <fieldset>
+                    <legend>
+                        <h2 class="form-subhead text--gray">
+                            <i class="fa-solid fa-image text--primary"></i>
+                            {% translate "Images & Auto-fill" %}
+                        </h2>
+                    </legend>
+                    <div class="form-hint mb-12">
+                        {% translate "Upload images and click 'Auto-fill from Images' to extract whisky details using AI vision." %}
+                    </div>
+                    {% include 'forms/form_field.html' with field=form.image_front_label %}
+                    {% if scanned_front_image %}
+                    <div class="scanned-image-notice" id="scanned-front-notice">
+                        <div class="scanned-image-preview">
+                            <img src="data:image/jpeg;base64,{{ scanned_front_image }}"
+                                 alt="{% translate 'Scanned front label' %}"
+                                 class="scanned-preview-thumb"
+                                 width="60"
+                                 height="60">
+                            <div class="scanned-image-info">
+                                <span class="badge badge-info">
+                                    <i class="fa-solid fa-camera"></i>
+                                    {% translate "Using scanned image" %}
+                                </span>
+                                <button type="button" class="pure-button button__tertiary btn-sm clear-scanned-image" data-target="front">
+                                    <i class="fa-solid fa-times"></i> {% translate "Clear" %}
+                                </button>
+                            </div>
+                        </div>
+                        <input type="hidden" name="use_scanned_front" id="use_scanned_front" value="1">
+                    </div>
+                    {% endif %}
+
+                    {% include 'forms/form_field.html' with field=form.image_back_label %}
+                    {% if scanned_back_image %}
+                    <div class="scanned-image-notice" id="scanned-back-notice">
+                        <div class="scanned-image-preview">
+                            <img src="data:image/jpeg;base64,{{ scanned_back_image }}"
+                                 alt="{% translate 'Scanned back label' %}"
+                                 class="scanned-preview-thumb"
+                                 width="60"
+                                 height="60">
+                            <div class="scanned-image-info">
+                                <span class="badge badge-info">
+                                    <i class="fa-solid fa-camera"></i>
+                                    {% translate "Using scanned image" %}
+                                </span>
+                                <button type="button" class="pure-button button__tertiary btn-sm clear-scanned-image" data-target="back">
+                                    <i class="fa-solid fa-times"></i> {% translate "Clear" %}
+                                </button>
+                            </div>
+                        </div>
+                        <input type="hidden" name="use_scanned_back" id="use_scanned_back" value="1">
+                    </div>
+                    {% endif %}
+
+                    <div class="pure-controls pure-controls--spaced">
+                        <button type="button" name="extract_vision" class="pure-button button__secondary">
+                            <i class="fa fa-magic" aria-hidden="true"></i>
+                            {% translate "Auto-fill from Images" %}
+                        </button>
+                        <span class="form-hint form-hint--inline">
+                            {% translate "Extract whisky details from uploaded images" %}
+                        </span>
+                    </div>
+                </fieldset>
+                <fieldset>
+                    <legend>
+                        <h2 class="form-subhead text--gray">{% translate "Details" %}</h2>
+                    </legend>
+                    {% include 'forms/form_field.html' with field=form.name %}
+                    {% include 'forms/form_field.html' with field=form.whisky_type %}
+                    {% include 'forms/form_field.html' with field=form.distillery %}
+                    {% include 'forms/form_field.html' with field=form.region %}
+                    {% include 'forms/form_field.html' with field=form.country %}
+                    {% include 'forms/form_field.html' with field=form.size %}
+                </fieldset>
+                <fieldset>
+                    <legend>
+                        <h2 class="form-subhead text--gray">{% translate "Character" %}</h2>
+                    </legend>
+                    {% include 'forms/form_field.html' with field=form.age_statement %}
+                    {% include 'forms/form_field.html' with field=form.abv %}
+                    {% include 'forms/form_field.html' with field=form.peated_level %}
+                    {% include 'forms/form_field.html' with field=form.cask_type %}
+                    {% include 'forms/form_field.html' with field=form.vintage_year %}
+                    {% include 'forms/form_field.html' with field=form.bottled_year %}
+                    {% include 'forms/form_field.html' with field=form.color %}
+                </fieldset>
+                <fieldset>
+                    <legend>
+                        <h2 class="form-subhead text--gray">{% translate "Bottling" %}</h2>
+                    </legend>
+                    {% include 'forms/form_field.html' with field=form.bottler %}
+                    {% include 'forms/form_field.html' with field=form.bottler_series %}
+                    {% include 'forms/form_field.html' with field=form.cask_number %}
+                    {% include 'forms/form_field.html' with field=form.batch_number %}
+                    {% include 'forms/form_field.html' with field=form.bottle_number %}
+                    {% include 'forms/form_field.html' with field=form.limited_edition %}
+                </fieldset>
+                <fieldset>
+                    <legend>
+                        <h2 class="form-subhead text--gray">{% translate "Origin & Price" %}</h2>
+                    </legend>
+                    {% include 'forms/form_field.html' with field=form.source %}
+                    {% include 'forms/form_field.html' with field=form.price %}
+                    {% include 'forms/form_field.html' with field=form.rrp %}
+                    {% include 'forms/form_field.html' with field=form.barcode %}
+                </fieldset>
+                <fieldset>
+                    <legend>
+                        <h2 class="form-subhead text--gray">{% translate "Personal Notes" %}</h2>
+                    </legend>
+                    {% include 'forms/form_field.html' with field=form.rating %}
+                    {% include 'forms/form_field.html' with field=form.owner %}
+                    {% include 'forms/form_field.html' with field=form.comment %}
+                </fieldset>
+                <fieldset>
+                    <legend>
+                        <h2 class="form-subhead text--gray">{% translate "Add to Cellar" %} <span class="text--small">({% translate "optional" %})</span></h2>
+                    </legend>
+                    {% include 'forms/form_field.html' with field=form.storage %}
+                    {% include 'forms/form_field.html' with field=form.row %}
+                    <ul id="storage__error-full"
+                        class="form-errorlist hidden"
+                        aria-live="assertive"
+                        aria-atomic="true">
+                        <li>
+                            <span>{% translate "This row of the shelf is full. Please choose another one." %}</span>
+                        </li>
+                    </ul>
+                    {% include 'forms/form_field.html' with field=form.column %}
+                    {% include 'forms/form_field.html' with field=form.bottle_price %}
+                    {% include 'forms/form_field.html' with field=form.is_gift %}
+                    {% include 'forms/form_field.html' with field=form.gift_from %}
+                    {% include 'forms/form_field.html' with field=form.occasion %}
+                    {% include 'forms/form_field.html' with field=form.fill_level %}
+                </fieldset>
+                {{ form.form_step }}
+                <div class="pure-controls">
+                    <div class="pure-g">
+                        <div id="save_button_container" class="pure-u-1">
+                            <button type="submit"
+                                    name="save_finish"
+                                    class="pure-button button__primary">
+                                {% translate "Save Whisky" %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock content %}

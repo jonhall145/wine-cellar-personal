@@ -3,6 +3,7 @@
 {% block extra_js %}
     {{ block.super }}
     <script src="{% static 'tom_select.js' %}" type="module" defer></script>
+    <script src="{% static 'mask_editor.js' %}" defer></script>
 {% endblock extra_js %}
 {% block title %}
     {% translate "Edit Storage" %}
@@ -20,8 +21,13 @@
                 {% csrf_token %}
                 <fieldset>
                     {% for field in form %}
-                        {% include 'forms/form_field.html' %}
+                        {% if field.is_hidden %}
+                            {{ field }}
+                        {% else %}
+                            {% include 'forms/form_field.html' %}
+                        {% endif %}
                     {% endfor %}
+                    <div id="mask-editor-container"></div>
                     <div class="pure-controls">
                         <button type="submit" class="pure-button button__primary">{% translate "Save" %}</button>
                     </div>

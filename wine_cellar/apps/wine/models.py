@@ -1,4 +1,3 @@
-import os
 from decimal import Decimal
 
 import pycountry
@@ -11,51 +10,12 @@ from django.urls import reverse
 from django.utils.formats import number_format
 from django.utils.translation import gettext_lazy as _
 
+from wine_cellar.apps.core.models import (
+    UserContentModel,
+)
+from wine_cellar.apps.core.models import versioned_media_url as _versioned_media_url
 from wine_cellar.apps.user.views import get_user_settings
 from wine_cellar.apps.wine.utils import user_directory_path
-
-
-def _versioned_media_url(field):
-    """Append ?v={mtime} to a media file URL for cache busting."""
-    if not field:
-        return None
-    url = field.url
-    try:
-        mtime = int(os.path.getmtime(field.path))
-        return f"{url}?v={mtime}"
-    except (FileNotFoundError, ValueError):
-        return url
-
-
-class UserContentModel(models.Model):
-    """Abstract base model for user-owned content."""
-
-    user = models.ForeignKey(
-        get_user_model(),
-        on_delete=models.CASCADE,
-        null=True,
-        verbose_name=_("User"),
-    )
-    household = models.ForeignKey(
-        "household.Household",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="%(class)s_items",
-        verbose_name=_("Household"),
-    )
-    created = models.DateTimeField(
-        auto_now_add=True,
-        db_index=True,
-        verbose_name=_("Created"),
-    )
-    modified = models.DateTimeField(
-        auto_now=True,
-        verbose_name=_("Modified"),
-    )
-
-    class Meta:
-        abstract = True
 
 
 class WineType(models.TextChoices):
@@ -226,9 +186,14 @@ class Appellation(models.Model):
     class Meta:
         verbose_name = _("Appellation")
         verbose_name_plural = _("Appellations")
-        unique_together = ["name", "country"]
         indexes = [
             models.Index(fields=["country"], name="appellation_country_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "country"],
+                name="unique_appellation_name_country",
+            ),
         ]
 
     def __str__(self):

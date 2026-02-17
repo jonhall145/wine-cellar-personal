@@ -3,7 +3,7 @@ from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django_filters import ChoiceFilter, OrderingFilter
 
-from wine_cellar.apps.storage.models import Storage, StorageItem
+from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 
 
 class StorageItemFilter(django_filters.FilterSet):
@@ -56,5 +56,5 @@ class StorageItemFilter(django_filters.FilterSet):
         super().__init__(data, queryset, request=request, prefix=prefix)
         if request and request.user.is_authenticated:
             self.filters["storage"].queryset = Storage.objects.filter(
-                user=request.user
+                user=request.user, app_type=get_app_type()
             ).order_by("order", "created")

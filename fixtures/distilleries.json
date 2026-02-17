@@ -1,0 +1,1753 @@
+[
+  {
+    "model": "whisky.distillery",
+    "pk": 1,
+    "fields": {
+      "name": "Glenfiddich",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4523,
+      "longitude": -3.1286,
+      "status": "AC",
+      "founded_year": 1887,
+      "closed_year": null,
+      "owner": "William Grant & Sons",
+      "description": "The world's best-selling single malt, known for its fruity and balanced character. A pioneering distillery in promoting single malt whisky globally.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 2,
+    "fields": {
+      "name": "The Glenlivet",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.3395,
+      "longitude": -3.2847,
+      "status": "AC",
+      "founded_year": 1824,
+      "closed_year": null,
+      "owner": "Pernod Ricard",
+      "description": "The first licensed distillery in the parish of Glenlivet, producing elegant and fruity Speyside malts. Often considered the definitive Speyside style.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 3,
+    "fields": {
+      "name": "Macallan",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4833,
+      "longitude": -3.2167,
+      "status": "AC",
+      "founded_year": 1824,
+      "closed_year": null,
+      "owner": "Edrington Group",
+      "description": "Renowned for sherry-cask matured whiskies with rich, complex flavors. One of the most prestigious and expensive single malts in the world.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 4,
+    "fields": {
+      "name": "Aberlour",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4645,
+      "longitude": -3.2315,
+      "status": "AC",
+      "founded_year": 1879,
+      "closed_year": null,
+      "owner": "Pernod Ricard",
+      "description": "Famous for double-cask maturation combining bourbon and sherry casks, creating rich and fruity whiskies. A favorite among sherry cask enthusiasts.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 5,
+    "fields": {
+      "name": "Balvenie",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4509,
+      "longitude": -3.1295,
+      "status": "AC",
+      "founded_year": 1892,
+      "closed_year": null,
+      "owner": "William Grant & Sons",
+      "description": "One of the few distilleries maintaining traditional floor maltings, producing honeyed and rich whiskies. Known for innovative cask finishing techniques.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 6,
+    "fields": {
+      "name": "Glenfarclas",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.3742,
+      "longitude": -3.4167,
+      "status": "AC",
+      "founded_year": 1836,
+      "closed_year": null,
+      "owner": "J. & G. Grant",
+      "description": "One of Scotland's few remaining independent family-owned distilleries, producing powerful sherry-matured malts. Known for impressive vintage releases.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 7,
+    "fields": {
+      "name": "Cragganmore",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.3833,
+      "longitude": -3.5000,
+      "status": "AC",
+      "founded_year": 1869,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Known for its complex and elegant character with unusual flat-topped stills. Selected as the Speyside representative in the Classic Malts range.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 8,
+    "fields": {
+      "name": "Cardhu",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4333,
+      "longitude": -3.3500,
+      "status": "AC",
+      "founded_year": 1824,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Founded by Helen Cumming, a pioneering woman in whisky, producing smooth and sweet single malts. The heart of Johnnie Walker blends.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 9,
+    "fields": {
+      "name": "Knockando",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4333,
+      "longitude": -3.2833,
+      "status": "AC",
+      "founded_year": 1898,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Produces elegant and delicate malts, traditionally bottled by season rather than age. An important component in J&B blends.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 10,
+    "fields": {
+      "name": "Tamdhu",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4667,
+      "longitude": -3.2500,
+      "status": "AC",
+      "founded_year": 1897,
+      "closed_year": null,
+      "owner": "Ian Macleod Distillers",
+      "description": "Exclusively matured in sherry casks, producing rich and full-bodied Speyside malts. One of the few distilleries with working Saladin maltings.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 11,
+    "fields": {
+      "name": "Tomintoul",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.2667,
+      "longitude": -3.3833,
+      "status": "AC",
+      "founded_year": 1964,
+      "closed_year": null,
+      "owner": "Angus Dundee Distillers",
+      "description": "Scotland's highest distillery at 1,160 feet, producing gentle and approachable whiskies. Known for its peated expressions as well.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 12,
+    "fields": {
+      "name": "Benrinnes",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4500,
+      "longitude": -3.3000,
+      "status": "AC",
+      "founded_year": 1826,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Known for unique partial triple distillation and meaty, robust character. Primarily used for blending but cult-followed as a single malt.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 13,
+    "fields": {
+      "name": "Dailuaine",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4167,
+      "longitude": -3.4000,
+      "status": "AC",
+      "founded_year": 1852,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Produces robust, waxy malts mainly for Johnnie Walker blends. Rarely seen as a single malt but highly regarded by whisky enthusiasts.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 14,
+    "fields": {
+      "name": "Mortlach",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4500,
+      "longitude": -3.1333,
+      "status": "AC",
+      "founded_year": 1823,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "The first legal distillery in Dufftown, producing meaty and complex malts through unique 2.81 times distillation. Known as the Beast of Dufftown.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 15,
+    "fields": {
+      "name": "Dufftown",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4500,
+      "longitude": -3.1167,
+      "status": "AC",
+      "founded_year": 1896,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "A key malt in the Bells blend, producing sweet and malty whiskies. One of six distilleries in the town known as the whisky capital.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 16,
+    "fields": {
+      "name": "Glendullan",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4667,
+      "longitude": -3.1167,
+      "status": "AC",
+      "founded_year": 1897,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Produces grassy, floral malts for Old Parr and Singleton ranges. Known for technical innovation and clean spirit character.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 17,
+    "fields": {
+      "name": "Strathisla",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.5333,
+      "longitude": -2.9667,
+      "status": "AC",
+      "founded_year": 1786,
+      "closed_year": null,
+      "owner": "Pernod Ricard",
+      "description": "The oldest continuously operating distillery in the Highlands, with picturesque pagoda roofs. The heart of the Chivas Regal blend.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 18,
+    "fields": {
+      "name": "Glen Grant",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4833,
+      "longitude": -3.1667,
+      "status": "AC",
+      "founded_year": 1840,
+      "closed_year": null,
+      "owner": "Campari Group",
+      "description": "Known for light, delicate, and fruity whiskies with tall stills and purifier systems. One of Italy's favorite single malts.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 19,
+    "fields": {
+      "name": "Longmorn",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.5167,
+      "longitude": -3.1833,
+      "status": "AC",
+      "founded_year": 1894,
+      "closed_year": null,
+      "owner": "Pernod Ricard",
+      "description": "Highly regarded by blenders and connoisseurs for rich, complex character. Often called one of the best unsung malts of Speyside.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 20,
+    "fields": {
+      "name": "BenRiach",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.5167,
+      "longitude": -3.1500,
+      "status": "AC",
+      "founded_year": 1898,
+      "closed_year": null,
+      "owner": "Brown-Forman",
+      "description": "Known for experimental cask finishes and both peated and unpeated expressions. Produces over 30 different styles of whisky.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 21,
+    "fields": {
+      "name": "Glen Moray",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.6500,
+      "longitude": -3.3167,
+      "status": "AC",
+      "founded_year": 1897,
+      "closed_year": null,
+      "owner": "La Martiniquaise",
+      "description": "A former brewery converted to a distillery, producing approachable and fruity malts. Known for innovative cask finishing experiments.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 22,
+    "fields": {
+      "name": "Miltonduff",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.6333,
+      "longitude": -3.3000,
+      "status": "AC",
+      "founded_year": 1824,
+      "closed_year": null,
+      "owner": "Pernod Ricard",
+      "description": "Produces clean, grassy spirit for Ballantine's blends. Once had unique Lomond stills producing Mosstowie malt.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 23,
+    "fields": {
+      "name": "Linkwood",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.6167,
+      "longitude": -3.2667,
+      "status": "AC",
+      "founded_year": 1821,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Known for producing floral, sweet, and complex malts. Historically so valued that managers were forbidden from changing anything in production.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 24,
+    "fields": {
+      "name": "Glen Elgin",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.6333,
+      "longitude": -3.2500,
+      "status": "AC",
+      "founded_year": 1898,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "The last distillery built in the Victorian boom, producing honeyed and fruity malts. A key component in White Horse blend.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 25,
+    "fields": {
+      "name": "Mannochmore",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.6333,
+      "longitude": -3.2833,
+      "status": "AC",
+      "founded_year": 1971,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Built next to Glenlossie, producing light and floral malts. Briefly released as black-bottled Loch Dhu in the 1990s.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 26,
+    "fields": {
+      "name": "Aultmore",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.5333,
+      "longitude": -2.9833,
+      "status": "AC",
+      "founded_year": 1896,
+      "closed_year": null,
+      "owner": "Bacardi",
+      "description": "Produces grassy, fresh, and elegant malts. Known as the distillery that never advertised but remained highly regarded by blenders.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 27,
+    "fields": {
+      "name": "Inchgower",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.6833,
+      "longitude": -2.9500,
+      "status": "AC",
+      "founded_year": 1871,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "A coastal Speyside distillery producing sweet and slightly salty malts. An important component in Bells blend.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 28,
+    "fields": {
+      "name": "Glenallachie",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4667,
+      "longitude": -3.2333,
+      "status": "AC",
+      "founded_year": 1967,
+      "closed_year": null,
+      "owner": "GlenAllachie Distillers Company",
+      "description": "Relaunched with impressive sherry-cask releases under Billy Walker. Quickly gaining recognition for quality and value.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 29,
+    "fields": {
+      "name": "Speyburn",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.5000,
+      "longitude": -3.1167,
+      "status": "AC",
+      "founded_year": 1897,
+      "closed_year": null,
+      "owner": "International Beverage Holdings",
+      "description": "Built in time to produce whisky for Queen Victoria's Jubilee, creating light and grassy malts. A popular entry-level single malt.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 30,
+    "fields": {
+      "name": "Tormore",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4167,
+      "longitude": -3.3333,
+      "status": "AC",
+      "founded_year": 1958,
+      "closed_year": null,
+      "owner": "Pernod Ricard",
+      "description": "A striking architectural gem designed by Sir Albert Richardson, producing elegant and nutty malts. The first new distillery built in the 20th century.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 31,
+    "fields": {
+      "name": "Tomatin",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.2833,
+      "longitude": -3.9500,
+      "status": "AC",
+      "founded_year": 1897,
+      "closed_year": null,
+      "owner": "Takara Shuzo",
+      "description": "Once Scotland's largest distillery with 23 stills, producing soft and malty whiskies. The first Scottish distillery owned by a Japanese company.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 32,
+    "fields": {
+      "name": "Craigellachie",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4667,
+      "longitude": -3.2167,
+      "status": "AC",
+      "founded_year": 1891,
+      "closed_year": null,
+      "owner": "Bacardi",
+      "description": "Known for sulphury, meaty character from old-fashioned worm tub condensers. A favorite among malt enthusiasts for its bold style.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 33,
+    "fields": {
+      "name": "Glen Keith",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.5333,
+      "longitude": -2.9833,
+      "status": "AC",
+      "founded_year": 1957,
+      "closed_year": null,
+      "owner": "Pernod Ricard",
+      "description": "Chivas Brothers' first new distillery, producing light and fruity spirit. Pioneered triple distillation in Speyside and experimented with peated malt.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 34,
+    "fields": {
+      "name": "Glentauchers",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.5167,
+      "longitude": -3.0000,
+      "status": "AC",
+      "founded_year": 1898,
+      "closed_year": null,
+      "owner": "Pernod Ricard",
+      "description": "A workhorse distillery producing grassy, malty spirit mainly for blends. Rarely released as a single malt but valued by blenders.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 35,
+    "fields": {
+      "name": "Caperdonich",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.5333,
+      "longitude": -2.9667,
+      "status": "CL",
+      "founded_year": 1897,
+      "closed_year": 2002,
+      "owner": "Forsyths (equipment salvaged)",
+      "description": "Glen Grant's sister distillery across the road, demolished in 2010. Known as the secret distillery with limited single malt releases.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 36,
+    "fields": {
+      "name": "Convalmore",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4500,
+      "longitude": -3.1333,
+      "status": "CL",
+      "founded_year": 1894,
+      "closed_year": 1985,
+      "owner": "William Grant & Sons",
+      "description": "Closed by DCL and now owned by William Grant as warehousing. Rare independent bottlings show elegant, floral character.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 37,
+    "fields": {
+      "name": "Pittyvaich",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4667,
+      "longitude": -3.1167,
+      "status": "DE",
+      "founded_year": 1975,
+      "closed_year": 1993,
+      "owner": "Demolished 2002",
+      "description": "Built next to Dufftown distillery, producing light and grassy malts. Demolished after only 18 years of intermittent production.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 38,
+    "fields": {
+      "name": "Imperial",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.5167,
+      "longitude": -3.0500,
+      "status": "DE",
+      "founded_year": 1897,
+      "closed_year": 1998,
+      "owner": "Demolished 2013",
+      "description": "Named to celebrate Queen Victoria's Diamond Jubilee, with checkered operating history. Demolished despite attempts to save it.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 39,
+    "fields": {
+      "name": "Braeval",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.3167,
+      "longitude": -3.3833,
+      "status": "AC",
+      "founded_year": 1973,
+      "closed_year": null,
+      "owner": "Pernod Ricard",
+      "description": "Originally called Braes of Glenlivet, one of Speyside's highest and most remote distilleries. Produces light, floral malts primarily for blends.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 40,
+    "fields": {
+      "name": "Auchroisk",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.5333,
+      "longitude": -3.1167,
+      "status": "AC",
+      "founded_year": 1974,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Built as a showcase distillery with modern design, producing nutty and slightly smoky malts. Released as The Singleton in some markets.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 41,
+    "fields": {
+      "name": "Allt-a-Bhainne",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.4167,
+      "longitude": -3.2667,
+      "status": "AC",
+      "founded_year": 1975,
+      "closed_year": null,
+      "owner": "Pernod Ricard",
+      "description": "Built for Chivas blends, rarely seen as a single malt. Produces clean, grassy spirit in an isolated location.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 42,
+    "fields": {
+      "name": "Benromach",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.6500,
+      "longitude": -3.3167,
+      "status": "AC",
+      "founded_year": 1898,
+      "closed_year": null,
+      "owner": "Gordon & MacPhail",
+      "description": "Rescued and revived by independent bottler Gordon & MacPhail, producing traditional lightly peated malts. A boutique distillery with hands-on approach.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 43,
+    "fields": {
+      "name": "Speyside Distillery",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.3833,
+      "longitude": -3.6000,
+      "status": "AC",
+      "founded_year": 1990,
+      "closed_year": null,
+      "owner": "Speyside Distillery Company",
+      "description": "A modern small-scale distillery in the Cairngorms, producing Spey and Beinn Dubh brands. Built over many years by founder George Christie.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 44,
+    "fields": {
+      "name": "Roseisle",
+      "region": 1,
+      "country": "GB",
+      "latitude": 57.6167,
+      "longitude": -3.4500,
+      "status": "AC",
+      "founded_year": 2009,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "One of Scotland's newest and largest distilleries with 14 stills, built for efficiency and sustainability. Produces fruity spirit for Johnnie Walker.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 45,
+    "fields": {
+      "name": "Glenmorangie",
+      "region": 2,
+      "country": "GB",
+      "latitude": 57.7333,
+      "longitude": -4.0333,
+      "status": "AC",
+      "founded_year": 1843,
+      "closed_year": null,
+      "owner": "LVMH",
+      "description": "Famous for Scotland's tallest stills and pioneering wood finishing techniques. Produces elegant, floral Highland malts with complex layers.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 46,
+    "fields": {
+      "name": "Dalmore",
+      "region": 2,
+      "country": "GB",
+      "latitude": 57.6833,
+      "longitude": -4.1167,
+      "status": "AC",
+      "founded_year": 1839,
+      "closed_year": null,
+      "owner": "Whyte & Mackay",
+      "description": "Known for sherried, rich malts and the iconic 12-pointed stag emblem. Home to some of the world's most expensive whisky releases.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 47,
+    "fields": {
+      "name": "Oban",
+      "region": 2,
+      "country": "GB",
+      "latitude": 56.4150,
+      "longitude": -5.4717,
+      "status": "AC",
+      "founded_year": 1794,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "A small coastal distillery with the town built around it, producing rich and slightly smoky West Highland malts. Part of the Classic Malts range.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 48,
+    "fields": {
+      "name": "Clynelish",
+      "region": 2,
+      "country": "GB",
+      "latitude": 58.0167,
+      "longitude": -3.9167,
+      "status": "AC",
+      "founded_year": 1967,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Successor to the original distillery, producing waxy, fruity malts with coastal influence. A key component in Johnnie Walker Gold Label.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 49,
+    "fields": {
+      "name": "Teaninich",
+      "region": 2,
+      "country": "GB",
+      "latitude": 57.6833,
+      "longitude": -4.2667,
+      "status": "AC",
+      "founded_year": 1817,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "An innovative distillery using the first mechanical malting in Scotland. Produces grassy, herbal malts mainly for blends.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 50,
+    "fields": {
+      "name": "Balblair",
+      "region": 2,
+      "country": "GB",
+      "latitude": 57.8500,
+      "longitude": -4.0833,
+      "status": "AC",
+      "founded_year": 1790,
+      "closed_year": null,
+      "owner": "International Beverage Holdings",
+      "description": "One of Scotland's oldest distilleries, producing elegant and fruity malts. Known for vintage-dated releases rather than age statements.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 51,
+    "fields": {
+      "name": "Old Pulteney",
+      "region": 2,
+      "country": "GB",
+      "latitude": 58.4500,
+      "longitude": -3.0833,
+      "status": "AC",
+      "founded_year": 1826,
+      "closed_year": null,
+      "owner": "International Beverage Holdings",
+      "description": "The most northerly mainland distillery, producing slightly briny, maritime malts. Once known as the Manzanilla of the North.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 52,
+    "fields": {
+      "name": "Glen Ord",
+      "region": 2,
+      "country": "GB",
+      "latitude": 57.5167,
+      "longitude": -4.3667,
+      "status": "AC",
+      "founded_year": 1838,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "One of the few distilleries with its own maltings still in operation, producing rich and spicy malts. Marketed as The Singleton in some regions.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 53,
+    "fields": {
+      "name": "Royal Brackla",
+      "region": 2,
+      "country": "GB",
+      "latitude": 57.5667,
+      "longitude": -3.8000,
+      "status": "AC",
+      "founded_year": 1812,
+      "closed_year": null,
+      "owner": "Bacardi",
+      "description": "The first distillery to receive a Royal Warrant in 1833, producing elegant and sherried malts. Known as The King's Own Whisky.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 54,
+    "fields": {
+      "name": "Dalwhinnie",
+      "region": 2,
+      "country": "GB",
+      "latitude": 57.0500,
+      "longitude": -4.3833,
+      "status": "AC",
+      "founded_year": 1897,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Scotland's highest working distillery at 1,164 feet, producing gentle and honeyed malts. Part of the Classic Malts range representing the Highlands.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 55,
+    "fields": {
+      "name": "Aberfeldy",
+      "region": 2,
+      "country": "GB",
+      "latitude": 56.6167,
+      "longitude": -3.8667,
+      "status": "AC",
+      "founded_year": 1896,
+      "closed_year": null,
+      "owner": "Bacardi",
+      "description": "Built by the Dewar family, producing honeyed and fruity malts from Golden Pitilie stream water. The heart of Dewar's blends.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 56,
+    "fields": {
+      "name": "Blair Athol",
+      "region": 2,
+      "country": "GB",
+      "latitude": 56.7667,
+      "longitude": -3.7500,
+      "status": "AC",
+      "founded_year": 1798,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "An attractive Victorian distillery in the village of Pitlochry, producing rich and spicy malts. A key component in Bells blend.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 57,
+    "fields": {
+      "name": "Edradour",
+      "region": 2,
+      "country": "GB",
+      "latitude": 56.7000,
+      "longitude": -3.6500,
+      "status": "AC",
+      "founded_year": 1825,
+      "closed_year": null,
+      "owner": "Signatory Vintage",
+      "description": "Scotland's smallest traditional distillery, still using manual production methods. Produces rich, creamy malts and heavily peated Ballechin.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 58,
+    "fields": {
+      "name": "Deanston",
+      "region": 2,
+      "country": "GB",
+      "latitude": 56.1333,
+      "longitude": -4.0500,
+      "status": "AC",
+      "founded_year": 1966,
+      "closed_year": null,
+      "owner": "Distell",
+      "description": "Converted from a cotton mill, powered by the River Teith and self-sufficient in electricity. Produces honeyed, waxy malts with a creamy texture.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 59,
+    "fields": {
+      "name": "Tullibardine",
+      "region": 2,
+      "country": "GB",
+      "latitude": 56.3000,
+      "longitude": -3.8333,
+      "status": "AC",
+      "founded_year": 1949,
+      "closed_year": null,
+      "owner": "Picard Vins & Spiritueux",
+      "description": "Built on the site of a medieval brewery, producing delicate and grassy Highland malts. Known for diverse wine cask finishes.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 60,
+    "fields": {
+      "name": "Ben Nevis",
+      "region": 2,
+      "country": "GB",
+      "latitude": 56.8167,
+      "longitude": -5.1000,
+      "status": "AC",
+      "founded_year": 1825,
+      "closed_year": null,
+      "owner": "Nikka (Asahi)",
+      "description": "At the foot of Britain's highest mountain, producing robust, waxy malts. Owned by Japanese company Nikka since 1989.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 61,
+    "fields": {
+      "name": "Macduff",
+      "region": 2,
+      "country": "GB",
+      "latitude": 57.6667,
+      "longitude": -2.5000,
+      "status": "AC",
+      "founded_year": 1962,
+      "closed_year": null,
+      "owner": "Bacardi",
+      "description": "Often bottled as Glen Deveron, producing nutty and fruity coastal malts. Known for unusual horizontal lyne arms creating a unique character.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 62,
+    "fields": {
+      "name": "Fettercairn",
+      "region": 2,
+      "country": "GB",
+      "latitude": 56.8667,
+      "longitude": -2.6167,
+      "status": "AC",
+      "founded_year": 1824,
+      "closed_year": null,
+      "owner": "Whyte & Mackay",
+      "description": "One of Scotland's oldest licensed distilleries with unique cooling rings on the stills. Produces tropical fruit and spicy malts.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 63,
+    "fields": {
+      "name": "Glencadam",
+      "region": 2,
+      "country": "GB",
+      "latitude": 56.7500,
+      "longitude": -2.5833,
+      "status": "AC",
+      "founded_year": 1825,
+      "closed_year": null,
+      "owner": "Angus Dundee Distillers",
+      "description": "An elegant Eastern Highland distillery producing creamy and fruity malts. Known as the rather delicate Brechin malt.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 64,
+    "fields": {
+      "name": "Royal Lochnagar",
+      "region": 2,
+      "country": "GB",
+      "latitude": 56.9833,
+      "longitude": -3.1833,
+      "status": "AC",
+      "founded_year": 1845,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Received its Royal Warrant after a visit from Queen Victoria in 1848. Produces light, floral malts with a hint of smoke.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 65,
+    "fields": {
+      "name": "Brora",
+      "region": 2,
+      "country": "GB",
+      "latitude": 58.0167,
+      "longitude": -3.8500,
+      "status": "AC",
+      "founded_year": 1819,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "A legendary distillery closed in 1983 and reopened in 2021, producing heavily peated Highland malts. One of whisky's most sought-after names.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 66,
+    "fields": {
+      "name": "Glenturret",
+      "region": 2,
+      "country": "GB",
+      "latitude": 56.3833,
+      "longitude": -3.8500,
+      "status": "AC",
+      "founded_year": 1763,
+      "closed_year": null,
+      "owner": "Lalique Group",
+      "description": "Claims to be Scotland's oldest working distillery, producing rich and nutty malts. Home to the Famous Grouse Experience.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 67,
+    "fields": {
+      "name": "Ardmore",
+      "region": 2,
+      "country": "GB",
+      "latitude": 57.5000,
+      "longitude": -2.9167,
+      "status": "AC",
+      "founded_year": 1898,
+      "closed_year": null,
+      "owner": "Beam Suntory",
+      "description": "One of the few Highland distilleries producing peated malt, creating sweet and smoky whiskies. The heart of Teacher's Highland Cream.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 68,
+    "fields": {
+      "name": "Knockdhu",
+      "region": 2,
+      "country": "GB",
+      "latitude": 57.5167,
+      "longitude": -2.7000,
+      "status": "AC",
+      "founded_year": 1894,
+      "closed_year": null,
+      "owner": "International Beverage Holdings",
+      "description": "Bottled as anCnoc to avoid confusion with Knockando, producing elegant and aromatic malts. A pioneer in peat level experimentation.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 69,
+    "fields": {
+      "name": "Lagavulin",
+      "region": 3,
+      "country": "GB",
+      "latitude": 55.6383,
+      "longitude": -6.1258,
+      "status": "AC",
+      "founded_year": 1816,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Produces intensely peated, rich, and complex Islay malts with exceptional depth. Part of the Classic Malts range and a whisky icon.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 70,
+    "fields": {
+      "name": "Laphroaig",
+      "region": 3,
+      "country": "GB",
+      "latitude": 55.6308,
+      "longitude": -6.1486,
+      "status": "AC",
+      "founded_year": 1815,
+      "closed_year": null,
+      "owner": "Beam Suntory",
+      "description": "Famous for medicinal, iodine-rich heavily peated malts. The only whisky to carry a Royal Warrant from Prince Charles.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 71,
+    "fields": {
+      "name": "Ardbeg",
+      "region": 3,
+      "country": "GB",
+      "latitude": 55.6419,
+      "longitude": -6.0736,
+      "status": "AC",
+      "founded_year": 1815,
+      "closed_year": null,
+      "owner": "LVMH",
+      "description": "Produces the peatiest regular release malts with smoky, sweet complexity. Has a devoted global following and annual limited editions.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 72,
+    "fields": {
+      "name": "Bowmore",
+      "region": 3,
+      "country": "GB",
+      "latitude": 55.7569,
+      "longitude": -6.2889,
+      "status": "AC",
+      "founded_year": 1779,
+      "closed_year": null,
+      "owner": "Beam Suntory",
+      "description": "Islay's oldest distillery, maintaining traditional floor maltings and producing balanced smoky and fruity malts. Home to some of the oldest whisky stocks.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 73,
+    "fields": {
+      "name": "Bruichladdich",
+      "region": 3,
+      "country": "GB",
+      "latitude": 55.7625,
+      "longitude": -6.3592,
+      "status": "AC",
+      "founded_year": 1881,
+      "closed_year": null,
+      "owner": "Remy Cointreau",
+      "description": "A progressive distillery producing unpeated, peated, and heavily peated expressions including Octomore. Known for innovation and terroir focus.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 74,
+    "fields": {
+      "name": "Caol Ila",
+      "region": 3,
+      "country": "GB",
+      "latitude": 55.8469,
+      "longitude": -6.1000,
+      "status": "AC",
+      "founded_year": 1846,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Islay's largest distillery by output, producing elegant smoky malts with sweet notes. The main peated malt in Johnnie Walker.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 75,
+    "fields": {
+      "name": "Bunnahabhain",
+      "region": 3,
+      "country": "GB",
+      "latitude": 55.9000,
+      "longitude": -6.1333,
+      "status": "AC",
+      "founded_year": 1881,
+      "closed_year": null,
+      "owner": "Distell",
+      "description": "The gentle Islay, traditionally producing unpeated maritime malts with nutty sweetness. Recently added peated expressions to the range.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 76,
+    "fields": {
+      "name": "Kilchoman",
+      "region": 3,
+      "country": "GB",
+      "latitude": 55.7667,
+      "longitude": -6.3833,
+      "status": "AC",
+      "founded_year": 2005,
+      "closed_year": null,
+      "owner": "Kilchoman Distillery Company",
+      "description": "Islay's first new distillery in 124 years, farm-based and producing its own barley. Creates complex, smoky malts with a modern approach.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 77,
+    "fields": {
+      "name": "Ardnahoe",
+      "region": 3,
+      "country": "GB",
+      "latitude": 55.8833,
+      "longitude": -6.1000,
+      "status": "AC",
+      "founded_year": 2018,
+      "closed_year": null,
+      "owner": "Hunter Laing",
+      "description": "Islay's newest distillery built by independent bottler Hunter Laing. Produces heavily peated spirit with first releases highly anticipated.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 78,
+    "fields": {
+      "name": "Port Ellen",
+      "region": 3,
+      "country": "GB",
+      "latitude": 55.6292,
+      "longitude": -6.1861,
+      "status": "AC",
+      "founded_year": 1825,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Legendary distillery closed in 1983, now being restored and reopened by Diageo. Original stocks fetch astronomical prices at auction.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 79,
+    "fields": {
+      "name": "Auchentoshan",
+      "region": 4,
+      "country": "GB",
+      "latitude": 55.9250,
+      "longitude": -4.4500,
+      "status": "AC",
+      "founded_year": 1823,
+      "closed_year": null,
+      "owner": "Beam Suntory",
+      "description": "Scotland's only remaining triple-distilled single malt, producing delicate and light Lowland whisky. Known as Glasgow's Malt Whisky.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 80,
+    "fields": {
+      "name": "Glenkinchie",
+      "region": 4,
+      "country": "GB",
+      "latitude": 55.9000,
+      "longitude": -2.9667,
+      "status": "AC",
+      "founded_year": 1837,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Edinburgh's closest distillery, producing grassy and floral Lowland malts. Part of the Classic Malts range representing the Lowlands.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 81,
+    "fields": {
+      "name": "Bladnoch",
+      "region": 4,
+      "country": "GB",
+      "latitude": 54.9167,
+      "longitude": -4.5167,
+      "status": "AC",
+      "founded_year": 1817,
+      "closed_year": null,
+      "owner": "David Prior",
+      "description": "Scotland's most southerly distillery, producing floral and delicate Lowland whisky. Recently revitalized under new ownership.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 82,
+    "fields": {
+      "name": "Ailsa Bay",
+      "region": 4,
+      "country": "GB",
+      "latitude": 55.4333,
+      "longitude": -4.6333,
+      "status": "AC",
+      "founded_year": 2007,
+      "closed_year": null,
+      "owner": "William Grant & Sons",
+      "description": "A large modern distillery built adjacent to Girvan grain distillery. Produces both peated and unpeated spirit mainly for blends.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 83,
+    "fields": {
+      "name": "Daftmill",
+      "region": 4,
+      "country": "GB",
+      "latitude": 56.3000,
+      "longitude": -3.1667,
+      "status": "AC",
+      "founded_year": 2005,
+      "closed_year": null,
+      "owner": "Cuthbert family",
+      "description": "A seasonal farm distillery producing whisky between harvests. Extremely limited releases highly sought after by collectors.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 84,
+    "fields": {
+      "name": "Kingsbarns",
+      "region": 4,
+      "country": "GB",
+      "latitude": 56.2833,
+      "longitude": -2.6667,
+      "status": "AC",
+      "founded_year": 2014,
+      "closed_year": null,
+      "owner": "Wemyss family",
+      "description": "A boutique distillery in Fife producing elegant fruity malts. Built in a converted farm with visitor experience focus.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 85,
+    "fields": {
+      "name": "Lindores Abbey",
+      "region": 4,
+      "country": "GB",
+      "latitude": 56.3333,
+      "longitude": -3.3500,
+      "status": "AC",
+      "founded_year": 2017,
+      "closed_year": null,
+      "owner": "Lindores Abbey Distillery",
+      "description": "Built on the site of the abbey where whisky distillation was first recorded in Scotland in 1494. A spiritual home of Scotch whisky.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 86,
+    "fields": {
+      "name": "Annandale",
+      "region": 4,
+      "country": "GB",
+      "latitude": 55.0667,
+      "longitude": -3.2833,
+      "status": "AC",
+      "founded_year": 1836,
+      "closed_year": null,
+      "owner": "Annandale Distillery Company",
+      "description": "Historic distillery revived after 100 years of closure, producing Man O'Sword peated and Man O'Words unpeated malts.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 87,
+    "fields": {
+      "name": "Glasgow Distillery",
+      "region": 4,
+      "country": "GB",
+      "latitude": 55.8667,
+      "longitude": -4.2833,
+      "status": "AC",
+      "founded_year": 2014,
+      "closed_year": null,
+      "owner": "The Glasgow Distillery Company",
+      "description": "The first working distillery in Glasgow for over a century, producing single malt and gin. Home to the 1770 brand.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 88,
+    "fields": {
+      "name": "Rosebank",
+      "region": 4,
+      "country": "GB",
+      "latitude": 55.9833,
+      "longitude": -3.8333,
+      "status": "AC",
+      "founded_year": 1840,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "A legendary triple-distilled Lowland malt closed in 1993 and recently reopened by Diageo. Known for floral elegance and complexity.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 89,
+    "fields": {
+      "name": "Borders Distillery",
+      "region": 4,
+      "country": "GB",
+      "latitude": 55.5667,
+      "longitude": -2.7833,
+      "status": "AC",
+      "founded_year": 2018,
+      "closed_year": null,
+      "owner": "Three Stills Company",
+      "description": "The first whisky distillery in the Scottish Borders in over 180 years. Producing traditional Lowland-style single malt.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 90,
+    "fields": {
+      "name": "InchDairnie",
+      "region": 4,
+      "country": "GB",
+      "latitude": 56.2000,
+      "longitude": -3.2333,
+      "status": "AC",
+      "founded_year": 2016,
+      "closed_year": null,
+      "owner": "InchDairnie Distillery",
+      "description": "A high-tech distillery focusing on innovation with unique processes. Producing RyeLaw rye whisky and experimental single malts.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 91,
+    "fields": {
+      "name": "Springbank",
+      "region": 5,
+      "country": "GB",
+      "latitude": 55.4250,
+      "longitude": -5.6083,
+      "status": "AC",
+      "founded_year": 1828,
+      "closed_year": null,
+      "owner": "J. & A. Mitchell & Co.",
+      "description": "One of Scotland's few remaining independent family-owned distilleries, producing lightly peated 2.5 times distilled malt. Everything done on-site from malting to bottling.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 92,
+    "fields": {
+      "name": "Glen Scotia",
+      "region": 5,
+      "country": "GB",
+      "latitude": 55.4250,
+      "longitude": -5.6000,
+      "status": "AC",
+      "founded_year": 1832,
+      "closed_year": null,
+      "owner": "Loch Lomond Group",
+      "description": "One of only three remaining Campbeltown distilleries, producing coastal, slightly peated malts. Experiencing a quality renaissance.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 93,
+    "fields": {
+      "name": "Glengyle",
+      "region": 5,
+      "country": "GB",
+      "latitude": 55.4267,
+      "longitude": -5.6050,
+      "status": "AC",
+      "founded_year": 1872,
+      "closed_year": null,
+      "owner": "J. & A. Mitchell & Co.",
+      "description": "Reopened in 2004 by Springbank owners, producing Kilkerran single malt. Helps revive Campbeltown's whisky heritage.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 94,
+    "fields": {
+      "name": "Highland Park",
+      "region": 6,
+      "country": "GB",
+      "latitude": 58.9667,
+      "longitude": -2.9667,
+      "status": "AC",
+      "founded_year": 1798,
+      "closed_year": null,
+      "owner": "Edrington Group",
+      "description": "The world's most northerly distillery in Orkney, producing balanced smoky and honeyed malts. Uses traditional floor maltings with local peat.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 95,
+    "fields": {
+      "name": "Scapa",
+      "region": 6,
+      "country": "GB",
+      "latitude": 58.9500,
+      "longitude": -3.0333,
+      "status": "AC",
+      "founded_year": 1885,
+      "closed_year": null,
+      "owner": "Pernod Ricard",
+      "description": "Orkney's second distillery near Scapa Flow, producing lighter and more delicate island malts than its neighbor. Uses unique Lomond-style wash still.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 96,
+    "fields": {
+      "name": "Talisker",
+      "region": 6,
+      "country": "GB",
+      "latitude": 57.2983,
+      "longitude": -6.3617,
+      "status": "AC",
+      "founded_year": 1830,
+      "closed_year": null,
+      "owner": "Diageo",
+      "description": "Skye's only distillery, producing powerful, peppery, and smoky maritime malts. Part of the Classic Malts range and beloved worldwide.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 97,
+    "fields": {
+      "name": "Tobermory",
+      "region": 6,
+      "country": "GB",
+      "latitude": 56.6217,
+      "longitude": -6.0633,
+      "status": "AC",
+      "founded_year": 1798,
+      "closed_year": null,
+      "owner": "Distell",
+      "description": "Isle of Mull's only distillery, producing unpeated Tobermory and peated Ledaig expressions. One of the oldest commercial distilleries in Scotland.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 98,
+    "fields": {
+      "name": "Jura",
+      "region": 6,
+      "country": "GB",
+      "latitude": 55.8333,
+      "longitude": -5.9500,
+      "status": "AC",
+      "founded_year": 1810,
+      "closed_year": null,
+      "owner": "Whyte & Mackay",
+      "description": "The Isle of Jura's only distillery, producing lightly peated to heavily peated expressions. Essential to the island's small community.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 99,
+    "fields": {
+      "name": "Arran",
+      "region": 6,
+      "country": "GB",
+      "latitude": 55.6983,
+      "longitude": -5.3133,
+      "status": "AC",
+      "founded_year": 1995,
+      "closed_year": null,
+      "owner": "Arran Distillers",
+      "description": "Lochranza distillery, the first legal distillery on Arran in 160 years. Produces fruity and complex island malts, now with peated expressions.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 100,
+    "fields": {
+      "name": "Lagg",
+      "region": 6,
+      "country": "GB",
+      "latitude": 55.4667,
+      "longitude": -5.2833,
+      "status": "AC",
+      "founded_year": 2019,
+      "closed_year": null,
+      "owner": "Arran Distillers",
+      "description": "Arran's second distillery in the south of the island, focusing exclusively on heavily peated whisky. Complementing Lochranza's unpeated style.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 101,
+    "fields": {
+      "name": "Raasay",
+      "region": 6,
+      "country": "GB",
+      "latitude": 57.3833,
+      "longitude": -6.0667,
+      "status": "AC",
+      "founded_year": 2017,
+      "closed_year": null,
+      "owner": "R&B Distillers",
+      "description": "The Isle of Raasay's first legal distillery, producing lightly peated and peated expressions. A showcase for innovation and island terroir.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 102,
+    "fields": {
+      "name": "Torabhaig",
+      "region": 6,
+      "country": "GB",
+      "latitude": 57.1667,
+      "longitude": -5.8833,
+      "status": "AC",
+      "founded_year": 2017,
+      "closed_year": null,
+      "owner": "Mossburn Distillers",
+      "description": "Skye's second distillery, producing heavily peated Hebridean single malt. Built in a restored 19th century farm steading.",
+      "is_user_created": false
+    }
+  },
+  {
+    "model": "whisky.distillery",
+    "pk": 103,
+    "fields": {
+      "name": "Abhainn Dearg",
+      "region": 6,
+      "country": "GB",
+      "latitude": 58.2667,
+      "longitude": -6.9000,
+      "status": "AC",
+      "founded_year": 2008,
+      "closed_year": null,
+      "owner": "Abhainn Dearg Distillery",
+      "description": "Scotland's most westerly distillery on the Isle of Lewis, producing small batch lightly peated malts. The first legal distillery in the Outer Hebrides.",
+      "is_user_created": false
+    }
+  }
+]

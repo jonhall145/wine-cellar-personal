@@ -1,0 +1,55 @@
+{% load static i18n whisky_tags %}
+<li class="wine-card">
+    <div class="wine-card__image-wrapper wine-card__image-wrapper--{{ whisky.whisky_type|lower }}">
+        <img src="{{ whisky.image_thumbnail }}"
+             class="wine-card__img"
+             height="200"
+             width="auto"
+             loading="lazy"
+             alt="{% translate 'Bottle of whisky' %}">
+    </div>
+    <div class="wine-card__detail_container">
+        <h2 class="wine-card__title">
+            <a class="wine-card__link" href="{% url 'whisky-detail' whisky.pk %}">{{ whisky.name }}</a>
+        </h2>
+        <div class="wine-card__meta">
+            {% whisky_type_badge whisky.whisky_type %}
+            {% if whisky.rating %}
+                {% rating_stars whisky.rating %}
+            {% endif %}
+            {% if whisky.peated_level %}
+                {% peated_badge whisky.peated_level %}
+            {% endif %}
+        </div>
+        {% if whisky.distillery %}
+            <div class="pure-u-1-1">
+                <span class="text--gray">{% translate "Distillery" %}</span>
+                <p>{{ whisky.distillery | truncatechars:31 }}</p>
+            </div>
+        {% endif %}
+        {% if whisky.age_statement %}
+            <div class="pure-u-1-1">
+                <span class="text--gray">{% translate "Age" %}</span>
+                <p>{{ whisky.age_statement }} {% translate "years" %}</p>
+            </div>
+        {% endif %}
+    </div>
+    <div class="wine-card__stock">
+        {% firstof whisky.stock_count whisky.total_stock as stock %}
+        {% if stock == 0 %}
+            <span class="stock-badge stock-badge--out"><i class="fa-solid fa-xmark"></i> {% translate "Out" %}</span>
+        {% elif stock <= 2 %}
+            <span class="stock-badge stock-badge--low"><i class="fa-solid fa-arrow-down"></i> {{ stock }}</span>
+        {% else %}
+            <span class="stock-badge stock-badge--plenty"><i class="fa-solid fa-check"></i> {{ stock }}</span>
+        {% endif %}
+    </div>
+    <div class="wine-card__actions">
+        <a href="{% url 'stock-add' whisky.pk %}" class="wine-card__action" title="{% translate 'Add bottle' %}">
+            <i class="fa-solid fa-plus"></i>
+        </a>
+        <a href="{% url 'drink-record-add' whisky.pk %}" class="wine-card__action" title="{% translate 'Record drink' %}">
+            <i class="fa-solid fa-whiskey-glass"></i>
+        </a>
+    </div>
+</li>

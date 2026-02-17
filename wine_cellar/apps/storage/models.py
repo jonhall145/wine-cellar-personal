@@ -1,8 +1,13 @@
+from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from wine_cellar.apps.wine.models import UserContentModel, Wine
+from wine_cellar.apps.core.models import UserContentModel
+
+
+def get_app_type():
+    return getattr(settings, "CELLAR_APP_TYPE", "wine")
 
 
 class Storage(UserContentModel):
@@ -18,6 +23,8 @@ class Storage(UserContentModel):
     is_cold = models.BooleanField(default=False, verbose_name=_("Cold Storage"))
     order = models.PositiveIntegerField(default=0, verbose_name=_("Display Order"))
     is_default = models.BooleanField(default=False, verbose_name=_("Default Storage"))
+    app_type = models.CharField(max_length=10, default="wine")
+    cell_mask = models.JSONField(null=True, blank=True, default=None)
 
     class Meta:
         verbose_name = _("Storage")
@@ -26,32 +33,53 @@ class Storage(UserContentModel):
     def save(self, *args, **kwargs):
         if self.is_default:
             # Ensure only one default storage per user
-            Storage.objects.filter(user=self.user, is_default=True).update(
-                is_default=False
-            )
+            Storage.objects.filter(
+                user=self.user, app_type=self.app_type, is_default=True
+            ).update(is_default=False)
         super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
 
+    def _get_items(self):
+        """Get the related items queryset based on app type."""
+        if self.app_type == "whisky":
+            return self.whisky_items
+        return self.items
+
+    def is_cell_active(self, row, column):
+        """Check if a cell is active. Returns True if no mask (all cells active)."""
+        if self.cell_mask is None:
+            return True
+        return (row, column) in self._active_cells_set
+
+    @property
+    def _active_cells_set(self):
+        """Return a set of active (row, col) tuples for O(1) lookup."""
+        if self.cell_mask is None:
+            return None
+        return {(r, c) for r, c in self.cell_mask}
+
     @property
     def total_slots(self):
+        if self.cell_mask is not None:
+            return len(self.cell_mask)
         return self.rows * self.columns
 
     @property
     def used_slots(self):
-        return self.items.filter(deleted=False).count()
+        return self._get_items().filter(deleted=False).count()
 
     @property
     def is_full(self):
         return self.used_slots >= self.total_slots
 
     def is_slot_occupied(self, row, column):
-        return self.items.filter(row=row, column=column, deleted=False).exists()
+        return self._get_items().filter(row=row, column=column, deleted=False).exists()
 
     @property
     def get_wines(self):
-        return self.items.filter(deleted=False).order_by("row", "column")
+        return self._get_items().filter(deleted=False).order_by("row", "column")
 
     def get_free_cells_by_row(self, exclude_item=None):
         """
@@ -68,11 +96,12 @@ class Storage(UserContentModel):
         if self.rows == 0:
             return {}
 
-        occupied_query = self.items.filter(deleted=False)
+        occupied_query = self._get_items().filter(deleted=False)
         if exclude_item:
             occupied_query = occupied_query.exclude(pk=exclude_item.pk)
 
         used_cells = set(occupied_query.values_list("row", "column"))
+        active_set = self._active_cells_set
 
         free_cells = {}
         for row in range(1, self.rows + 1):
@@ -80,13 +109,14 @@ class Storage(UserContentModel):
                 col
                 for col in range(1, self.columns + 1)
                 if (row, col) not in used_cells
+                and (active_set is None or (row, col) in active_set)
             ]
         return free_cells
 
 
 class StorageItem(UserContentModel):
     storage = models.ForeignKey(Storage, on_delete=models.CASCADE, related_name="items")
-    wine = models.ForeignKey(Wine, on_delete=models.CASCADE)
+    wine = models.ForeignKey("wine.Wine", on_delete=models.CASCADE)
     row = models.PositiveIntegerField(null=True, blank=True)
     column = models.PositiveIntegerField(null=True, blank=True)
     deleted = models.BooleanField(default=False, db_index=True)

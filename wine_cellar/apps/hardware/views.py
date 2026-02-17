@@ -4,7 +4,6 @@ import json
 import logging
 import secrets
 from datetime import datetime
-import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -17,7 +16,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from django.views.generic import TemplateView
 
-from wine_cellar.apps.storage.models import Storage, StorageItem
+from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.models import (
     Grape,
@@ -241,7 +240,7 @@ def report_position_change(request):
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
-    except ValueError as e:
+    except ValueError:
         logger.warning("Invalid data in report_position_change", exc_info=True)
         return JsonResponse({"error": "Invalid data"}, status=400)
 
@@ -495,17 +494,15 @@ def sync_operations(request):
                 offline_op.applied = True
                 offline_op.save(update_fields=["applied"])
                 results.append({"id": offline_op.pk, "success": True})
-            except Exception as e:
-                # Store detailed error server-side, but do not expose it to the client
-                logger.exception("Failed to apply offline operation")
-                offline_op.error = str(e)
+            except Exception:
+                logger.exception(
+                    "Error applying offline operation",
+                    extra={"operation_type": op_type, "operation_id": offline_op.pk},
+                )
+                offline_op.error = "Operation failed"
                 offline_op.save(update_fields=["error"])
                 results.append(
-                    {
-                        "id": offline_op.pk,
-                        "success": False,
-                        "error": "Failed to apply operation",
-                    }
+                    {"id": offline_op.pk, "success": False, "error": "Operation failed"}
                 )
 
         return JsonResponse(
@@ -921,7 +918,7 @@ class DeviceSettingsView(LoginRequiredMixin, TemplateView):
             .order_by("-created")
         )
 
-        storages = Storage.objects.filter(household=household)
+        storages = Storage.objects.filter(household=household, app_type=get_app_type())
 
         context["devices"] = devices
         context["storages"] = storages
@@ -999,7 +996,9 @@ class RackConfigView(LoginRequiredMixin, TemplateView):
             },
         )
 
-        storages = Storage.objects.filter(user=self.request.user)
+        storages = Storage.objects.filter(
+            user=self.request.user, app_type=get_app_type()
+        )
 
         context["config"] = config
         context["storages"] = storages

@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load static i18n %}
+{% block title %}
+    {% translate "Alerts" %}
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">{% translate "Alerts" %}</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1">
+            {% if dreg_expired %}
+                <h2 class="text--danger">{% translate "Dreg Over 1 Year" %}</h2>
+                <table class="pure-table pure-table-horizontal pure-table-striped mb-12">
+                    <thead>
+                        <tr>
+                            <th>{% translate "Whisky" %}</th>
+                            <th>{% translate "Location" %}</th>
+                            <th>{% translate "Dreg Since" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in dreg_expired %}
+                            <tr>
+                                <td><a href="{% url 'whisky-detail' item.whisky.pk %}">{{ item.whisky.name }}</a></td>
+                                <td>{{ item.storage }}</td>
+                                <td>{{ item.dreg_date }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+
+            {% if dreg_warning %}
+                <h2 class="text--warning">{% translate "Dreg Approaching 1 Year" %}</h2>
+                <table class="pure-table pure-table-horizontal pure-table-striped mb-12">
+                    <thead>
+                        <tr>
+                            <th>{% translate "Whisky" %}</th>
+                            <th>{% translate "Location" %}</th>
+                            <th>{% translate "Dreg Since" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in dreg_warning %}
+                            <tr>
+                                <td><a href="{% url 'whisky-detail' item.whisky.pk %}">{{ item.whisky.name }}</a></td>
+                                <td>{{ item.storage }}</td>
+                                <td>{{ item.dreg_date }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+
+            {% if needs_reorder %}
+                <h2>{% translate "Low Stock" %}</h2>
+                <table class="pure-table pure-table-horizontal pure-table-striped mb-12">
+                    <thead>
+                        <tr>
+                            <th>{% translate "Whisky" %}</th>
+                            <th>{% translate "Current Stock" %}</th>
+                            <th>{% translate "Minimum" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reminder in needs_reorder %}
+                            <tr>
+                                <td><a href="{% url 'whisky-detail' reminder.whisky.pk %}">{{ reminder.whisky.name }}</a></td>
+                                <td>{{ reminder.current_stock }}</td>
+                                <td>{{ reminder.min_stock }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+
+            {% if not dreg_expired and not dreg_warning and not needs_reorder %}
+                <div class="empty-state">
+                    <div class="empty-state__icon"><i class="fa-solid fa-circle-check"></i></div>
+                    <h3 class="empty-state__title">{% translate "All Clear!" %}</h3>
+                    <p class="empty-state__message">{% translate "No alerts. Your collection is in great shape." %}</p>
+                    <a href="{% url 'whisky-list' %}" class="pure-button button__primary empty-state__action">
+                        <i class="fa-solid fa-whiskey-glass"></i> {% translate "Browse Whiskies" %}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock content %}

@@ -23,7 +23,7 @@
         {% endblock extra_js %}
         <title>
             {% block title %}
-                Our wine cellar
+                {{ APP_NAME }}
             {% endblock title %}
         </title>
     </head>
@@ -40,7 +40,12 @@
                             <span></span>
                             {# djlint:on #}
                         </label>
-                        <a href="{% url 'homepage' %}" class="pure-menu-heading pure-menu-link">Wine Cellar</a>
+                        <a href="{% url 'homepage' %}" class="pure-menu-heading pure-menu-link">{{ APP_NAME }}</a>
+                        {% if SWITCH_APP_URL %}
+                            <a href="{{ SWITCH_APP_URL }}" class="app-switch-btn" title="{{ SWITCH_APP_NAME }}" aria-label="{% blocktranslate with app_name=SWITCH_APP_NAME %}Switch to {{ app_name }}{% endblocktranslate %}">
+                                <i class="fa-solid {{ SWITCH_APP_ICON }}"></i>
+                            </a>
+                        {% endif %}
                         <div class="pure-menu">
                             <ul class="pure-menu-list">
                                 {% include "includes/navigation_items.html" %}
@@ -50,7 +55,7 @@
                     <!-- large screen menu -->
                     <nav class="pure-menu pure-menu-horizontal menu__md">
                         <div class="menu__container">
-                            <a href="{% url 'homepage' %}" class="pure-menu-heading pure-menu-link">Wine Cellar</a>
+                            <a href="{% url 'homepage' %}" class="pure-menu-heading pure-menu-link">{{ APP_NAME }}</a>
                             <ul class="pure-menu-list">
                                 {% include "includes/navigation_items.html" with show_dropdown_indicator=True %}
                             </ul>
@@ -61,7 +66,7 @@
         {% endblock menu %}
         <main class="main">
             {% block header %}
-                <h1 class="brand-title">Django Wine Cellar</h1>
+                <h1 class="brand-title">{{ APP_NAME }}</h1>
             {% endblock header %}
             {% block allauth_wrapper %}
                 {% block content %}
@@ -75,28 +80,43 @@
                     <i class="fa-solid fa-home"></i>
                     <span>{% translate "Home" %}</span>
                 </a>
-                <a href="{% url 'wine-list' %}" class="bottom-nav__item">
-                    <i class="fa-solid fa-wine-bottle"></i>
-                    <span>{% translate "Wines" %}</span>
-                </a>
-                <a href="{% url 'wine-add' %}" class="bottom-nav__item bottom-nav__item--primary">
-                    <i class="fa-solid fa-plus"></i>
-                    <span>{% translate "Add" %}</span>
-                </a>
-                <a href="{% url 'wine-scan' %}" class="bottom-nav__item">
-                    <i class="fa-solid fa-camera"></i>
-                    <span>{% translate "Scan" %}</span>
-                </a>
+                {% if CELLAR_APP_TYPE == 'whisky' %}
+                    <a href="{% url 'whisky-list' %}" class="bottom-nav__item">
+                        <i class="fa-solid fa-whiskey-glass"></i>
+                        <span>{% translate "Whiskies" %}</span>
+                    </a>
+                    <a href="{% url 'whisky-add' %}" class="bottom-nav__item bottom-nav__item--primary">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>{% translate "Add" %}</span>
+                    </a>
+                    <a href="{% url 'whisky-scan' %}" class="bottom-nav__item">
+                        <i class="fa-solid fa-camera"></i>
+                        <span>{% translate "Scan" %}</span>
+                    </a>
+                {% else %}
+                    <a href="{% url 'wine-list' %}" class="bottom-nav__item">
+                        <i class="fa-solid fa-wine-bottle"></i>
+                        <span>{% translate "Wines" %}</span>
+                    </a>
+                    <a href="{% url 'wine-add' %}" class="bottom-nav__item bottom-nav__item--primary">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>{% translate "Add" %}</span>
+                    </a>
+                    <a href="{% url 'wine-scan' %}" class="bottom-nav__item">
+                        <i class="fa-solid fa-camera"></i>
+                        <span>{% translate "Scan" %}</span>
+                    </a>
+                {% endif %}
                 <a href="{% url 'storage-list' %}" class="bottom-nav__item">
                     <i class="fa-solid fa-warehouse"></i>
-                <span>{% translate "Storage" %}</span>
-            </a>
-        </nav>
+                    <span>{% translate "Storage" %}</span>
+                </a>
+            </nav>
         {% endif %}
         <footer class="footer">
             <p>
                 AGPL 3.0 | {% translate "Version" %} {% get_setting "VERSION" %} | <a href="https://github.com/the-broke-sommeliers/wine-cellar"
-    target="_blank">Github <span class="visually-hidden">(opens in new tab)</span></a>
+    target="_blank" rel="noopener noreferrer">GitHub <span class="visually-hidden">(opens in new tab)</span></a>
             </p>
         </footer>
         <script src="{% static 'base.js' %}?v={% get_setting 'VERSION' %}" defer></script>

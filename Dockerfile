@@ -15,7 +15,8 @@ COPY webpack.common.js webpack.prod.js webpack.dev.js tsconfig.json ./
 COPY wine_cellar/assets/ wine_cellar/assets/
 COPY wine_cellar/react/ wine_cellar/react/
 
-RUN npm run build:prod
+RUN --mount=type=cache,target=/app/node_modules/.cache \
+    npm run build:prod
 
 
 # ============================================================

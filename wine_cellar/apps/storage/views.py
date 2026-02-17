@@ -1,6 +1,7 @@
 import json
 import logging
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import models
 from django.forms import model_to_dict
@@ -19,9 +20,23 @@ from wine_cellar.apps.storage.forms import (
     StorageForm,
     StorageItemEditForm,
 )
-from wine_cellar.apps.storage.models import Storage, StorageItem
+from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.models import Wine
+
+logger = logging.getLogger(__name__)
+
+
+def _is_whisky_mode():
+    return getattr(settings, "CELLAR_APP_TYPE", "wine") == "whisky"
+
+
+def _get_storage_item_model():
+    if _is_whisky_mode():
+        from wine_cellar.apps.whisky.models import WhiskyStorageItem
+
+        return WhiskyStorageItem
+    return StorageItem
 
 
 logger = logging.getLogger(__name__)
@@ -36,7 +51,7 @@ class StorageListView(ListView):
     def get_queryset(self):
         qs = super().get_queryset().order_by("order", "created")
         household = get_active_household(self.request.user)
-        return qs.filter(household=household)
+        return qs.filter(household=household, app_type=get_app_type())
 
 
 class StorageDetailView(DetailView, MultipleObjectMixin):
@@ -55,7 +70,7 @@ class StorageDetailView(DetailView, MultipleObjectMixin):
     def get_queryset(self):
         qs = super().get_queryset()
         household = get_active_household(self.request.user)
-        return qs.filter(household=household)
+        return qs.filter(household=household, app_type=get_app_type())
 
 
 class StorageCreateView(FormView):
@@ -79,7 +94,12 @@ class StorageCreateView(FormView):
         is_default = cleaned_data.get("is_default", False)
 
         # Get max order for this household
-        max_order = Storage.objects.filter(household=household).count()
+        app_type = get_app_type()
+        max_order = Storage.objects.filter(
+            household=household, app_type=app_type
+        ).count()
+
+        cell_mask = cleaned_data.get("cell_mask")
 
         Storage.objects.create(
             location=location,
@@ -92,6 +112,8 @@ class StorageCreateView(FormView):
             order=max_order,
             user=user,
             household=household,
+            app_type=app_type,
+            cell_mask=cell_mask,
         )
 
 
@@ -105,6 +127,10 @@ class StorageUpdateView(FormView):
         household = get_active_household(self.request.user)
         storage = get_object_or_404(Storage, pk=self.kwargs["pk"], household=household)
         initial.update(model_to_dict(storage))
+        if storage.cell_mask is not None:
+            initial["cell_mask"] = json.dumps(storage.cell_mask)
+        else:
+            initial["cell_mask"] = ""
         return initial
 
     def form_valid(self, form):
@@ -123,6 +149,16 @@ class StorageUpdateView(FormView):
         columns = cleaned_data["columns"]
         is_cold = cleaned_data.get("is_cold", False)
         is_default = cleaned_data.get("is_default", False)
+        cell_mask = cleaned_data.get("cell_mask")
+
+        # Clip mask to new bounds if rows/columns changed
+        if cell_mask is not None and rows and columns:
+            cell_mask = [
+                [r, c] for r, c in cell_mask if 1 <= r <= rows and 1 <= c <= columns
+            ]
+            # If all cells are active, set mask to null
+            if len(cell_mask) == rows * columns:
+                cell_mask = None
 
         storage.location = location
         storage.description = description
@@ -131,6 +167,7 @@ class StorageUpdateView(FormView):
         storage.columns = columns
         storage.is_cold = is_cold
         storage.is_default = is_default
+        storage.cell_mask = cell_mask
         storage.user = user
         storage.save()
 
@@ -142,7 +179,9 @@ class StorageDeleteView(DeleteView):
 
     def form_valid(self, form):
         household = get_active_household(self.request.user)
-        storages = Storage.objects.filter(household=household).count()
+        storages = Storage.objects.filter(
+            household=household, app_type=get_app_type()
+        ).count()
         if storages <= 1:
             form.add_error(
                 None,
@@ -157,7 +196,7 @@ class StorageDeleteView(DeleteView):
     def get_queryset(self):
         qs = super().get_queryset()
         household = get_active_household(self.request.user)
-        return qs.filter(household=household)
+        return qs.filter(household=household, app_type=get_app_type())
 
 
 class StorageItemAddView(FormView):
@@ -191,7 +230,9 @@ class StorageItemAddView(FormView):
         wine = self.get_wine()
         context["wine"] = wine
         household = get_active_household(self.request.user)
-        user_storages = Storage.objects.filter(household=household)
+        user_storages = Storage.objects.filter(
+            household=household, app_type=get_app_type()
+        )
         free_cells_by_storage = {
             storage.pk: storage.get_free_cells_by_row() for storage in user_storages
         }
@@ -368,7 +409,9 @@ class StorageItemUpdateView(FormView):
 
         # Free cells calculation - exclude current item so it can be moved
         household = get_active_household(self.request.user)
-        user_storages = Storage.objects.filter(household=household)
+        user_storages = Storage.objects.filter(
+            household=household, app_type=get_app_type()
+        )
         free_cells_by_storage = {
             storage.pk: storage.get_free_cells_by_row(exclude_item=item)
             for storage in user_storages
@@ -411,7 +454,9 @@ class StorageItemUpdateView(FormView):
 def storage_grid_data(request):
     """API endpoint to get storage grid data for React component."""
     household = get_active_household(request.user)
-    storages = Storage.objects.filter(household=household).order_by("name")
+    storages = Storage.objects.filter(
+        household=household, app_type=get_app_type()
+    ).order_by("name")
 
     # Get current storage from query param or use first one
     current_storage_id = request.GET.get("storage_id")
@@ -422,30 +467,60 @@ def storage_grid_data(request):
     else:
         current_storage_id = None
 
+    whisky_mode = _is_whisky_mode()
+
     storage_data = []
     for storage in storages:
         items = []
-        for item in storage.items.filter(deleted=False).select_related("wine"):
-            wine = item.wine
-            # Use bottle's rating, fall back to wine's rating
-            rating = item.rating if item.rating is not None else wine.rating
-            items.append(
-                {
-                    "row": item.row,
-                    "column": item.column,
-                    "wine": {
-                        "id": wine.pk,
-                        "name": wine.name,
-                        "vintage": wine.vintage,
-                        "wine_type": (
-                            wine.get_wine_type_display() if wine.wine_type else ""
-                        ),
-                        "country": wine.country or "",
-                        "item_id": item.pk,
-                        "rating": rating,
-                    },
-                }
-            )
+        item_qs = storage._get_items().filter(deleted=False)
+        if whisky_mode:
+            item_qs = item_qs.select_related("whisky")
+        else:
+            item_qs = item_qs.select_related("wine")
+
+        for item in item_qs:
+            if whisky_mode:
+                whisky = item.whisky
+                rating = item.rating if item.rating is not None else whisky.rating
+                items.append(
+                    {
+                        "row": item.row,
+                        "column": item.column,
+                        "wine": {
+                            "id": whisky.pk,
+                            "name": whisky.name,
+                            "vintage": whisky.vintage_year,
+                            "wine_type": (
+                                whisky.get_whisky_type_display()
+                                if whisky.whisky_type
+                                else ""
+                            ),
+                            "country": whisky.country or "",
+                            "item_id": item.pk,
+                            "rating": rating,
+                        },
+                    }
+                )
+            else:
+                wine = item.wine
+                rating = item.rating if item.rating is not None else wine.rating
+                items.append(
+                    {
+                        "row": item.row,
+                        "column": item.column,
+                        "wine": {
+                            "id": wine.pk,
+                            "name": wine.name,
+                            "vintage": wine.vintage,
+                            "wine_type": (
+                                wine.get_wine_type_display() if wine.wine_type else ""
+                            ),
+                            "country": wine.country or "",
+                            "item_id": item.pk,
+                            "rating": rating,
+                        },
+                    }
+                )
 
         storage_data.append(
             {
@@ -453,6 +528,7 @@ def storage_grid_data(request):
                 "name": storage.name,
                 "rows": storage.rows,
                 "columns": storage.columns,
+                "cell_mask": storage.cell_mask,
                 "items": items,
             }
         )
@@ -461,6 +537,7 @@ def storage_grid_data(request):
         {
             "storages": storage_data,
             "current_storage_id": current_storage_id,
+            "item_url_prefix": "/whisky/" if whisky_mode else "/wine/",
         }
     )
 
@@ -483,17 +560,18 @@ def move_bottle(request):
         household = get_active_household(request.user)
 
         # Get the item to move
+        ItemModel = _get_storage_item_model()
         try:
-            item = StorageItem.objects.get(
-                pk=item_id, household=household, deleted=False
-            )
-        except StorageItem.DoesNotExist:
+            item = ItemModel.objects.get(pk=item_id, household=household, deleted=False)
+        except ItemModel.DoesNotExist:
             return JsonResponse({"error": "Bottle not found"}, status=404)
 
         # Get target storage
         try:
             target_storage = Storage.objects.get(
-                pk=target_storage_id, household=household
+                pk=target_storage_id,
+                household=household,
+                app_type=get_app_type(),
             )
         except Storage.DoesNotExist:
             return JsonResponse({"error": "Storage not found"}, status=404)
@@ -503,6 +581,8 @@ def move_bottle(request):
             return JsonResponse({"error": "Invalid row"}, status=400)
         if target_column < 1 or target_column > target_storage.columns:
             return JsonResponse({"error": "Invalid column"}, status=400)
+        if not target_storage.is_cell_active(target_row, target_column):
+            return JsonResponse({"error": "Target cell is not active"}, status=400)
 
         # Check if target position is occupied
         if target_storage.is_slot_occupied(target_row, target_column):
@@ -546,7 +626,9 @@ def storage_move_up(request, pk):
     household = get_active_household(request.user)
     storage = get_object_or_404(Storage, pk=pk, household=household)
     prev_storage = (
-        Storage.objects.filter(household=household, order__lt=storage.order)
+        Storage.objects.filter(
+            household=household, app_type=get_app_type(), order__lt=storage.order
+        )
         .order_by("-order")
         .first()
     )
@@ -563,7 +645,9 @@ def storage_move_down(request, pk):
     household = get_active_household(request.user)
     storage = get_object_or_404(Storage, pk=pk, household=household)
     next_storage = (
-        Storage.objects.filter(household=household, order__gt=storage.order)
+        Storage.objects.filter(
+            household=household, app_type=get_app_type(), order__gt=storage.order
+        )
         .order_by("order")
         .first()
     )

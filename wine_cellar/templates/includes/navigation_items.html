@@ -1,18 +1,33 @@
 {% load i18n %}
 {# Navigation menu items - included in both small and large screen menus #}
 {% if user.is_authenticated %}
-    <li class="pure-menu-item">
-        <a href="{% url 'wine-list' %}" class="pure-menu-link">{% translate "Wines" %}</a>
-    </li>
-    <li class="pure-menu-item">
-        <a href="{% url 'wine-add' %}" class="pure-menu-link">{% translate "Add Wine" %}</a>
-    </li>
-    <li class="pure-menu-item">
-        <a href="{% url 'wine-scan' %}" class="pure-menu-link">{% translate "Scan Wine" %}</a>
-    </li>
-    <li class="pure-menu-item">
-        <a href="{% url 'wine-map' %}" class="pure-menu-link">{% translate "Map" %}</a>
-    </li>
+    {% if CELLAR_APP_TYPE == 'whisky' %}
+        <li class="pure-menu-item">
+            <a href="{% url 'whisky-list' %}" class="pure-menu-link">{% translate "Whiskies" %}</a>
+        </li>
+        <li class="pure-menu-item">
+            <a href="{% url 'whisky-add' %}" class="pure-menu-link">{% translate "Add Whisky" %}</a>
+        </li>
+        <li class="pure-menu-item">
+            <a href="{% url 'whisky-scan' %}" class="pure-menu-link">{% translate "Scan" %}</a>
+        </li>
+        <li class="pure-menu-item">
+            <a href="{% url 'whisky-map' %}" class="pure-menu-link">{% translate "Map" %}</a>
+        </li>
+    {% else %}
+        <li class="pure-menu-item">
+            <a href="{% url 'wine-list' %}" class="pure-menu-link">{% translate "Wines" %}</a>
+        </li>
+        <li class="pure-menu-item">
+            <a href="{% url 'wine-add' %}" class="pure-menu-link">{% translate "Add Wine" %}</a>
+        </li>
+        <li class="pure-menu-item">
+            <a href="{% url 'wine-scan' %}" class="pure-menu-link">{% translate "Scan Wine" %}</a>
+        </li>
+        <li class="pure-menu-item">
+            <a href="{% url 'wine-map' %}" class="pure-menu-link">{% translate "Map" %}</a>
+        </li>
+    {% endif %}
     <li class="pure-menu-item">
         <a href="{% url 'storage-list' %}" class="pure-menu-link">{% translate "Storage" %}</a>
     </li>
@@ -71,6 +86,13 @@
     {% elif active_household %}
         <li class="pure-menu-item">
             <a href="{% url 'household-list' %}" class="pure-menu-link">{{ active_household.name|truncatechars:15 }}</a>
+        </li>
+    {% endif %}
+    {% if SWITCH_APP_URL %}
+        <li class="pure-menu-item">
+            <a href="{{ SWITCH_APP_URL }}" class="pure-menu-link app-switch-link">
+                <i class="fa-solid {{ SWITCH_APP_ICON }}"></i> {{ SWITCH_APP_NAME }}
+            </a>
         </li>
     {% endif %}
     <li class="pure-menu-item">

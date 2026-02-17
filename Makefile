@@ -6,6 +6,57 @@ ARGUMENTS=$(filter-out $(firstword $(MAKECMDGOALS)), $(MAKECMDGOALS))
 .PHONY: all
 all: help
 
+.PHONY: help
+help:
+	@echo ""
+	@echo "  Wine & Whisky Cellar"
+	@echo "  ===================="
+	@echo ""
+	@echo "  Setup"
+	@echo "    make install              Install deps, build frontend, run migrations"
+	@echo "    make clean                Remove node_modules, venv, and lockfile"
+	@echo "    make fixtures             Load wine sample data"
+	@echo "    make whisky-fixtures      Load whisky sample data"
+	@echo ""
+	@echo "  Development"
+	@echo "    make server               Wine dev server (port 8003)"
+	@echo "    make watch                Wine dev server + frontend rebuild"
+	@echo "    make whisky-server        Whisky dev server (port 8004)"
+	@echo "    make whisky-watch         Whisky dev server + frontend rebuild"
+	@echo ""
+	@echo "  Testing"
+	@echo "    make pytest               Run all tests"
+	@echo "    make whisky-pytest        Run whisky tests only"
+	@echo "    make pytest-lastfailed    Re-run failed tests"
+	@echo "    make pytest-clean         Delete test DB and run all tests"
+	@echo "    make coverage             Run tests with coverage report"
+	@echo "    make smoke-test           Run smoke test against local server"
+	@echo ""
+	@echo "  Linting"
+	@echo "    make lint                 Run all linters (isort, flake8, eslint, migrations)"
+	@echo "    make lint-quick           Quick lint (eslint staged + migrations)"
+	@echo "    make lint-js-fix          Auto-fix JS/TS lint errors"
+	@echo "    make lint-py [FILES]      Lint Python files (black, isort, flake8)"
+	@echo "    make lint-html [FILES]    Lint Django templates"
+	@echo "    make lint-html-fix [FILES] Auto-fix template lint errors"
+	@echo ""
+	@echo "  Deploy (Docker)"
+	@echo "    make wine-deploy          Build and deploy wine app"
+	@echo "    make whisky-deploy        Build and deploy whisky app"
+	@echo ""
+	@echo "  Production"
+	@echo "    make wine-prod-start      Start wine container"
+	@echo "    make wine-prod-stop       Stop wine container"
+	@echo "    make wine-prod-restart    Restart wine container"
+	@echo "    make wine-prod-status     Show wine container status"
+	@echo "    make wine-prod-logs       Tail wine container logs"
+	@echo "    make whisky-prod-start    Start whisky container"
+	@echo "    make whisky-prod-stop     Stop whisky container"
+	@echo "    make whisky-prod-restart  Restart whisky container"
+	@echo "    make whisky-prod-status   Show whisky container status"
+	@echo "    make whisky-prod-logs     Tail whisky container logs"
+	@echo ""
+
 .PHONY: install
 install:
 	npm install --no-save
@@ -37,6 +88,78 @@ fixtures:
 	$(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/appellations.json
 	$(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/wines.json
 	$(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/stock.json
+
+.PHONY: deploy
+deploy:
+	./deploy-docker.sh $(ARGUMENTS)
+
+.PHONY: wine-deploy
+wine-deploy:
+	./deploy-docker.sh wine
+
+.PHONY: wine-prod-start
+wine-prod-start:
+	docker compose -f docker-compose.prod.yml up -d wine-web
+
+.PHONY: wine-prod-stop
+wine-prod-stop:
+	docker compose -f docker-compose.prod.yml stop wine-web
+
+.PHONY: wine-prod-restart
+wine-prod-restart:
+	docker compose -f docker-compose.prod.yml restart wine-web
+
+.PHONY: wine-prod-status
+wine-prod-status:
+	docker compose -f docker-compose.prod.yml ps wine-web
+
+.PHONY: wine-prod-logs
+wine-prod-logs:
+	docker compose -f docker-compose.prod.yml logs -f wine-web
+
+.PHONY: whisky-fixtures
+whisky-fixtures:
+	CELLAR_APP_TYPE=whisky $(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/whisky_regions.json
+	CELLAR_APP_TYPE=whisky $(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/distilleries.json
+	CELLAR_APP_TYPE=whisky $(VIRTUAL_ENV)/bin/python3 manage.py loaddata fixtures/bottlers.json
+
+.PHONY: whisky-server
+whisky-server:
+	CELLAR_APP_TYPE=whisky $(VIRTUAL_ENV)/bin/python3 manage.py runserver 8004
+
+.PHONY: whisky-watch
+whisky-watch:
+	trap 'kill %1' KILL; \
+	npm run watch & \
+	CELLAR_APP_TYPE=whisky $(VIRTUAL_ENV)/bin/python3 manage.py runserver 8004
+
+.PHONY: whisky-pytest
+whisky-pytest:
+	CELLAR_APP_TYPE=whisky $(VIRTUAL_ENV)/bin/py.test tests/whisky/ --reuse-db
+
+.PHONY: whisky-deploy
+whisky-deploy:
+	./deploy-docker.sh whisky
+
+.PHONY: whisky-prod-start
+whisky-prod-start:
+	docker compose -f docker-compose.prod.yml up -d whisky-web
+
+.PHONY: whisky-prod-stop
+whisky-prod-stop:
+	docker compose -f docker-compose.prod.yml stop whisky-web
+
+.PHONY: whisky-prod-restart
+whisky-prod-restart:
+	docker compose -f docker-compose.prod.yml restart whisky-web
+
+.PHONY: whisky-prod-status
+whisky-prod-status:
+	docker compose -f docker-compose.prod.yml ps whisky-web
+
+.PHONY: whisky-prod-logs
+whisky-prod-logs:
+	docker compose -f docker-compose.prod.yml logs -f whisky-web
 
 .PHONY: pytest
 pytest:
