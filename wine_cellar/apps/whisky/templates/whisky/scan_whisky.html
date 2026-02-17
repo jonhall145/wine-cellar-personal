@@ -9,7 +9,7 @@
             <p class="form-hint">
                 {% blocktranslate %}Scan the barcode of a bottle to quickly add or remove a whisky from your cabinet.{% endblocktranslate %}
             </p>
-            <div id="scanner" data-zxing_wasm_url="{% static 'zxing_reader.wasm' %}" data-scan-url="/whisky/scanned/__CODE__/" data-scan-barcode-url="{% url 'whisky-scan-barcode' %}" data-label-scan-url="{% url 'label-scan' %}"></div>
+            <div id="scanner" data-zxing-wasm-url="{% static 'zxing_reader.wasm' %}" data-scan-url="/whisky/scanned/__CODE__/" data-scan-barcode-url="{% url 'whisky-scan-barcode' %}" data-label-scan-url="{% url 'label-scan' %}"></div>
         </div>
     </div>
 {% endblock content %}
