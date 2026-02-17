@@ -28,10 +28,10 @@ jobs:
               workflow_id: context.workflow,
               branch: 'main',
               status: 'completed',
-              per_page: 50
+              per_page: 100
             });
             const lastSuccess = runs.data.workflow_runs.find(
-              (run) => run.id !== context.runId && run.conclusion === 'success'
+              (run) => run.conclusion === 'success'
             );
             const shouldRun = !lastSuccess || lastSuccess.head_sha !== context.sha;
             core.setOutput('should_run', shouldRun ? 'true' : 'false');
