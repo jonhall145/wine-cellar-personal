@@ -42,7 +42,7 @@
                         </label>
                         <a href="{% url 'homepage' %}" class="pure-menu-heading pure-menu-link">{{ APP_NAME }}</a>
                         {% if SWITCH_APP_URL %}
-                            <a href="{{ SWITCH_APP_URL }}" class="app-switch-btn" title="{{ SWITCH_APP_NAME }}" aria-label="{% translate 'Switch to' %} {{ SWITCH_APP_NAME }}">
+                            <a href="{{ SWITCH_APP_URL }}" class="app-switch-btn" title="{{ SWITCH_APP_NAME }}" aria-label="{% blocktranslate with app_name=SWITCH_APP_NAME %}Switch to {{ app_name }}{% endblocktranslate %}">
                                 <i class="fa-solid {{ SWITCH_APP_ICON }}"></i>
                             </a>
                         {% endif %}
