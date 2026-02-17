@@ -94,7 +94,7 @@ const DistilleryMap: React.FC<{ distilleries: DistilleryData[], baseUrl: string 
         ? distilleries.filter(d => d.region_id === selectedRegion)
         : distilleries
 
-    const mappable = filtered.filter(d => d.latitude && d.longitude)
+    const mappable = filtered.filter(d => d.latitude != null && d.longitude != null)
 
     const markers = mappable.map((d, idx) => {
         const feature = {

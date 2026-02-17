@@ -42,7 +42,7 @@
                         </label>
                         <a href="{% url 'homepage' %}" class="pure-menu-heading pure-menu-link">{{ APP_NAME }}</a>
                         {% if SWITCH_APP_URL %}
-                            <a href="{{ SWITCH_APP_URL }}" class="app-switch-btn" title="{{ SWITCH_APP_NAME }}">
+                            <a href="{{ SWITCH_APP_URL }}" class="app-switch-btn" title="{{ SWITCH_APP_NAME }}" aria-label="{% translate 'Switch to' %} {{ SWITCH_APP_NAME }}">
                                 <i class="fa-solid {{ SWITCH_APP_ICON }}"></i>
                             </a>
                         {% endif %}
@@ -116,7 +116,7 @@
         <footer class="footer">
             <p>
                 AGPL 3.0 | {% translate "Version" %} {% get_setting "VERSION" %} | <a href="https://github.com/the-broke-sommeliers/wine-cellar"
-    target="_blank" rel="noopener noreferrer">Github <span class="visually-hidden">(opens in new tab)</span></a>
+    target="_blank" rel="noopener noreferrer">GitHub <span class="visually-hidden">(opens in new tab)</span></a>
             </p>
         </footer>
         <script src="{% static 'base.js' %}?v={% get_setting 'VERSION' %}" defer></script>
