@@ -5,6 +5,7 @@ The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.0/topics/http/urls/
 """
 
+import logging
 import os
 from email.utils import formatdate, parsedate_to_datetime
 
@@ -13,6 +14,8 @@ from django.contrib import admin
 from django.contrib.auth.decorators import login_not_required
 from django.http import HttpResponseNotModified
 from django.urls import include, path, re_path
+from django.views.decorators.cache import cache_page
+from django.views.decorators.http import require_http_methods
 from django.views.i18n import JavaScriptCatalog
 from django.views.static import serve
 
@@ -29,7 +32,11 @@ from wine_cellar.apps.storage.views import (
 )
 from wine_cellar.apps.user.views import UserSettingsView
 
+logger = logging.getLogger("wine_cellar.health_check")
+
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".svg"}
+# Health check disk space threshold in GB
+CRITICAL_DISK_SPACE_GB = 0.1
 
 
 @login_not_required
@@ -67,43 +74,45 @@ def serve_media(request, path):
     return response
 
 
+@login_not_required
+@require_http_methods(["GET", "HEAD"])
+@cache_page(10)  # Cache for 10 seconds to reduce load while staying responsive
 def health_check(request):
-    """Health check endpoint for container orchestration and monitoring."""
+    """Health check endpoint for container orchestration and monitoring.
+
+    Returns minimal status to avoid information disclosure on this public
+    endpoint. Performs DB and disk checks internally but only returns
+    HTTP 200 (healthy) or 503 (unhealthy).
+    """
     import shutil
 
     from django.db import connections
     from django.http import JsonResponse
 
-    health = {
-        "status": "ok",
-        "database": "ok",
-        "disk": "ok",
-    }
     status_code = 200
 
+    # Check database connectivity
     try:
         for conn in connections.all():
             conn.ensure_connection()
     except Exception:
-        health["database"] = "unhealthy"
-        health["status"] = "unhealthy"
         status_code = 503
 
+    # Check disk space
     try:
         media_root = getattr(settings, "MEDIA_ROOT", "/tmp")
         disk_usage = shutil.disk_usage(media_root)
         free_gb = disk_usage.free / (1024**3)
-        health["disk_free_gb"] = round(free_gb, 2)
-        if free_gb < 0.1:
-            health["disk"] = "critical"
-            health["status"] = "unhealthy"
+        if free_gb < CRITICAL_DISK_SPACE_GB:
             status_code = 503
-        elif free_gb < 1:
-            health["disk"] = "low"
     except Exception:
-        health["disk"] = "unknown"
+        # If disk check fails (e.g., path inaccessible), log but don't fail
+        # Only actual low disk space (checked successfully) should fail health
+        logger.exception("Disk check failed in health_check endpoint")
 
-    return JsonResponse(health, status=status_code)
+    # Return minimal response - rely primarily on HTTP status code
+    response_data = {"status": "ok" if status_code == 200 else "unhealthy"}
+    return JsonResponse(response_data, status=status_code)
 
 
 urlpatterns = [
