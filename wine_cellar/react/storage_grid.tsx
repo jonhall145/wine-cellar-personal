@@ -46,6 +46,14 @@ interface WineInfo {
     rating: number | null;
 }
 
+// API response item (without 'active' field)
+interface StorageItemData {
+    row: number;
+    column: number;
+    wine: WineInfo;
+}
+
+// Fully-built grid cell (with 'active' field computed client-side)
 interface CellData {
     row: number;
     column: number;
@@ -59,7 +67,7 @@ interface StorageData {
     rows: number;
     columns: number;
     cell_mask: [number, number][] | null;
-    items: CellData[];
+    items: StorageItemData[];
 }
 
 interface AllStoragesData {
