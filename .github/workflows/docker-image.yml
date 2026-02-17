@@ -31,7 +31,7 @@ jobs:
             const runs = await github.rest.actions.listWorkflowRuns({
               owner,
               repo,
-              workflow_id: context.workflow,
+              workflow_id: 'docker-image.yml',
               branch: 'main',
               status: 'completed',
               per_page: 100
@@ -39,6 +39,9 @@ jobs:
             const lastSuccess = runs.data.workflow_runs.find(
               (run) => run.conclusion === 'success'
             );
+            if (!lastSuccess) {
+              core.info('No successful completed runs found in the last 100; running build.');
+            }
             const shouldRun = !lastSuccess || lastSuccess.head_sha !== context.sha;
             core.setOutput('should_run', shouldRun ? 'true' : 'false');
   build:
