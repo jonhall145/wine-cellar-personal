@@ -1,4 +1,5 @@
 from django import template
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
@@ -85,10 +86,10 @@ def whisky_type_badge(whisky_type: str) -> str:
     label = WHISKY_TYPE_LABELS.get(whisky_type, whisky_type)
 
     if not css_class:
-        return f'<span class="whisky-type-badge">{label}</span>'
+        return mark_safe(f'<span class="whisky-type-badge">{escape(label)}</span>')
 
     return mark_safe(
-        f'<span class="whisky-type-badge whisky-type-badge--{css_class}">{label}</span>'
+        f'<span class="whisky-type-badge whisky-type-badge--{css_class}">{escape(label)}</span>'
     )
 
 
@@ -102,10 +103,10 @@ def peated_badge(peated_level: str) -> str:
     label = PEATED_LEVEL_LABELS.get(peated_level, peated_level)
 
     if not css_class:
-        return f'<span class="peated-badge">{label}</span>'
+        return mark_safe(f'<span class="peated-badge">{escape(label)}</span>')
 
     return mark_safe(
-        f'<span class="peated-badge peated-badge--{css_class}">{label}</span>'
+        f'<span class="peated-badge peated-badge--{css_class}">{escape(label)}</span>'
     )
 
 
@@ -122,14 +123,14 @@ def fill_level_display(fill_level: str) -> str:
     if not css_class:
         return mark_safe(
             f'<span class="fill-level">'
-            f'<i class="{icon_class} fill-level__icon"></i>'
-            f"{label}"
+            f'<i class="{escape(icon_class)} fill-level__icon"></i>'
+            f"{escape(label)}"
             f"</span>"
         )
 
     return mark_safe(
         f'<span class="fill-level fill-level--{css_class}">'
-        f'<i class="{icon_class} fill-level__icon"></i>'
-        f"{label}"
+        f'<i class="{escape(icon_class)} fill-level__icon"></i>'
+        f"{escape(label)}"
         f"</span>"
     )
