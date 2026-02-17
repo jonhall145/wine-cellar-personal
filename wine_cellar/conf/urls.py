@@ -76,7 +76,7 @@ def serve_media(request, path):
 
 @login_not_required
 @require_http_methods(["GET", "HEAD"])
-@cache_page(60)  # Cache for 60 seconds to reduce DB/disk I/O from health check polling
+@cache_page(10)  # Cache for 10 seconds to reduce load while staying responsive
 def health_check(request):
     """Health check endpoint for container orchestration and monitoring.
 
@@ -106,7 +106,8 @@ def health_check(request):
         if free_gb < CRITICAL_DISK_SPACE_GB:
             status_code = 503
     except Exception:
-        # Disk check failure shouldn't fail health check, but log it
+        # If disk check fails (e.g., path inaccessible), log but don't fail
+        # Only actual low disk space (checked successfully) should fail health
         logger.exception("Disk check failed in health_check endpoint")
 
     # Return minimal response - rely primarily on HTTP status code
