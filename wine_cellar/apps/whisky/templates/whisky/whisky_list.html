@@ -66,7 +66,7 @@
             {% if whiskies %}
             <div class="per-page-selector">
                 <label for="per-page" class="per-page-selector__label">{% translate "Per page:" %}</label>
-                <select id="per-page" class="per-page-selector__select" onchange="window.location.href=this.value">
+                <select id="per-page" class="per-page-selector__select">
                     {% for option in per_page_options %}
                         <option value="{% querystring per_page=option page=1 %}" {% if option == current_per_page %}selected{% endif %}>{{ option }}</option>
                     {% endfor %}
@@ -90,4 +90,17 @@
             {% include "includes/pagination.html" %}
         </div>
     </div>
+    <script>
+        (function () {
+            var perPageSelect = document.getElementById('per-page');
+            if (perPageSelect) {
+                perPageSelect.addEventListener('change', function (event) {
+                    var target = event.target || perPageSelect;
+                    if (target && typeof target.value === 'string') {
+                        window.location.href = target.value;
+                    }
+                });
+            }
+        })();
+    </script>
 {% endblock content %}
