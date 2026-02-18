@@ -303,7 +303,7 @@
 {% endblock styles %}
 {% block extra_js %}
     {{ block.super }}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js" integrity="sha512-HqoaJUO8gm5CH+i8cqbXTadMtw0E2I2Uzjlvnzm8bxKE9GLoiT3+uLMEa19Ehx7mBeeSprucbQgiDq8FgWnbgA==" crossorigin="anonymous"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||

@@ -89,8 +89,8 @@ def whisky_type_badge(whisky_type: str) -> str:
         return mark_safe(f'<span class="whisky-type-badge">{escape(label)}</span>')
 
     return mark_safe(
-        '<span class="whisky-type-badge whisky-type-badge--%s">%s</span>'
-        % (escape(css_class), escape(label))
+        f'<span class="whisky-type-badge whisky-type-badge--{escape(css_class)}">'
+        f"{escape(label)}</span>"
     )
 
 
@@ -107,8 +107,8 @@ def peated_badge(peated_level: str) -> str:
         return mark_safe(f'<span class="peated-badge">{escape(label)}</span>')
 
     return mark_safe(
-        '<span class="peated-badge peated-badge--%s">%s</span>'
-        % (escape(css_class), escape(label))
+        f'<span class="peated-badge peated-badge--{escape(css_class)}">'
+        f"{escape(label)}</span>"
     )
 
 
