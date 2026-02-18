@@ -82,14 +82,17 @@
                             if (typeof value === "string" && value.length > 0) {
                                 var isRelative = value.charAt(0) === "/" || value.charAt(0) === "?";
                                 var isSameOriginAbsolute = false;
+                                var url;
                                 try {
-                                    var url = new URL(value, window.location.href);
+                                    url = new URL(value, window.location.href);
                                     isSameOriginAbsolute = url.origin === window.location.origin;
                                 } catch (e) {
                                     isSameOriginAbsolute = false;
                                 }
-                                if (isRelative || isSameOriginAbsolute) {
-                                    window.location.href = value;
+                                if (url &&
+                                        (url.protocol === "https:" || url.protocol === "http:") &&
+                                        (isRelative || isSameOriginAbsolute)) {
+                                    window.location.href = url.href;
                                 }
                             }
                         });

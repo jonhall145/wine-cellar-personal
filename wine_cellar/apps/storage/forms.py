@@ -107,7 +107,7 @@ class StorageForm(forms.Form):
             )
 
         for row, column in mask:
-            # Coordinates are 1-based: require them to be within [1, rows] and [1, columns].
+            # Coordinates are 1-based: require within [1, rows] and [1, columns].
             if row < 1 or column < 1 or row > rows or column > columns:
                 raise forms.ValidationError(
                     _(
