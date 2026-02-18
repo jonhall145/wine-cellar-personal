@@ -233,8 +233,9 @@ class HouseholdSwitchView(LoginRequiredMixin, View):
         else:
             messages.error(request, _("Unable to switch household."))
 
-        # Redirect to referring page or home
-        next_url = request.POST.get("next", "/")
+        # Redirect to referring page or household list as a safe default
+        safe_default_url = reverse("household-list")
+        next_url = (request.POST.get("next") or "").strip()
         if url_has_allowed_host_and_scheme(
             url=next_url,
             allowed_hosts={request.get_host()},
@@ -242,7 +243,7 @@ class HouseholdSwitchView(LoginRequiredMixin, View):
         ):
             redirect_to = next_url
         else:
-            redirect_to = "/"
+            redirect_to = safe_default_url
         return redirect(redirect_to)
 
 
