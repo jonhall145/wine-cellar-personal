@@ -28,7 +28,7 @@ from django_ratelimit.decorators import ratelimit
 
 from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
-from wine_cellar.apps.whisky.filters import WhiskyFilter
+from wine_cellar.apps.whisky.filters import WhiskyFilter, WhiskyStorageItemFilter
 from wine_cellar.apps.whisky.forms import (
     BottleNoteForm,
     ReorderReminderForm,
@@ -1703,20 +1703,22 @@ class StorageItemDeleteView(DeleteView):
         return reverse_lazy("whisky-detail", kwargs={"pk": self.object.whisky.pk})
 
 
-class StorageItemListView(TemplateView):
-    """List all bottles in storage."""
+class StorageItemListView(FilterView):
+    """List all bottles in storage with filtering."""
 
+    model = WhiskyStorageItem
     template_name = "whisky/bottle_list.html"
+    context_object_name = "bottles"
+    filterset_class = WhiskyStorageItemFilter
+    paginate_by = 20
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+    def get_queryset(self):
         household = get_active_household(self.request.user)
-        context["bottles"] = (
+        return (
             WhiskyStorageItem.objects.filter(household=household, deleted=False)
             .select_related("whisky", "storage")
-            .order_by("storage__order", "row", "column")
+            .order_by("-created")
         )
-        return context
 
 
 class StorageItemUpdateView(FormView):

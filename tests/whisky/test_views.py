@@ -56,6 +56,56 @@ def test_whisky_list_shows_user_whiskies(client, user, whisky_factory):
 
 
 @pytest.mark.django_db
+def test_bottle_list_loads(client, user, whisky_storage_item_factory):
+    """Test that whisky bottle list page loads and exposes filter context."""
+    household = user.user_settings.active_household
+    whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+    )
+    client.force_login(user)
+    r = client.get(reverse("bottle-list"))
+    assert r.status_code == HTTPStatus.OK
+    assertTemplateUsed(response=r, template_name="whisky/bottle_list.html")
+    assert "filter" in r.context
+
+
+@pytest.mark.django_db
+def test_bottle_list_filters_by_whisky_name(client, user, whisky_storage_item_factory):
+    """Test whisky bottle list applies whisky_name filter from query params."""
+    household = user.user_settings.active_household
+    matching = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        whisky__name="Lagavulin 16",
+    )
+    non_matching = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        whisky__name="Ardbeg 10",
+    )
+
+    client.force_login(user)
+    r = client.get(reverse("bottle-list"), {"whisky_name": "Lagavulin"})
+    assert r.status_code == HTTPStatus.OK
+    bottles = list(r.context["bottles"])
+    assert matching in bottles
+    assert non_matching not in bottles
+
+
+@pytest.mark.django_db
 def test_whisky_detail_loads(client, user, whisky_factory):
     """Test that whisky detail page loads for a valid whisky."""
     whisky = whisky_factory(user=user, name="Ardbeg 10")
