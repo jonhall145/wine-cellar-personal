@@ -12,8 +12,10 @@ from email.utils import formatdate, parsedate_to_datetime
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.decorators import login_not_required
-from django.http import HttpResponseNotModified
+from django.core.exceptions import SuspiciousFileOperation
+from django.http import Http404, HttpResponseNotModified
 from django.urls import include, path, re_path
+from django.utils._os import safe_join
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import require_http_methods
 from django.views.i18n import JavaScriptCatalog
@@ -42,7 +44,10 @@ CRITICAL_DISK_SPACE_GB = 0.1
 @login_not_required
 def serve_media(request, path):
     """Serve media files with cache headers and 304 support."""
-    fullpath = os.path.join(settings.MEDIA_ROOT, path)
+    try:
+        fullpath = safe_join(settings.MEDIA_ROOT, path)
+    except SuspiciousFileOperation:
+        raise Http404
 
     # Handle If-Modified-Since for conditional requests
     if os.path.isfile(fullpath):
