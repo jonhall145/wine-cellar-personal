@@ -363,12 +363,14 @@ class WhiskyBaseForm(WhiskyFormPostCleanMixin, TomSelectMixin, forms.Form):
         max_digits=8,
         decimal_places=2,
         localize=True,
+        widget=forms.TextInput(attrs={"inputmode": "decimal"}),
     )
     rrp = forms.DecimalField(
         required=False,
         max_digits=8,
         decimal_places=2,
         localize=True,
+        widget=forms.TextInput(attrs={"inputmode": "decimal"}),
     )
     barcode = forms.CharField(
         max_length=100,
@@ -420,6 +422,7 @@ class WhiskyBaseForm(WhiskyFormPostCleanMixin, TomSelectMixin, forms.Form):
             "Price paid for this specific bottle (if different from whisky price)."
         ),
         localize=True,
+        widget=forms.TextInput(attrs={"inputmode": "decimal"}),
     )
     is_gift = forms.BooleanField(
         required=False,
