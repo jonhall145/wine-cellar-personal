@@ -92,7 +92,7 @@
                                 if (url &&
                                         (url.protocol === "https:" || url.protocol === "http:") &&
                                         (isRelative || isSameOriginAbsolute)) {
-                                    window.location.href = value;
+                                    window.location.href = url.href;
                                 }
                             }
                         });
