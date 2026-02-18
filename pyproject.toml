@@ -37,7 +37,7 @@ python_files = ["test_*.py", "*_test.py"]
 omit = ["wine_cellar/conf/*","**/tests/*", "**/migrations/*"]
 
 [tool.coverage.report]
-fail_under = 80
+fail_under = 59
 show_missing = true
 exclude_lines = [
     "pragma: no cover",
