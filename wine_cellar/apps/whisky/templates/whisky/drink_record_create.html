@@ -14,6 +14,7 @@
                   novalidate>
                 {% csrf_token %}
                 {% include 'forms/form_field.html' with field=form.storage_item %}
+                {% include 'forms/form_field.html' with field=form.post_drink_status %}
                 {% include 'forms/form_field.html' with field=form.date_consumed %}
                 {% include 'forms/form_field.html' with field=form.tasting_notes %}
                 {% include 'forms/form_field.html' with field=form.rating %}

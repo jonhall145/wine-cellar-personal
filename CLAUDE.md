@@ -2,6 +2,10 @@
 
 This file documents capabilities and tools available when working with Claude on this project.
 
+## Project Overview
+
+Primary stack: Python/Django backend, Docker for deployment, Raspberry Pi build server, Cloudflare Tunnel for SSL/routing, R2 for backups. Frontend uses HTML templates with CSS/JS.
+
 ## UI Testing & Browser Automation
 
 Claude has access to browser automation tools for inspecting and testing UI:
@@ -255,6 +259,18 @@ For production deployment to meshnet:
 - **Stage-commit-push**: User often requests these as a single action
 - **Lint before commit**: Always run `make lint` and fix issues before committing
 - **Save conversations**: Always save a copy of the conversation to `.claude/logs/` for later review
+
+## Git Workflow
+
+When asked to commit/push, always run pre-commit hooks (lint, type checks) first and fix any failures before attempting the commit.
+
+## Code Conventions
+
+When making changes to shared templates or components used by both wine and whisky apps, always check for hardcoded app-specific references (e.g., wine-specific URLs, service names) and make them generic.
+
+## Testing
+
+After making model/field changes, search ALL test files for references to the old field/model name and update them in a single pass. Do not rely on a single test run to catch everything.
 
 ### Conversation Logging
 

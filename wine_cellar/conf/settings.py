@@ -71,7 +71,6 @@ INSTALLED_APPS = [
     "wine_cellar.apps.wine",
     "wine_cellar.apps.user",
     "wine_cellar.apps.storage",
-    "wine_cellar.apps.hardware",
 ]
 
 if CELLAR_APP_TYPE == "whisky":

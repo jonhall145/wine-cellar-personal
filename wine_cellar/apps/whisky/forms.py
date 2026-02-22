@@ -154,9 +154,6 @@ class WhiskyBaseForm(WhiskyFormPostCleanMixin, TomSelectMixin, forms.Form):
         self.fields["price"].help_text = _(
             "Enter the price of the bottle in %(currency)s."
         ) % {"currency": settings.CURRENCY_SYMBOLS[user_settings.currency]}
-        self.fields["rrp"].help_text = _("Enter the RRP in %(currency)s.") % {
-            "currency": settings.CURRENCY_SYMBOLS[user_settings.currency]
-        }
 
         # Configure source queryset for household
         self.fields["source"].queryset = WhiskySource.objects.filter(
@@ -359,13 +356,6 @@ class WhiskyBaseForm(WhiskyFormPostCleanMixin, TomSelectMixin, forms.Form):
         help_text=_("Rate this whisky from 0 to 3 stars."),
     )
     price = forms.DecimalField(
-        required=False,
-        max_digits=8,
-        decimal_places=2,
-        localize=True,
-        widget=forms.TextInput(attrs={"inputmode": "decimal"}),
-    )
-    rrp = forms.DecimalField(
         required=False,
         max_digits=8,
         decimal_places=2,
@@ -744,9 +734,9 @@ class WhiskyStockAddForm(TomSelectMixin, forms.Form):
         whisky = kwargs.pop("whisky", None)
         super().__init__(*args, **kwargs)
 
-        # Default bottle price from whisky RRP or price
+        # Default bottle price from whisky price
         if whisky and not self.initial.get("price"):
-            self.initial["price"] = whisky.rrp or whisky.price
+            self.initial["price"] = whisky.price
         household = get_active_household(user)
 
         self.fields["storage"].queryset = Storage.objects.filter(
@@ -853,6 +843,9 @@ class WhiskyStockAddForm(TomSelectMixin, forms.Form):
         return value.strip()
 
 
+POST_DRINK_STATUS_CONSUMED = "consumed"
+
+
 class WhiskyDrinkRecordForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.whisky = kwargs.pop("whisky", None)
@@ -887,6 +880,19 @@ class WhiskyDrinkRecordForm(forms.Form):
         required=False,
         label=_("Bottle"),
         help_text=_("Select which bottle you consumed (optional)."),
+    )
+    post_drink_status = forms.ChoiceField(
+        required=False,
+        initial=POST_DRINK_STATUS_CONSUMED,
+        label=_("Bottle status after drink"),
+        choices=(
+            (POST_DRINK_STATUS_CONSUMED, _("Consumed (remove from stock)")),
+            (FillLevel.OPENED, _("Opened (keep in stock)")),
+            (FillLevel.DREG, _("Dreg (keep in stock)")),
+        ),
+        help_text=_(
+            "If you select a bottle, choose how that bottle should be updated."
+        ),
     )
     date_consumed = forms.DateField(
         widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
@@ -929,6 +935,19 @@ class WhiskyDrinkRecordForm(forms.Form):
 
         return bottle
 
+    def clean(self):
+        cleaned_data = super().clean()
+        bottle = cleaned_data.get("storage_item")
+        post_drink_status = cleaned_data.get("post_drink_status")
+
+        if bottle and not post_drink_status:
+            self.add_error(
+                "post_drink_status",
+                _("Choose how to update the selected bottle."),
+            )
+
+        return cleaned_data
+
 
 class WhiskyWishlistForm(forms.Form):
     name = forms.CharField(
@@ -969,37 +988,6 @@ class WhiskyWishlistForm(forms.Form):
         initial=1,
         validators=[validators.MinValueValidator(1), validators.MaxValueValidator(5)],
         help_text=_("Priority from 1 (low) to 5 (high)."),
-    )
-
-
-class WhiskySaleAlertForm(forms.Form):
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop("user")
-        super().__init__(*args, **kwargs)
-        household = get_active_household(user)
-
-        self.fields["source"].queryset = WhiskySource.objects.filter(
-            household=household
-        ).order_by("name")
-
-    source = forms.ModelChoiceField(
-        queryset=WhiskySource.objects.none(),
-        required=False,
-        label=_("Source"),
-        help_text=_("Leave blank to monitor all sources"),
-    )
-    threshold_percent = forms.IntegerField(
-        initial=10,
-        validators=[validators.MinValueValidator(1), validators.MaxValueValidator(100)],
-        label=_("Price Drop Threshold (%)"),
-        help_text=_("Alert when price drops by this percentage"),
-    )
-    threshold_price = forms.DecimalField(
-        required=False,
-        max_digits=8,
-        decimal_places=2,
-        label=_("Target Price"),
-        help_text=_("Alert when price drops to or below this amount"),
     )
 
 

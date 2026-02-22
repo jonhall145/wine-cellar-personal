@@ -346,16 +346,6 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         localize=True,
         widget=forms.TextInput(attrs={"inputmode": "decimal"}),
     )
-    rrp = forms.DecimalField(
-        required=False,
-        max_digits=6,
-        decimal_places=2,
-        localize=True,
-        widget=forms.TextInput(attrs={"inputmode": "decimal"}),
-        help_text=_(
-            "Enter the recommended retail price if different from purchase price."
-        ),
-    )
     price_url = forms.URLField(
         required=False,
         max_length=500,
@@ -366,6 +356,14 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         max_length=100,
         required=False,
         help_text=_("Enter the barcode number of the wine as indicated on the label."),
+    )
+    barcode_2 = forms.CharField(
+        max_length=100,
+        required=False,
+        label=_("Additional Barcode"),
+        help_text=_(
+            "Enter an additional barcode (e.g. from a different region/format)."
+        ),  # noqa: E501
     )
     comment = forms.CharField(
         max_length=250,
@@ -767,45 +765,4 @@ class LabelScanForm(forms.Form):
         required=False,
         label=_("Back Label Image"),
         help_text=_("Optional: Upload back label image"),
-    )
-
-
-class SaleAlertForm(forms.Form):
-    """Form for creating sale alerts."""
-
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop("user")
-        super().__init__(*args, **kwargs)
-        from wine_cellar.apps.wine.models import Wine
-
-        self.fields["wine"].queryset = Wine.objects.filter(user=user).order_by("name")
-        self.fields["source"].queryset = Source.objects.filter(user=user).order_by(
-            "name"
-        )
-
-    wine = forms.ModelChoiceField(
-        queryset=None,
-        required=False,
-        label=_("Wine"),
-        help_text=_("Leave blank to monitor all wines"),
-    )
-    source = forms.ModelChoiceField(
-        queryset=None,
-        required=False,
-        label=_("Source"),
-        help_text=_("Leave blank to monitor all sources"),
-    )
-    threshold_percent = forms.IntegerField(
-        initial=10,
-        min_value=1,
-        max_value=100,
-        label=_("Price Drop Threshold (%)"),
-        help_text=_("Alert when price drops by this percentage"),
-    )
-    threshold_price = forms.DecimalField(
-        required=False,
-        max_digits=6,
-        decimal_places=2,
-        label=_("Target Price"),
-        help_text=_("Alert when price drops to or below this amount"),
     )

@@ -3,7 +3,6 @@ import BaseMap from './Map'
 import MarkerClusterLayer from './MarkerClusterLayer'
 import GeoJsonMarker from './GeoJsonMarker'
 import { ItemPopup } from './ItemPopup'
-import CountryChoroplethLayer from './CountryChoroplethLayer'
 
 /**
  * Creates a Map component.
@@ -38,7 +37,7 @@ export const Map = React.forwardRef(function Map({ id, title, ...props }, ref) {
  * @param {ReactNode} children - Any additional controls etc. to be added to the map
  * @returns {JSX.Element} - The rendered map component with markers.
  */
-export const MapWithMarkers = ({ wines, countriesWithWines, withoutPopup, children, ...props }) => {
+export const MapWithMarkers = ({ wines, withoutPopup, children, ...props }) => {
   const [countries, setCountries] = useState(null)
 
   useEffect(() => {
@@ -80,7 +79,6 @@ export const MapWithMarkers = ({ wines, countriesWithWines, withoutPopup, childr
   })
   return (
     <Map {...props}>
-      <CountryChoroplethLayer countriesWithWines={countriesWithWines} />
       {markers.length > 1 ? (
         <MarkerClusterLayer>{markers}</MarkerClusterLayer>
       ) : (

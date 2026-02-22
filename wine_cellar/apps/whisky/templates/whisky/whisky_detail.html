@@ -151,12 +151,6 @@
                             <td>{{ whisky.get_price_with_currency }}{% if whisky.get_average_price_with_currency %} ({% translate "Average" %}: {{ whisky.get_average_price_with_currency }}){% endif %}</td>
                         </tr>
                     {% endif %}
-                    {% if whisky.rrp is not None %}
-                        <tr>
-                            <th>{% translate "RRP" %}</th>
-                            <td>{{ whisky.get_rrp_with_currency }}</td>
-                        </tr>
-                    {% endif %}
                     <tr>
                         <th>{% translate "Rating" %}</th>
                         <td>

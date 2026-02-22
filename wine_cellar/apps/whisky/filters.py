@@ -1,17 +1,20 @@
 import django_filters
 import pycountry
 from django.core.cache import cache
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils.translation import gettext_lazy as _
 from django_filters import ChoiceFilter, OrderingFilter
 
+from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.models import (
     WHISKY_COUNTRIES,
     Distillery,
+    FillLevel,
     PeatedLevel,
     Whisky,
     WhiskyRegion,
+    WhiskyStorageItem,
     WhiskyType,
 )
 
@@ -283,6 +286,8 @@ class WhiskyFilter(django_filters.FilterSet):
         return queryset
 
     def filter_rating(self, queryset, name, value):
+        if value == "0":
+            return queryset.filter(Q(rating=0) | Q(rating__isnull=True))
         if value:
             return queryset.filter(rating=int(value))
         return queryset
@@ -318,3 +323,72 @@ class WhiskyFilter(django_filters.FilterSet):
 
         # Update country filter with favourites-ordered choices
         self.filters["country"].extra["choices"] = get_country_choices(user)
+
+
+class WhiskyStorageItemFilter(django_filters.FilterSet):
+    """Filter for the whisky bottles list page."""
+
+    whisky_name = django_filters.CharFilter(
+        field_name="whisky__name",
+        lookup_expr="icontains",
+        label=_("Whisky Name"),
+    )
+    storage = django_filters.ModelChoiceFilter(
+        queryset=Storage.objects.none(),
+        label=_("Storage"),
+    )
+    fill_level = ChoiceFilter(
+        choices=[("", _("All"))] + list(FillLevel.choices),
+        label=_("Fill Level"),
+    )
+    is_gift = ChoiceFilter(
+        method="filter_is_gift",
+        choices=(("", _("All")), ("1", _("Yes")), ("0", _("No"))),
+        label=_("Is Gift"),
+    )
+    has_occasion = ChoiceFilter(
+        method="filter_has_occasion",
+        choices=(("", _("All")), ("1", _("Yes")), ("0", _("No"))),
+        label=_("Has Occasion"),
+    )
+    order = OrderingFilter(
+        choices=(
+            ("-created", _("Recently Added")),
+            ("created", _("Oldest First")),
+            ("whisky__name", _("Whisky Name A-Z")),
+            ("-whisky__name", _("Whisky Name Z-A")),
+            ("storage__name", _("Storage A-Z")),
+            ("-price", _("Highest Price")),
+            ("price", _("Lowest Price")),
+        ),
+        label=_("Sort By"),
+        empty_label=None,
+    )
+
+    def filter_is_gift(self, queryset, name, value):
+        if value == "1":
+            return queryset.filter(is_gift=True)
+        if value == "0":
+            return queryset.filter(is_gift=False)
+        return queryset
+
+    def filter_has_occasion(self, queryset, name, value):
+        if value == "1":
+            return queryset.exclude(occasion__isnull=True).exclude(occasion="")
+        if value == "0":
+            return queryset.filter(Q(occasion__isnull=True) | Q(occasion=""))
+        return queryset
+
+    class Meta:
+        model = WhiskyStorageItem
+        fields = ["whisky_name", "storage", "fill_level", "is_gift", "has_occasion"]
+
+    def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
+        super().__init__(data, queryset, request=request, prefix=prefix)
+        if request and request.user.is_authenticated:
+            household = get_active_household(request.user)
+            if household:
+                self.filters["storage"].queryset = Storage.objects.filter(
+                    household=household,
+                    app_type=get_app_type(),
+                ).order_by("order", "created")
