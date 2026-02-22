@@ -1157,10 +1157,7 @@ class DrinkRecordCreateView(FormView):
                 storage_item.fill_level = post_drink_status
                 update_fields = ["fill_level"]
 
-                if (
-                    post_drink_status in (FillLevel.OPENED, FillLevel.DREG)
-                    and not storage_item.opened_date
-                ):
+                if not storage_item.opened_date:
                     storage_item.opened_date = date_consumed
                     update_fields.append("opened_date")
 
