@@ -10,39 +10,41 @@
     <div class="pure-g">
         <div class="pure-u-1">
             {% if drink_records %}
-                <table class="pure-table pure-table-horizontal pure-table-striped">
-                    <thead>
-                        <tr>
-                            <th>{% translate "Date" %}</th>
-                            <th>{% translate "Wine" %}</th>
-                            <th>{% translate "Rating" %}</th>
-                            <th>{% translate "Shared With" %}</th>
-                            <th>{% translate "Occasion" %}</th>
-                            <th>{% translate "Notes" %}</th>
-                            <th>{% translate "Actions" %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for record in drink_records %}
+                <div class="table-responsive">
+                    <table class="pure-table pure-table-horizontal pure-table-striped">
+                        <thead>
                             <tr>
-                                <td>{{ record.date_consumed }}</td>
-                                <td><a href="{% url 'wine-detail' record.wine.pk %}">{{ record.wine.name }}</a></td>
-                                <td>{{ record.rating|default_if_none:"-" }}</td>
-                                <td>{{ record.shared_with|default_if_none:"-" }}</td>
-                                <td>{{ record.occasion|default_if_none:"-" }}</td>
-                                <td>{{ record.tasting_notes|default_if_none:"-"|truncatewords:20 }}</td>
-                                <td>
-                                    <a href="{% url 'drink-record-edit' record.pk %}" class="pure-button pure-button-small" title="{% translate 'Edit' %}">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </a>
-                                    <a href="{% url 'drink-record-delete' record.pk %}" class="pure-button pure-button-small button__danger" title="{% translate 'Delete' %}">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </a>
-                                </td>
+                                <th>{% translate "Date" %}</th>
+                                <th>{% translate "Wine" %}</th>
+                                <th>{% translate "Rating" %}</th>
+                                <th>{% translate "Shared With" %}</th>
+                                <th>{% translate "Occasion" %}</th>
+                                <th>{% translate "Notes" %}</th>
+                                <th>{% translate "Actions" %}</th>
                             </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {% for record in drink_records %}
+                                <tr>
+                                    <td>{{ record.date_consumed }}</td>
+                                    <td><a href="{% url 'wine-detail' record.wine.pk %}">{{ record.wine.name }}</a></td>
+                                    <td>{{ record.rating|default_if_none:"-" }}</td>
+                                    <td>{{ record.shared_with|default_if_none:"-" }}</td>
+                                    <td>{{ record.occasion|default_if_none:"-" }}</td>
+                                    <td>{{ record.tasting_notes|default_if_none:"-"|truncatewords:20 }}</td>
+                                    <td>
+                                        <a href="{% url 'drink-record-edit' record.pk %}" class="pure-button pure-button-small" title="{% translate 'Edit' %}">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </a>
+                                        <a href="{% url 'drink-record-delete' record.pk %}" class="pure-button pure-button-small button__danger" title="{% translate 'Delete' %}">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             {% else %}
                 <div class="empty-state">
                     <div class="empty-state__icon"><i class="fa-solid fa-wine-glass"></i></div>

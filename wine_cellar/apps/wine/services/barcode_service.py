@@ -309,8 +309,6 @@ class BarcodeScanner:
             data["category"] = wine.category
         if wine.price:
             data["price"] = str(wine.price)
-        if wine.rrp:
-            data["rrp"] = str(wine.rrp)
 
         # Handle many-to-many fields
         grapes = list(wine.grapes.values_list("name", flat=True))

@@ -30,12 +30,12 @@ from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 from wine_cellar.apps.whisky.filters import WhiskyFilter, WhiskyStorageItemFilter
 from wine_cellar.apps.whisky.forms import (
+    POST_DRINK_STATUS_CONSUMED,
     BottleNoteForm,
     ReorderReminderForm,
     WhiskyDrinkRecordForm,
     WhiskyEditForm,
     WhiskyForm,
-    WhiskySaleAlertForm,
     WhiskyStockAddForm,
     WhiskyWishlistForm,
 )
@@ -52,7 +52,6 @@ from wine_cellar.apps.whisky.models import (
     WhiskyPriceHistory,
     WhiskyRegion,
     WhiskyReorderReminder,
-    WhiskySaleAlert,
     WhiskyStorageItem,
     WhiskyVisionExtractionLog,
     WhiskyWishlist,
@@ -412,7 +411,6 @@ class WhiskyCreateView(FormView):
         comment = cleaned_data["comment"]
         country = cleaned_data["country"]
         price = cleaned_data["price"]
-        rrp = cleaned_data["rrp"]
         name = cleaned_data["name"]
         rating = cleaned_data["rating"]
         whisky_type = cleaned_data["whisky_type"]
@@ -462,7 +460,6 @@ class WhiskyCreateView(FormView):
                 "comment": comment,
                 "rating": rating,
                 "price": price,
-                "rrp": rrp,
                 "source": source,
                 "owner": owner,
             },
@@ -572,7 +569,6 @@ class WhiskyUpdateView(FormView):
         comment = cleaned_data["comment"]
         country = cleaned_data["country"]
         price = cleaned_data["price"]
-        rrp = cleaned_data["rrp"]
         name = cleaned_data["name"]
         rating = cleaned_data["rating"]
         whisky_type = cleaned_data["whisky_type"]
@@ -618,7 +614,6 @@ class WhiskyUpdateView(FormView):
         whisky.limited_edition = limited_edition
         whisky.release_year = release_year
         whisky.price = price
-        whisky.rrp = rrp
         whisky.source = source
         whisky.owner = owner
         whisky.save()
@@ -1136,13 +1131,15 @@ class DrinkRecordCreateView(FormView):
         household = get_active_household(self.request.user)
         whisky = get_object_or_404(Whisky, pk=self.kwargs["pk"], household=household)
         storage_item = form.cleaned_data.get("storage_item")
+        post_drink_status = form.cleaned_data.get("post_drink_status")
+        date_consumed = form.cleaned_data["date_consumed"]
 
         # Create drink record
         WhiskyDrinkRecord.objects.create(
             whisky=whisky,
             user=self.request.user,
             household=household,
-            date_consumed=form.cleaned_data["date_consumed"],
+            date_consumed=date_consumed,
             tasting_notes=form.cleaned_data.get("tasting_notes"),
             rating=form.cleaned_data.get("rating"),
             shared_with=form.cleaned_data.get("shared_with"),
@@ -1150,10 +1147,37 @@ class DrinkRecordCreateView(FormView):
             storage_item=storage_item,
         )
 
-        # Mark bottle as consumed if selected
+        # Update bottle status if selected
         if storage_item:
-            storage_item.deleted = True
-            storage_item.save(update_fields=["deleted"])
+            if post_drink_status == POST_DRINK_STATUS_CONSUMED:
+                storage_item.deleted = True
+                storage_item.save(update_fields=["deleted"])
+            elif post_drink_status in (FillLevel.OPENED, FillLevel.DREG):
+                old_fill_level = storage_item.fill_level
+                storage_item.fill_level = post_drink_status
+                update_fields = ["fill_level"]
+
+                if (
+                    post_drink_status in (FillLevel.OPENED, FillLevel.DREG)
+                    and not storage_item.opened_date
+                ):
+                    storage_item.opened_date = date_consumed
+                    update_fields.append("opened_date")
+
+                if (
+                    post_drink_status == FillLevel.DREG
+                    and old_fill_level != FillLevel.DREG
+                ):
+                    storage_item.dreg_date = date_consumed
+                    update_fields.append("dreg_date")
+                elif (
+                    post_drink_status != FillLevel.DREG
+                    and old_fill_level == FillLevel.DREG
+                ):
+                    storage_item.dreg_date = None
+                    update_fields.append("dreg_date")
+
+                storage_item.save(update_fields=update_fields)
 
         self.success_url = reverse_lazy("whisky-detail", kwargs={"pk": whisky.pk})
         return super().form_valid(form)
@@ -1557,79 +1581,6 @@ class ReorderReminderDeleteView(DeleteView):
         return WhiskyReorderReminder.objects.filter(household=household)
 
 
-class SaleAlertsView(TemplateView):
-    """View and manage sale alerts."""
-
-    template_name = "whisky/sale_alerts.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        context["alerts"] = (
-            WhiskySaleAlert.objects.filter(household=household)
-            .select_related("whisky", "source")
-            .order_by("-is_active", "-created")
-        )
-        return context
-
-
-class SaleAlertCreateView(FormView):
-    """Create a new sale alert."""
-
-    template_name = "whisky/sale_alert_create.html"
-    form_class = WhiskySaleAlertForm
-    success_url = reverse_lazy("sale-alerts")
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs["user"] = self.request.user
-        return kwargs
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        context["whisky"] = get_object_or_404(
-            Whisky, pk=self.kwargs["pk"], household=household
-        )
-        return context
-
-    def form_valid(self, form):
-        household = get_active_household(self.request.user)
-        whisky = get_object_or_404(Whisky, pk=self.kwargs["pk"], household=household)
-        WhiskySaleAlert.objects.create(
-            user=self.request.user,
-            household=household,
-            whisky=whisky,
-            source=form.cleaned_data.get("source"),
-            threshold_percent=form.cleaned_data.get("threshold_percent", 10),
-            threshold_price=form.cleaned_data.get("threshold_price"),
-        )
-        self.success_url = reverse_lazy("whisky-detail", kwargs={"pk": whisky.pk})
-        return super().form_valid(form)
-
-
-class SaleAlertDeleteView(DeleteView):
-    """Delete a sale alert."""
-
-    template_name = "whisky/sale_alert_confirm_delete.html"
-    success_url = reverse_lazy("sale-alerts")
-
-    def get_queryset(self):
-        household = get_active_household(self.request.user)
-        return WhiskySaleAlert.objects.filter(household=household)
-
-
-class SaleAlertToggleView(TemplateView):
-    """Toggle a sale alert's active status."""
-
-    def get(self, request, *args, **kwargs):
-        household = get_active_household(request.user)
-        alert = get_object_or_404(WhiskySaleAlert, pk=kwargs["pk"], household=household)
-        alert.is_active = not alert.is_active
-        alert.save(update_fields=["is_active"])
-        return redirect("sale-alerts")
-
-
 class StorageItemAddView(FormView):
     """Add a bottle to storage."""
 
@@ -1871,8 +1822,6 @@ class WhiskyMergeConfirmView(TemplateView):
             WhiskyVisionExtractionLog.objects.filter(whisky=duplicate).update(
                 whisky=primary
             )
-            WhiskySaleAlert.objects.filter(whisky=duplicate).update(whisky=primary)
-
             # Handle ReorderReminder (unique on whisky+user)
             for reminder in WhiskyReorderReminder.objects.filter(whisky=duplicate):
                 if not WhiskyReorderReminder.objects.filter(

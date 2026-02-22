@@ -398,13 +398,6 @@ class Whisky(UserContentModel):
         blank=True,
         verbose_name=_("Price"),
     )
-    rrp = models.DecimalField(
-        max_digits=8,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name=_("RRP"),
-    )
     comment = models.TextField(
         blank=True,
         default="",
@@ -537,19 +530,6 @@ class Whisky(UserContentModel):
             getattr(user_settings, "currency", "EUR"), "€"
         )
         formatted_price = number_format(self.price, use_l10n=True)
-        return f"{currency}{formatted_price}"
-
-    @property
-    def get_rrp_with_currency(self):
-        from wine_cellar.apps.user.views import get_user_settings
-
-        if self.rrp is None:
-            return None
-        user_settings = get_user_settings(self.user)
-        currency = settings.CURRENCY_SYMBOLS.get(
-            getattr(user_settings, "currency", "EUR"), "€"
-        )
-        formatted_price = number_format(self.rrp, use_l10n=True)
         return f"{currency}{formatted_price}"
 
     @property
@@ -1009,30 +989,3 @@ class WhiskyPriceHistory(UserContentModel):
 
     def __str__(self):
         return f"{self.whisky.name} - {self.price} at {self.recorded_at}"
-
-
-class WhiskySaleAlert(UserContentModel):
-    whisky = models.ForeignKey(Whisky, on_delete=models.CASCADE)
-    source = models.ForeignKey(
-        WhiskySource, on_delete=models.SET_NULL, null=True, blank=True
-    )
-    threshold_percent = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name=_("Discount Threshold %"),
-    )
-    threshold_price = models.DecimalField(
-        max_digits=8,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name=_("Target Price"),
-    )
-    is_active = models.BooleanField(default=True)
-    last_notified = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        ordering = ["-created"]
-
-    def __str__(self):
-        return f"Sale alert: {self.whisky.name}"

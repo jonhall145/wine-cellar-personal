@@ -21,10 +21,6 @@ from wine_cellar.apps.wine.views import (
     ReorderReminderCreateView,
     ReorderReminderDeleteView,
     ReorderRemindersView,
-    SaleAlertCreateView,
-    SaleAlertDeleteView,
-    SaleAlertsView,
-    SaleAlertToggleView,
     WineCreateView,
     WineDeleteView,
     WineDetailView,
@@ -40,6 +36,7 @@ from wine_cellar.apps.wine.views import (
     WishlistListView,
     WishlistPurchasedView,
     crop_wine_image,
+    delete_wine_barcode,
     extract_wine_vision_ajax,
     scan_barcode_ajax,
     set_primary_image,
@@ -123,18 +120,11 @@ urlpatterns = [
         ReorderReminderDeleteView.as_view(),
         name="reorder-reminder-delete",
     ),
-    # Sale alerts
-    path("sale-alerts/", SaleAlertsView.as_view(), name="sale-alerts"),
-    path("sale-alerts/add/", SaleAlertCreateView.as_view(), name="sale-alert-add"),
+    # Barcodes
     path(
-        "sale-alerts/delete/<int:pk>/",
-        SaleAlertDeleteView.as_view(),
-        name="sale-alert-delete",
-    ),
-    path(
-        "sale-alerts/toggle/<int:pk>/",
-        SaleAlertToggleView.as_view(),
-        name="sale-alert-toggle",
+        "wine/barcode/<int:pk>/delete/",
+        delete_wine_barcode,
+        name="wine-barcode-delete",
     ),
     # Label scanning
     path("label-scan/", LabelScanView.as_view(), name="label-scan"),

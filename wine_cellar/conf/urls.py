@@ -124,15 +124,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
     path("household/", include("wine_cellar.apps.household.urls")),
-    path(
-        "api/v1/", include("wine_cellar.apps.hardware.urls", namespace="hardware-api")
-    ),
-    path(
-        "hardware/",
-        include(
-            ("wine_cellar.apps.hardware.web_urls", "hardware"), namespace="hardware"
-        ),
-    ),
     path("user/settings/", UserSettingsView.as_view(), name="user-settings"),
     # Storage (shared across wine/whisky)
     path("storages/", StorageListView.as_view(), name="storage-list"),

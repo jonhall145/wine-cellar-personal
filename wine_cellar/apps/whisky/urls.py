@@ -22,7 +22,7 @@ urlpatterns = [
         views.WhiskyScannedView.as_view(),
         name="whisky-scanned",
     ),
-    path("whisky/label-scan/", views.LabelScanView.as_view(), name="label-scan"),
+    path("label-scan/", views.LabelScanView.as_view(), name="label-scan"),
     # AJAX endpoints
     path(
         "whisky/extract-vision/",
@@ -129,23 +129,6 @@ urlpatterns = [
         "reorder/<int:pk>/delete/",
         views.ReorderReminderDeleteView.as_view(),
         name="reorder-reminder-delete",
-    ),
-    # Sale alerts
-    path("sale-alerts/", views.SaleAlertsView.as_view(), name="sale-alerts"),
-    path(
-        "whisky/<int:pk>/sale-alert/add/",
-        views.SaleAlertCreateView.as_view(),
-        name="sale-alert-add",
-    ),
-    path(
-        "sale-alert/<int:pk>/delete/",
-        views.SaleAlertDeleteView.as_view(),
-        name="sale-alert-delete",
-    ),
-    path(
-        "sale-alert/<int:pk>/toggle/",
-        views.SaleAlertToggleView.as_view(),
-        name="sale-alert-toggle",
     ),
     # Bottle notes
     path(

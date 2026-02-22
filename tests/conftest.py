@@ -6,10 +6,6 @@ import pytest
 from django.conf import settings
 from pytest_factoryboy import register
 
-from wine_cellar.apps.hardware.tests.factories import (
-    HardwareDeviceFactory,
-    OfflineOperationFactory,
-)
 from wine_cellar.apps.household.tests.factories import (
     HouseholdFactory,
     HouseholdMembershipFactory,
@@ -49,10 +45,6 @@ register(SizeFactory)
 register(SourceFactory)
 register(StorageFactory)
 register(StorageItemFactory)
-
-# Hardware factories
-register(HardwareDeviceFactory)
-register(OfflineOperationFactory)
 
 
 @pytest.fixture

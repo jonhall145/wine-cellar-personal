@@ -300,13 +300,6 @@ class Wine(UserContentModel):
     price = models.DecimalField(
         max_digits=6, decimal_places=2, null=True, verbose_name=_("Price")
     )
-    rrp = models.DecimalField(
-        max_digits=6,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name=_("RRP"),
-    )
     price_url = models.URLField(
         max_length=500,
         blank=True,
@@ -346,15 +339,6 @@ class Wine(UserContentModel):
             getattr(user_settings, "currency", "EUR"), "€"
         )
         formatted_price = number_format(self.price, use_l10n=True)
-        return f"{currency}{formatted_price}"
-
-    @property
-    def get_rrp_with_currency(self):
-        user_settings = get_user_settings(self.user)
-        currency = settings.CURRENCY_SYMBOLS.get(
-            getattr(user_settings, "currency", "EUR"), "€"
-        )
-        formatted_price = number_format(self.rrp, use_l10n=True)
         return f"{currency}{formatted_price}"
 
     @property
@@ -803,62 +787,3 @@ class PriceHistory(UserContentModel):
     def __str__(self):
         source_name = self.source.name if self.source else "Unknown"
         return f"{self.wine.name} - {self.price} ({source_name})"
-
-
-class SaleAlert(UserContentModel):
-    """Alerts for price drops on wines from specific sources."""
-
-    wine = models.ForeignKey(
-        Wine,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="sale_alerts",
-        verbose_name=_("Wine"),
-        help_text=_("Leave blank to monitor all wines from this source"),
-    )
-    source = models.ForeignKey(
-        Source,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="sale_alerts",
-        verbose_name=_("Source"),
-        help_text=_("Leave blank to monitor all sources for this wine"),
-    )
-    threshold_percent = models.PositiveIntegerField(
-        default=10,
-        verbose_name=_("Price Drop Threshold (%)"),
-        help_text=_("Alert when price drops by this percentage or more"),
-    )
-    threshold_price = models.DecimalField(
-        max_digits=6,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name=_("Target Price"),
-        help_text=_("Alert when price drops to or below this amount"),
-    )
-    is_active = models.BooleanField(
-        default=True,
-        verbose_name=_("Active"),
-    )
-    last_notified = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name=_("Last Notified"),
-    )
-
-    class Meta:
-        verbose_name = _("Sale Alert")
-        verbose_name_plural = _("Sale Alerts")
-        indexes = [
-            models.Index(
-                fields=["user", "is_active"], name="salealert_user_active_idx"
-            ),
-        ]
-
-    def __str__(self):
-        wine_name = self.wine.name if self.wine else "Any wine"
-        source_name = self.source.name if self.source else "Any source"
-        return f"Alert: {wine_name} from {source_name}"

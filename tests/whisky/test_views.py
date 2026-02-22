@@ -1,10 +1,11 @@
+import datetime
 from http import HTTPStatus
 
 import pytest
 from django.urls import reverse
 from pytest_django.asserts import assertRedirects, assertTemplateUsed
 
-from wine_cellar.apps.whisky.models import Whisky
+from wine_cellar.apps.whisky.models import FillLevel, Whisky, WhiskyDrinkRecord
 
 
 @pytest.mark.django_db
@@ -106,6 +107,101 @@ def test_bottle_list_filters_by_whisky_name(client, user, whisky_storage_item_fa
 
 
 @pytest.mark.django_db
+def test_drink_record_form_invites_bottle_status_selection(
+    client, user, whisky_storage_item_factory
+):
+    """Test drink-record form exposes the bottle-status choice field."""
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+    )
+
+    client.force_login(user)
+    response = client.get(reverse("drink-record-add", kwargs={"pk": bottle.whisky.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assert "post_drink_status" in response.context["form"].fields
+
+
+@pytest.mark.django_db
+def test_drink_record_with_selected_bottle_can_mark_consumed(
+    client, user, whisky_storage_item_factory
+):
+    """Test selected bottle can be marked consumed when recording a drink."""
+    from wine_cellar.apps.whisky.forms import POST_DRINK_STATUS_CONSUMED
+
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.UNOPENED,
+        deleted=False,
+    )
+
+    client.force_login(user)
+    response = client.post(
+        reverse("drink-record-add", kwargs={"pk": bottle.whisky.pk}),
+        {
+            "storage_item": bottle.pk,
+            "post_drink_status": POST_DRINK_STATUS_CONSUMED,
+            "date_consumed": "2024-01-15",
+            "rating": 2,
+        },
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+    record = WhiskyDrinkRecord.objects.filter(whisky=bottle.whisky, user=user).first()
+    assert record is not None
+    assert record.storage_item == bottle
+    bottle.refresh_from_db()
+    assert bottle.deleted is True
+
+
+@pytest.mark.django_db
+def test_drink_record_with_selected_bottle_can_mark_opened(
+    client, user, whisky_storage_item_factory
+):
+    """Test selected bottle can stay in stock and be marked opened."""
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.UNOPENED,
+        deleted=False,
+    )
+
+    client.force_login(user)
+    response = client.post(
+        reverse("drink-record-add", kwargs={"pk": bottle.whisky.pk}),
+        {
+            "storage_item": bottle.pk,
+            "post_drink_status": FillLevel.OPENED,
+            "date_consumed": "2024-01-15",
+            "rating": 3,
+        },
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+    bottle.refresh_from_db()
+    assert bottle.deleted is False
+    assert bottle.fill_level == FillLevel.OPENED
+    assert bottle.opened_date == datetime.date(2024, 1, 15)
+
+
+@pytest.mark.django_db
 def test_whisky_detail_loads(client, user, whisky_factory):
     """Test that whisky detail page loads for a valid whisky."""
     whisky = whisky_factory(user=user, name="Ardbeg 10")
@@ -158,7 +254,6 @@ def test_whisky_create_post_valid(client, user):
         "country": "GB",
         "comment": "",
         "price": "",
-        "rrp": "",
         "rating": "",
     }
     assert not Whisky.objects.filter(user=user).exists()
@@ -239,7 +334,6 @@ def test_whisky_create_post_with_distillery(client, user, distillery_factory):
         "age_statement": 10,
         "comment": "",
         "price": "",
-        "rrp": "",
         "rating": "",
     }
     r = client.post(reverse("whisky-add"), data, follow=True)

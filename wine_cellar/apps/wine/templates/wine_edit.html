@@ -24,12 +24,40 @@
             object-fit: cover;
             border-radius: 6px;
         }
+        .barcode-list {
+            padding: 0;
+            margin: 0 0 0.5em 0;
+            list-style: none;
+        }
+        .barcode-list__item {
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+            margin-bottom: 0.25em;
+        }
+        .barcode-list__delete {
+            padding: 0.1em 0.4em;
+            font-size: 0.85em;
+        }
     </style>
 {% endblock extra_css %}
 {% block extra_js %}
     {{ block.super }}
     <script src="{% static 'tom_select.js' %}" type="module" defer></script>
     <script src="{% static 'image_preview.js' %}" type="module" defer></script>
+    <script>
+        function deleteBarcode(pk, csrfToken) {
+            fetch("{% url 'wine-barcode-delete' 0 %}".replace('/0/', '/' + pk + '/'), {
+                method: 'POST',
+                headers: {'X-CSRFToken': csrfToken, 'Content-Type': 'application/json'},
+            }).then(function(r) {
+                if (r.ok) {
+                    var el = document.getElementById('barcode-row-' + pk);
+                    if (el) el.remove();
+                }
+            });
+        }
+    </script>
 {% endblock extra_js %}
 {% block title %}
     Create/Edit Wine
@@ -56,6 +84,25 @@
                     </a>
                 </div>
             {% endif %}
+            {% with barcodes=wine.barcodes.all %}
+                {% if barcodes %}
+                    <div class="mb-12">
+                        <h4>{% translate "Barcodes" %}</h4>
+                        <ul class="barcode-list">
+                            {% for b in barcodes %}
+                                <li id="barcode-row-{{ b.pk }}" class="barcode-list__item">
+                                    <span>{{ b.barcode }}</span>
+                                    <button type="button"
+                                            class="pure-button button__danger barcode-list__delete"
+                                            onclick="deleteBarcode({{ b.pk }}, '{{ csrf_token }}')">
+                                        ×
+                                    </button>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+            {% endwith %}
             <form method="post"
                   enctype="multipart/form-data"
                   class="pure-form pure-form-stacked wine-form"

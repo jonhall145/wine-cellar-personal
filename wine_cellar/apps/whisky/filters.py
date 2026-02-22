@@ -286,6 +286,8 @@ class WhiskyFilter(django_filters.FilterSet):
         return queryset
 
     def filter_rating(self, queryset, name, value):
+        if value == "0":
+            return queryset.filter(Q(rating=0) | Q(rating__isnull=True))
         if value:
             return queryset.filter(rating=int(value))
         return queryset

@@ -481,6 +481,14 @@ class WineCreateView(FormView):
             self.request.user, household, form.cleaned_data
         )
 
+        # Apply AI label bounds as auto-crop thumbnails if confidence is sufficient
+        extraction_result = self.request.session.get("extraction_result")
+        if extraction_result and created:
+            confidence = extraction_result.get("confidence", "low")
+            if confidence in ("high", "medium"):
+                extracted_data = extraction_result.get("extracted_data", {})
+                self._apply_auto_crop(wine, extracted_data)
+
         # Clear scanned label data from session after successful save
         if "scanned_label" in self.request.session:
             del self.request.session["scanned_label"]
@@ -493,6 +501,50 @@ class WineCreateView(FormView):
             )
 
         return super().form_valid(form)
+
+    @staticmethod
+    def _apply_auto_crop(wine, extracted_data):
+        """Apply AI-extracted label bounds as auto-crop thumbnails."""
+        from PIL import Image
+
+        from wine_cellar.apps.wine.models import ImageType
+        from wine_cellar.apps.wine.utils import apply_manual_crop
+
+        bounds_map = {
+            ImageType.LABEL_FRONT: extracted_data.get("label_bounds_front"),
+            ImageType.LABEL_BACK: extracted_data.get("label_bounds_back"),
+        }
+
+        for image_type, bounds in bounds_map.items():
+            if not bounds:
+                continue
+            wine_image = wine.wineimage_set.filter(image_type=image_type).first()
+            if not wine_image or not wine_image.image:
+                continue
+            try:
+                import os
+
+                from django.conf import settings as django_settings
+
+                full_path = os.path.join(
+                    django_settings.MEDIA_ROOT, wine_image.image.name
+                )
+                with Image.open(full_path) as img:
+                    img_width, img_height = img.size
+
+                x = int((bounds["x1"] / 100) * img_width)
+                y = int((bounds["y1"] / 100) * img_height)
+                width = int(((bounds["x2"] - bounds["x1"]) / 100) * img_width)
+                height = int(((bounds["y2"] - bounds["y1"]) / 100) * img_height)
+
+                if width > 0 and height > 0:
+                    thumb_path = apply_manual_crop(wine_image, x, y, width, height)
+                    wine_image.thumbnail = thumb_path
+                    wine_image.save(update_fields=["thumbnail"])
+            except Exception:
+                logger.exception(
+                    f"Auto-crop failed for wine {wine.pk} image type {image_type}"
+                )
 
     @staticmethod
     @transaction.atomic
@@ -514,7 +566,6 @@ class WineCreateView(FormView):
         food_pairings = cleaned_data["food_pairings"]
         source = cleaned_data["source"]
         price = cleaned_data["price"]
-        rrp = cleaned_data["rrp"]
         vineyards = cleaned_data["vineyard"]
         grapes = cleaned_data["grapes"]
         name = cleaned_data["name"]
@@ -545,7 +596,6 @@ class WineCreateView(FormView):
                 "comment": comment,
                 "rating": rating,
                 "price": price,
-                "rrp": rrp,
             },
         )
 
@@ -645,6 +695,7 @@ class WineUpdateView(FormView):
             size, _ = Size.objects.get_or_create(name=size_code, user=None)
         category = cleaned_data["category"] or None  # Convert empty string to None
         barcode = cleaned_data["barcode"]
+        barcode_2 = cleaned_data.get("barcode_2")
         comment = cleaned_data["comment"]
         country = cleaned_data["country"]
         subregion = cleaned_data["subregion"]
@@ -652,7 +703,6 @@ class WineUpdateView(FormView):
         food_pairings = cleaned_data["food_pairings"]
         source = cleaned_data["source"]
         price = cleaned_data["price"]
-        rrp = cleaned_data["rrp"]
         vineyards = cleaned_data["vineyard"]
         grapes = cleaned_data["grapes"]
         name = cleaned_data["name"]
@@ -677,13 +727,18 @@ class WineUpdateView(FormView):
         wine.drink_to = drink_to
         wine.wine_type = wine_type
         wine.price = price
-        wine.rrp = rrp
         wine.save()
 
-        # Create barcode entry if provided
+        # Create barcode entries if provided
         if barcode:
             WineBarcode.objects.get_or_create(
                 barcode=barcode,
+                user=user,
+                defaults={"wine": wine, "household": wine.household},
+            )
+        if barcode_2:
+            WineBarcode.objects.get_or_create(
+                barcode=barcode_2,
                 user=user,
                 defaults={"wine": wine, "household": wine.household},
             )
@@ -887,13 +942,11 @@ class WineMergeConfirmView(TemplateView):
         return context
 
     def post(self, request, *args, **kwargs):
-        from wine_cellar.apps.hardware.models import PositionChangeReview
         from wine_cellar.apps.wine.models import (
             DrinkingWindowAlert,
             DrinkRecord,
             PriceHistory,
             ReorderReminder,
-            SaleAlert,
             VisionExtractionLog,
         )
 
@@ -924,8 +977,6 @@ class WineMergeConfirmView(TemplateView):
             DrinkingWindowAlert.objects.filter(wine=duplicate).update(wine=primary)
             PriceHistory.objects.filter(wine=duplicate).update(wine=primary)
             VisionExtractionLog.objects.filter(wine=duplicate).update(wine=primary)
-            PositionChangeReview.objects.filter(wine=duplicate).update(wine=primary)
-            SaleAlert.objects.filter(wine=duplicate).update(wine=primary)
 
             # Handle ReorderReminder (unique on wine+user)
             for reminder in ReorderReminder.objects.filter(wine=duplicate):
@@ -1845,6 +1896,17 @@ def set_primary_image(request, pk):
 
 
 @login_required
+def delete_wine_barcode(request, pk):
+    """Delete a WineBarcode by pk (POST only)."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    household = get_active_household(request.user)
+    barcode = get_object_or_404(WineBarcode, pk=pk, household=household)
+    barcode.delete()
+    return JsonResponse({"success": True})
+
+
+@login_required
 def crop_wine_image(request, pk):
     """Apply manual crop to a WineImage and create a new thumbnail."""
     import json
@@ -1898,78 +1960,3 @@ def crop_wine_image(request, pk):
             {"error": "An internal error occurred while processing the image."},
             status=500,
         )
-
-
-class SaleAlertsView(TemplateView):
-    """View and manage sale alerts."""
-
-    template_name = "sale_alerts.html"
-
-    def get_context_data(self, **kwargs):
-        from wine_cellar.apps.wine.models import SaleAlert
-
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        context["alerts"] = (
-            SaleAlert.objects.filter(household=household)
-            .select_related("wine", "source")
-            .order_by("-is_active", "-created")
-        )
-        return context
-
-
-class SaleAlertCreateView(FormView):
-    """Create a new sale alert."""
-
-    template_name = "sale_alert_create.html"
-    success_url = reverse_lazy("sale-alerts")
-
-    def get_form_class(self):
-        from wine_cellar.apps.wine.forms import SaleAlertForm
-
-        return SaleAlertForm
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs["user"] = self.request.user
-        return kwargs
-
-    def form_valid(self, form):
-        from wine_cellar.apps.wine.models import SaleAlert
-
-        household = get_active_household(self.request.user)
-        SaleAlert.objects.create(
-            user=self.request.user,
-            household=household,
-            wine=form.cleaned_data.get("wine"),
-            source=form.cleaned_data.get("source"),
-            threshold_percent=form.cleaned_data.get("threshold_percent", 10),
-            threshold_price=form.cleaned_data.get("threshold_price"),
-        )
-        return super().form_valid(form)
-
-
-class SaleAlertDeleteView(DeleteView):
-    """Delete a sale alert."""
-
-    template_name = "sale_alert_confirm_delete.html"
-    success_url = reverse_lazy("sale-alerts")
-
-    def get_queryset(self):
-        from wine_cellar.apps.wine.models import SaleAlert
-
-        household = get_active_household(self.request.user)
-        return SaleAlert.objects.filter(household=household)
-
-
-class SaleAlertToggleView(TemplateView):
-    """Toggle a sale alert's active status."""
-
-    def get(self, request, *args, **kwargs):
-        from wine_cellar.apps.wine.models import SaleAlert
-
-        household = get_active_household(request.user)
-        alert = get_object_or_404(SaleAlert, pk=kwargs["pk"], household=household)
-        alert.is_active = not alert.is_active
-        alert.save(update_fields=["is_active"])
-        return redirect("sale-alerts")

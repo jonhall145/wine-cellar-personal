@@ -383,8 +383,17 @@ class WineVisionExtractor:
         "vino de españa": "ES",
         "qmp": "DE",
         "qualitätswein": "DE",
+        "kabinett": "DE",
+        "spätlese": "DE",
+        "auslese": "DE",
+        "beerenauslese": "DE",
+        "trockenbeerenauslese": "DE",
         "ava": "US",
         "american viticultural area": "US",
+        "gi": "AU",
+        "vqa": "CA",
+        "dop": "PT",
+        "vinho regional": "PT",
     }
 
     def __init__(self):
@@ -581,13 +590,16 @@ Please extract the following information if visible in ANY of the images:
    - Region names that indicate country (Bordeaux=France, Rioja=Spain, Tuscany=Italy)
    Return as country name or ISO code
 5. **Region/Subregion**: Geographic region (e.g., "Bordeaux", "Tuscany", "Napa Valley")
-6. **Grapes/Varieties**: List of grape varieties (e.g., Cabernet Sauvignon, Merlot)
-7. **Vineyard/Producer**: The winery or producer name
-8. **ABV**: Alcohol by volume percentage (as a number, e.g., 13.5)
-9. **Volume**: Bottle size in ml (e.g., 750, 375, 1500)
-10. **Sweetness**: dry, semi-dry, medium sweet, sweet, or feinherb
-11. **Barcode**: If visible in the barcode image
-12. **Label Bounds**: For each image containing a wine label, estimate the \
+6. **Designation**: The wine's geographic certification or quality designation \
+(e.g., AOC, AOP, DOC, DOCG, DO, DOCA, AVA, GI, IGP, QbA, Qualitätswein, Kabinett, \
+Spätlese, VQA, DOP, Vinho Regional, etc.)
+7. **Grapes/Varieties**: List of grape varieties (e.g., Cabernet Sauvignon, Merlot)
+8. **Vineyard/Producer**: The winery or producer name
+9. **ABV**: Alcohol by volume percentage (as a number, e.g., 13.5)
+10. **Volume**: Bottle size in ml (e.g., 750, 375, 1500)
+11. **Sweetness**: dry, semi-dry, medium sweet, sweet, or feinherb
+12. **Barcode**: If visible in the barcode image
+13. **Label Bounds**: For each image containing a wine label, estimate the \
 bounding box of the main label as percentages of image dimensions (0-100). \
 Format: x1,y1,x2,y2 where (x1,y1) is top-left and (x2,y2) is bottom-right.
 
@@ -599,6 +611,7 @@ TYPE: [wine type or "not found"]
 VINTAGE: [year or "not found"]
 COUNTRY: [ISO code or country name or "not found"]
 REGION: [region or "not found"]
+DESIGNATION: [designation or "not found"]
 GRAPES: [grape1, grape2, ... or "not found"]
 VINEYARD: [vineyard name or "not found"]
 ABV: [number or "not found"]
@@ -639,6 +652,7 @@ LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
             "vintage": r"VINTAGE:\s*(.+?)(?:\n|$)",
             "country": r"COUNTRY:\s*(.+?)(?:\n|$)",
             "subregion": r"REGION:\s*(.+?)(?:\n|$)",
+            "designation": r"DESIGNATION:\s*(.+?)(?:\n|$)",
             "grapes": r"GRAPES:\s*(.+?)(?:\n|$)",
             "vineyard": r"VINEYARD:\s*(.+?)(?:\n|$)",
             "abv": r"ABV:\s*(.+?)(?:\n|$)",
@@ -670,8 +684,8 @@ LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
             if conf_value in ["high", "medium", "low"]:
                 confidence = conf_value
 
-        # Try to infer country from region if not found
-        if "country" not in data and "subregion" in data:
+        # Try to infer country from region or designation if not found
+        if "country" not in data and ("subregion" in data or "designation" in data):
             inferred_country = self._infer_country_from_region(data)
             if inferred_country:
                 data["country"] = inferred_country
@@ -753,6 +767,9 @@ LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
         elif field == "vineyard":
             return value
 
+        elif field == "designation":
+            return value
+
         elif field == "abv":
             # Extract number
             abv_match = re.search(r"(\d+\.?\d*)", value)
@@ -830,7 +847,7 @@ LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
 
     def _infer_country_from_region(self, extracted_data: dict) -> str | None:
         """
-        Infer country from subregion if country wasn't extracted.
+        Infer country from subregion or designation if country wasn't extracted.
 
         Args:
             extracted_data: Dictionary of extracted wine data
@@ -840,6 +857,14 @@ LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
         """
         if "country" in extracted_data:
             return None  # Already have country
+
+        # Check designation first (e.g. AOC → France, DOC → Italy)
+        designation = extracted_data.get("designation", "")
+        if designation:
+            designation_lower = designation.lower()
+            for appellation, country_code in self.APPELLATION_COUNTRY_MAP.items():
+                if appellation in designation_lower:
+                    return country_code
 
         subregion = extracted_data.get("subregion", "")
         if not subregion:
