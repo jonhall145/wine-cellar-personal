@@ -2,7 +2,7 @@
 set -e
 export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
 
-# Wine Cellar - Backup to Cloudflare R2
+# Wine & Whisky Cellar - Backup to Cloudflare R2
 # Supports both SQLite (bare-metal) and PostgreSQL (Docker) deployments.
 #
 # Usage:
@@ -92,6 +92,16 @@ if [ "$MODE" = "docker" ]; then
             tar czf "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" -C "$TMP_DIR" media
         fi
     fi
+
+    # Whisky media backup
+    echo "  Backing up whisky media files from Docker volume..."
+    WHISKY_CONTAINER=$(docker compose -f "${PROJECT_DIR}/${COMPOSE_FILE}" ps -q whisky-web 2>/dev/null | head -1)
+    if [ -n "$WHISKY_CONTAINER" ]; then
+        docker cp "${WHISKY_CONTAINER}:/app/media" "${TMP_DIR}/whisky_media" 2>/dev/null || true
+        if [ -d "${TMP_DIR}/whisky_media" ] && [ "$(ls -A "${TMP_DIR}/whisky_media" 2>/dev/null)" ]; then
+            tar czf "${TMP_DIR}/whisky_media_${TIMESTAMP}.tar.gz" -C "$TMP_DIR" whisky_media
+        fi
+    fi
 elif [ -d "$MEDIA_PATH" ]; then
     echo "  Backing up media files..."
     tar czf "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" -C "$(dirname "$MEDIA_PATH")" "$(basename "$MEDIA_PATH")"
@@ -111,15 +121,24 @@ if [ -f "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" ]; then
         --endpoint-url "$R2_ENDPOINT" --profile "$AWS_PROFILE"
 fi
 
+if [ -f "${TMP_DIR}/whisky_media_${TIMESTAMP}.tar.gz" ]; then
+    aws s3 cp "${TMP_DIR}/whisky_media_${TIMESTAMP}.tar.gz" \
+        "s3://${BUCKET}/whisky_media/whisky_media_${TIMESTAMP}.tar.gz" \
+        --endpoint-url "$R2_ENDPOINT" --profile "$AWS_PROFILE"
+fi
+
 # ─── Local USB backup copy ───────────────────────────────────────────
 
 USB_BACKUP_DIR="/mnt/usb/backups"
 if mountpoint -q /mnt/usb 2>/dev/null; then
     echo "  Saving local copy to USB..."
-    mkdir -p "${USB_BACKUP_DIR}/db" "${USB_BACKUP_DIR}/media"
+    mkdir -p "${USB_BACKUP_DIR}/db" "${USB_BACKUP_DIR}/media" "${USB_BACKUP_DIR}/whisky_media"
     cp "$DB_BACKUP" "${USB_BACKUP_DIR}/db/"
     if [ -f "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" ]; then
         cp "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" "${USB_BACKUP_DIR}/media/"
+    fi
+    if [ -f "${TMP_DIR}/whisky_media_${TIMESTAMP}.tar.gz" ]; then
+        cp "${TMP_DIR}/whisky_media_${TIMESTAMP}.tar.gz" "${USB_BACKUP_DIR}/whisky_media/"
     fi
 
     # Prune local USB backups older than 7 days
@@ -133,7 +152,7 @@ fi
 echo "  Pruning backups older than ${KEEP_DAYS} days..."
 cutoff=$(date -d "-${KEEP_DAYS} days" +%Y%m%d 2>/dev/null || date -v-${KEEP_DAYS}d +%Y%m%d)
 
-for prefix in db media; do
+for prefix in db media whisky_media; do
     aws s3 ls "s3://${BUCKET}/${prefix}/" \
         --endpoint-url "$R2_ENDPOINT" --profile "$AWS_PROFILE" 2>/dev/null \
     | awk '{print $4}' | while read -r file; do
