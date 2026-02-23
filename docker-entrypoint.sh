@@ -26,7 +26,8 @@ if [ "$1" = "python" ] || [ "$1" = "gunicorn" ]; then
     python manage.py migrate --no-input
 
     # One-time cleanup: drop legacy django_celery_beat tables if they exist
-    python manage.py shell -c "
+    if [ "$DATABASE" = "postgres" ]; then
+        python manage.py shell -c "
 from django.db import connection
 with connection.cursor() as c:
     c.execute(\"SELECT tablename FROM pg_tables WHERE tablename LIKE 'django_celery_beat%%'\")
@@ -36,6 +37,7 @@ with connection.cursor() as c:
         c.execute(f'DROP TABLE IF EXISTS {quoted} CASCADE')
         print(f'Dropped legacy table {t}')
 " 2>/dev/null || true
+    fi
 
     # Load initial fixture data based on app type - safe to re-run
     if [ "$CELLAR_APP_TYPE" = "whisky" ]; then
