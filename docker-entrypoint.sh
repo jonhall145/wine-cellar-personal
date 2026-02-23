@@ -19,11 +19,25 @@ except Exception:
     echo "PostgreSQL is up"
 fi
 
-# Only run setup tasks for web server commands (not celery workers)
+# Only run setup tasks for web server commands
 if [ "$1" = "python" ] || [ "$1" = "gunicorn" ]; then
     # Run migrations
     echo "Running migrations..."
     python manage.py migrate --no-input
+
+    # One-time cleanup: drop legacy django_celery_beat tables if they exist
+    if [ "$DATABASE" = "postgres" ]; then
+        python manage.py shell -c "
+from django.db import connection
+with connection.cursor() as c:
+    c.execute(\"SELECT tablename FROM pg_tables WHERE tablename LIKE 'django_celery_beat%%'\")
+    tables = [r[0] for r in c.fetchall()]
+    for t in tables:
+        quoted = connection.ops.quote_name(t)
+        c.execute(f'DROP TABLE IF EXISTS {quoted} CASCADE')
+        print(f'Dropped legacy table {t}')
+" 2>/dev/null || true
+    fi
 
     # Load initial fixture data based on app type - safe to re-run
     if [ "$CELLAR_APP_TYPE" = "whisky" ]; then

@@ -1,7 +1,7 @@
 import logging
 
-from celery import shared_task
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from wine_cellar.apps.user.views import get_active_household
@@ -11,7 +11,6 @@ from wine_cellar.apps.wine.models import Wine
 logger = logging.getLogger(__name__)
 
 
-@shared_task(name="drink_by_reminder")
 def drink_by_reminder():
     """Send reminders for wines in their final drinking year."""
     User = get_user_model()
@@ -21,12 +20,11 @@ def drink_by_reminder():
         .exclude(user_settings__notifications=False)
     )
     current_year = timezone.now().year
+    sent = 0
     for user in users:
-        # Get the user's active household
         household = get_active_household(user)
         if not household:
             continue
-        # Find wines where drink_to matches current year (not "now" which is 0)
         wines = Wine.objects.filter(
             household=household,
             drink_to=current_year,
@@ -35,3 +33,18 @@ def drink_by_reminder():
         ).distinct()
         if wines.count() > 0:
             send_drink_by_reminder(user, wines)
+            sent += 1
+            logger.info(
+                "Sent drink-by reminder to %s (%d wines)",
+                user.email,
+                wines.count(),
+            )
+    return sent
+
+
+class Command(BaseCommand):
+    help = "Send email reminders for wines in their final drinking year."
+
+    def handle(self, *args, **options):
+        sent = drink_by_reminder()
+        self.stdout.write(f"Sent {sent} reminder(s)")

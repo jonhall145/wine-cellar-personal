@@ -44,37 +44,6 @@ services:
       timeout: 3s
       retries: 5
 
-  celery-worker:
-    image: wine-cellar:dev
-    command: celery -A wine_cellar.conf.celery:celery_app worker --loglevel=info
-    volumes:
-      - ./wine_cellar:/app/wine_cellar
-      - media_data:/app/media
-    env_file:
-      - .env.docker
-    depends_on:
-      web:
-        condition: service_started
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  celery-beat:
-    image: wine-cellar:dev
-    command: celery -A wine_cellar.conf.celery:celery_app beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
-    volumes:
-      - ./wine_cellar:/app/wine_cellar
-    env_file:
-      - .env.docker
-    depends_on:
-      web:
-        condition: service_started
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
 volumes:
   postgres_data:
   media_data:

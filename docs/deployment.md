@@ -369,6 +369,30 @@ DJANGO_DEFAULT_FROM_EMAIL=Wine Cellar <your@email.com>
 
 ---
 
+## Drink-By Reminders (Cron)
+
+Drink-by reminder emails are sent by the `send_drink_reminders` management command. You need to schedule this with a host cron job — it is **not** run automatically by the application server.
+
+Email configuration (see above) must be set up before reminders will be delivered.
+
+### Docker deployments
+
+Add a cron entry on the host that runs the command inside the running container:
+
+```
+0 9 * * * docker compose -f /path/to/docker-compose.prod.yml exec -T wine-web python manage.py send_drink_reminders >> /var/log/drink_reminders.log 2>&1
+```
+
+### Non-Docker (bare-metal / virtualenv) deployments
+
+```
+0 9 * * * cd /path/to/wine-cellar && venv/bin/python manage.py send_drink_reminders >> /var/log/drink_reminders.log 2>&1
+```
+
+Adjust the time (`0 9 * * *` = 09:00 daily) to suit your timezone. The command only sends emails to users who have notifications enabled and have wines in their final drinking year, so it is safe to run daily.
+
+---
+
 ## Systemd Service (Auto-Start)
 
 Create `/etc/systemd/system/wine-cellar.service`:

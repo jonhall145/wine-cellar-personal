@@ -1026,7 +1026,6 @@ def health_check(request):
     Checks:
     - Database connectivity
     - Disk space for media uploads
-    - Celery worker status (if configured)
     """
     import shutil
 
@@ -1034,7 +1033,6 @@ def health_check(request):
         "status": "ok",
         "database": "ok",
         "disk": "ok",
-        "celery": "unknown",
     }
     status_code = 200
 
@@ -1062,16 +1060,6 @@ def health_check(request):
                 status_code = 503
     except Exception:
         health["disk"] = "unknown"
-
-    # Check Celery worker status (optional)
-    try:
-        from django_celery_beat.models import PeriodicTask
-
-        # Just check if celery beat tables are accessible
-        PeriodicTask.objects.exists()
-        health["celery"] = "configured"
-    except Exception:
-        health["celery"] = "not_configured"
 
     return JsonResponse(health, status=status_code)
 

@@ -4,8 +4,10 @@ from django.utils import timezone
 
 from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.user.views import get_user_settings
+from wine_cellar.apps.wine.management.commands.send_drink_reminders import (
+    drink_by_reminder,
+)
 from wine_cellar.apps.wine.models import Wine
-from wine_cellar.apps.wine.tasks import drink_by_reminder
 
 
 @pytest.mark.django_db

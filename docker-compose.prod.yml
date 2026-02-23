@@ -85,48 +85,6 @@ services:
       retries: 5
     restart: unless-stopped
 
-  celery-worker:
-    image: wine-cellar:prod
-    command: celery -A wine_cellar.conf.celery:celery_app worker --loglevel=warning --concurrency=2
-    volumes:
-      - media_data:/app/media
-    env_file:
-      - .env.docker.prod
-    healthcheck:
-      test: ["CMD-SHELL", "celery -A wine_cellar.conf.celery:celery_app inspect ping --timeout 5"]
-      interval: 30s
-      timeout: 10s
-      start_period: 30s
-      retries: 3
-    depends_on:
-      wine-web:
-        condition: service_started
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-
-  celery-beat:
-    image: wine-cellar:prod
-    command: celery -A wine_cellar.conf.celery:celery_app beat --loglevel=warning --scheduler django_celery_beat.schedulers:DatabaseScheduler
-    env_file:
-      - .env.docker.prod
-    healthcheck:
-      test: ["CMD-SHELL", "cat /proc/1/cmdline | tr '\\0' ' ' | grep -q 'celery.*beat'"]
-      interval: 30s
-      timeout: 5s
-      start_period: 30s
-      retries: 3
-    depends_on:
-      wine-web:
-        condition: service_started
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-
 volumes:
   postgres_data:
   media_data:
