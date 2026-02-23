@@ -43,7 +43,9 @@ backups/
 
 # AI assistants
 GEMINI.md
-.claude/
+.claude/*
+!.claude/hooks/
+!.claude/settings.json
 
 # Temporary test files in root
 /*.png
