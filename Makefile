@@ -1,4 +1,5 @@
 VIRTUAL_ENV ?= venv
+PYTHON ?= python3.12
 NODE_BIN = node_modules/.bin
 SOURCE_DIRS = wine_cellar tests
 ARGUMENTS=$(filter-out $(firstword $(MAKECMDGOALS)), $(MAKECMDGOALS))
@@ -61,7 +62,7 @@ help:
 install:
 	npm install --no-save
 	npm run build
-	if [ ! -f $(VIRTUAL_ENV)/bin/python3 ]; then python3 -m venv $(VIRTUAL_ENV); fi
+	if [ ! -f $(VIRTUAL_ENV)/bin/python3 ]; then $(PYTHON) -m venv $(VIRTUAL_ENV); fi
 	$(VIRTUAL_ENV)/bin/python3 -m pip install --upgrade -r requirements.txt
 	$(VIRTUAL_ENV)/bin/python3 manage.py migrate
 
