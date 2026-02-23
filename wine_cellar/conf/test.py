@@ -54,9 +54,6 @@ from wine_cellar.conf.settings import (
 # Test-specific settings
 MEDIA_ROOT = BASE_DIR / "test_media/"
 
-# Run Celery tasks synchronously in tests
-CELERY_TASK_ALWAYS_EAGER = True
-
 # Use dummy cache in tests to prevent cache interference between tests
 CACHES = {
     "default": {
@@ -74,7 +71,6 @@ __all__ = [
     "AUTH_PASSWORD_VALIDATORS",
     "AUTHENTICATION_BACKENDS",
     "BASE_DIR",
-    "CELERY_TASK_ALWAYS_EAGER",
     "CSRF_TRUSTED_ORIGINS",
     "CURRENCIES",
     "CURRENCY_SYMBOLS",

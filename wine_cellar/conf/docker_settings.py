@@ -1,7 +1,7 @@
 """
 Docker settings for Wine Cellar.
 
-Imports all base settings and overrides database, cache, and Celery
+Imports all base settings and overrides database and cache
 configuration to use Docker service containers (PostgreSQL, Redis).
 """
 
@@ -20,14 +20,6 @@ DATABASES = {
         "PORT": os.environ.get("SQL_PORT", "5432"),
     }
 }
-
-# Celery - Redis broker via Docker service
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
-CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://redis:6379/0")
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-CELERY_TIMEZONE = TIME_ZONE  # noqa: F405
 
 # Cache - Redis (shared across containers, unlike LocMemCache)
 CACHES = {

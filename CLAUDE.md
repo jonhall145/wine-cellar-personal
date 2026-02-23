@@ -96,7 +96,7 @@ A test user exists for UI testing:
 **Backend:**
 - Django 5.2.9 with Python 3.12+
 - PostgreSQL 16 (production) / SQLite (development)
-- Celery 5.6.0 with django-celery-beat for background tasks
+- Cron-based background tasks (drink-by reminders via management command)
 
 **Frontend:**
 - React 19.2.3 with TypeScript
