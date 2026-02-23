@@ -32,7 +32,8 @@ with connection.cursor() as c:
     c.execute(\"SELECT tablename FROM pg_tables WHERE tablename LIKE 'django_celery_beat%%'\")
     tables = [r[0] for r in c.fetchall()]
     for t in tables:
-        c.execute('DROP TABLE IF EXISTS \\\"%s\\\" CASCADE' % t)
+        quoted = connection.ops.quote_name(t)
+        c.execute(f'DROP TABLE IF EXISTS {quoted} CASCADE')
         print(f'Dropped legacy table {t}')
 " 2>/dev/null || true
 
