@@ -3,51 +3,18 @@ name: Django CI
 on:
   pull_request:
     branches: [ "main" ]
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
-  precheck:
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
-    outputs:
-      should_run: ${{ steps.should_run.outputs.should_run }}
-    steps:
-      - name: Check for commits since previous success
-        id: should_run
-        uses: actions/github-script@v8
-        with:
-          script: |
-            if (context.eventName === 'pull_request') {
-              core.setOutput('should_run', 'true');
-              return;
-            }
-            const { owner, repo } = context.repo;
-            const runs = await github.rest.actions.listWorkflowRuns({
-              owner,
-              repo,
-              workflow_id: 'ci.yml',
-              branch: 'main',
-              status: 'completed',
-              per_page: 100
-            });
-            const lastSuccess = runs.data.workflow_runs.find(
-              (run) => run.conclusion === 'success'
-            );
-            if (!lastSuccess) {
-              core.info('No successful completed runs found in the last 100; running build.');
-            }
-            const shouldRun = !lastSuccess || lastSuccess.head_sha !== context.sha;
-            core.setOutput('should_run', shouldRun ? 'true' : 'false');
-
   build:
-    needs: precheck
-    if: needs.precheck.outputs.should_run == 'true'
     runs-on: ubuntu-24.04
     services:
       postgres:
@@ -84,7 +51,7 @@ jobs:
           cache-name: cache-node-modules
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package.json') }}
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
@@ -102,7 +69,7 @@ jobs:
             ${{ runner.os }}-
       - name: Install Dependencies
         run: |
-          npm install
+          npm ci --no-audit --no-fund
           npm run build
           pip install -r requirements/dev.txt
       - name: Run Tests
