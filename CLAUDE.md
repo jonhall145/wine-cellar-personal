@@ -172,6 +172,33 @@ make lint       # Run all linters
 make fixtures   # Load sample data
 ```
 
+## Production Deployment Commands
+
+Always use `make` targets rather than calling scripts directly.
+
+```bash
+make wine-deploy        # Build Docker image and deploy wine app
+make whisky-deploy      # Deploy whisky app (uses same image)
+
+make wine-prod-start    # Start wine container
+make wine-prod-stop     # Stop wine container
+make wine-prod-restart  # Restart wine container
+make wine-prod-status   # Show wine container status
+make wine-prod-logs     # Tail wine container logs
+
+make whisky-prod-start    # Start whisky container
+make whisky-prod-stop     # Stop whisky container
+make whisky-prod-restart  # Restart whisky container
+make whisky-prod-status   # Show whisky container status
+make whisky-prod-logs     # Tail whisky container logs
+```
+
+**Notes:**
+- Both apps share the same `wine-cellar:prod` Docker image — `make wine-deploy` builds it for both
+- To deploy both apps: run `make wine-deploy` then `make whisky-deploy`
+- Do NOT use `deploy-to-prod.sh` — that is the legacy non-Docker path and is no longer used
+- Static files and frontend assets are built inside the Docker image automatically
+
 ## Key Directories
 
 - `wine_cellar/` - Main Django application
@@ -229,16 +256,16 @@ This is a **mobile-first app**. Mobile testing is mandatory, not optional.
 
 **Static Files & CSS:**
 - Changes to CSS/JS require `make watch` or `npm run build` to be visible
-- Production requires `collectstatic` - use `./run_prod_https.sh` which handles this
+- Production requires `collectstatic` - handled automatically inside the Docker image build
 - Check browser cache / use incognito when CSS changes aren't visible
 
 ### Deployment Checklist
 
-For production deployment to meshnet:
+For production deployment:
 1. Run `make lint` - fix any issues before deploying
 2. Run `make pytest` - ensure tests pass
-3. Static files are collected automatically by prod scripts
-4. HTTPS is required for camera access - use `./run_prod_https.sh`
+3. Run `make wine-deploy` then `make whisky-deploy`
+4. Static files and frontend assets are built inside the Docker image automatically
 
 ### Common Fix Patterns
 

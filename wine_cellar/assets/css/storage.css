@@ -180,9 +180,11 @@
   }
 }
 
-.storage-grid__cell:hover {
-  border-color: var(--gray-600);
-  background-color: var(--gray-200);
+@media (hover: hover) {
+  .storage-grid__cell:hover {
+    border-color: var(--gray-600);
+    background-color: var(--gray-200);
+  }
 }
 
 .storage-grid__cell--filled {
@@ -190,9 +192,11 @@
   border-color: var(--wine-red-dark, #5a252c);
 }
 
-.storage-grid__cell--filled:hover {
-  background-color: var(--wine-red-dark, #5a252c);
-  transform: scale(1.05);
+@media (hover: hover) {
+  .storage-grid__cell--filled:hover {
+    background-color: var(--wine-red-dark, #5a252c);
+    transform: scale(1.05);
+  }
 }
 
 /* Wine type color variants */
@@ -201,8 +205,10 @@
   border-color: var(--wine-red-dark);
 }
 
-.storage-grid__cell--red:hover {
-  background-color: var(--wine-red-dark);
+@media (hover: hover) {
+  .storage-grid__cell--red:hover {
+    background-color: var(--wine-red-dark);
+  }
 }
 
 .storage-grid__cell--white {
@@ -210,8 +216,10 @@
   border-color: var(--wine-white-dark);
 }
 
-.storage-grid__cell--white:hover {
-  background-color: var(--wine-white-dark);
+@media (hover: hover) {
+  .storage-grid__cell--white:hover {
+    background-color: var(--wine-white-dark);
+  }
 }
 
 .storage-grid__cell--white .storage-grid__bottle {
@@ -223,8 +231,10 @@
   border-color: var(--wine-rose-dark);
 }
 
-.storage-grid__cell--rose:hover {
-  background-color: var(--wine-rose-dark);
+@media (hover: hover) {
+  .storage-grid__cell--rose:hover {
+    background-color: var(--wine-rose-dark);
+  }
 }
 
 .storage-grid__cell--rose .storage-grid__bottle {
@@ -236,8 +246,10 @@
   border-color: var(--wine-sparkling-dark);
 }
 
-.storage-grid__cell--sparkling:hover {
-  background-color: var(--wine-sparkling-dark);
+@media (hover: hover) {
+  .storage-grid__cell--sparkling:hover {
+    background-color: var(--wine-sparkling-dark);
+  }
 }
 
 .storage-grid__cell--sparkling .storage-grid__bottle {
@@ -249,8 +261,10 @@
   border-color: var(--wine-dessert-dark);
 }
 
-.storage-grid__cell--dessert:hover {
-  background-color: var(--wine-dessert-dark);
+@media (hover: hover) {
+  .storage-grid__cell--dessert:hover {
+    background-color: var(--wine-dessert-dark);
+  }
 }
 
 .storage-grid__cell--dessert .storage-grid__bottle {
@@ -262,8 +276,10 @@
   border-color: var(--wine-fortified-dark);
 }
 
-.storage-grid__cell--fortified:hover {
-  background-color: var(--wine-fortified-dark);
+@media (hover: hover) {
+  .storage-grid__cell--fortified:hover {
+    background-color: var(--wine-fortified-dark);
+  }
 }
 
 .storage-grid__cell--orange {
@@ -271,8 +287,10 @@
   border-color: var(--wine-orange-dark);
 }
 
-.storage-grid__cell--orange:hover {
-  background-color: var(--wine-orange-dark);
+@media (hover: hover) {
+  .storage-grid__cell--orange:hover {
+    background-color: var(--wine-orange-dark);
+  }
 }
 
 .storage-grid__cell--orange .storage-grid__bottle {
@@ -426,9 +444,11 @@
   border-color: var(--gray-300);
 }
 
-[data-theme="dark"] .storage-grid__cell:hover {
-  background-color: var(--gray-200);
-  border-color: var(--gray-500);
+@media (hover: hover) {
+  [data-theme="dark"] .storage-grid__cell:hover {
+    background-color: var(--gray-200);
+    border-color: var(--gray-500);
+  }
 }
 
 [data-theme="dark"] .storage-grid__cell--drag-over {
@@ -557,8 +577,10 @@
   background-color: rgba(40, 167, 69, 0.1);
 }
 
-.storage-grid__cell--drop-target:hover {
-  background-color: rgba(40, 167, 69, 0.3);
+@media (hover: hover) {
+  .storage-grid__cell--drop-target:hover {
+    background-color: rgba(40, 167, 69, 0.3);
+  }
 }
 
 /* Dragging states for dnd-kit */
@@ -582,10 +604,12 @@
   cursor: default;
 }
 
-.storage-grid__cell--inactive:hover {
-  background-color: transparent;
-  border-color: var(--gray-300);
-  transform: none;
+@media (hover: hover) {
+  .storage-grid__cell--inactive:hover {
+    background-color: transparent;
+    border-color: var(--gray-300);
+    transform: none;
+  }
 }
 
 [data-theme="dark"] .storage-grid__cell--inactive {
