@@ -42,8 +42,9 @@ help:
 	@echo "    make lint-html-fix [FILES] Auto-fix template lint errors"
 	@echo ""
 	@echo "  Deploy (Docker)"
-	@echo "    make wine-deploy          Build and deploy wine app"
-	@echo "    make whisky-deploy        Build and deploy whisky app"
+	@echo "    make deploy               Rebuild and redeploy full production stack"
+	@echo "    make wine-deploy          Build/deploy wine app and restart nginx"
+	@echo "    make whisky-deploy        Build/deploy whisky app and restart nginx"
 	@echo ""
 	@echo "  Production"
 	@echo "    make wine-prod-start      Start wine container"
@@ -92,11 +93,13 @@ fixtures:
 
 .PHONY: deploy
 deploy:
-	./deploy-docker.sh $(ARGUMENTS)
+	docker compose -f docker-compose.prod.yml up -d --build --force-recreate
 
 .PHONY: wine-deploy
 wine-deploy:
-	./deploy-docker.sh wine
+	docker compose -f docker-compose.prod.yml build wine-web
+	docker compose -f docker-compose.prod.yml up -d wine-web
+	docker compose -f docker-compose.prod.yml restart nginx
 
 .PHONY: wine-prod-start
 wine-prod-start:
@@ -140,7 +143,9 @@ whisky-pytest:
 
 .PHONY: whisky-deploy
 whisky-deploy:
-	./deploy-docker.sh whisky
+	docker compose -f docker-compose.prod.yml build whisky-web
+	docker compose -f docker-compose.prod.yml up -d whisky-web
+	docker compose -f docker-compose.prod.yml restart nginx
 
 .PHONY: whisky-prod-start
 whisky-prod-start:

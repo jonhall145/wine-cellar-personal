@@ -42,6 +42,13 @@ class CreatableModelChoiceField(forms.ModelChoiceField):
         super().validate(value)
 
 
+class CreatableMultipleChoiceField(forms.MultipleChoiceField):
+    """MultipleChoiceField that allows TomSelect-created values not in choices."""
+
+    def valid_value(self, value):
+        return True
+
+
 image_fields_map = {
     "image_front_label": WhiskyImage.ImageType.LABEL_FRONT,
     "image_back_label": WhiskyImage.ImageType.LABEL_BACK,
@@ -287,7 +294,7 @@ class WhiskyBaseForm(WhiskyFormPostCleanMixin, TomSelectMixin, forms.Form):
         label=_("Peated"),
         help_text=_("Is this whisky peated?"),
     )
-    cask_type = forms.MultipleChoiceField(
+    cask_type = CreatableMultipleChoiceField(
         choices=[(c, c) for c in COMMON_CASK_TYPES],
         required=False,
         widget=forms.SelectMultiple(),
@@ -664,6 +671,7 @@ class WhiskyEditForm(WhiskyBaseForm):
             max_options=-1,
             search=True,
             create=True,
+            clear=False,
         )
         self.set_tom_config(
             name="region",
@@ -672,6 +680,7 @@ class WhiskyEditForm(WhiskyBaseForm):
             max_options=-1,
             search=True,
             create=True,
+            clear=False,
         )
         self.set_tom_config(
             name="bottler",
@@ -680,6 +689,7 @@ class WhiskyEditForm(WhiskyBaseForm):
             max_options=-1,
             search=True,
             create=True,
+            clear=False,
         )
         self.set_tom_config(
             name="country",
@@ -687,6 +697,7 @@ class WhiskyEditForm(WhiskyBaseForm):
             max_items=1,
             max_options=-1,
             search=True,
+            clear=False,
         )
 
         cask_type = initial.get("cask_type", "")
@@ -705,6 +716,7 @@ class WhiskyEditForm(WhiskyBaseForm):
             max_options=-1,
             search=True,
             create=True,
+            clear=False,
             placeholder=str(_("Search or add cask type...")),
         )
         self.set_tom_config(
@@ -714,6 +726,7 @@ class WhiskyEditForm(WhiskyBaseForm):
             max_options=-1,
             search=True,
             create=True,
+            clear=False,
             placeholder=str(_("Search or add source...")),
         )
         self.set_tom_config(

@@ -198,6 +198,7 @@ make whisky-prod-logs     # Tail whisky container logs
 - To deploy both apps: run `make wine-deploy` then `make whisky-deploy`
 - Do NOT use `deploy-to-prod.sh` — that is the legacy non-Docker path and is no longer used
 - Static files and frontend assets are built inside the Docker image automatically
+- **Deploy agent should ONLY run `make wine-deploy` then `make whisky-deploy`. Do NOT run lint, tests, or any other steps.**
 
 ## Key Directories
 
