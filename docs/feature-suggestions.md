@@ -18,31 +18,21 @@ Currently there's no way to bulk-import wines or export the cellar. This is one 
 
 ---
 
-### 2. AI Tasting Notes Assistant
+### 2. Recently Viewed Wines
 
-**Impact: High | Complexity: Low-Medium**
+**Impact: High | Complexity: Low**
 
-The Claude API integration already exists for label scanning. Extend it to help users write better tasting notes when logging a drink.
+Track the last 5-10 wines a user has viewed and display them prominently on the homepage. This is a small change with outsized usability benefit - users frequently revisit the same wines when deciding what to drink, adding stock, or updating notes.
 
-- When creating a `DrinkRecord`, offer a "help me describe this" button
-- User selects basic impressions (fruity, earthy, tannic, etc.) and Claude generates structured tasting notes following the appearance/nose/palate/finish format
-- Could also summarise a user's tasting notes across multiple bottles of the same wine to show how it's evolving
-
----
-
-### 3. AI Food Pairing Recommendations
-
-**Impact: Medium | Complexity: Low**
-
-The `food_pairings` M2M field exists but requires manual entry. Use the existing Claude integration to suggest pairings based on wine type, grape varieties, region, and attributes.
-
-- Add a "Suggest pairings" button on the wine detail page
-- Claude analyses the wine's characteristics and returns 3-5 food pairing suggestions
-- User can accept/reject suggestions before saving
+- Store recent views in the user's session (no model changes needed)
+- Display as a horizontal card row on the homepage above or alongside existing sections
+- Show wine name, thumbnail, vintage, and bottle count
+- Clicking goes straight to the wine detail page
+- Clear/dismiss individual items or the whole list
 
 ---
 
-### 4. Smart Collections / Custom Tags
+### 3. Smart Collections / Custom Tags
 
 **Impact: High | Complexity: Medium**
 
@@ -56,7 +46,7 @@ Users currently have no way to organise wines beyond the built-in filters (type,
 
 ---
 
-### 5. Full REST API
+### 4. Full REST API
 
 **Impact: High | Complexity: High**
 
@@ -70,7 +60,7 @@ The app currently only has a few AJAX endpoints. A proper REST API (using Django
 
 ---
 
-### 6. Progressive Web App (PWA) Support
+### 5. Progressive Web App (PWA) Support
 
 **Impact: High | Complexity: Medium**
 
@@ -84,7 +74,7 @@ As a mobile-first app, PWA support would significantly improve the experience:
 
 ---
 
-### 7. Wine Journey Timeline
+### 6. Wine Journey Timeline
 
 **Impact: Medium | Complexity: Medium**
 
@@ -99,20 +89,7 @@ A visual timeline showing the user's wine journey over time:
 
 ---
 
-### 8. Batch Operations
-
-**Impact: Medium | Complexity: Medium**
-
-For users with large cellars, operating on one bottle at a time is tedious:
-
-- Checkbox selection on bottle list and wine list views
-- Bulk actions: move to storage, mark as consumed, delete, export, change price
-- "Select all matching current filter" for large operations
-- Confirmation step showing exactly what will change
-
----
-
-### 9. Advanced Analytics Dashboard
+### 7. Advanced Analytics Dashboard
 
 **Impact: Medium | Complexity: Medium**
 
@@ -129,7 +106,7 @@ The current stats page is basic. A richer analytics dashboard could include:
 
 ---
 
-### 10. Price Tracking Completion
+### 8. Price Tracking Completion
 
 **Impact: Medium | Complexity: Medium-High**
 
@@ -145,18 +122,7 @@ The `PriceHistory`, `Source`, and `price_selector` fields exist but the scraping
 
 ## Improvements to Existing Features
 
-### 11. Enhanced Search & Saved Filters
-
-**Impact: High | Complexity: Medium**
-
-- **Full-text search** across all wine fields (name, region, appellation, grapes, comments) in a single search bar
-- **Saved filter presets**: Save frequently used filter combinations (e.g., "ready to drink reds", "French whites under $20")
-- **Drinking window filter**: Filter by "ready now", "too young", "past prime", "no window set"
-- **Quick search** with autocomplete suggestions as user types
-
----
-
-### 12. Storage Grid Enhancements
+### 9. Storage Grid Enhancements
 
 **Impact: Medium | Complexity: Medium**
 
@@ -170,7 +136,7 @@ The React storage grid is already functional. Improvements:
 
 ---
 
-### 13. Wishlist Improvements
+### 10. Wishlist Improvements
 
 **Impact: Medium | Complexity: Low-Medium**
 
@@ -181,7 +147,7 @@ The React storage grid is already functional. Improvements:
 
 ---
 
-### 14. Notification Centre
+### 11. Notification Centre
 
 **Impact: Medium | Complexity: Medium**
 
@@ -195,7 +161,7 @@ Currently notifications are email-only via cron. Add an in-app notification syst
 
 ---
 
-### 15. Drink History Enhancements
+### 12. Drink History Enhancements
 
 **Impact: Medium | Complexity: Low-Medium**
 
@@ -207,7 +173,7 @@ Currently notifications are email-only via cron. Add an in-app notification syst
 
 ---
 
-### 16. Vision Extraction Refinements
+### 13. Vision Extraction Refinements
 
 **Impact: Medium | Complexity: Low**
 
@@ -223,7 +189,7 @@ The Claude vision integration works well. Refinements:
 
 ## Technical / Infrastructure Improvements
 
-### 17. Background Task Queue
+### 14. Background Task Queue
 
 **Impact: Medium | Complexity: Medium**
 
@@ -238,7 +204,7 @@ Replace cron-based tasks with a proper task queue (Django-Q2, Celery, or Huey):
 
 ---
 
-### 18. Database Query Optimisation
+### 15. Database Query Optimisation
 
 **Impact: Medium | Complexity: Low-Medium**
 
@@ -250,7 +216,7 @@ Replace cron-based tasks with a proper task queue (Django-Q2, Celery, or Huey):
 
 ---
 
-### 19. Improved Test Coverage
+### 16. Improved Test Coverage
 
 **Impact: Medium | Complexity: Medium**
 
@@ -262,7 +228,7 @@ Replace cron-based tasks with a proper task queue (Django-Q2, Celery, or Huey):
 
 ---
 
-### 20. Accessibility Improvements
+### 17. Accessibility Improvements
 
 **Impact: Medium | Complexity: Low-Medium**
 
@@ -280,12 +246,11 @@ Replace cron-based tasks with a proper task queue (Django-Q2, Celery, or Huey):
 | Suggestion | Effort | Description |
 |---|---|---|
 | Dark mode | Low | CSS custom properties + media query for `prefers-color-scheme` |
-| Recently viewed wines | Low | Track last 5-10 viewed wines in session, show on homepage |
 | Duplicate detection | Low | Warn when adding a wine that closely matches an existing entry |
 | Bottle count on nav | Low | Show total bottle count in the header/nav bar |
 | Sorting on all list views | Low | Add sortable column headers to wine list, bottle list, drink history |
 | "Random bottle" picker | Low | "What should I drink tonight?" button that picks a random in-stock wine |
-| QR code generation | Low | Generate a QR code for any wine that links to its detail page |
+| QR code generation | Low | Generate a QR code for any wine that links to its detail page - print and stick on shelves so anyone can scan a bottle's spot to see full details |
 | Keyboard shortcuts | Low | `n` for new wine, `s` for scan, `/` for search |
 | Empty state illustrations | Low | Friendly empty states for new users with no wines/bottles/drinks |
 | Cellar summary email | Low | Weekly/monthly digest email with cellar stats and upcoming drinking windows |
