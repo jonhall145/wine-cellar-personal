@@ -102,7 +102,8 @@ deploy:
 ghcr-deploy:
 	docker pull $(GHCR_IMAGE)
 	docker tag $(GHCR_IMAGE) wine-cellar:prod
-	COMPOSE_IGNORE_ORPHANS=1 $(PROD_COMPOSE) up -d --no-build --force-recreate --no-deps wine-web whisky-web
+	$(PROD_COMPOSE) up -d --no-build db redis
+	$(PROD_COMPOSE) up -d --no-build --force-recreate --no-deps wine-web whisky-web
 	$(PROD_COMPOSE) restart nginx
 
 .PHONY: wine-deploy
