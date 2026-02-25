@@ -11,6 +11,7 @@ from django.utils.formats import number_format
 from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.core.models import (
+    HouseholdQuerySet,
     UserContentModel,
     user_directory_path,
     versioned_media_url,
@@ -256,7 +257,30 @@ class WhiskyAttribute(UserContentModel):
 # ---------------------------------------------------------------------------
 
 
+class WhiskyQuerySet(HouseholdQuerySet):
+    """Custom queryset for Whisky with prefetch optimization."""
+
+    def with_related(self):
+        return self.select_related(
+            "distillery",
+            "region",
+            "bottler",
+            "source",
+        ).prefetch_related("attributes", "images")
+
+    def with_stock_count(self):
+        return self.annotate(
+            stock_count=models.Count(
+                "whiskystorageitem",
+                filter=models.Q(whiskystorageitem__deleted=False),
+                distinct=True,
+            )
+        )
+
+
 class Whisky(UserContentModel):
+    objects = WhiskyQuerySet.as_manager()
+
     name = models.CharField(max_length=200, verbose_name=_("Name"))
     whisky_type = models.CharField(
         max_length=2,
@@ -397,6 +421,7 @@ class Whisky(UserContentModel):
         null=True,
         blank=True,
         verbose_name=_("Price"),
+        validators=[MinValueValidator(0)],
     )
     comment = models.TextField(
         blank=True,
@@ -703,7 +728,16 @@ class WhiskyBarcode(models.Model):
 # ---------------------------------------------------------------------------
 
 
+class WhiskyStorageItemQuerySet(HouseholdQuerySet):
+    """Custom queryset for WhiskyStorageItem."""
+
+    def in_stock(self):
+        return self.filter(deleted=False)
+
+
 class WhiskyStorageItem(UserContentModel):
+    objects = WhiskyStorageItemQuerySet.as_manager()
+
     storage = models.ForeignKey(
         "storage.Storage",
         on_delete=models.CASCADE,
@@ -713,7 +747,13 @@ class WhiskyStorageItem(UserContentModel):
     row = models.PositiveIntegerField(null=True, blank=True)
     column = models.PositiveIntegerField(null=True, blank=True)
     deleted = models.BooleanField(default=False, db_index=True)
-    price = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    price = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+    )
     is_gift = models.BooleanField(default=False, verbose_name=_("Is Gift"))
     gift_from = models.CharField(
         max_length=100, null=True, blank=True, verbose_name=_("Gift From")

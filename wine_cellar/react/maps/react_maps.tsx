@@ -1,7 +1,8 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
-// @ts-ignore
+// @ts-ignore - WineMaps is a .jsx file
 import { MapWithMarkers, Map } from './WineMaps'
+import ErrorBoundary from '../components/ErrorBoundary'
 
 function init() {
   const container = document.getElementById('wine_map')
@@ -10,11 +11,13 @@ function init() {
     const root = createRoot(container)
     root.render(
       <React.StrictMode>
-        <MapWithMarkers
-          {...props.map}
-          wines={props.wines}
-          id="display-point"
-        />
+        <ErrorBoundary>
+          <MapWithMarkers
+            {...props.map}
+            wines={props.wines}
+            id="display-point"
+          />
+        </ErrorBoundary>
       </React.StrictMode>
     )
   }

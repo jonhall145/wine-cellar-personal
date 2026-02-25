@@ -14,8 +14,8 @@ import {
     Active,
     Over,
 } from '@dnd-kit/core';
-// @ts-ignore
 import django from 'django';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const translated = {
     storage: django.gettext('Storage'),
@@ -730,7 +730,7 @@ const initStorageGrid = () => {
         const storageIdAttr = container.getAttribute('data-storage-id');
         const initialStorageId = storageIdAttr ? parseInt(storageIdAttr, 10) : undefined;
         const root = createRoot(container);
-        root.render(<StorageGrid initialStorageId={initialStorageId} />);
+        root.render(<ErrorBoundary><StorageGrid initialStorageId={initialStorageId} /></ErrorBoundary>);
     }
 };
 

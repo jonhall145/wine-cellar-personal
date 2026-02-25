@@ -175,6 +175,25 @@ module.exports = {
     // against the local directory.
     modules: [path.resolve('./node_modules')],
   },
+  optimization: {
+    splitChunks: {
+      chunks: 'all',
+      cacheGroups: {
+        reactVendor: {
+          test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+          name: 'react-vendors',
+          chunks: 'all',
+          priority: 20,
+        },
+        leafletVendor: {
+          test: /[\\/]node_modules[\\/](leaflet|maplibre-gl|@maplibre|leaflet\.markercluster)[\\/]/,
+          name: 'leaflet-vendors',
+          chunks: 'all',
+          priority: 20,
+        },
+      },
+    },
+  },
   plugins: [
     new MiniCssExtractPlugin({
       filename: '[name].css',

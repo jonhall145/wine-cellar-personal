@@ -11,6 +11,7 @@ from django.utils.formats import number_format
 from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.core.models import (
+    HouseholdQuerySet,
     UserContentModel,
 )
 from wine_cellar.apps.core.models import versioned_media_url as _versioned_media_url
@@ -231,7 +232,32 @@ class Source(UserContentModel):
         return self.name
 
 
+class WineQuerySet(HouseholdQuerySet):
+    """Custom queryset for Wine with prefetch optimization."""
+
+    def with_related(self):
+        return self.select_related("size", "appellation").prefetch_related(
+            "grapes",
+            "attributes",
+            "food_pairings",
+            "vineyard",
+            "source",
+            "wineimage_set",
+        )
+
+    def with_stock_count(self):
+        return self.annotate(
+            stock_count=models.Count(
+                "storageitem",
+                filter=models.Q(storageitem__deleted=False),
+                distinct=True,
+            )
+        )
+
+
 class Wine(UserContentModel):
+    objects = WineQuerySet.as_manager()
+
     name = models.CharField(max_length=100, verbose_name=_("Name"))
     wine_type = models.CharField(max_length=2, choices=WineType, verbose_name=_("Type"))
     category = models.CharField(
@@ -240,7 +266,12 @@ class Wine(UserContentModel):
     grapes = models.ManyToManyField(Grape, verbose_name=_("Grapes"))
     attributes = models.ManyToManyField(Attribute, verbose_name=_("Attributes"))
     food_pairings = models.ManyToManyField(FoodPairing, verbose_name=_("Food Pairings"))
-    abv = models.FloatField(null=True, blank=True, verbose_name=_("ABV"))
+    abv = models.FloatField(
+        null=True,
+        blank=True,
+        verbose_name=_("ABV"),
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+    )
     size = models.ForeignKey(
         Size, on_delete=models.SET_NULL, null=True, verbose_name=_("Size")
     )
@@ -298,7 +329,11 @@ class Wine(UserContentModel):
     vineyard = models.ManyToManyField(Vineyard, verbose_name=_("Vineyard"))
     source = models.ManyToManyField(Source, verbose_name=_("Source"))
     price = models.DecimalField(
-        max_digits=6, decimal_places=2, null=True, verbose_name=_("Price")
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        verbose_name=_("Price"),
+        validators=[MinValueValidator(0)],
     )
     price_url = models.URLField(
         max_length=500,

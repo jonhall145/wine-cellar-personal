@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { createRoot } from 'react-dom/client'
+import ErrorBoundary from './components/ErrorBoundary'
 import { BarcodeScanner, DetectedBarcode } from 'react-barcode-scanner'
-// @ts-ignore
 import django from 'django'
 
 import { BarcodeDetector, prepareZXingModule } from 'barcode-detector/ponyfill'
@@ -390,7 +390,7 @@ const initScanner = () => {
     })
     // @ts-ignore
     globalThis.BarcodeDetector ??= BarcodeDetector
-    root.render(<Scanner />)
+    root.render(<ErrorBoundary><Scanner /></ErrorBoundary>)
   }
 }
 

@@ -1,5 +1,4 @@
 import React from 'react'
-// @ts-ignore
 import django from 'django'
 
 const translated = {

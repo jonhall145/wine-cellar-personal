@@ -22,6 +22,13 @@ def versioned_media_url(field):
         return url
 
 
+class HouseholdQuerySet(models.QuerySet):
+    """Base queryset that filters by household."""
+
+    def for_household(self, household):
+        return self.filter(household=household)
+
+
 class UserContentModel(models.Model):
     """Abstract base model for user-owned content."""
 

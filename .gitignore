@@ -17,6 +17,7 @@ build/
 staticfiles/
 wine_cellar/static/
 media/
+wine_cellar/test_media/
 *.mo
 
 # Environment files
