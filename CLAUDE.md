@@ -143,7 +143,7 @@ These skills are available for common tasks:
 
 ## Development Commands
 
-Use `make` to run development tasks. Run `make help` or `make` without arguments to see available targets.
+Use `make` to run development tasks. Run `make help` to see available targets.
 
 ## Production Deployment Commands
 
