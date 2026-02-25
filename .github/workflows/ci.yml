@@ -89,3 +89,4 @@ jobs:
           flake8 wine_cellar tests --exclude migrations,settings
       - name: Coveralls
         uses: coverallsapp/github-action@v2
+        continue-on-error: true
