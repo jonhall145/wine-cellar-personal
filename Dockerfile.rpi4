@@ -4,7 +4,7 @@
 # ============================================================
 # Stage 1: Build frontend assets with Node.js
 # ============================================================
-FROM --platform=linux/arm64 node:20-slim AS frontend-builder
+FROM node:20-slim AS frontend-builder
 
 WORKDIR /app
 
