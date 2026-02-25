@@ -492,7 +492,12 @@ def storage_grid_data(request):
                             "id": whisky.pk,
                             "name": whisky.name,
                             "vintage": whisky.vintage_year,
-                            "wine_type": f"cask-{cask_cat}",
+                            "wine_type": (
+                                whisky.get_whisky_type_display()
+                                if whisky.whisky_type
+                                else ""
+                            ),
+                            "wine_type_class": f"cask-{cask_cat}",
                             "country": whisky.country or "",
                             "item_id": item.pk,
                             "rating": rating,
