@@ -1,20 +1,48 @@
 # Code Structure Review
 
 **Date:** 2026-02-24
+**Updated:** 2026-02-25
 **Scope:** Full codebase architecture, models, views, tests, and frontend
+
+---
+
+## Progress Tracker
+
+| # | Issue | Status | Notes |
+|---|-------|--------|-------|
+| 1 | Auth enforcement on wine/whisky views | ✅ Resolved | `LoginRequiredMiddleware` enforces globally (v0.0.2) |
+| 2 | `@transaction.atomic` on multi-model operations | ✅ Done | Both `WineCreateView` and `WineUpdateView` now use `@transaction.atomic` |
+| 3 | Webpack `splitChunks` for vendor dedup | ✅ Done | PR #58 — `react-vendors` and `leaflet-vendors` chunks in `webpack.common.js` |
+| 4 | Custom QuerySets with `prefetch_related` | ✅ Done | `WineQuerySet`, `WhiskyQuerySet`, `StorageItemQuerySet`, `WhiskyStorageItemQuerySet` with `HouseholdQuerySet` base |
+| 5 | Adopt household mixin pattern across all apps | ❌ Open | Wine/whisky views still use manual `get_active_household()` per-method |
+| 6 | Extract service layer from views | ❌ Open | Business logic still in views; only `WineVisionExtractor` is service-extracted |
+| 7 | Extract shared wine/whisky abstract base | ❌ Open | Apps remain ~75% duplicated |
+| 8 | Increase test coverage to 75% | ❌ Open | Still at 59% threshold; `views.py` still excluded from coverage |
+| 9 | TypeScript definitions for Django | ✅ Done | `types/django.d.ts` with proper `declare module` |
+| 10 | React error boundaries | ✅ Done | `ErrorBoundary` component wrapping all 5 React mount points |
+| 11 | Missing model validators (price, ABV) | ✅ Done | `MinValueValidator(0)` on all price fields; `MaxValueValidator(100)` on ABV; vintage max intentionally skipped (form-validated) |
+| 12 | Standardize URL patterns across wine/whisky | ❌ Open | |
+| 13 | Convert `.jsx` → `.tsx` in maps | ❌ Open | `Map.jsx`, `WineMaps.jsx` still `.jsx`; 1 `@ts-ignore` for `.jsx` import remains |
+| 14 | Soft delete on Wine model | ❌ Open | |
+| 15 | Integration/E2E tests with Playwright | ❌ Open | |
+| 16 | Merge small JS bundles into `base.js` | ❌ Open | `wine_carousel` and `storage_view_toggle` still separate entry points |
+| 17 | Add webpack-bundle-analyzer | ❌ Open | |
+| 18 | Move storage URLs to proper app include | ❌ Open | |
+
+**Progress: 7 of 18 complete** (39%)
 
 ---
 
 ## Executive Summary
 
-The wine-cellar-personal project is a well-organized Django application with a React frontend. The core architecture is sound — clean app separation, good use of Django conventions, and a solid household-based multi-tenancy model. However, there are several areas where targeted improvements would significantly improve maintainability, performance, and safety.
+The wine-cellar-personal project is a well-organized Django application with a React frontend. The core architecture is sound — clean app separation, good use of Django conventions, and a solid household multi-tenancy design.
 
 **Top 5 priorities:**
-1. Massive code duplication between wine and whisky apps (~80% identical)
-2. Bundle sizes are bloated (maps.js is 6.9MB)
-3. Missing authorization enforcement on wine/whisky views
-4. N+1 query problems in model properties
-5. Business logic trapped in fat views instead of service layer
+1. ~~Massive code duplication between wine and whisky apps (~80% identical)~~ — still open
+2. ~~Bundle sizes are bloated (maps.js is 6.9MB)~~ — ✅ mitigated by splitChunks (PR #58)
+3. ~~Missing authorization enforcement on wine/whisky views~~ — ✅ resolved by `LoginRequiredMiddleware`
+4. ~~N+1 query problems in model properties~~ — ✅ resolved by custom QuerySets
+5. Business logic trapped in fat views instead of service layer — still open
 
 ---
 
@@ -29,7 +57,7 @@ The wine-cellar-personal project is a well-organized Django application with a R
 
 ### Issues
 
-#### 1.1 Wine/Whisky Duplication (Critical)
+#### 1.1 Wine/Whisky Duplication (Critical) — ❌ Open
 
 The whisky app is a near-complete copy of the wine app. Side-by-side comparison:
 
@@ -49,11 +77,11 @@ The whisky app is a near-complete copy of the wine app. Side-by-side comparison:
 - Single set of URL patterns with app-type parameter
 - This would eliminate ~2,000 lines of duplicated code
 
-#### 1.2 Storage URLs at Root Level
+#### 1.2 Storage URLs at Root Level — ❌ Open
 
 Storage routes are defined in `wine_cellar/conf/urls.py` rather than having their own `storage/urls.py` included via `include()`. This makes ownership unclear and breaks the Django convention of self-contained apps.
 
-#### 1.3 No Service Layer Convention
+#### 1.3 No Service Layer Convention — ❌ Open
 
 Business logic is split between models (properties), views (static methods), and a small `services/` directory. There's no consistent convention for where domain logic lives.
 
@@ -70,30 +98,13 @@ Business logic is split between models (properties), views (static methods), and
 
 ### Issues
 
-#### 2.1 N+1 Query Problems in Properties (High)
+#### 2.1 N+1 Query Problems in Properties — ✅ Resolved
 
-Multiple Wine model properties trigger individual queries when accessed:
+~~Multiple Wine model properties trigger individual queries when accessed.~~
 
-```python
-@property
-def get_vineyards(self):
-    return "\n".join([str(v) for v in self.vineyard.all()])  # query per wine
+**Resolution:** Custom `WineQuerySet.with_related()` and `WhiskyQuerySet.with_related()` now provide `select_related`/`prefetch_related` optimization. Both use `HouseholdQuerySet` as a base class for tenant-scoped queries. `StorageItemQuerySet.in_stock()` and `WhiskyStorageItemQuerySet.in_stock()` also added.
 
-@property
-def get_grapes(self):
-    return "\n".join([str(g) for g in self.grapes.all()])  # query per wine
-```
-
-Properties `get_vineyards`, `get_grapes`, `get_sources`, `get_attributes`, `get_food_pairings`, `total_stock`, and `get_stock` all trigger queries. In a list view of 50 wines, this could mean 350+ queries.
-
-**Recommendation:** Create a custom manager with `prefetch_related()`:
-```python
-class WineQuerySet(models.QuerySet):
-    def with_related(self):
-        return self.select_related('size', 'appellation').prefetch_related(
-            'grapes', 'attributes', 'food_pairings', 'vineyard', 'source'
-        )
-```
+> **Note:** The model *properties* (`get_vineyards`, `get_grapes`, etc.) still trigger individual queries when called without prefetch. The fix is at the QuerySet level — views must use `.with_related()` to benefit. Detail views already do this correctly.
 
 #### 2.2 Missing Foreign Key Indexes (High)
 
@@ -105,26 +116,33 @@ Several frequently-queried FKs lack indexes:
 
 Django auto-creates indexes on ForeignKey fields, but some older fields or fields with custom configurations may have been missed. Worth verifying with `SHOW INDEX` or Django's `inspectdb`.
 
-#### 2.3 No Custom Managers (Medium)
+#### 2.3 Custom Managers — ✅ Resolved
 
-All models use Django's default manager. Missing opportunities:
-- Household-scoped default manager (prevent cross-tenant queries)
-- `StorageItem.objects.in_stock()` for the common `deleted=False` filter
-- `Wine.objects.with_stock_count()` for annotated queries
+~~All models use Django's default manager.~~
 
-#### 2.4 Cascade Deletion Destroys History (Medium)
+**Resolution:** Custom querysets added:
+- `WineQuerySet` with `with_related()` and `with_stock_count()`
+- `WhiskyQuerySet` with `with_related()` and `with_stock_count()`
+- `StorageItemQuerySet` with `in_stock()`
+- `WhiskyStorageItemQuerySet` with `in_stock()`
+- All inherit from `HouseholdQuerySet` for tenant-scoped filtering
+
+#### 2.4 Cascade Deletion Destroys History (Medium) — ❌ Open
 
 Deleting a Wine cascades to: DrinkRecord, PriceHistory, DrinkingWindowAlert, ReorderReminder, WineBarcode. This destroys valuable historical data.
 
 **Recommendation:** Consider soft delete on Wine (like StorageItem), or archive patterns for historical records.
 
-#### 2.5 Missing Validators (Low)
+#### 2.5 Missing Validators — ✅ Resolved
 
-- `Wine.price` and `StorageItem.price` allow negative values
-- `Wine.vintage` allows future years
-- `Wine.abv` has no upper bound validator
+~~`Wine.price` and `StorageItem.price` allow negative values; `Wine.abv` has no upper bound validator.~~
 
-#### 2.6 Inconsistent Naming (Low)
+**Resolution:**
+- `MinValueValidator(0)` added to `Wine.price`, `StorageItem.price`, `Whisky.price`, `WhiskyStorageItem.price`
+- `MaxValueValidator(100)` added to `Wine.abv`
+- `Wine.vintage` max validator intentionally removed (v0.0.2) — causes annual migrations; form-level validation handles this instead
+
+#### 2.6 Inconsistent Naming (Low) — ❌ Open
 
 - `Wine.vintage` (int) vs `Whisky.vintage_year` (int) — same concept, different names
 - `Wine.vineyard` (M2M to producers) — "vineyard" typically means location, not producer
@@ -142,20 +160,13 @@ Deleting a Wine cascades to: DrinkRecord, PriceHistory, DrinkingWindowAlert, Reo
 
 ### Issues
 
-#### 3.1 Missing Auth Enforcement on Wine/Whisky Views (Critical)
+#### 3.1 Auth Enforcement on Wine/Whisky Views — ✅ Resolved
 
-Wine and whisky CBVs do **not** use `LoginRequiredMixin`:
+~~Wine and whisky CBVs do not use `LoginRequiredMixin`.~~
 
-```python
-class WineCreateView(FormView):  # No LoginRequiredMixin!
-    ...
-```
+**Resolution:** Since v0.0.2, the project uses `django.contrib.auth.middleware.LoginRequiredMiddleware` in the middleware stack, which enforces login on ALL views by default. Public views explicitly use `@login_not_required`. This is actually a stronger pattern than per-view `LoginRequiredMixin`. Tests confirm unauthenticated access redirects to login.
 
-This relies entirely on django-allauth's global configuration. If that configuration changes, views become publicly accessible.
-
-**Recommendation:** Add `LoginRequiredMixin` to every CBV, or create a base `AuthenticatedFormView` that all views inherit from.
-
-#### 3.2 Fat Views with Embedded Business Logic (High)
+#### 3.2 Fat Views with Embedded Business Logic (High) — ❌ Open
 
 Several views contain complex business logic that should live in a service layer:
 
@@ -173,15 +184,15 @@ services/
   stats_service.py     # get_cellar_stats()
 ```
 
-#### 3.3 Missing Transaction Safety (High)
+#### 3.3 Transaction Safety — ✅ Resolved
 
-`WineCreateView.process_form_data()` creates a Wine, then barcodes, then images, then M2M relationships across multiple database calls — without `@transaction.atomic`. If the image save fails, you get a Wine with no images.
+~~`WineCreateView.process_form_data()` creates a Wine, then barcodes, then images, then M2M relationships across multiple database calls — without `@transaction.atomic`.~~
 
-`WineUpdateView.process_form_data()` uses `@transaction.atomic` on a static method, which is unusual but functional.
+**Resolution:** Both `WineCreateView.process_form_data()` and `WineUpdateView.process_form_data()` now use `@staticmethod @transaction.atomic`. The wine merge operation also uses `with transaction.atomic():`.
 
-**Recommendation:** Wrap all multi-model operations in `@transaction.atomic`.
+> **Note:** Whisky `WhiskyUpdateView.process_form_data()` does NOT yet have `@transaction.atomic`. The whisky create view should also be verified.
 
-#### 3.4 Inconsistent Authorization Patterns (Medium)
+#### 3.4 Inconsistent Authorization Patterns (Medium) — ❌ Open
 
 | App | Auth Pattern | Household Filtering |
 |-----|-------------|-------------------|
@@ -196,7 +207,7 @@ class WineCreateView(RequireMemberMixin, FormView):
     ...
 ```
 
-#### 3.5 Duplicated URL Patterns (Medium)
+#### 3.5 Duplicated URL Patterns (Medium) — ❌ Open
 
 Wine and whisky have inconsistent URL structures:
 - Wine: `stock/add/<int:pk>/` vs Whisky: `whisky/<int:pk>/stock/add/`
@@ -216,7 +227,7 @@ Wine and whisky have inconsistent URL structures:
 
 ### Issues
 
-#### 4.1 Coverage at 59% (Medium)
+#### 4.1 Coverage at 59% (Medium) — ❌ Open
 
 The minimum threshold is 59%, which is fairly low. Key gaps:
 
@@ -235,7 +246,7 @@ The minimum threshold is 59%, which is fairly low. Key gaps:
 3. All management commands
 4. Signal-created objects (default storage on household creation)
 
-#### 4.2 No Integration / E2E Tests (Medium)
+#### 4.2 No Integration / E2E Tests (Medium) — ❌ Open
 
 Tests are primarily unit-level. There are no tests for:
 - Full create-wine-with-images flow
@@ -244,7 +255,7 @@ Tests are primarily unit-level. There are no tests for:
 
 Playwright is installed but only used for manual UI checks, not automated test suites.
 
-#### 4.3 Views.py Excluded from Coverage (Low)
+#### 4.3 Views.py Excluded from Coverage (Low) — ❌ Open
 
 ```toml
 [tool.coverage.run]
@@ -268,65 +279,43 @@ Views contain significant business logic (see section 3.2). Excluding them from 
 
 ### Issues
 
-#### 5.1 Massive Bundle Sizes (Critical)
+#### 5.1 Bundle Sizes — ✅ Mitigated
 
-| Bundle | Size | Notes |
-|--------|------|-------|
-| maps.js | 6.82 MB | Leaflet + MapLibre + cluster |
-| distillery_map.js | 6.86 MB | Same libs duplicated |
-| storage_grid.js | 3.27 MB | React + dnd-kit |
-| barcode_scanner.js | 3.22 MB | React + zxing |
-| label_scanner.js | 2.93 MB | React + camera |
-| base.js | 498 KB | Core bundle |
+~~Maps alone were 13.7MB because Leaflet/MapLibre were duplicated across two bundles.~~
 
-Maps alone are 13.7MB because Leaflet/MapLibre are duplicated across two bundles.
+**Resolution:** PR #58 added `splitChunks` to `webpack.common.js` with dedicated cache groups for `react-vendors` and `leaflet-vendors`. This deduplicates React and Leaflet/MapLibre across all entry points.
 
-**Recommendation:** Add `splitChunks` to webpack config:
-```javascript
-optimization: {
-  splitChunks: {
-    chunks: 'all',
-    cacheGroups: {
-      vendor: {
-        test: /[\\/]node_modules[\\/]/,
-        name: 'vendors',
-        chunks: 'all',
-      },
-      leaflet: {
-        test: /[\\/]node_modules[\\/](leaflet|@maplibre)[\\/]/,
-        name: 'leaflet-vendor',
-        chunks: 'all',
-      },
-    },
-  },
-}
-```
+> **Note:** Could be further improved with `webpack-bundle-analyzer` to measure actual savings and identify remaining duplication.
 
-This should cut map bundle sizes by ~50%.
+#### 5.2 TypeScript Safety Gaps — 🔄 Partially Resolved
 
-#### 5.2 TypeScript Safety Gaps (Medium)
+**Resolved:**
+- ✅ `types/django.d.ts` created with proper `declare module 'django'` type definitions
+- ✅ Most `@ts-ignore` suppressions for Django imports removed
 
-- 10 `@ts-ignore` suppressions for Django i18n imports
-- Mixed `.jsx` / `.tsx` files in the maps directory
-- `any` types used in storage_grid.tsx and vision extraction
-- Vision extraction files (`.js`) not typed at all
+**Remaining:**
+- ❌ 1 `@ts-ignore` remains in `react_maps.tsx` for `.jsx` import (`WineMaps`)
+- ❌ ~10 `@ts-ignore` in `stock_add.ts` for TomSelect (needs `types/tom-select.d.ts`)
+- ❌ 2 `@ts-ignore` in `react_bar_code.tsx` for zxing WASM
+- ❌ Mixed `.jsx` / `.tsx` files in maps directory
+- ❌ Vision extraction files (`.js`) not typed at all
 
-**Recommendation:**
-1. Create `types/django.d.ts` with proper type definitions
-2. Convert all `.jsx` to `.tsx`
-3. Enable `noImplicitAny: true` in tsconfig
+#### 5.3 React Error Boundaries — ✅ Done
 
-#### 5.3 Missing React Error Boundaries (Medium)
+~~No error boundaries exist.~~
 
-No error boundaries exist. If the barcode scanner, storage grid, or map crashes (e.g., WebGL not supported), the entire page section breaks with no user feedback.
+**Resolution:** Generic `ErrorBoundary` component created at `wine_cellar/react/components/ErrorBoundary.tsx` with retry functionality. Wraps all 5 React mount points:
+1. Barcode scanner (`react_bar_code.tsx`)
+2. Label scanner (`react_label_scanner.tsx`)
+3. Storage grid (`storage_grid.tsx`)
+4. Wine map (`react_maps.tsx`)
+5. Distillery map (`react_distillery_map.tsx`)
 
-**Recommendation:** Create a generic `ErrorBoundary` component and wrap each mounted React root.
-
-#### 5.4 Small Bundles as Separate Entry Points (Low)
+#### 5.4 Small Bundles as Separate Entry Points (Low) — ❌ Open
 
 `wine_carousel.js` (4KB) and `storage_view_toggle.js` (7KB) are separate HTTP requests for trivial functionality. These could be merged into `base.js`.
 
-#### 5.5 No Production Source Maps (Low)
+#### 5.5 No Production Source Maps (Low) — ❌ Open
 
 `webpack.prod.js` sets `devtool: false`. Production errors will be impossible to debug without source maps.
 
@@ -336,36 +325,36 @@ No error boundaries exist. If the barcode scanner, storage grid, or map crashes 
 
 ### Tier 1 — High Impact, Moderate Effort
 
-| # | Issue | Effort | Impact |
-|---|-------|--------|--------|
-| 1 | Add `LoginRequiredMixin` to all wine/whisky CBVs | Small | Security |
-| 2 | Add `@transaction.atomic` to multi-model view operations | Small | Data integrity |
-| 3 | Add webpack `splitChunks` for vendor deduplication | Small | 50% bundle reduction |
-| 4 | Create custom QuerySet with `prefetch_related` for Wine/Whisky | Medium | Eliminate N+1 queries |
-| 5 | Adopt household mixin pattern across all apps | Medium | Consistent authorization |
+| # | Issue | Effort | Impact | Status |
+|---|-------|--------|--------|--------|
+| 1 | Auth enforcement on all views | Small | Security | ✅ Done |
+| 2 | `@transaction.atomic` on multi-model operations | Small | Data integrity | ✅ Done |
+| 3 | Webpack `splitChunks` for vendor dedup | Small | 50% bundle reduction | ✅ Done |
+| 4 | Custom QuerySet with `prefetch_related` | Medium | Eliminate N+1 queries | ✅ Done |
+| 5 | Adopt household mixin pattern across all apps | Medium | Consistent authorization | ❌ Open |
 
 ### Tier 2 — High Impact, Higher Effort
 
-| # | Issue | Effort | Impact |
-|---|-------|--------|--------|
-| 6 | Extract business logic from views to service layer | Large | Maintainability |
-| 7 | Extract shared wine/whisky code to abstract base | Large | Eliminate duplication |
-| 8 | Increase test coverage to 75%, include views.py | Medium | Reliability |
-| 9 | Create TypeScript definitions for Django integration | Small | Type safety |
-| 10 | Add React error boundaries | Small | User experience |
+| # | Issue | Effort | Impact | Status |
+|---|-------|--------|--------|--------|
+| 6 | Extract business logic from views to service layer | Large | Maintainability | ❌ Open |
+| 7 | Extract shared wine/whisky code to abstract base | Large | Eliminate duplication | ❌ Open |
+| 8 | Increase test coverage to 75%, include views.py | Medium | Reliability | ❌ Open |
+| 9 | Create TypeScript definitions for Django integration | Small | Type safety | ✅ Done |
+| 10 | Add React error boundaries | Small | User experience | ✅ Done |
 
 ### Tier 3 — Lower Priority
 
-| # | Issue | Effort | Impact |
-|---|-------|--------|--------|
-| 11 | Add missing model validators (price, vintage) | Small | Data quality |
-| 12 | Standardize URL patterns across wine/whisky | Medium | Developer experience |
-| 13 | Convert .jsx to .tsx in maps components | Small | Type safety |
-| 14 | Soft delete on Wine model (preserve history) | Medium | Data preservation |
-| 15 | Add integration/E2E tests with Playwright | Large | Confidence |
-| 16 | Merge small JS bundles into base.js | Small | Fewer HTTP requests |
-| 17 | Add webpack-bundle-analyzer | Small | Visibility |
-| 18 | Move storage URLs to proper app include | Small | Convention |
+| # | Issue | Effort | Impact | Status |
+|---|-------|--------|--------|--------|
+| 11 | Add missing model validators (price, vintage) | Small | Data quality | ✅ Done |
+| 12 | Standardize URL patterns across wine/whisky | Medium | Developer experience | ❌ Open |
+| 13 | Convert .jsx to .tsx in maps components | Small | Type safety | ❌ Open |
+| 14 | Soft delete on Wine model (preserve history) | Medium | Data preservation | ❌ Open |
+| 15 | Add integration/E2E tests with Playwright | Large | Confidence | ❌ Open |
+| 16 | Merge small JS bundles into base.js | Small | Fewer HTTP requests | ❌ Open |
+| 17 | Add webpack-bundle-analyzer | Small | Visibility | ❌ Open |
+| 18 | Move storage URLs to proper app include | Small | Convention | ❌ Open |
 
 ---
 
@@ -383,3 +372,7 @@ Worth noting the things this codebase does right:
 - **Rate limiting** on mutation endpoints
 - **Soft delete** on storage items preserves inventory history
 - **Caching** on filter choices prevents repeated DB hits
+- **`LoginRequiredMiddleware`** — stronger than per-view mixins *(added since initial review)*
+- **Custom QuerySets** with household scoping and prefetch optimization *(added since initial review)*
+- **React ErrorBoundary** wrapping all mount points *(added since initial review)*
+- **Webpack vendor chunking** deduplicates large libraries *(added since initial review)*
