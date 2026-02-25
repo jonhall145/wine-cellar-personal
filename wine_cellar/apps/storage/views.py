@@ -22,7 +22,7 @@ from wine_cellar.apps.storage.forms import (
 )
 from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household
-from wine_cellar.apps.whisky.templatetags.whisky_tags import classify_cask_type
+from wine_cellar.apps.whisky.utils import classify_cask_type
 from wine_cellar.apps.wine.models import Wine
 
 logger = logging.getLogger(__name__)
