@@ -177,7 +177,7 @@ module.exports = {
   },
   optimization: {
     splitChunks: {
-      chunks: 'all',
+      chunks: 'async',
       cacheGroups: {
         reactVendor: {
           test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
