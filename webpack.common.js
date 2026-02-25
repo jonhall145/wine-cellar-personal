@@ -191,6 +191,13 @@ module.exports = {
           chunks: 'all',
           priority: 20,
         },
+        faVendor: {
+          test: /[\\/]node_modules[\\/]@fortawesome[\\/]/,
+          name: 'fontawesome-vendors',
+          chunks: 'all',
+          priority: 30,
+          enforce: true,
+        },
       },
     },
   },
