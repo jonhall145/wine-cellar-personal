@@ -5,6 +5,7 @@ SOURCE_DIRS = wine_cellar tests
 ARGUMENTS=$(filter-out $(firstword $(MAKECMDGOALS)), $(MAKECMDGOALS))
 DEV_COMPOSE = docker compose -f docker-compose.yml
 PROD_COMPOSE = docker compose -f docker-compose.prod.yml
+GHCR_IMAGE ?= ghcr.io/jonhall145/wine-cellar-personal:latest
 NODE_RUN = docker run --rm -v "$$(pwd)":/app -v /app/node_modules -w /app node:20-slim
 
 .PHONY: all
@@ -48,6 +49,7 @@ help:
 	@echo "    make deploy               Rebuild and redeploy full production stack"
 	@echo "    make wine-deploy          Build/deploy wine app and restart nginx"
 	@echo "    make whisky-deploy        Build/deploy whisky app and restart nginx"
+	@echo "    make ghcr-deploy          Pull/deploy from GitHub Container Registry image"
 	@echo ""
 	@echo "  Production"
 	@echo "    make wine-prod-start      Start wine container"
@@ -95,6 +97,13 @@ fixtures:
 .PHONY: deploy
 deploy:
 	$(PROD_COMPOSE) up -d --build --force-recreate
+
+.PHONY: ghcr-deploy
+ghcr-deploy:
+	docker pull $(GHCR_IMAGE)
+	docker tag $(GHCR_IMAGE) wine-cellar:prod
+	$(PROD_COMPOSE) up -d --no-build --force-recreate --no-deps wine-web whisky-web
+	$(PROD_COMPOSE) restart nginx
 
 .PHONY: wine-deploy
 wine-deploy:
