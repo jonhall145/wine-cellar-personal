@@ -102,9 +102,7 @@ deploy:
 ghcr-deploy:
 	docker pull $(GHCR_IMAGE)
 	docker tag $(GHCR_IMAGE) wine-cellar:prod
-	$(PROD_COMPOSE) up -d --no-build db redis
-	$(PROD_COMPOSE) up -d --no-build --force-recreate --no-deps wine-web whisky-web
-	$(PROD_COMPOSE) restart nginx
+	$(PROD_COMPOSE) up -d --no-build
 
 .PHONY: wine-deploy
 wine-deploy:
