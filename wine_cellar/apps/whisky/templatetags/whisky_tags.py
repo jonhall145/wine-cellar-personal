@@ -50,6 +50,7 @@ FILL_LEVEL_CLASSES = {
     "DR": "dreg",
 }
 
+
 @register.filter
 def cask_border_css(whisky):
     """Return CSS class suffix for card border based on cask type and strength."""
