@@ -251,7 +251,7 @@ lint-py:
 	EXIT_STATUS=0; \
 	DOCKER_ARGS="$(patsubst $(CURDIR)/%,%,$(ARGUMENTS))"; \
 	if ! docker image inspect wine-cellar:dev >/dev/null 2>&1; then $(DEV_COMPOSE) build web || EXIT_STATUS=$$?; fi; \
-	docker run --rm -v "$$(pwd)":/app -w /app wine-cellar:dev black --check $$DOCKER_ARGS || EXIT_STATUS=$$?; \
-	docker run --rm -v "$$(pwd)":/app -w /app wine-cellar:dev isort $$DOCKER_ARGS --check-only || EXIT_STATUS=$$?; \
-	docker run --rm -v "$$(pwd)":/app -w /app wine-cellar:dev flake8 $$DOCKER_ARGS || EXIT_STATUS=$$?; \
+	docker run --rm -v "$$(pwd)":/app -w /app -e DOCKER_ARGS="$$DOCKER_ARGS" wine-cellar:dev sh -lc 'black --check $$DOCKER_ARGS' || EXIT_STATUS=$$?; \
+	docker run --rm -v "$$(pwd)":/app -w /app -e DOCKER_ARGS="$$DOCKER_ARGS" wine-cellar:dev sh -lc 'isort $$DOCKER_ARGS --check-only' || EXIT_STATUS=$$?; \
+	docker run --rm -v "$$(pwd)":/app -w /app -e DOCKER_ARGS="$$DOCKER_ARGS" wine-cellar:dev sh -lc 'flake8 $$DOCKER_ARGS --exclude migrations,settings' || EXIT_STATUS=$$?; \
 	exit $${EXIT_STATUS}

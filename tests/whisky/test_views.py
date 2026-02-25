@@ -375,7 +375,7 @@ def test_storage_grid_data_unauthenticated(client):
 
 @pytest.mark.django_db
 def test_storage_grid_data_bourbon_cask_type(client, user, whisky_storage_item_factory):
-    """A whisky with a bourbon cask_type returns wine_type='cask-bourbon'."""
+    """A whisky with a bourbon cask_type returns wine_type_class='cask-bourbon'."""
     item = _make_storage_item(whisky_storage_item_factory, user, "Bourbon")
     client.force_login(user)
     r = client.get(
@@ -391,12 +391,12 @@ def test_storage_grid_data_bourbon_cask_type(client, user, whisky_storage_item_f
         if w["wine"]["id"] == item.whisky.pk
     ]
     assert wines, "Expected at least one matching item in grid data"
-    assert wines[0]["wine_type"] == "cask-bourbon"
+    assert wines[0]["wine_type_class"] == "cask-bourbon"
 
 
 @pytest.mark.django_db
 def test_storage_grid_data_sherry_cask_type(client, user, whisky_storage_item_factory):
-    """A whisky with a sherry cask_type returns wine_type='cask-sherry'."""
+    """A whisky with a sherry cask_type returns wine_type_class='cask-sherry'."""
     item = _make_storage_item(whisky_storage_item_factory, user, "Sherry (Oloroso)")
     client.force_login(user)
     r = client.get(
@@ -412,12 +412,12 @@ def test_storage_grid_data_sherry_cask_type(client, user, whisky_storage_item_fa
         if w["wine"]["id"] == item.whisky.pk
     ]
     assert wines, "Expected at least one matching item in grid data"
-    assert wines[0]["wine_type"] == "cask-sherry"
+    assert wines[0]["wine_type_class"] == "cask-sherry"
 
 
 @pytest.mark.django_db
 def test_storage_grid_data_other_cask_type(client, user, whisky_storage_item_factory):
-    """A whisky with an unrecognised cask_type returns wine_type='cask-other'."""
+    """A whisky with an unrecognised cask_type returns wine_type_class='cask-other'."""
     item = _make_storage_item(whisky_storage_item_factory, user, "Rum")
     client.force_login(user)
     r = client.get(
@@ -433,12 +433,12 @@ def test_storage_grid_data_other_cask_type(client, user, whisky_storage_item_fac
         if w["wine"]["id"] == item.whisky.pk
     ]
     assert wines, "Expected at least one matching item in grid data"
-    assert wines[0]["wine_type"] == "cask-other"
+    assert wines[0]["wine_type_class"] == "cask-other"
 
 
 @pytest.mark.django_db
 def test_storage_grid_data_empty_cask_type(client, user, whisky_storage_item_factory):
-    """A whisky with an empty cask_type returns wine_type='cask-other'."""
+    """A whisky with an empty cask_type returns wine_type_class='cask-other'."""
     item = _make_storage_item(whisky_storage_item_factory, user, "")
     client.force_login(user)
     r = client.get(
@@ -454,14 +454,14 @@ def test_storage_grid_data_empty_cask_type(client, user, whisky_storage_item_fac
         if w["wine"]["id"] == item.whisky.pk
     ]
     assert wines, "Expected at least one matching item in grid data"
-    assert wines[0]["wine_type"] == "cask-other"
+    assert wines[0]["wine_type_class"] == "cask-other"
 
 
 @pytest.mark.django_db
 def test_storage_grid_data_mixed_finish_prioritises_sherry(
     client, user, whisky_storage_item_factory
 ):
-    """A multi-cask string containing sherry returns wine_type='cask-sherry'."""
+    """A multi-cask string containing sherry returns wine_type_class='cask-sherry'."""
     item = _make_storage_item(
         whisky_storage_item_factory, user, "Bourbon, Sherry (Oloroso)"
     )
@@ -479,4 +479,4 @@ def test_storage_grid_data_mixed_finish_prioritises_sherry(
         if w["wine"]["id"] == item.whisky.pk
     ]
     assert wines, "Expected at least one matching item in grid data"
-    assert wines[0]["wine_type"] == "cask-sherry"
+    assert wines[0]["wine_type_class"] == "cask-sherry"
