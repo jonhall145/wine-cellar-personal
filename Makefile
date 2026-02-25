@@ -155,7 +155,7 @@ whisky-pytest:
 
 .PHONY: whisky-deploy
 whisky-deploy:
-	$(PROD_COMPOSE) build whisky-web
+	$(PROD_COMPOSE) build wine-web
 	$(PROD_COMPOSE) up -d whisky-web
 	$(PROD_COMPOSE) restart nginx
 
