@@ -199,6 +199,61 @@
   box-shadow: 0 0 8px rgba(255, 140, 0, 0.4);
 }
 
+/* Cask type border colors (whisky) */
+.wine-card__image-wrapper--cask-bourbon {
+  border-color: var(--cask-bourbon);
+}
+
+.wine-card__image-wrapper--cask-bourbon-cs {
+  border-color: var(--cask-bourbon-cs);
+}
+
+.wine-card__image-wrapper--cask-sherry {
+  border-color: var(--cask-sherry);
+}
+
+.wine-card__image-wrapper--cask-sherry-cs {
+  border-color: var(--cask-sherry-cs);
+}
+
+.wine-card__image-wrapper--cask-other {
+  border-color: var(--cask-other);
+}
+
+.wine-card__image-wrapper--cask-other-cs {
+  border-color: var(--cask-other-cs);
+}
+
+.wine-card:hover .wine-card__image-wrapper--cask-bourbon {
+  border-color: #c09030;
+  box-shadow: 0 0 8px rgba(212, 168, 64, 0.4);
+}
+
+.wine-card:hover .wine-card__image-wrapper--cask-bourbon-cs {
+  border-color: #8a6510;
+  box-shadow: 0 0 8px rgba(166, 124, 32, 0.4);
+}
+
+.wine-card:hover .wine-card__image-wrapper--cask-sherry {
+  border-color: #a070b0;
+  box-shadow: 0 0 8px rgba(139, 94, 155, 0.4);
+}
+
+.wine-card:hover .wine-card__image-wrapper--cask-sherry-cs {
+  border-color: #7a4590;
+  box-shadow: 0 0 8px rgba(94, 53, 112, 0.4);
+}
+
+.wine-card:hover .wine-card__image-wrapper--cask-other {
+  border-color: #3a8b5e;
+  box-shadow: 0 0 8px rgba(74, 155, 110, 0.4);
+}
+
+.wine-card:hover .wine-card__image-wrapper--cask-other-cs {
+  border-color: #1d5b35;
+  box-shadow: 0 0 8px rgba(45, 107, 69, 0.4);
+}
+
 .wine-card__img {
   max-height: 100%;
   max-width: 100%;

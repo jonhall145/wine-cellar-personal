@@ -48,6 +48,55 @@ FILL_LEVEL_CLASSES = {
     "DR": "dreg",
 }
 
+SHERRY_PORT_KEYWORDS = [
+    "sherry",
+    "oloroso",
+    "pedro ximénez",
+    "px",
+    "fino",
+    "port",
+]
+
+BOURBON_WOOD_KEYWORDS = [
+    "bourbon",
+    "virgin oak",
+    "french oak",
+    "american oak",
+]
+
+
+def classify_cask_type(cask_type_str):
+    """Classify a cask_type string into a category.
+
+    Priority: sherry/port > bourbon/wood > other.
+    Returns: "sherry", "bourbon", or "other".
+    """
+    if not cask_type_str:
+        return "other"
+
+    lower = cask_type_str.lower()
+
+    for keyword in SHERRY_PORT_KEYWORDS:
+        if keyword in lower:
+            return "sherry"
+
+    for keyword in BOURBON_WOOD_KEYWORDS:
+        if keyword in lower:
+            return "bourbon"
+
+    return "other"
+
+
+@register.filter
+def cask_border_css(whisky):
+    """Return CSS class suffix for card border based on cask type and strength."""
+    category = classify_cask_type(getattr(whisky, "cask_type", ""))
+    is_cs = getattr(whisky, "cask_strength", False)
+    suffix = f"cask-{category}"
+    if is_cs:
+        suffix += "-cs"
+    return suffix
+
 
 @register.simple_tag
 def rating_stars(rating, max_rating=3):

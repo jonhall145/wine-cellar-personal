@@ -1,6 +1,6 @@
 {% load static i18n whisky_tags %}
 <li class="wine-card">
-    <div class="wine-card__image-wrapper wine-card__image-wrapper--{{ whisky.whisky_type|lower }}">
+    <div class="wine-card__image-wrapper wine-card__image-wrapper--{{ whisky|cask_border_css }}">
         <img src="{{ whisky.image_thumbnail }}"
              class="wine-card__img"
              height="200"

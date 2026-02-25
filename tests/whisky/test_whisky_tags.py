@@ -1,6 +1,10 @@
 """Tests for whisky template tags."""
 
+from types import SimpleNamespace
+
 from wine_cellar.apps.whisky.templatetags.whisky_tags import (
+    cask_border_css,
+    classify_cask_type,
     fill_level_display,
     peated_badge,
     whisky_type_badge,
@@ -100,3 +104,87 @@ class TestFillLevelDisplay:
         # Should escape the HTML tags
         assert "&lt;script&gt;" in result
         assert "<script>" not in result
+
+
+class TestClassifyCaskType:
+    """Tests for cask type classification logic."""
+
+    def test_empty_returns_other(self):
+        assert classify_cask_type("") == "other"
+        assert classify_cask_type(None) == "other"
+
+    def test_bourbon(self):
+        assert classify_cask_type("Bourbon") == "bourbon"
+
+    def test_first_fill_bourbon(self):
+        assert classify_cask_type("First Fill Bourbon") == "bourbon"
+
+    def test_virgin_oak(self):
+        assert classify_cask_type("Virgin Oak") == "bourbon"
+
+    def test_american_oak(self):
+        assert classify_cask_type("American Oak") == "bourbon"
+
+    def test_french_oak(self):
+        assert classify_cask_type("French Oak") == "bourbon"
+
+    def test_sherry_oloroso(self):
+        assert classify_cask_type("Sherry (Oloroso)") == "sherry"
+
+    def test_sherry_px(self):
+        assert classify_cask_type("Pedro Ximénez") == "sherry"
+
+    def test_px_abbreviation(self):
+        assert classify_cask_type("PX") == "sherry"
+
+    def test_port(self):
+        assert classify_cask_type("Port") == "sherry"
+
+    def test_fino(self):
+        assert classify_cask_type("Fino") == "sherry"
+
+    def test_mixed_bourbon_sherry_prioritizes_sherry(self):
+        assert classify_cask_type("Bourbon, Sherry (Oloroso)") == "sherry"
+
+    def test_rum_returns_other(self):
+        assert classify_cask_type("Rum") == "other"
+
+    def test_case_insensitive(self):
+        assert classify_cask_type("BOURBON") == "bourbon"
+        assert classify_cask_type("sherry") == "sherry"
+
+
+class TestCaskBorderCss:
+    """Tests for cask_border_css template filter."""
+
+    def test_bourbon_non_cs(self):
+        whisky = SimpleNamespace(cask_type="Bourbon", cask_strength=False)
+        assert cask_border_css(whisky) == "cask-bourbon"
+
+    def test_bourbon_cs(self):
+        whisky = SimpleNamespace(cask_type="Bourbon", cask_strength=True)
+        assert cask_border_css(whisky) == "cask-bourbon-cs"
+
+    def test_sherry_non_cs(self):
+        whisky = SimpleNamespace(cask_type="Sherry (Oloroso)", cask_strength=False)
+        assert cask_border_css(whisky) == "cask-sherry"
+
+    def test_sherry_cs(self):
+        whisky = SimpleNamespace(cask_type="Sherry (Oloroso)", cask_strength=True)
+        assert cask_border_css(whisky) == "cask-sherry-cs"
+
+    def test_other_non_cs(self):
+        whisky = SimpleNamespace(cask_type="Rum", cask_strength=False)
+        assert cask_border_css(whisky) == "cask-other"
+
+    def test_other_cs(self):
+        whisky = SimpleNamespace(cask_type="Rum", cask_strength=True)
+        assert cask_border_css(whisky) == "cask-other-cs"
+
+    def test_empty_cask_type(self):
+        whisky = SimpleNamespace(cask_type="", cask_strength=False)
+        assert cask_border_css(whisky) == "cask-other"
+
+    def test_missing_attributes_default(self):
+        whisky = SimpleNamespace()
+        assert cask_border_css(whisky) == "cask-other"
