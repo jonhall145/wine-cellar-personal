@@ -300,6 +300,10 @@ class WhiskyBaseForm(WhiskyFormPostCleanMixin, TomSelectMixin, forms.Form):
         widget=forms.SelectMultiple(),
         help_text=_("e.g. Bourbon, Sherry (Oloroso). Type to add custom."),
     )
+    cask_strength = forms.BooleanField(
+        required=False,
+        label=_("Cask Strength"),
+    )
     color = forms.CharField(
         max_length=100,
         required=False,

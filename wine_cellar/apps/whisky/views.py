@@ -421,6 +421,7 @@ class WhiskyCreateView(FormView):
         bottled_year = cleaned_data.get("bottled_year")
         peated_level = cleaned_data.get("peated_level") or None
         cask_type = cleaned_data.get("cask_type") or ""
+        cask_strength = cleaned_data.get("cask_strength", False)
         color = cleaned_data.get("color")
         bottler = cleaned_data.get("bottler")
         bottler_series = cleaned_data.get("bottler_series")
@@ -449,6 +450,7 @@ class WhiskyCreateView(FormView):
                 "age_statement": age_statement,
                 "peated_level": peated_level,
                 "cask_type": cask_type,
+                "cask_strength": cask_strength,
                 "color": color,
                 "bottler": bottler,
                 "bottler_series": bottler_series,
@@ -579,6 +581,7 @@ class WhiskyUpdateView(FormView):
         bottled_year = cleaned_data.get("bottled_year")
         peated_level = cleaned_data.get("peated_level") or None
         cask_type = cleaned_data.get("cask_type") or ""
+        cask_strength = cleaned_data.get("cask_strength", False)
         color = cleaned_data.get("color")
         bottler = cleaned_data.get("bottler")
         bottler_series = cleaned_data.get("bottler_series")
@@ -605,6 +608,7 @@ class WhiskyUpdateView(FormView):
         whisky.bottled_year = bottled_year
         whisky.peated_level = peated_level
         whisky.cask_type = cask_type
+        whisky.cask_strength = cask_strength
         whisky.color = color
         whisky.bottler = bottler
         whisky.bottler_series = bottler_series

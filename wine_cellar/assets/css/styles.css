@@ -45,6 +45,14 @@
   --wine-dessert-dark: #b8895f;
   --wine-fortified-dark: #6b350f;
   --wine-orange-dark: #d47500;
+
+  /* Cask type colors (whisky) */
+  --cask-bourbon: #d4a840;
+  --cask-sherry: #8b5e9b;
+  --cask-other: #4a9b6e;
+  --cask-bourbon-cs: #a67c20;
+  --cask-sherry-cs: #5e3570;
+  --cask-other-cs: #2d6b45;
   
   /* Status colors */
   --status-ready: #019603;

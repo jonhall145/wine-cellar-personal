@@ -349,6 +349,10 @@ class Whisky(UserContentModel):
         verbose_name=_("Cask Type"),
         help_text=_("e.g. Bourbon, Sherry (Oloroso), Virgin Oak"),
     )
+    cask_strength = models.BooleanField(
+        default=False,
+        verbose_name=_("Cask Strength"),
+    )
     color = models.CharField(
         max_length=100,
         blank=True,
