@@ -17,6 +17,23 @@ module.exports = merge(common, {
         },
         extractComments: false
       })
-    ]
+    ],
+    splitChunks: {
+      chunks: 'all',
+      cacheGroups: {
+        reactVendor: {
+          test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+          name: 'react-vendors',
+          chunks: 'all',
+          priority: 20,
+        },
+        leafletVendor: {
+          test: /[\\/]node_modules[\\/](leaflet|maplibre-gl|@maplibre|leaflet\.markercluster)[\\/]/,
+          name: 'leaflet-vendors',
+          chunks: 'all',
+          priority: 20,
+        },
+      },
+    },
   }
 })

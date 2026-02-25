@@ -1,8 +1,8 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-// @ts-ignore
 import django from 'django';
 import { CameraError, CameraErrorType } from './components/CameraError';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Compression settings
 const MAX_DIMENSION = 2048; // Max width or height in pixels
@@ -273,7 +273,7 @@ const initLabelScanner = () => {
     const container = document.getElementById('label-scanner');
     if (container) {
         const root = createRoot(container);
-        root.render(<LabelScanner />);
+        root.render(<ErrorBoundary><LabelScanner /></ErrorBoundary>);
     }
 };
 

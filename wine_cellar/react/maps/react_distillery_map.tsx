@@ -4,8 +4,8 @@ import BaseMap from './Map'
 import GeoJsonMarker from './GeoJsonMarker'
 import MarkerClusterLayer from './MarkerClusterLayer'
 import { MapPopup } from './MapPopup'
-// @ts-ignore
 import django from 'django'
+import ErrorBoundary from '../components/ErrorBoundary'
 
 const translated = {
     region: django.gettext('Region'),
@@ -174,7 +174,9 @@ function init() {
             const root = createRoot(container)
             root.render(
                 <React.StrictMode>
-                    <DistilleryMap distilleries={distilleries} baseUrl={baseUrl} />
+                    <ErrorBoundary>
+                        <DistilleryMap distilleries={distilleries} baseUrl={baseUrl} />
+                    </ErrorBoundary>
                 </React.StrictMode>
             )
         } catch (e) {

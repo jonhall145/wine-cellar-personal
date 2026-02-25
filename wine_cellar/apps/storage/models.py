@@ -3,7 +3,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from wine_cellar.apps.core.models import UserContentModel
+from wine_cellar.apps.core.models import HouseholdQuerySet, UserContentModel
 
 
 def get_app_type():
@@ -114,13 +114,24 @@ class Storage(UserContentModel):
         return free_cells
 
 
+class StorageItemQuerySet(HouseholdQuerySet):
+    """Custom queryset for StorageItem."""
+
+    def in_stock(self):
+        return self.filter(deleted=False)
+
+
 class StorageItem(UserContentModel):
+    objects = StorageItemQuerySet.as_manager()
+
     storage = models.ForeignKey(Storage, on_delete=models.CASCADE, related_name="items")
     wine = models.ForeignKey("wine.Wine", on_delete=models.CASCADE)
     row = models.PositiveIntegerField(null=True, blank=True)
     column = models.PositiveIntegerField(null=True, blank=True)
     deleted = models.BooleanField(default=False, db_index=True)
-    price = models.DecimalField(max_digits=6, decimal_places=2, null=True)
+    price = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, validators=[MinValueValidator(0)]
+    )
     is_gift = models.BooleanField(default=False, verbose_name=_("Is Gift"))
     gift_from = models.CharField(
         max_length=100, null=True, blank=True, verbose_name=_("Gift From")
