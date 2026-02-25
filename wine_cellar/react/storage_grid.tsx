@@ -41,6 +41,7 @@ interface WineInfo {
     name: string;
     vintage: number | null;
     wine_type: string;
+    wine_type_class?: string;
     country: string;
     item_id: number;
     rating: number | null;
@@ -88,6 +89,9 @@ const getWineTypeClass = (wineType: string | null | undefined): string => {
         'dessert': 'dessert',
         'fortified': 'fortified',
         'orange': 'orange',
+        'cask-bourbon': 'cask-bourbon',
+        'cask-sherry': 'cask-sherry',
+        'cask-other': 'cask-other',
     };
     const normalized = wineType.toLowerCase();
     return typeMap[normalized] || '';
@@ -240,7 +244,7 @@ const DraggableCell: React.FC<DraggableCellProps> = ({
         className += ' storage-grid__cell--inactive';
     } else if (hasWine) {
         className += ' storage-grid__cell--filled';
-        const wineTypeClass = getWineTypeClass(cell.wine?.wine_type);
+        const wineTypeClass = getWineTypeClass(cell.wine?.wine_type_class ?? cell.wine?.wine_type);
         if (wineTypeClass) className += ` storage-grid__cell--${wineTypeClass}`;
     }
     if (isDragging) className += ' storage-grid__cell--dragging';
@@ -269,7 +273,7 @@ const DraggableCell: React.FC<DraggableCellProps> = ({
 
 // Drag overlay component shown during drag
 const DragOverlayContent: React.FC<{ wine: WineInfo }> = ({ wine }) => {
-    const wineTypeClass = getWineTypeClass(wine.wine_type);
+    const wineTypeClass = getWineTypeClass(wine.wine_type_class ?? wine.wine_type);
     return (
         <div className={`storage-grid__cell storage-grid__cell--filled storage-grid__cell--overlay${wineTypeClass ? ` storage-grid__cell--${wineTypeClass}` : ''}`}>
             <div className="storage-grid__bottle">
@@ -544,7 +548,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                                 selectedBottle?.cell.column === cell.column &&
                                 selectedBottle?.storageId === storage.id;
 
-                            const wineTypeClass = cell.wine ? getWineTypeClass(cell.wine.wine_type) : '';
+                            const wineTypeClass = cell.wine ? getWineTypeClass(cell.wine.wine_type_class ?? cell.wine.wine_type) : '';
 
                             const isInactive = !cell.active;
 

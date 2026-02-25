@@ -1,4 +1,5 @@
 import datetime
+import json
 from http import HTTPStatus
 
 import pytest
@@ -341,3 +342,141 @@ def test_whisky_create_post_with_distillery(client, user, distillery_factory):
     whisky = Whisky.objects.get(user=user, name="Laphroaig 10")
     assert whisky.distillery == distillery
     assert whisky.age_statement == 10
+
+
+# ---------------------------------------------------------------------------
+# storage_grid_data – whisky mode
+# ---------------------------------------------------------------------------
+
+
+def _make_storage_item(whisky_storage_item_factory, user, cask_type):
+    """Helper: create a storage item for a whisky with the given cask_type."""
+    household = user.user_settings.active_household
+    return whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        whisky__cask_type=cask_type,
+        row=1,
+        column=1,
+    )
+
+
+@pytest.mark.django_db
+def test_storage_grid_data_unauthenticated(client):
+    """Unauthenticated request to storage-grid-data redirects to login."""
+    r = client.get(reverse("storage-grid-data"))
+    assert r.status_code == HTTPStatus.FOUND
+    assert reverse("account_login") in r["Location"]
+
+
+@pytest.mark.django_db
+def test_storage_grid_data_bourbon_cask_type(client, user, whisky_storage_item_factory):
+    """A whisky with a bourbon cask_type returns wine_type_class='cask-bourbon'."""
+    item = _make_storage_item(whisky_storage_item_factory, user, "Bourbon")
+    client.force_login(user)
+    r = client.get(
+        reverse("storage-grid-data"),
+        {"storage_id": item.storage.pk},
+    )
+    assert r.status_code == HTTPStatus.OK
+    data = json.loads(r.content)
+    wines = [
+        w["wine"]
+        for s in data["storages"]
+        for w in s["items"]
+        if w["wine"]["id"] == item.whisky.pk
+    ]
+    assert wines, "Expected at least one matching item in grid data"
+    assert wines[0]["wine_type_class"] == "cask-bourbon"
+
+
+@pytest.mark.django_db
+def test_storage_grid_data_sherry_cask_type(client, user, whisky_storage_item_factory):
+    """A whisky with a sherry cask_type returns wine_type_class='cask-sherry'."""
+    item = _make_storage_item(whisky_storage_item_factory, user, "Sherry (Oloroso)")
+    client.force_login(user)
+    r = client.get(
+        reverse("storage-grid-data"),
+        {"storage_id": item.storage.pk},
+    )
+    assert r.status_code == HTTPStatus.OK
+    data = json.loads(r.content)
+    wines = [
+        w["wine"]
+        for s in data["storages"]
+        for w in s["items"]
+        if w["wine"]["id"] == item.whisky.pk
+    ]
+    assert wines, "Expected at least one matching item in grid data"
+    assert wines[0]["wine_type_class"] == "cask-sherry"
+
+
+@pytest.mark.django_db
+def test_storage_grid_data_other_cask_type(client, user, whisky_storage_item_factory):
+    """A whisky with an unrecognised cask_type returns wine_type_class='cask-other'."""
+    item = _make_storage_item(whisky_storage_item_factory, user, "Rum")
+    client.force_login(user)
+    r = client.get(
+        reverse("storage-grid-data"),
+        {"storage_id": item.storage.pk},
+    )
+    assert r.status_code == HTTPStatus.OK
+    data = json.loads(r.content)
+    wines = [
+        w["wine"]
+        for s in data["storages"]
+        for w in s["items"]
+        if w["wine"]["id"] == item.whisky.pk
+    ]
+    assert wines, "Expected at least one matching item in grid data"
+    assert wines[0]["wine_type_class"] == "cask-other"
+
+
+@pytest.mark.django_db
+def test_storage_grid_data_empty_cask_type(client, user, whisky_storage_item_factory):
+    """A whisky with an empty cask_type returns wine_type_class='cask-other'."""
+    item = _make_storage_item(whisky_storage_item_factory, user, "")
+    client.force_login(user)
+    r = client.get(
+        reverse("storage-grid-data"),
+        {"storage_id": item.storage.pk},
+    )
+    assert r.status_code == HTTPStatus.OK
+    data = json.loads(r.content)
+    wines = [
+        w["wine"]
+        for s in data["storages"]
+        for w in s["items"]
+        if w["wine"]["id"] == item.whisky.pk
+    ]
+    assert wines, "Expected at least one matching item in grid data"
+    assert wines[0]["wine_type_class"] == "cask-other"
+
+
+@pytest.mark.django_db
+def test_storage_grid_data_mixed_finish_prioritises_sherry(
+    client, user, whisky_storage_item_factory
+):
+    """A multi-cask string containing sherry returns wine_type_class='cask-sherry'."""
+    item = _make_storage_item(
+        whisky_storage_item_factory, user, "Bourbon, Sherry (Oloroso)"
+    )
+    client.force_login(user)
+    r = client.get(
+        reverse("storage-grid-data"),
+        {"storage_id": item.storage.pk},
+    )
+    assert r.status_code == HTTPStatus.OK
+    data = json.loads(r.content)
+    wines = [
+        w["wine"]
+        for s in data["storages"]
+        for w in s["items"]
+        if w["wine"]["id"] == item.whisky.pk
+    ]
+    assert wines, "Expected at least one matching item in grid data"
+    assert wines[0]["wine_type_class"] == "cask-sherry"

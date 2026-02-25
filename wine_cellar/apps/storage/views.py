@@ -22,6 +22,7 @@ from wine_cellar.apps.storage.forms import (
 )
 from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household
+from wine_cellar.apps.whisky.utils import classify_cask_type
 from wine_cellar.apps.wine.models import Wine
 
 logger = logging.getLogger(__name__)
@@ -482,6 +483,7 @@ def storage_grid_data(request):
             if whisky_mode:
                 whisky = item.whisky
                 rating = item.rating if item.rating is not None else whisky.rating
+                cask_cat = classify_cask_type(whisky.cask_type or "")
                 items.append(
                     {
                         "row": item.row,
@@ -495,6 +497,7 @@ def storage_grid_data(request):
                                 if whisky.whisky_type
                                 else ""
                             ),
+                            "wine_type_class": f"cask-{cask_cat}",
                             "country": whisky.country or "",
                             "item_id": item.pk,
                             "rating": rating,

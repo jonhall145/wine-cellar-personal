@@ -3,6 +3,8 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
+from wine_cellar.apps.whisky.utils import classify_cask_type
+
 register = template.Library()
 
 
@@ -47,44 +49,6 @@ FILL_LEVEL_CLASSES = {
     "OP": "opened",
     "DR": "dreg",
 }
-
-SHERRY_PORT_KEYWORDS = [
-    "sherry",
-    "oloroso",
-    "pedro ximénez",
-    "px",
-    "fino",
-    "port",
-]
-
-BOURBON_WOOD_KEYWORDS = [
-    "bourbon",
-    "virgin oak",
-    "french oak",
-    "american oak",
-]
-
-
-def classify_cask_type(cask_type_str):
-    """Classify a cask_type string into a category.
-
-    Priority: sherry/port > bourbon/wood > other.
-    Returns: "sherry", "bourbon", or "other".
-    """
-    if not cask_type_str:
-        return "other"
-
-    lower = cask_type_str.lower()
-
-    for keyword in SHERRY_PORT_KEYWORDS:
-        if keyword in lower:
-            return "sherry"
-
-    for keyword in BOURBON_WOOD_KEYWORDS:
-        if keyword in lower:
-            return "bourbon"
-
-    return "other"
 
 
 @register.filter

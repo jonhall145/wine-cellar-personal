@@ -249,8 +249,9 @@ lint-html:
 .PHONY: lint-py
 lint-py:
 	EXIT_STATUS=0; \
-	$(DEV_COMPOSE) up -d web || EXIT_STATUS=$$?; \
-	$(DEV_COMPOSE) exec -T web black $(ARGUMENTS) || EXIT_STATUS=$$?; \
-	$(DEV_COMPOSE) exec -T web isort $(ARGUMENTS) --filter-files || EXIT_STATUS=$$?; \
-	$(DEV_COMPOSE) exec -T web flake8 $(ARGUMENTS) || EXIT_STATUS=$$?; \
+	DOCKER_ARGS="$(patsubst $(CURDIR)/%,%,$(ARGUMENTS))"; \
+	if ! docker image inspect wine-cellar:dev >/dev/null 2>&1; then $(DEV_COMPOSE) build web || EXIT_STATUS=$$?; fi; \
+	docker run --rm -v "$$(pwd)":/app -w /app -e DOCKER_ARGS="$$DOCKER_ARGS" wine-cellar:dev sh -lc 'black --check $$DOCKER_ARGS' || EXIT_STATUS=$$?; \
+	docker run --rm -v "$$(pwd)":/app -w /app -e DOCKER_ARGS="$$DOCKER_ARGS" wine-cellar:dev sh -lc 'isort $$DOCKER_ARGS --check-only' || EXIT_STATUS=$$?; \
+	docker run --rm -v "$$(pwd)":/app -w /app -e DOCKER_ARGS="$$DOCKER_ARGS" wine-cellar:dev sh -lc 'flake8 $$DOCKER_ARGS --exclude migrations,settings' || EXIT_STATUS=$$?; \
 	exit $${EXIT_STATUS}
