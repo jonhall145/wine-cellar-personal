@@ -1267,7 +1267,7 @@ class CellarValueView(TemplateView):
         # Total value from storage items
         storage_items = StorageItem.objects.filter(household=household, deleted=False)
         total_value = storage_items.aggregate(
-            total=Coalesce(Sum("price"), Decimal("0.00"))
+            total=Coalesce(Sum(Coalesce("price", "wine__price")), Decimal("0.00"))
         )["total"]
         total_bottles = storage_items.count()
 
@@ -1282,15 +1282,14 @@ class CellarValueView(TemplateView):
             if country not in wines_by_country:
                 wines_by_country[country] = {"count": 0, "value": Decimal("0")}
             wines_by_country[country]["count"] += 1
-            if item.price:
-                wines_by_country[country]["value"] += item.price
+            item_price = item.price or item.wine.price or Decimal("0")
+            wines_by_country[country]["value"] += item_price
 
             # Type stats (same loop)
             if wine_type not in wines_by_type:
                 wines_by_type[wine_type] = {"count": 0, "value": Decimal("0")}
             wines_by_type[wine_type]["count"] += 1
-            if item.price:
-                wines_by_type[wine_type]["value"] += item.price
+            wines_by_type[wine_type]["value"] += item_price
 
         # Format values as integers (no pence)
         for data in wines_by_country.values():
