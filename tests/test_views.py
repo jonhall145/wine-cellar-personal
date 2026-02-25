@@ -851,7 +851,7 @@ def test_cellar_value_uses_wine_price_as_fallback(
 def test_cellar_value_zero_item_price_not_overridden(
     client, user, wine_factory, storage_item_factory
 ):
-    """An explicit storage_item.price of zero is respected and not replaced by wine.price."""
+    """An explicit item price of zero is respected and not replaced by wine.price."""
     Wine.objects.filter(user=user).delete()
     storage = user.storage_set.first()
     wine = wine_factory(user=user, country="FR", price=20.00)

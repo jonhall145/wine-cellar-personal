@@ -502,7 +502,7 @@ def test_cellar_value_uses_whisky_price_as_fallback(
 def test_cellar_value_zero_item_price_not_overridden(
     client, user, whisky_factory, whisky_storage_item_factory
 ):
-    """An explicit storage_item.price of zero is respected and not replaced by whisky.price."""
+    """An explicit item price of zero is respected and not replaced by whisky.price."""
     Whisky.objects.filter(user=user).delete()
     storage = user.storage_set.first()
     whisky = whisky_factory(user=user, price=50.00)
