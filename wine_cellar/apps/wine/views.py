@@ -1282,7 +1282,12 @@ class CellarValueView(TemplateView):
             if country not in wines_by_country:
                 wines_by_country[country] = {"count": 0, "value": Decimal("0")}
             wines_by_country[country]["count"] += 1
-            item_price = item.price or item.wine.price or Decimal("0")
+            if item.price is not None:
+                item_price = item.price
+            elif item.wine.price is not None:
+                item_price = item.wine.price
+            else:
+                item_price = Decimal("0")
             wines_by_country[country]["value"] += item_price
 
             # Type stats (same loop)

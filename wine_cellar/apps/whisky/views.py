@@ -1332,7 +1332,12 @@ class CellarValueView(TemplateView):
             if distillery not in whiskies_by_distillery:
                 whiskies_by_distillery[distillery] = {"count": 0, "value": Decimal("0")}
             whiskies_by_distillery[distillery]["count"] += 1
-            item_price = item.price or item.whisky.price or Decimal("0")
+            if item.price is not None:
+                item_price = item.price
+            elif item.whisky.price is not None:
+                item_price = item.whisky.price
+            else:
+                item_price = Decimal("0")
             whiskies_by_distillery[distillery]["value"] += item_price
 
             # Type stats
