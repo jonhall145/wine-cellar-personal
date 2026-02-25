@@ -32,27 +32,7 @@ Claude has access to browser automation tools for inspecting and testing UI:
 
 ### Usage Examples
 
-```javascript
-// Basic page inspection with Playwright
-const { chromium } = require('playwright');
-
-const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage();
-await page.goto('http://localhost:8003/');
-
-// Take screenshot
-await page.screenshot({ path: 'screenshot.png', fullPage: true });
-
-// Capture console errors
-page.on('console', msg => {
-  if (msg.type() === 'error') console.log('Error:', msg.text());
-});
-
-// Check for accessibility issues
-const imagesWithoutAlt = await page.$$eval('img:not([alt])', imgs => imgs.length);
-
-await browser.close();
-```
+See [playwright-examples.md](docs/playwright-examples.md) for code examples and patterns.
 
 ### Common UI Checks
 
@@ -163,38 +143,14 @@ These skills are available for common tasks:
 
 ## Development Commands
 
-```bash
-make install    # Install dependencies
-make server     # Start dev server (port 8003)
-make watch      # Dev server with frontend rebuild
-make pytest     # Run backend tests
-make lint       # Run all linters
-make fixtures   # Load sample data
-```
+Use `make` to run development tasks. Run `make help` to see available targets.
 
 ## Production Deployment Commands
 
-Always use `make` targets rather than calling scripts directly.
+Always use `make` targets rather than calling scripts directly. Run `make help` to see all available deployment targets.
 
-```bash
-make wine-deploy        # Build Docker image and deploy wine app
-make whisky-deploy      # Deploy whisky app (uses same image)
-
-make wine-prod-start    # Start wine container
-make wine-prod-stop     # Stop wine container
-make wine-prod-restart  # Restart wine container
-make wine-prod-status   # Show wine container status
-make wine-prod-logs     # Tail wine container logs
-
-make whisky-prod-start    # Start whisky container
-make whisky-prod-stop     # Stop whisky container
-make whisky-prod-restart  # Restart whisky container
-make whisky-prod-status   # Show whisky container status
-make whisky-prod-logs     # Tail whisky container logs
-```
-
-**Notes:**
-- Both apps share the same `wine-cellar:prod` Docker image — `make wine-deploy` builds it for both
+**Key points:**
+- Both wine and whisky apps share the same Docker image — `make wine-deploy` builds it for both
 - To deploy both apps: run `make wine-deploy` then `make whisky-deploy`
 - Do NOT use `deploy-to-prod.sh` — that is the legacy non-Docker path and is no longer used
 - Static files and frontend assets are built inside the Docker image automatically
