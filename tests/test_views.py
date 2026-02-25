@@ -829,3 +829,51 @@ def test_form_shows_only_available_bottles(
 
     assert len(available_bottles) == 1
     assert bottle1 in available_bottles
+
+
+@pytest.mark.django_db
+def test_cellar_value_uses_wine_price_as_fallback(
+    client, user, wine_factory, storage_item_factory
+):
+    """Cellar value total uses wine.price when storage_item.price is NULL."""
+    Wine.objects.filter(user=user).delete()
+    storage = user.storage_set.first()
+    wine = wine_factory(user=user, country="FR", price=20.00)
+    # item has no price; should fall back to wine.price=20
+    storage_item_factory(wine=wine, storage=storage, price=None)
+    client.force_login(user)
+    r = client.get(reverse("cellar-value"))
+    assert r.status_code == HTTPStatus.OK
+    assert r.context_data["total_value"] == 20
+
+
+@pytest.mark.django_db
+def test_cellar_value_zero_item_price_not_overridden(
+    client, user, wine_factory, storage_item_factory
+):
+    """An explicit item price of zero is respected and not replaced by wine.price."""
+    Wine.objects.filter(user=user).delete()
+    storage = user.storage_set.first()
+    wine = wine_factory(user=user, country="FR", price=20.00)
+    # item price explicitly set to 0 — must NOT fall through to wine.price
+    storage_item_factory(wine=wine, storage=storage, price=0)
+    client.force_login(user)
+    r = client.get(reverse("cellar-value"))
+    assert r.status_code == HTTPStatus.OK
+    assert r.context_data["total_value"] == 0
+
+
+@pytest.mark.django_db
+def test_cellar_value_by_country_uses_wine_price_fallback(
+    client, user, wine_factory, storage_item_factory
+):
+    """Per-country breakdown uses wine.price when storage_item.price is NULL."""
+    Wine.objects.filter(user=user).delete()
+    storage = user.storage_set.first()
+    wine = wine_factory(user=user, country="FR", price=30.00)
+    storage_item_factory(wine=wine, storage=storage, price=None)
+    client.force_login(user)
+    r = client.get(reverse("cellar-value"))
+    assert r.status_code == HTTPStatus.OK
+    by_country = r.context_data["by_country"]
+    assert by_country["France"]["value"] == 30

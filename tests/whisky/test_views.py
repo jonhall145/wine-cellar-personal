@@ -480,3 +480,52 @@ def test_storage_grid_data_mixed_finish_prioritises_sherry(
     ]
     assert wines, "Expected at least one matching item in grid data"
     assert wines[0]["wine_type_class"] == "cask-sherry"
+
+
+@pytest.mark.django_db
+def test_cellar_value_uses_whisky_price_as_fallback(
+    client, user, whisky_factory, whisky_storage_item_factory
+):
+    """Cellar value total uses whisky.price when storage_item.price is NULL."""
+    Whisky.objects.filter(user=user).delete()
+    storage = user.storage_set.first()
+    whisky = whisky_factory(user=user, price=50.00)
+    # item has no price; should fall back to whisky.price=50
+    whisky_storage_item_factory(whisky=whisky, storage=storage, price=None)
+    client.force_login(user)
+    r = client.get(reverse("cellar-value"))
+    assert r.status_code == HTTPStatus.OK
+    assert r.context_data["total_value"] == 50
+
+
+@pytest.mark.django_db
+def test_cellar_value_zero_item_price_not_overridden(
+    client, user, whisky_factory, whisky_storage_item_factory
+):
+    """An explicit item price of zero is respected and not replaced by whisky.price."""
+    Whisky.objects.filter(user=user).delete()
+    storage = user.storage_set.first()
+    whisky = whisky_factory(user=user, price=50.00)
+    # item price explicitly set to 0 — must NOT fall through to whisky.price
+    whisky_storage_item_factory(whisky=whisky, storage=storage, price=0)
+    client.force_login(user)
+    r = client.get(reverse("cellar-value"))
+    assert r.status_code == HTTPStatus.OK
+    assert r.context_data["total_value"] == 0
+
+
+@pytest.mark.django_db
+def test_cellar_value_by_distillery_uses_whisky_price_fallback(
+    client, user, whisky_factory, distillery_factory, whisky_storage_item_factory
+):
+    """Per-distillery breakdown uses whisky.price when storage_item.price is NULL."""
+    Whisky.objects.filter(user=user).delete()
+    storage = user.storage_set.first()
+    distillery = distillery_factory()
+    whisky = whisky_factory(user=user, distillery=distillery, price=75.00)
+    whisky_storage_item_factory(whisky=whisky, storage=storage, price=None)
+    client.force_login(user)
+    r = client.get(reverse("cellar-value"))
+    assert r.status_code == HTTPStatus.OK
+    by_distillery = r.context_data["by_distillery"]
+    assert by_distillery[distillery.name]["value"] == 75
