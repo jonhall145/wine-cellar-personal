@@ -1315,7 +1315,7 @@ class CellarValueView(TemplateView):
             household=household, deleted=False
         )
         total_value = storage_items.aggregate(
-            total=Coalesce(Sum("price"), Decimal("0.00"))
+            total=Coalesce(Sum(Coalesce("price", "whisky__price")), Decimal("0.00"))
         )["total"]
         total_bottles = storage_items.count()
 
@@ -1332,15 +1332,14 @@ class CellarValueView(TemplateView):
             if distillery not in whiskies_by_distillery:
                 whiskies_by_distillery[distillery] = {"count": 0, "value": Decimal("0")}
             whiskies_by_distillery[distillery]["count"] += 1
-            if item.price:
-                whiskies_by_distillery[distillery]["value"] += item.price
+            item_price = item.price or item.whisky.price or Decimal("0")
+            whiskies_by_distillery[distillery]["value"] += item_price
 
             # Type stats
             if whisky_type not in whiskies_by_type:
                 whiskies_by_type[whisky_type] = {"count": 0, "value": Decimal("0")}
             whiskies_by_type[whisky_type]["count"] += 1
-            if item.price:
-                whiskies_by_type[whisky_type]["value"] += item.price
+            whiskies_by_type[whisky_type]["value"] += item_price
 
         # Format values as integers
         for data in whiskies_by_distillery.values():
