@@ -88,6 +88,9 @@ const getWineTypeClass = (wineType: string | null | undefined): string => {
         'dessert': 'dessert',
         'fortified': 'fortified',
         'orange': 'orange',
+        'cask-bourbon': 'cask-bourbon',
+        'cask-sherry': 'cask-sherry',
+        'cask-other': 'cask-other',
     };
     const normalized = wineType.toLowerCase();
     return typeMap[normalized] || '';

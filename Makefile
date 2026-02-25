@@ -249,8 +249,8 @@ lint-html:
 .PHONY: lint-py
 lint-py:
 	EXIT_STATUS=0; \
-	$(DEV_COMPOSE) up -d web || EXIT_STATUS=$$?; \
-	$(DEV_COMPOSE) exec -T web black $(ARGUMENTS) || EXIT_STATUS=$$?; \
-	$(DEV_COMPOSE) exec -T web isort $(ARGUMENTS) --filter-files || EXIT_STATUS=$$?; \
-	$(DEV_COMPOSE) exec -T web flake8 $(ARGUMENTS) || EXIT_STATUS=$$?; \
+	DOCKER_ARGS="$(subst /root/wine-cellar-personal/,/app/,$(ARGUMENTS))"; \
+	docker run --rm -v "$$(pwd)":/app -w /app wine-cellar:dev black $$DOCKER_ARGS || EXIT_STATUS=$$?; \
+	docker run --rm -v "$$(pwd)":/app -w /app wine-cellar:dev isort $$DOCKER_ARGS --check-only || EXIT_STATUS=$$?; \
+	docker run --rm -v "$$(pwd)":/app -w /app wine-cellar:dev flake8 $$DOCKER_ARGS || EXIT_STATUS=$$?; \
 	exit $${EXIT_STATUS}

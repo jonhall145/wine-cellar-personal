@@ -297,6 +297,40 @@
   color: var(--gray-700);
 }
 
+/* Whisky cask type color variants */
+.storage-grid__cell--cask-bourbon {
+  background-color: var(--cask-bourbon);
+  border-color: var(--cask-bourbon-cs);
+}
+
+@media (hover: hover) {
+  .storage-grid__cell--cask-bourbon:hover {
+    background-color: var(--cask-bourbon-cs);
+  }
+}
+
+.storage-grid__cell--cask-sherry {
+  background-color: var(--cask-sherry);
+  border-color: var(--cask-sherry-cs);
+}
+
+@media (hover: hover) {
+  .storage-grid__cell--cask-sherry:hover {
+    background-color: var(--cask-sherry-cs);
+  }
+}
+
+.storage-grid__cell--cask-other {
+  background-color: var(--cask-other);
+  border-color: var(--cask-other-cs);
+}
+
+@media (hover: hover) {
+  .storage-grid__cell--cask-other:hover {
+    background-color: var(--cask-other-cs);
+  }
+}
+
 .storage-grid__cell--selected {
   border-color: var(--alert-info-border);
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
