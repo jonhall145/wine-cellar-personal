@@ -26,6 +26,7 @@ from django.views.generic import (
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
+from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
 from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 from wine_cellar.apps.whisky.filters import WhiskyFilter, WhiskyStorageItemFilter
@@ -78,7 +79,7 @@ def base64_to_uploaded_file(base64_data: str, filename: str) -> InMemoryUploaded
     )
 
 
-class HomePageView(TemplateView):
+class HomePageView(RequireHouseholdMixin, TemplateView):
     template_name = "whisky/homepage.html"
 
     def get_context_data(self, **kwargs):
@@ -225,7 +226,7 @@ class HomePageView(TemplateView):
 @method_decorator(
     ratelimit(key="user", rate="20/m", method="POST", block=True), name="post"
 )
-class WhiskyCreateView(FormView):
+class WhiskyCreateView(RequireMemberMixin, FormView):
     """View for creating new whiskies. Rate limited to 20 creations/minute per user."""
 
     template_name = "whisky/whisky_create.html"
@@ -525,7 +526,7 @@ class WhiskyCreateView(FormView):
         return whisky, created
 
 
-class WhiskyUpdateView(FormView):
+class WhiskyUpdateView(RequireMemberMixin, FormView):
     template_name = "whisky/whisky_edit.html"
     form_class = WhiskyEditForm
     success_url = reverse_lazy("whisky-list")
@@ -674,7 +675,7 @@ class WhiskyUpdateView(FormView):
             )
 
 
-class WhiskyDetailView(DetailView):
+class WhiskyDetailView(RequireHouseholdMixin, DetailView):
     template_name = "whisky/whisky_detail.html"
     model = Whisky
 
@@ -718,7 +719,7 @@ class WhiskyDetailView(DetailView):
         return context
 
 
-class WhiskyDeleteView(DeleteView):
+class WhiskyDeleteView(RequireMemberMixin, DeleteView):
     model = Whisky
     template_name = "whisky/whisky_confirm_delete.html"
     success_url = reverse_lazy("whisky-list")
@@ -729,7 +730,7 @@ class WhiskyDeleteView(DeleteView):
         return qs.filter(household=household)
 
 
-class WhiskyListView(FilterView):
+class WhiskyListView(RequireHouseholdMixin, FilterView):
     model = Whisky
     template_name = "whisky/whisky_list.html"
     context_object_name = "whiskies"
@@ -778,11 +779,11 @@ class WhiskyListView(FilterView):
         return qs.filter(household=household).distinct()
 
 
-class WhiskyScanView(TemplateView):
+class WhiskyScanView(RequireHouseholdMixin, TemplateView):
     template_name = "whisky/scan_whisky.html"
 
 
-class WhiskyScannedView(TemplateView):
+class WhiskyScannedView(RequireHouseholdMixin, TemplateView):
     template_name = "whisky/scanned_whisky.html"
 
     def dispatch(self, request, *args, **kwargs):
@@ -804,7 +805,7 @@ class WhiskyScannedView(TemplateView):
         return super().dispatch(request, *args, **kwargs)
 
 
-class WhiskyMapView(TemplateView):
+class WhiskyMapView(RequireHouseholdMixin, TemplateView):
     template_name = "whisky/whisky_map.html"
 
     def get_context_data(self, **kwargs):
@@ -863,7 +864,7 @@ class WhiskyMapView(TemplateView):
         return context
 
 
-class LabelScanView(TemplateView):
+class LabelScanView(RequireHouseholdMixin, TemplateView):
     template_name = "whisky/label_scan.html"
 
     def post(self, request, *args, **kwargs):
@@ -1111,7 +1112,7 @@ def scan_barcode_ajax(request):
         return JsonResponse({"error": "Barcode scanning failed"}, status=500)
 
 
-class DrinkRecordCreateView(FormView):
+class DrinkRecordCreateView(RequireMemberMixin, FormView):
     template_name = "whisky/drink_record_create.html"
     form_class = WhiskyDrinkRecordForm
 
@@ -1184,7 +1185,7 @@ class DrinkRecordCreateView(FormView):
         return super().form_valid(form)
 
 
-class DrinkRecordListView(TemplateView):
+class DrinkRecordListView(RequireHouseholdMixin, TemplateView):
     template_name = "whisky/drink_record_list.html"
 
     def get_context_data(self, **kwargs):
@@ -1196,7 +1197,7 @@ class DrinkRecordListView(TemplateView):
         return context
 
 
-class DrinkRecordEditView(FormView):
+class DrinkRecordEditView(RequireMemberMixin, FormView):
     template_name = "whisky/drink_record_edit.html"
     form_class = WhiskyDrinkRecordForm
 
@@ -1235,7 +1236,7 @@ class DrinkRecordEditView(FormView):
         return super().form_valid(form)
 
 
-class DrinkRecordDeleteView(DeleteView):
+class DrinkRecordDeleteView(RequireMemberMixin, DeleteView):
     template_name = "whisky/drink_record_confirm_delete.html"
     success_url = reverse_lazy("drink-history")
 
@@ -1244,7 +1245,7 @@ class DrinkRecordDeleteView(DeleteView):
         return WhiskyDrinkRecord.objects.filter(household=household)
 
 
-class WishlistListView(TemplateView):
+class WishlistListView(RequireHouseholdMixin, TemplateView):
     template_name = "whisky/wishlist_list.html"
 
     def get_context_data(self, **kwargs):
@@ -1256,7 +1257,7 @@ class WishlistListView(TemplateView):
         return context
 
 
-class WishlistCreateView(FormView):
+class WishlistCreateView(RequireMemberMixin, FormView):
     template_name = "whisky/wishlist_create.html"
     form_class = WhiskyWishlistForm
     success_url = reverse_lazy("wishlist-list")
@@ -1278,7 +1279,7 @@ class WishlistCreateView(FormView):
         return super().form_valid(form)
 
 
-class WishlistDeleteView(DeleteView):
+class WishlistDeleteView(RequireMemberMixin, DeleteView):
     template_name = "whisky/wishlist_confirm_delete.html"
     success_url = reverse_lazy("wishlist-list")
 
@@ -1287,7 +1288,7 @@ class WishlistDeleteView(DeleteView):
         return WhiskyWishlist.objects.filter(household=household)
 
 
-class WishlistPurchasedView(TemplateView):
+class WishlistPurchasedView(RequireHouseholdMixin, TemplateView):
     """Mark a wishlist item as purchased."""
 
     def get(self, request, *args, **kwargs):
@@ -1298,7 +1299,7 @@ class WishlistPurchasedView(TemplateView):
         return redirect("wishlist-list")
 
 
-class CellarValueView(TemplateView):
+class CellarValueView(RequireHouseholdMixin, TemplateView):
     template_name = "whisky/cellar_value.html"
 
     def get_context_data(self, **kwargs):
@@ -1364,7 +1365,7 @@ class CellarValueView(TemplateView):
         return context
 
 
-class ConsumptionStatsView(TemplateView):
+class ConsumptionStatsView(RequireHouseholdMixin, TemplateView):
     template_name = "whisky/consumption_stats.html"
 
     def get_context_data(self, **kwargs):
@@ -1427,7 +1428,7 @@ class ConsumptionStatsView(TemplateView):
         return context
 
 
-class BottleNoteCreateView(FormView):
+class BottleNoteCreateView(RequireMemberMixin, FormView):
     template_name = "whisky/bottle_note_create.html"
     form_class = BottleNoteForm
 
@@ -1457,7 +1458,7 @@ class BottleNoteCreateView(FormView):
         return super().form_valid(form)
 
 
-class DrinkingWindowAlertsView(TemplateView):
+class DrinkingWindowAlertsView(RequireHouseholdMixin, TemplateView):
     template_name = "whisky/drinking_window_alerts.html"
 
     def get_context_data(self, **kwargs):
@@ -1508,7 +1509,7 @@ class DrinkingWindowAlertsView(TemplateView):
         return context
 
 
-class ReorderRemindersView(TemplateView):
+class ReorderRemindersView(RequireHouseholdMixin, TemplateView):
     template_name = "whisky/reorder_reminders.html"
 
     def get_context_data(self, **kwargs):
@@ -1549,7 +1550,7 @@ class ReorderRemindersView(TemplateView):
         return context
 
 
-class ReorderReminderCreateView(FormView):
+class ReorderReminderCreateView(RequireMemberMixin, FormView):
     template_name = "whisky/reorder_reminder_create.html"
     form_class = ReorderReminderForm
 
@@ -1577,7 +1578,7 @@ class ReorderReminderCreateView(FormView):
         return super().form_valid(form)
 
 
-class ReorderReminderDeleteView(DeleteView):
+class ReorderReminderDeleteView(RequireMemberMixin, DeleteView):
     template_name = "whisky/reorder_reminder_confirm_delete.html"
     success_url = reverse_lazy("reorder-reminders")
 
@@ -1586,7 +1587,7 @@ class ReorderReminderDeleteView(DeleteView):
         return WhiskyReorderReminder.objects.filter(household=household)
 
 
-class StorageItemAddView(FormView):
+class StorageItemAddView(RequireMemberMixin, FormView):
     """Add a bottle to storage."""
 
     template_name = "whisky/stock_add.html"
@@ -1646,7 +1647,7 @@ class StorageItemAddView(FormView):
         return super().form_valid(form)
 
 
-class StorageItemDeleteView(DeleteView):
+class StorageItemDeleteView(RequireMemberMixin, DeleteView):
     """Remove a bottle from storage."""
 
     template_name = "whisky/stock_confirm_delete.html"
@@ -1659,7 +1660,7 @@ class StorageItemDeleteView(DeleteView):
         return reverse_lazy("whisky-detail", kwargs={"pk": self.object.whisky.pk})
 
 
-class StorageItemListView(FilterView):
+class StorageItemListView(RequireHouseholdMixin, FilterView):
     """List all bottles in storage with filtering."""
 
     model = WhiskyStorageItem
@@ -1677,7 +1678,7 @@ class StorageItemListView(FilterView):
         )
 
 
-class StorageItemUpdateView(FormView):
+class StorageItemUpdateView(RequireMemberMixin, FormView):
     """Edit a bottle (e.g., update fill level)."""
 
     template_name = "whisky/bottle_edit.html"
@@ -1755,7 +1756,7 @@ class StorageItemUpdateView(FormView):
         return super().form_valid(form)
 
 
-class StorageItemHistoryView(ListView):
+class StorageItemHistoryView(RequireHouseholdMixin, ListView):
     """List deleted (removed) whisky storage items."""
 
     model = WhiskyStorageItem
@@ -1772,7 +1773,7 @@ class StorageItemHistoryView(ListView):
         )
 
 
-class WhiskyMergeConfirmView(TemplateView):
+class WhiskyMergeConfirmView(RequireMemberMixin, TemplateView):
     template_name = "whisky/whisky_merge_confirm.html"
 
     def get_whiskies(self):
@@ -1847,7 +1848,7 @@ class WhiskyMergeConfirmView(TemplateView):
         return redirect("whisky-detail", pk=primary.pk)
 
 
-class WhiskyImagesView(DetailView):
+class WhiskyImagesView(RequireHouseholdMixin, DetailView):
     """View for managing whisky images (set primary, crop)."""
 
     template_name = "whisky/whisky_images.html"

@@ -20,6 +20,7 @@ from django.views.generic import DeleteView, DetailView, FormView, TemplateView
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
+from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
 from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 from wine_cellar.apps.wine.filters import WineFilter
@@ -63,7 +64,7 @@ def base64_to_uploaded_file(base64_data: str, filename: str) -> InMemoryUploaded
     )
 
 
-class HomePageView(TemplateView):
+class HomePageView(RequireHouseholdMixin, TemplateView):
     template_name = "homepage.html"
 
     def get_context_data(self, **kwargs):
@@ -217,7 +218,7 @@ class HomePageView(TemplateView):
 @method_decorator(
     ratelimit(key="user", rate="20/m", method="POST", block=True), name="post"
 )
-class WineCreateView(FormView):
+class WineCreateView(RequireMemberMixin, FormView):
     """View for creating new wines. Rate limited to 20 creations/minute per user."""
 
     template_name = "wine_create.html"
@@ -645,7 +646,7 @@ class WineCreateView(FormView):
         return wine, created
 
 
-class WineUpdateView(FormView):
+class WineUpdateView(RequireMemberMixin, FormView):
     template_name = "wine_edit.html"
     form_class = WineEditForm
     success_url = reverse_lazy("wine-list")
@@ -774,7 +775,7 @@ class WineUpdateView(FormView):
                 )
 
 
-class WineDetailView(DetailView):
+class WineDetailView(RequireHouseholdMixin, DetailView):
     template_name = "wine_detail.html"
     model = Wine
 
@@ -820,7 +821,7 @@ class WineDetailView(DetailView):
         return context
 
 
-class WineImagesView(DetailView):
+class WineImagesView(RequireHouseholdMixin, DetailView):
     """View for managing wine images (set primary, crop)."""
 
     template_name = "wine_images.html"
@@ -834,7 +835,7 @@ class WineImagesView(DetailView):
         )
 
 
-class WineListView(FilterView):
+class WineListView(RequireHouseholdMixin, FilterView):
     model = Wine
     template_name = "wine_list.html"
     context_object_name = "wines"
@@ -881,11 +882,11 @@ class WineListView(FilterView):
         return qs.filter(household=household).distinct()
 
 
-class WineScanView(TemplateView):
+class WineScanView(RequireHouseholdMixin, TemplateView):
     template_name = "scan_wine.html"
 
 
-class WineScannedView(TemplateView):
+class WineScannedView(RequireHouseholdMixin, TemplateView):
     template_name = "scanned_wine.html"
 
     def dispatch(self, request, *args, **kwargs):
@@ -905,7 +906,7 @@ class WineScannedView(TemplateView):
         return super().dispatch(request, *args, **kwargs)
 
 
-class WineDeleteView(DeleteView):
+class WineDeleteView(RequireMemberMixin, DeleteView):
     model = Wine
     template_name = "wine_confirm_delete.html"
     success_url = reverse_lazy("wine-list")
@@ -916,7 +917,7 @@ class WineDeleteView(DeleteView):
         return qs.filter(household=household)
 
 
-class WineMergeConfirmView(TemplateView):
+class WineMergeConfirmView(RequireMemberMixin, TemplateView):
     template_name = "wine_merge_confirm.html"
 
     def get_wines(self):
@@ -998,7 +999,7 @@ class WineMergeConfirmView(TemplateView):
         return redirect("wine-detail", pk=primary.pk)
 
 
-class WineMapView(TemplateView):
+class WineMapView(RequireHouseholdMixin, TemplateView):
     template_name = "wine_map.html"
 
     def get_context_data(self, **kwargs):
@@ -1064,7 +1065,7 @@ def health_check(request):
     return JsonResponse(health, status=status_code)
 
 
-class DrinkRecordCreateView(FormView):
+class DrinkRecordCreateView(RequireMemberMixin, FormView):
     template_name = "drink_record_create.html"
     form_class = None  # Set dynamically
 
@@ -1118,7 +1119,7 @@ class DrinkRecordCreateView(FormView):
         return super().form_valid(form)
 
 
-class DrinkRecordListView(TemplateView):
+class DrinkRecordListView(RequireHouseholdMixin, TemplateView):
     template_name = "drink_record_list.html"
 
     def get_context_data(self, **kwargs):
@@ -1132,7 +1133,7 @@ class DrinkRecordListView(TemplateView):
         return context
 
 
-class DrinkRecordEditView(FormView):
+class DrinkRecordEditView(RequireMemberMixin, FormView):
     template_name = "drink_record_edit.html"
 
     def get_form_class(self):
@@ -1175,7 +1176,7 @@ class DrinkRecordEditView(FormView):
         return super().form_valid(form)
 
 
-class DrinkRecordDeleteView(DeleteView):
+class DrinkRecordDeleteView(RequireMemberMixin, DeleteView):
     template_name = "drink_record_confirm_delete.html"
     success_url = reverse_lazy("drink-history")
 
@@ -1186,7 +1187,7 @@ class DrinkRecordDeleteView(DeleteView):
         return DrinkRecord.objects.filter(household=household)
 
 
-class WishlistListView(TemplateView):
+class WishlistListView(RequireHouseholdMixin, TemplateView):
     template_name = "wishlist_list.html"
 
     def get_context_data(self, **kwargs):
@@ -1200,7 +1201,7 @@ class WishlistListView(TemplateView):
         return context
 
 
-class WishlistCreateView(FormView):
+class WishlistCreateView(RequireMemberMixin, FormView):
     template_name = "wishlist_create.html"
     success_url = reverse_lazy("wishlist-list")
 
@@ -1228,7 +1229,7 @@ class WishlistCreateView(FormView):
         return super().form_valid(form)
 
 
-class WishlistDeleteView(DeleteView):
+class WishlistDeleteView(RequireMemberMixin, DeleteView):
     template_name = "wishlist_confirm_delete.html"
     success_url = reverse_lazy("wishlist-list")
 
@@ -1239,7 +1240,7 @@ class WishlistDeleteView(DeleteView):
         return Wishlist.objects.filter(household=household)
 
 
-class WishlistPurchasedView(TemplateView):
+class WishlistPurchasedView(RequireHouseholdMixin, TemplateView):
     """Mark a wishlist item as purchased."""
 
     def get(self, request, *args, **kwargs):
@@ -1252,7 +1253,7 @@ class WishlistPurchasedView(TemplateView):
         return redirect("wishlist-list")
 
 
-class CellarValueView(TemplateView):
+class CellarValueView(RequireHouseholdMixin, TemplateView):
     template_name = "cellar_value.html"
 
     def get_context_data(self, **kwargs):
@@ -1314,7 +1315,7 @@ class CellarValueView(TemplateView):
         return context
 
 
-class BottleNoteCreateView(FormView):
+class BottleNoteCreateView(RequireMemberMixin, FormView):
     template_name = "bottle_note_create.html"
 
     def get_form_class(self):
@@ -1350,7 +1351,7 @@ class BottleNoteCreateView(FormView):
         return super().form_valid(form)
 
 
-class DrinkingWindowAlertsView(TemplateView):
+class DrinkingWindowAlertsView(RequireHouseholdMixin, TemplateView):
     template_name = "drinking_window_alerts.html"
 
     def get_context_data(self, **kwargs):
@@ -1403,7 +1404,7 @@ class DrinkingWindowAlertsView(TemplateView):
         return context
 
 
-class ConsumptionStatsView(TemplateView):
+class ConsumptionStatsView(RequireHouseholdMixin, TemplateView):
     template_name = "consumption_stats.html"
 
     def get_context_data(self, **kwargs):
@@ -1464,7 +1465,7 @@ class ConsumptionStatsView(TemplateView):
         return context
 
 
-class ReorderRemindersView(TemplateView):
+class ReorderRemindersView(RequireHouseholdMixin, TemplateView):
     template_name = "reorder_reminders.html"
 
     def get_context_data(self, **kwargs):
@@ -1506,7 +1507,7 @@ class ReorderRemindersView(TemplateView):
         return context
 
 
-class ReorderReminderCreateView(FormView):
+class ReorderReminderCreateView(RequireMemberMixin, FormView):
     template_name = "reorder_reminder_create.html"
 
     def get_form_class(self):
@@ -1540,7 +1541,7 @@ class ReorderReminderCreateView(FormView):
         return super().form_valid(form)
 
 
-class ReorderReminderDeleteView(DeleteView):
+class ReorderReminderDeleteView(RequireMemberMixin, DeleteView):
     template_name = "reorder_reminder_confirm_delete.html"
     success_url = reverse_lazy("reorder-reminders")
 
@@ -1551,7 +1552,7 @@ class ReorderReminderDeleteView(DeleteView):
         return ReorderReminder.objects.filter(household=household)
 
 
-class LabelScanView(FormView):
+class LabelScanView(RequireHouseholdMixin, FormView):
     template_name = "label_scan.html"
 
     def get_form_class(self):
@@ -1641,7 +1642,7 @@ class LabelScanView(FormView):
         return redirect("wine-add")
 
 
-class LabelScanResultView(TemplateView):
+class LabelScanResultView(RequireHouseholdMixin, TemplateView):
     """Process OCR results and pre-fill wine form."""
 
     template_name = "label_scan_result.html"
