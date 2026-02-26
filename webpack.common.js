@@ -22,10 +22,9 @@ module.exports = {
         './wine_cellar/assets/js/theme_toggle.ts',
         './wine_cellar/assets/js/form_loading.ts',
         './wine_cellar/assets/js/dropdown_toggle.ts',
+        './wine_cellar/assets/js/storage_view_toggle.ts',
+        './wine_cellar/assets/js/wine_carousel.ts',
       ],
-    },
-    storage_view_toggle: {
-      import: ['./wine_cellar/assets/js/storage_view_toggle.ts'],
     },
     tom_select: {
       import: ['./wine_cellar/assets/js/init_tom_select.ts'],
@@ -55,9 +54,6 @@ module.exports = {
         './wine_cellar/assets/css/map.css',
         './wine_cellar/react/maps/react_distillery_map.tsx'
       ]
-    },
-    wine_carousel: {
-      import: ['./wine_cellar/assets/js/wine_carousel.ts'],
     },
     image_preview: {
       import: ['./wine_cellar/assets/js/image_preview.ts'],
