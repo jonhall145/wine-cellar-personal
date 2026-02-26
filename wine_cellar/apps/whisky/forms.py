@@ -1,4 +1,3 @@
-import json
 from datetime import datetime
 
 import pycountry
@@ -9,6 +8,7 @@ from django.forms import ImageField
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
+from wine_cellar.apps.core.forms import TomSelectMixin
 from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 from wine_cellar.apps.whisky.models import (
@@ -53,40 +53,6 @@ image_fields_map = {
     "image_front_label": WhiskyImage.ImageType.LABEL_FRONT,
     "image_back_label": WhiskyImage.ImageType.LABEL_BACK,
 }
-
-
-class TomSelectMixin:
-    def set_tom_config(
-        self,
-        name,
-        create=False,
-        items=[],
-        max_items=None,
-        max_options=50,
-        clear=True,
-        placeholder=None,
-        closeAfterSelect=True,
-        search=False,
-    ):
-        tom_config = {
-            "create": create,
-            "maxItems": max_items,
-            "closeAfterSelect": closeAfterSelect,
-        }
-        if items:
-            tom_config["items"] = items
-        if max_options:
-            tom_config["maxOptions"] = None if max_options == -1 else max_options
-        if placeholder is not None:
-            tom_config["placeholder"] = placeholder
-
-        self.fields[name].widget.attrs.update(
-            {
-                "data-tom_config": json.dumps(tom_config),
-                "data-clear": "true" if clear else "false",
-                "data-search": "true" if search else "false",
-            }
-        )
 
 
 class WhiskyFormPostCleanMixin:
