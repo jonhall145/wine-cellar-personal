@@ -1,12 +1,9 @@
-import base64
 import logging
 from decimal import Decimal
-from io import BytesIO
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required, login_required
-from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import connections, transaction
 from django.db.models import Avg, Count, F, Max, Min, Q, Sum
 from django.db.models.functions import Coalesce
@@ -20,6 +17,7 @@ from django.views.generic import DeleteView, DetailView, FormView, TemplateView
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
+from wine_cellar.apps.core.utils import base64_to_uploaded_file
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
 from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
@@ -35,33 +33,6 @@ FINAL_FORM_STEP = 4
 
 # Maximum allowed image upload size (10MB) to prevent memory exhaustion
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
-
-logger = logging.getLogger(__name__)
-
-
-def base64_to_uploaded_file(base64_data: str, filename: str) -> InMemoryUploadedFile:
-    """Convert base64 string to Django InMemoryUploadedFile.
-
-    Args:
-        base64_data: Base64-encoded image data (without data URL prefix)
-        filename: Desired filename for the uploaded file
-
-    Returns:
-        InMemoryUploadedFile suitable for use with Django image fields
-    """
-    # Decode base64 to bytes
-    image_bytes = base64.b64decode(base64_data)
-    image_io = BytesIO(image_bytes)
-
-    # Create InMemoryUploadedFile
-    return InMemoryUploadedFile(
-        file=image_io,
-        field_name=None,
-        name=filename,
-        content_type="image/jpeg",
-        size=len(image_bytes),
-        charset=None,
-    )
 
 
 class HomePageView(RequireHouseholdMixin, TemplateView):

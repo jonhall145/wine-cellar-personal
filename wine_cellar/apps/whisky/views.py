@@ -1,12 +1,10 @@
 import base64
 import logging
 from decimal import Decimal
-from io import BytesIO
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import transaction
 from django.db.models import Avg, Count, F, Max, Min, Q, Sum
 from django.db.models.functions import Coalesce
@@ -26,6 +24,7 @@ from django.views.generic import (
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
+from wine_cellar.apps.core.utils import base64_to_uploaded_file
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
 from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
@@ -62,21 +61,6 @@ from wine_cellar.apps.whisky.models import (
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
 
 logger = logging.getLogger(__name__)
-
-
-def base64_to_uploaded_file(base64_data: str, filename: str) -> InMemoryUploadedFile:
-    """Convert base64 string to Django InMemoryUploadedFile."""
-    image_bytes = base64.b64decode(base64_data)
-    image_io = BytesIO(image_bytes)
-
-    return InMemoryUploadedFile(
-        file=image_io,
-        field_name=None,
-        name=filename,
-        content_type="image/jpeg",
-        size=len(image_bytes),
-        charset=None,
-    )
 
 
 class HomePageView(RequireHouseholdMixin, TemplateView):
