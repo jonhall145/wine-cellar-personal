@@ -9,7 +9,7 @@ class TomSelectMixin:
         self,
         name,
         create=False,
-        items=[],
+        items=None,
         max_items=None,
         max_options=50,
         clear=True,
@@ -22,7 +22,7 @@ class TomSelectMixin:
             "maxItems": max_items,
             "closeAfterSelect": closeAfterSelect,
         }
-        if items:
+        if items is not None:
             tom_config["items"] = items
         if max_options:
             tom_config["maxOptions"] = None if max_options == -1 else max_options
