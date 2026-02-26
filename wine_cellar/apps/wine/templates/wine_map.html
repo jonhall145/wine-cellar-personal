@@ -5,6 +5,7 @@
 {% endblock header %}
 {% block styles %}
     {{ block.super }}
+    <link rel="stylesheet" href="{% static 'leaflet-vendors.css' %}" />
     <link rel="stylesheet" href="{% static 'maps.css' %}" />
 {% endblock styles %}
 {% block content %}
