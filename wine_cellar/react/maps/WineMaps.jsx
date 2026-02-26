@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import BaseMap from './Map'
 import MarkerClusterLayer from './MarkerClusterLayer'
 import GeoJsonMarker from './GeoJsonMarker'
 import { ItemPopup } from './ItemPopup'
+import countries from './country.json'
 
 /**
  * Creates a Map component.
@@ -38,30 +39,12 @@ export const Map = React.forwardRef(function Map({ id, title, ...props }, ref) {
  * @returns {JSX.Element} - The rendered map component with markers.
  */
 export const MapWithMarkers = ({ wines, withoutPopup, children, ...props }) => {
-  const [countries, setCountries] = useState(null)
-
-  useEffect(() => {
-    fetch('/static/maps/country.json')
-      .then(response => response.json())
-      .then(data => setCountries(data))
-      .catch(err => console.error('Failed to load country data:', err))
-  }, [])
-
-  if (!countries) {
-    return (
-      <Map {...props}>
-        <div style={{ textAlign: 'center', padding: '20px' }}>Loading map data...</div>
-        {children}
-      </Map>
-    )
-  }
-
   const markers = wines.map((wine, index) => {
-    const feature = Object.assign({}, countries[wine.country])
-    if (!feature) {
-        return null
+    if (!countries[wine.country]) {
+      return null
     }
-    feature.properties = Object.assign(wine, feature.properties)
+    const feature = { ...countries[wine.country] }
+    feature.properties = { ...feature.properties, ...wine }
 
     // Use appellation coordinates when available, otherwise fall back to country center
     if (wine.appellation && wine.appellation.lat && wine.appellation.lng) {
