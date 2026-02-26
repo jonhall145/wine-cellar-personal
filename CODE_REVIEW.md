@@ -14,7 +14,7 @@
 | 2 | `@transaction.atomic` on multi-model operations | ✅ Done | Both `WineCreateView` and `WineUpdateView` now use `@transaction.atomic` |
 | 3 | Webpack `splitChunks` for vendor dedup | ✅ Done | PR #58 — `react-vendors` and `leaflet-vendors` chunks in `webpack.common.js` |
 | 4 | Custom QuerySets with `prefetch_related` | ✅ Done | `WineQuerySet`, `WhiskyQuerySet`, `StorageItemQuerySet`, `WhiskyStorageItemQuerySet` with `HouseholdQuerySet` base |
-| 5 | Adopt household mixin pattern across all apps | ❌ Open | Wine/whisky views still use manual `get_active_household()` per-method |
+| 5 | Adopt household mixin pattern across all apps | ✅ Done | `RequireHouseholdMixin` / `RequireMemberMixin` on all wine/whisky CBVs |
 | 6 | Extract service layer from views | ❌ Open | Business logic still in views; only `WineVisionExtractor` is service-extracted |
 | 7 | Extract shared wine/whisky abstract base | ❌ Open | Apps remain ~75% duplicated |
 | 8 | Increase test coverage to 75% | ❌ Open | Still at 59% threshold; `views.py` still excluded from coverage |
@@ -25,11 +25,11 @@
 | 13 | Convert `.jsx` → `.tsx` in maps | ❌ Open | `Map.jsx`, `WineMaps.jsx` still `.jsx`; 1 `@ts-ignore` for `.jsx` import remains |
 | 14 | Soft delete on Wine model | ❌ Open | |
 | 15 | Integration/E2E tests with Playwright | ❌ Open | |
-| 16 | Merge small JS bundles into `base.js` | ❌ Open | `wine_carousel` and `storage_view_toggle` still separate entry points |
+| 16 | Merge small JS bundles into `base.js` | ✅ Done | `wine_carousel` and `storage_view_toggle` merged into `base` entry |
 | 17 | Add webpack-bundle-analyzer | ❌ Open | |
-| 18 | Move storage URLs to proper app include | ❌ Open | |
+| 18 | Move storage URLs to proper app include | ✅ Done | `storage/urls.py` with `include()` in `conf/urls.py` |
 
-**Progress: 7 of 18 complete** (39%)
+**Progress: 10 of 18 complete** (56%)
 
 ---
 
@@ -77,9 +77,11 @@ The whisky app is a near-complete copy of the wine app. Side-by-side comparison:
 - Single set of URL patterns with app-type parameter
 - This would eliminate ~2,000 lines of duplicated code
 
-#### 1.2 Storage URLs at Root Level — ❌ Open
+#### 1.2 Storage URLs at Root Level — ✅ Resolved
 
-Storage routes are defined in `wine_cellar/conf/urls.py` rather than having their own `storage/urls.py` included via `include()`. This makes ownership unclear and breaks the Django convention of self-contained apps.
+~~Storage routes are defined in `wine_cellar/conf/urls.py` rather than having their own `storage/urls.py` included via `include()`.~~
+
+**Resolution:** Storage URL patterns extracted to `wine_cellar/apps/storage/urls.py` and included via `path("", include("wine_cellar.apps.storage.urls"))` in `conf/urls.py`.
 
 #### 1.3 No Service Layer Convention — ❌ Open
 
@@ -190,22 +192,20 @@ services/
 
 **Resolution:** Both `WineCreateView.process_form_data()` and `WineUpdateView.process_form_data()` now use `@staticmethod @transaction.atomic`. The wine merge operation also uses `with transaction.atomic():`.
 
-> **Note:** Whisky `WhiskyUpdateView.process_form_data()` does NOT yet have `@transaction.atomic`. The whisky create view should also be verified.
+> **Note:** Both `WhiskyCreateView.process_form_data()` and `WhiskyUpdateView.process_form_data()` now also use `@staticmethod @transaction.atomic`.
 
-#### 3.4 Inconsistent Authorization Patterns (Medium) — ❌ Open
+#### 3.4 Inconsistent Authorization Patterns (Medium) — ✅ Resolved
+
+~~Wine and whisky views used manual `get_active_household()` per-method instead of the household mixin hierarchy.~~
+
+**Resolution:** All wine and whisky CBVs now use `RequireHouseholdMixin` (read-only) or `RequireMemberMixin` (mutation). Inline `get_active_household()` calls remain in some methods (redundant but harmless) and will be cleaned up in future phases.
 
 | App | Auth Pattern | Household Filtering |
 |-----|-------------|-------------------|
 | Household | Mixin hierarchy (excellent) | Enforced in mixin dispatch |
 | Storage | Manual `get_active_household()` | Per-method, easy to forget |
-| Wine | None explicit | Per-method, easy to forget |
-| Whisky | None explicit | Per-method, easy to forget |
-
-**Recommendation:** Adopt the household app's mixin pattern across all apps:
-```python
-class WineCreateView(RequireMemberMixin, FormView):
-    ...
-```
+| Wine | Mixin hierarchy | Enforced in mixin dispatch + some redundant per-method |
+| Whisky | Mixin hierarchy | Enforced in mixin dispatch + some redundant per-method |
 
 #### 3.5 Duplicated URL Patterns (Medium) — ❌ Open
 
@@ -311,9 +311,11 @@ Views contain significant business logic (see section 3.2). Excluding them from 
 4. Wine map (`react_maps.tsx`)
 5. Distillery map (`react_distillery_map.tsx`)
 
-#### 5.4 Small Bundles as Separate Entry Points (Low) — ❌ Open
+#### 5.4 Small Bundles as Separate Entry Points (Low) — ✅ Resolved
 
-`wine_carousel.js` (4KB) and `storage_view_toggle.js` (7KB) are separate HTTP requests for trivial functionality. These could be merged into `base.js`.
+~~`wine_carousel.js` (4KB) and `storage_view_toggle.js` (7KB) are separate HTTP requests for trivial functionality.~~
+
+**Resolution:** Both scripts merged into the `base` webpack entry point. Both have lazy-init guards so they're safe to include on every page. Separate `<script>` tags removed from detail templates.
 
 #### 5.5 No Production Source Maps (Low) — ❌ Open
 
@@ -331,7 +333,7 @@ Views contain significant business logic (see section 3.2). Excluding them from 
 | 2 | `@transaction.atomic` on multi-model operations | Small | Data integrity | ✅ Done |
 | 3 | Webpack `splitChunks` for vendor dedup | Small | 50% bundle reduction | ✅ Done |
 | 4 | Custom QuerySet with `prefetch_related` | Medium | Eliminate N+1 queries | ✅ Done |
-| 5 | Adopt household mixin pattern across all apps | Medium | Consistent authorization | ❌ Open |
+| 5 | Adopt household mixin pattern across all apps | Medium | Consistent authorization | ✅ Done |
 
 ### Tier 2 — High Impact, Higher Effort
 
@@ -352,9 +354,9 @@ Views contain significant business logic (see section 3.2). Excluding them from 
 | 13 | Convert .jsx to .tsx in maps components | Small | Type safety | ❌ Open |
 | 14 | Soft delete on Wine model (preserve history) | Medium | Data preservation | ❌ Open |
 | 15 | Add integration/E2E tests with Playwright | Large | Confidence | ❌ Open |
-| 16 | Merge small JS bundles into base.js | Small | Fewer HTTP requests | ❌ Open |
+| 16 | Merge small JS bundles into base.js | Small | Fewer HTTP requests | ✅ Done |
 | 17 | Add webpack-bundle-analyzer | Small | Visibility | ❌ Open |
-| 18 | Move storage URLs to proper app include | Small | Convention | ❌ Open |
+| 18 | Move storage URLs to proper app include | Small | Convention | ✅ Done |
 
 ---
 
