@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.http.response import HttpResponseRedirectBase
 from django.shortcuts import redirect
 from django.utils.translation import gettext_lazy as _
 
@@ -109,7 +110,7 @@ class RequireMemberMixin(RequireHouseholdMixin):
 
     def dispatch(self, request, *args, **kwargs):
         response = super().dispatch(request, *args, **kwargs)
-        if isinstance(response, redirect.__class__):
+        if isinstance(response, HttpResponseRedirectBase):
             return response
 
         if not self.can_edit():
@@ -132,7 +133,7 @@ class RequireAdminMixin(RequireHouseholdMixin):
 
     def dispatch(self, request, *args, **kwargs):
         response = super().dispatch(request, *args, **kwargs)
-        if isinstance(response, redirect.__class__):
+        if isinstance(response, HttpResponseRedirectBase):
             return response
 
         if not self.can_manage_members():
@@ -155,7 +156,7 @@ class RequireOwnerMixin(RequireHouseholdMixin):
 
     def dispatch(self, request, *args, **kwargs):
         response = super().dispatch(request, *args, **kwargs)
-        if isinstance(response, redirect.__class__):
+        if isinstance(response, HttpResponseRedirectBase):
             return response
 
         if not self.is_owner():

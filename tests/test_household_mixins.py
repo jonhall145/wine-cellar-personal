@@ -68,6 +68,48 @@ def test_require_household_redirects_without_active_household(user_factory):
 
 
 @pytest.mark.django_db
+def test_require_member_redirects_without_active_household(user_factory):
+    user = user_factory()
+    user.user_settings.active_household = None
+    user.user_settings.save()
+
+    request = RequestFactory().get("/")
+    request.user = user
+    _add_messages(request)
+
+    response = DummyMemberView.as_view()(request)
+    assert response.status_code == 302
+
+
+@pytest.mark.django_db
+def test_require_admin_redirects_without_active_household(user_factory):
+    user = user_factory()
+    user.user_settings.active_household = None
+    user.user_settings.save()
+
+    request = RequestFactory().get("/")
+    request.user = user
+    _add_messages(request)
+
+    response = DummyAdminView.as_view()(request)
+    assert response.status_code == 302
+
+
+@pytest.mark.django_db
+def test_require_owner_redirects_without_active_household(user_factory):
+    user = user_factory()
+    user.user_settings.active_household = None
+    user.user_settings.save()
+
+    request = RequestFactory().get("/")
+    request.user = user
+    _add_messages(request)
+
+    response = DummyOwnerView.as_view()(request)
+    assert response.status_code == 302
+
+
+@pytest.mark.django_db
 def test_require_member_blocks_viewer(user):
     user.household_memberships.update(role=HouseholdRole.VIEWER)
 
