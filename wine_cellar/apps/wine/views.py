@@ -1290,7 +1290,7 @@ class BottleNoteCreateView(RequireMemberMixin, FormView):
     template_name = "bottle_note_create.html"
 
     def get_form_class(self):
-        from wine_cellar.apps.wine.forms import BottleNoteForm
+        from wine_cellar.apps.core.forms import BottleNoteForm
 
         return BottleNoteForm
 
@@ -1482,7 +1482,7 @@ class ReorderReminderCreateView(RequireMemberMixin, FormView):
     template_name = "reorder_reminder_create.html"
 
     def get_form_class(self):
-        from wine_cellar.apps.wine.forms import ReorderReminderForm
+        from wine_cellar.apps.core.forms import ReorderReminderForm
 
         return ReorderReminderForm
 

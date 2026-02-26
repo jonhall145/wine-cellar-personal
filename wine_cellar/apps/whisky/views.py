@@ -24,6 +24,7 @@ from django.views.generic import (
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
+from wine_cellar.apps.core.forms import BottleNoteForm, ReorderReminderForm
 from wine_cellar.apps.core.utils import base64_to_uploaded_file
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
 from wine_cellar.apps.storage.models import Storage, get_app_type
@@ -31,8 +32,6 @@ from wine_cellar.apps.user.views import get_active_household, get_user_settings
 from wine_cellar.apps.whisky.filters import WhiskyFilter, WhiskyStorageItemFilter
 from wine_cellar.apps.whisky.forms import (
     POST_DRINK_STATUS_CONSUMED,
-    BottleNoteForm,
-    ReorderReminderForm,
     WhiskyDrinkRecordForm,
     WhiskyEditForm,
     WhiskyForm,

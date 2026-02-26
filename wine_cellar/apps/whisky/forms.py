@@ -972,22 +972,3 @@ class WhiskyWishlistForm(forms.Form):
         validators=[validators.MinValueValidator(1), validators.MaxValueValidator(5)],
         help_text=_("Priority from 1 (low) to 5 (high)."),
     )
-
-
-class BottleNoteForm(forms.Form):
-    note_date = forms.DateField(
-        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
-        help_text=_("Date of this note."),
-    )
-    note = forms.CharField(
-        widget=forms.Textarea,
-        help_text=_("Your note about this bottle."),
-    )
-
-
-class ReorderReminderForm(forms.Form):
-    min_stock = forms.IntegerField(
-        min_value=1,
-        initial=1,
-        help_text=_("Alert when stock drops to or below this number."),
-    )
