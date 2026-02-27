@@ -1,4 +1,5 @@
 from django import template
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
 register = template.Library()
@@ -31,3 +32,27 @@ def _rating_stars_impl(rating, max_rating=3):
 
 
 rating_stars = register.simple_tag(_rating_stars_impl, name="rating_stars")
+
+
+def _badge_impl(code, classes_map, labels_map, css_prefix):
+    """Render a colored badge span.
+
+    Args:
+        code: The type code (e.g. "RE", "SM", "PE")
+        classes_map: Dict mapping code to CSS class suffix
+        labels_map: Dict mapping code to display label
+        css_prefix: CSS class prefix (e.g. "wine-type-badge", "whisky-type-badge")
+    """
+    if not code:
+        return ""
+
+    css_class = classes_map.get(code, "")
+    label = labels_map.get(code, code)
+
+    if not css_class:
+        return mark_safe(f'<span class="{css_prefix}">{escape(label)}</span>')
+
+    return mark_safe(
+        f'<span class="{css_prefix} {css_prefix}--{escape(css_class)}">'
+        f"{escape(label)}</span>"
+    )

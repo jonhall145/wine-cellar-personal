@@ -18,12 +18,34 @@ from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
 from wine_cellar.apps.core.utils import base64_to_uploaded_file
+from wine_cellar.apps.core.views import (
+    BaseBottleNoteCreateView,
+    BaseCellarValueView,
+    BaseDrinkRecordCreateView,
+    BaseDrinkRecordDeleteView,
+    BaseDrinkRecordEditView,
+    BaseDrinkRecordListView,
+    BaseReorderReminderCreateView,
+    BaseReorderReminderDeleteView,
+    BaseReorderRemindersView,
+    BaseWishlistDeleteView,
+    BaseWishlistListView,
+    BaseWishlistPurchasedView,
+)
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
 from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 from wine_cellar.apps.wine.filters import WineFilter
 from wine_cellar.apps.wine.forms import WineEditForm, WineForm, image_fields_map
-from wine_cellar.apps.wine.models import Wine, WineBarcode, WineImage
+from wine_cellar.apps.wine.models import (
+    BottleNote,
+    DrinkRecord,
+    ReorderReminder,
+    Wine,
+    WineBarcode,
+    WineImage,
+    Wishlist,
+)
 from wine_cellar.apps.wine.services import BarcodeScanner, WineVisionExtractor
 
 logger = logging.getLogger(__name__)
@@ -1036,140 +1058,44 @@ def health_check(request):
     return JsonResponse(health, status=status_code)
 
 
-class DrinkRecordCreateView(RequireMemberMixin, FormView):
+class DrinkRecordCreateView(BaseDrinkRecordCreateView):
     template_name = "drink_record_create.html"
-    form_class = None  # Set dynamically
+    beverage_model = Wine
+    drink_record_model = DrinkRecord
+    beverage_fk_name = "wine"
+    detail_url_name = "wine-detail"
 
     def get_form_class(self):
         from wine_cellar.apps.wine.forms import DrinkRecordForm
 
         return DrinkRecordForm
 
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        household = get_active_household(self.request.user)
-        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], household=household)
-        kwargs["wine"] = wine
-        kwargs["user"] = self.request.user
-        return kwargs
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        context["wine"] = get_object_or_404(
-            Wine, pk=self.kwargs["pk"], household=household
-        )
-        return context
-
-    def form_valid(self, form):
-        from wine_cellar.apps.wine.models import DrinkRecord
-
-        household = get_active_household(self.request.user)
-        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], household=household)
-        storage_item = form.cleaned_data.get("storage_item")
-
-        # Create drink record
-        DrinkRecord.objects.create(
-            wine=wine,
-            user=self.request.user,
-            household=household,
-            date_consumed=form.cleaned_data["date_consumed"],
-            tasting_notes=form.cleaned_data.get("tasting_notes"),
-            rating=form.cleaned_data.get("rating"),
-            shared_with=form.cleaned_data.get("shared_with"),
-            occasion=form.cleaned_data.get("occasion"),
-            storage_item=storage_item,
-        )
-
-        # Mark bottle as consumed if selected
-        if storage_item:
-            storage_item.deleted = True
-            storage_item.save(update_fields=["deleted"])
-
-        self.success_url = reverse_lazy("wine-detail", kwargs={"pk": wine.pk})
-        return super().form_valid(form)
-
-
-class DrinkRecordListView(RequireHouseholdMixin, TemplateView):
+class DrinkRecordListView(BaseDrinkRecordListView):
     template_name = "drink_record_list.html"
-
-    def get_context_data(self, **kwargs):
-        from wine_cellar.apps.wine.models import DrinkRecord
-
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        context["drink_records"] = DrinkRecord.objects.filter(
-            household=household
-        ).select_related("wine")
-        return context
+    drink_record_model = DrinkRecord
+    beverage_fk_name = "wine"
 
 
-class DrinkRecordEditView(RequireMemberMixin, FormView):
+class DrinkRecordEditView(BaseDrinkRecordEditView):
     template_name = "drink_record_edit.html"
+    drink_record_model = DrinkRecord
+    beverage_fk_name = "wine"
 
     def get_form_class(self):
         from wine_cellar.apps.wine.forms import DrinkRecordForm
 
         return DrinkRecordForm
 
-    def get_object(self):
-        from wine_cellar.apps.wine.models import DrinkRecord
 
-        household = get_active_household(self.request.user)
-        return get_object_or_404(DrinkRecord, pk=self.kwargs["pk"], household=household)
-
-    def get_initial(self):
-        record = self.get_object()
-        return {
-            "date_consumed": record.date_consumed,
-            "tasting_notes": record.tasting_notes,
-            "rating": record.rating,
-            "shared_with": record.shared_with,
-            "occasion": record.occasion,
-        }
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        record = self.get_object()
-        context["record"] = record
-        context["wine"] = record.wine
-        return context
-
-    def form_valid(self, form):
-        record = self.get_object()
-        record.date_consumed = form.cleaned_data["date_consumed"]
-        record.tasting_notes = form.cleaned_data.get("tasting_notes")
-        record.rating = form.cleaned_data.get("rating")
-        record.shared_with = form.cleaned_data.get("shared_with")
-        record.occasion = form.cleaned_data.get("occasion")
-        record.save()
-        self.success_url = reverse_lazy("drink-history")
-        return super().form_valid(form)
-
-
-class DrinkRecordDeleteView(RequireMemberMixin, DeleteView):
+class DrinkRecordDeleteView(BaseDrinkRecordDeleteView):
+    model = DrinkRecord
     template_name = "drink_record_confirm_delete.html"
-    success_url = reverse_lazy("drink-history")
-
-    def get_queryset(self):
-        from wine_cellar.apps.wine.models import DrinkRecord
-
-        household = get_active_household(self.request.user)
-        return DrinkRecord.objects.filter(household=household)
 
 
-class WishlistListView(RequireHouseholdMixin, TemplateView):
+class WishlistListView(BaseWishlistListView):
     template_name = "wishlist_list.html"
-
-    def get_context_data(self, **kwargs):
-        from wine_cellar.apps.wine.models import Wishlist
-
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        context["wishlist_items"] = Wishlist.objects.filter(
-            household=household, purchased=False
-        )
-        return context
+    wishlist_model = Wishlist
 
 
 class WishlistCreateView(RequireMemberMixin, FormView):
@@ -1200,126 +1126,35 @@ class WishlistCreateView(RequireMemberMixin, FormView):
         return super().form_valid(form)
 
 
-class WishlistDeleteView(RequireMemberMixin, DeleteView):
+class WishlistDeleteView(BaseWishlistDeleteView):
+    model = Wishlist
     template_name = "wishlist_confirm_delete.html"
-    success_url = reverse_lazy("wishlist-list")
-
-    def get_queryset(self):
-        from wine_cellar.apps.wine.models import Wishlist
-
-        household = get_active_household(self.request.user)
-        return Wishlist.objects.filter(household=household)
 
 
-class WishlistPurchasedView(RequireHouseholdMixin, TemplateView):
-    """Mark a wishlist item as purchased."""
-
-    def get(self, request, *args, **kwargs):
-        from wine_cellar.apps.wine.models import Wishlist
-
-        household = get_active_household(request.user)
-        item = get_object_or_404(Wishlist, pk=kwargs["pk"], household=household)
-        item.purchased = True
-        item.save()
-        return redirect("wishlist-list")
+class WishlistPurchasedView(BaseWishlistPurchasedView):
+    wishlist_model = Wishlist
 
 
-class CellarValueView(RequireHouseholdMixin, TemplateView):
+class CellarValueView(BaseCellarValueView):
     template_name = "cellar_value.html"
+    storage_item_model = StorageItem
+    price_fallback_path = "wine__price"
+    beverage_fk_name = "wine"
+    select_related_fields = ("wine",)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-        household = get_active_household(user)
-        user_settings = get_user_settings(user)
-        currency = settings.CURRENCY_SYMBOLS.get(
-            getattr(user_settings, "currency", "EUR"), "€"
-        )
-
-        # Total value from storage items
-        storage_items = StorageItem.objects.filter(household=household, deleted=False)
-        total_value = storage_items.aggregate(
-            total=Coalesce(Sum(Coalesce("price", "wine__price")), Decimal("0.00"))
-        )["total"]
-        total_bottles = storage_items.count()
-
-        # Value by country and type - single iteration
-        wines_by_country = {}
-        wines_by_type = {}
-        for item in storage_items.select_related("wine"):
-            country = item.wine.country_name if item.wine.country else "Unknown"
-            wine_type = item.wine.get_type if item.wine.wine_type else "Unknown"
-
-            # Country stats
-            if country not in wines_by_country:
-                wines_by_country[country] = {"count": 0, "value": Decimal("0")}
-            wines_by_country[country]["count"] += 1
-            if item.price is not None:
-                item_price = item.price
-            elif item.wine.price is not None:
-                item_price = item.wine.price
-            else:
-                item_price = Decimal("0")
-            wines_by_country[country]["value"] += item_price
-
-            # Type stats (same loop)
-            if wine_type not in wines_by_type:
-                wines_by_type[wine_type] = {"count": 0, "value": Decimal("0")}
-            wines_by_type[wine_type]["count"] += 1
-            wines_by_type[wine_type]["value"] += item_price
-
-        # Format values as integers (no pence)
-        for data in wines_by_country.values():
-            data["value"] = int(data["value"])
-        for data in wines_by_type.values():
-            data["value"] = int(data["value"])
-
-        context.update(
-            {
-                "total_value": int(total_value),
-                "total_bottles": total_bottles,
-                "currency": currency,
-                "by_country": wines_by_country,
-                "by_type": wines_by_type,
-            }
-        )
-        return context
+    def get_groupings(self, item):
+        return {
+            "by_country": item.wine.country_name if item.wine.country else "Unknown",
+            "by_type": item.wine.get_type if item.wine.wine_type else "Unknown",
+        }
 
 
-class BottleNoteCreateView(RequireMemberMixin, FormView):
+class BottleNoteCreateView(BaseBottleNoteCreateView):
     template_name = "bottle_note_create.html"
-
-    def get_form_class(self):
-        from wine_cellar.apps.core.forms import BottleNoteForm
-
-        return BottleNoteForm
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        context["storage_item"] = get_object_or_404(
-            StorageItem, pk=self.kwargs["pk"], household=household
-        )
-        return context
-
-    def form_valid(self, form):
-        from wine_cellar.apps.wine.models import BottleNote
-
-        household = get_active_household(self.request.user)
-        storage_item = get_object_or_404(
-            StorageItem, pk=self.kwargs["pk"], household=household
-        )
-        BottleNote.objects.create(
-            storage_item=storage_item,
-            user=self.request.user,
-            household=household,
-            note_date=form.cleaned_data["note_date"],
-            note=form.cleaned_data["note"],
-        )
-        self.success_url = reverse_lazy(
-            "wine-detail", kwargs={"pk": storage_item.wine.pk}
-        )
-        return super().form_valid(form)
+    storage_item_model = StorageItem
+    note_model = BottleNote
+    beverage_fk_name = "wine"
+    detail_url_name = "wine-detail"
 
 
 class DrinkingWindowAlertsView(RequireHouseholdMixin, TemplateView):
@@ -1436,91 +1271,24 @@ class ConsumptionStatsView(RequireHouseholdMixin, TemplateView):
         return context
 
 
-class ReorderRemindersView(RequireHouseholdMixin, TemplateView):
+class ReorderRemindersView(BaseReorderRemindersView):
     template_name = "reorder_reminders.html"
-
-    def get_context_data(self, **kwargs):
-        from wine_cellar.apps.wine.models import ReorderReminder
-
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-        household = get_active_household(user)
-
-        reminders = (
-            ReorderReminder.objects.filter(household=household, is_active=True)
-            .select_related("wine")
-            .annotate(
-                current_stock=Count(
-                    "wine__storageitem", filter=Q(wine__storageitem__deleted=False)
-                )
-            )
-        )
-
-        # Find wines that need reordering
-        needs_reorder = []
-        for reminder in reminders:
-            if reminder.current_stock <= reminder.min_stock:
-                needs_reorder.append(
-                    {
-                        "wine": reminder.wine,
-                        "current_stock": reminder.current_stock,
-                        "min_stock": reminder.min_stock,
-                        "reminder": reminder,
-                    }
-                )
-
-        context.update(
-            {
-                "reminders": reminders,
-                "needs_reorder": needs_reorder,
-            }
-        )
-        return context
+    reminder_model = ReorderReminder
+    beverage_fk_name = "wine"
+    stock_reverse_path = "wine__storageitem"
 
 
-class ReorderReminderCreateView(RequireMemberMixin, FormView):
+class ReorderReminderCreateView(BaseReorderReminderCreateView):
     template_name = "reorder_reminder_create.html"
-
-    def get_form_class(self):
-        from wine_cellar.apps.core.forms import ReorderReminderForm
-
-        return ReorderReminderForm
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        context["wine"] = get_object_or_404(
-            Wine, pk=self.kwargs["pk"], household=household
-        )
-        return context
-
-    def form_valid(self, form):
-        from wine_cellar.apps.wine.models import ReorderReminder
-
-        household = get_active_household(self.request.user)
-        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], household=household)
-        ReorderReminder.objects.update_or_create(
-            wine=wine,
-            user=self.request.user,
-            household=household,
-            defaults={
-                "min_stock": form.cleaned_data["min_stock"],
-                "is_active": True,
-            },
-        )
-        self.success_url = reverse_lazy("wine-detail", kwargs={"pk": wine.pk})
-        return super().form_valid(form)
+    beverage_model = Wine
+    reminder_model = ReorderReminder
+    beverage_fk_name = "wine"
+    detail_url_name = "wine-detail"
 
 
-class ReorderReminderDeleteView(RequireMemberMixin, DeleteView):
+class ReorderReminderDeleteView(BaseReorderReminderDeleteView):
+    model = ReorderReminder
     template_name = "reorder_reminder_confirm_delete.html"
-    success_url = reverse_lazy("reorder-reminders")
-
-    def get_queryset(self):
-        from wine_cellar.apps.wine.models import ReorderReminder
-
-        household = get_active_household(self.request.user)
-        return ReorderReminder.objects.filter(household=household)
 
 
 class LabelScanView(RequireHouseholdMixin, FormView):

@@ -4,7 +4,7 @@ from django import template
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
-from wine_cellar.apps.core.templatetags.core_tags import _rating_stars_impl
+from wine_cellar.apps.core.templatetags.core_tags import _badge_impl, _rating_stars_impl
 
 register = template.Library()
 
@@ -39,17 +39,8 @@ def wine_type_css(wine_type: str) -> str:
 @register.simple_tag
 def wine_type_badge(wine_type: str) -> str:
     """Render a colored badge for the wine type."""
-    if not wine_type:
-        return ""
-
-    css_class = WINE_TYPE_CLASSES.get(wine_type, "")
-    label = WINE_TYPE_LABELS.get(wine_type, wine_type)
-
-    if not css_class:
-        return f'<span class="wine-type-badge">{label}</span>'
-
-    return mark_safe(
-        f'<span class="wine-type-badge wine-type-badge--{css_class}">{label}</span>'
+    return _badge_impl(
+        wine_type, WINE_TYPE_CLASSES, WINE_TYPE_LABELS, "wine-type-badge"
     )
 
 

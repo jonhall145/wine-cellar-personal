@@ -24,8 +24,21 @@ from django.views.generic import (
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
-from wine_cellar.apps.core.forms import BottleNoteForm, ReorderReminderForm
 from wine_cellar.apps.core.utils import base64_to_uploaded_file
+from wine_cellar.apps.core.views import (
+    BaseBottleNoteCreateView,
+    BaseCellarValueView,
+    BaseDrinkRecordCreateView,
+    BaseDrinkRecordDeleteView,
+    BaseDrinkRecordEditView,
+    BaseDrinkRecordListView,
+    BaseReorderReminderCreateView,
+    BaseReorderReminderDeleteView,
+    BaseReorderRemindersView,
+    BaseWishlistDeleteView,
+    BaseWishlistListView,
+    BaseWishlistPurchasedView,
+)
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
 from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
@@ -1095,149 +1108,63 @@ def scan_barcode_ajax(request):
         return JsonResponse({"error": "Barcode scanning failed"}, status=500)
 
 
-class DrinkRecordCreateView(RequireMemberMixin, FormView):
+class DrinkRecordCreateView(BaseDrinkRecordCreateView):
     template_name = "whisky/drink_record_create.html"
     form_class = WhiskyDrinkRecordForm
+    beverage_model = Whisky
+    drink_record_model = WhiskyDrinkRecord
+    beverage_fk_name = "whisky"
+    detail_url_name = "whisky-detail"
 
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        household = get_active_household(self.request.user)
-        whisky = get_object_or_404(Whisky, pk=self.kwargs["pk"], household=household)
-        kwargs["whisky"] = whisky
-        kwargs["user"] = self.request.user
-        return kwargs
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        context["whisky"] = get_object_or_404(
-            Whisky, pk=self.kwargs["pk"], household=household
-        )
-        return context
-
-    def form_valid(self, form):
-        household = get_active_household(self.request.user)
-        whisky = get_object_or_404(Whisky, pk=self.kwargs["pk"], household=household)
-        storage_item = form.cleaned_data.get("storage_item")
+    def handle_bottle_update(self, form, storage_item):
         post_drink_status = form.cleaned_data.get("post_drink_status")
         date_consumed = form.cleaned_data["date_consumed"]
 
-        # Create drink record
-        WhiskyDrinkRecord.objects.create(
-            whisky=whisky,
-            user=self.request.user,
-            household=household,
-            date_consumed=date_consumed,
-            tasting_notes=form.cleaned_data.get("tasting_notes"),
-            rating=form.cleaned_data.get("rating"),
-            shared_with=form.cleaned_data.get("shared_with"),
-            occasion=form.cleaned_data.get("occasion"),
-            storage_item=storage_item,
-        )
+        if post_drink_status == POST_DRINK_STATUS_CONSUMED:
+            storage_item.deleted = True
+            storage_item.save(update_fields=["deleted"])
+        elif post_drink_status in (FillLevel.OPENED, FillLevel.DREG):
+            old_fill_level = storage_item.fill_level
+            storage_item.fill_level = post_drink_status
+            update_fields = ["fill_level"]
 
-        # Update bottle status if selected
-        if storage_item:
-            if post_drink_status == POST_DRINK_STATUS_CONSUMED:
-                storage_item.deleted = True
-                storage_item.save(update_fields=["deleted"])
-            elif post_drink_status in (FillLevel.OPENED, FillLevel.DREG):
-                old_fill_level = storage_item.fill_level
-                storage_item.fill_level = post_drink_status
-                update_fields = ["fill_level"]
+            if not storage_item.opened_date:
+                storage_item.opened_date = date_consumed
+                update_fields.append("opened_date")
 
-                if not storage_item.opened_date:
-                    storage_item.opened_date = date_consumed
-                    update_fields.append("opened_date")
+            if post_drink_status == FillLevel.DREG and old_fill_level != FillLevel.DREG:
+                storage_item.dreg_date = date_consumed
+                update_fields.append("dreg_date")
+            elif (
+                post_drink_status != FillLevel.DREG and old_fill_level == FillLevel.DREG
+            ):
+                storage_item.dreg_date = None
+                update_fields.append("dreg_date")
 
-                if (
-                    post_drink_status == FillLevel.DREG
-                    and old_fill_level != FillLevel.DREG
-                ):
-                    storage_item.dreg_date = date_consumed
-                    update_fields.append("dreg_date")
-                elif (
-                    post_drink_status != FillLevel.DREG
-                    and old_fill_level == FillLevel.DREG
-                ):
-                    storage_item.dreg_date = None
-                    update_fields.append("dreg_date")
-
-                storage_item.save(update_fields=update_fields)
-
-        self.success_url = reverse_lazy("whisky-detail", kwargs={"pk": whisky.pk})
-        return super().form_valid(form)
+            storage_item.save(update_fields=update_fields)
 
 
-class DrinkRecordListView(RequireHouseholdMixin, TemplateView):
+class DrinkRecordListView(BaseDrinkRecordListView):
     template_name = "whisky/drink_record_list.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        context["drink_records"] = WhiskyDrinkRecord.objects.filter(
-            household=household
-        ).select_related("whisky")
-        return context
+    drink_record_model = WhiskyDrinkRecord
+    beverage_fk_name = "whisky"
 
 
-class DrinkRecordEditView(RequireMemberMixin, FormView):
+class DrinkRecordEditView(BaseDrinkRecordEditView):
     template_name = "whisky/drink_record_edit.html"
     form_class = WhiskyDrinkRecordForm
-
-    def get_object(self):
-        household = get_active_household(self.request.user)
-        return get_object_or_404(
-            WhiskyDrinkRecord, pk=self.kwargs["pk"], household=household
-        )
-
-    def get_initial(self):
-        record = self.get_object()
-        return {
-            "date_consumed": record.date_consumed,
-            "tasting_notes": record.tasting_notes,
-            "rating": record.rating,
-            "shared_with": record.shared_with,
-            "occasion": record.occasion,
-        }
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        record = self.get_object()
-        context["record"] = record
-        context["whisky"] = record.whisky
-        return context
-
-    def form_valid(self, form):
-        record = self.get_object()
-        record.date_consumed = form.cleaned_data["date_consumed"]
-        record.tasting_notes = form.cleaned_data.get("tasting_notes")
-        record.rating = form.cleaned_data.get("rating")
-        record.shared_with = form.cleaned_data.get("shared_with")
-        record.occasion = form.cleaned_data.get("occasion")
-        record.save()
-        self.success_url = reverse_lazy("drink-history")
-        return super().form_valid(form)
+    drink_record_model = WhiskyDrinkRecord
+    beverage_fk_name = "whisky"
 
 
-class DrinkRecordDeleteView(RequireMemberMixin, DeleteView):
+class DrinkRecordDeleteView(BaseDrinkRecordDeleteView):
+    model = WhiskyDrinkRecord
     template_name = "whisky/drink_record_confirm_delete.html"
-    success_url = reverse_lazy("drink-history")
-
-    def get_queryset(self):
-        household = get_active_household(self.request.user)
-        return WhiskyDrinkRecord.objects.filter(household=household)
 
 
-class WishlistListView(RequireHouseholdMixin, TemplateView):
+class WishlistListView(BaseWishlistListView):
     template_name = "whisky/wishlist_list.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        context["wishlist_items"] = WhiskyWishlist.objects.filter(
-            household=household, purchased=False
-        )
-        return context
+    wishlist_model = WhiskyWishlist
 
 
 class WishlistCreateView(RequireMemberMixin, FormView):
@@ -1262,90 +1189,29 @@ class WishlistCreateView(RequireMemberMixin, FormView):
         return super().form_valid(form)
 
 
-class WishlistDeleteView(RequireMemberMixin, DeleteView):
+class WishlistDeleteView(BaseWishlistDeleteView):
+    model = WhiskyWishlist
     template_name = "whisky/wishlist_confirm_delete.html"
-    success_url = reverse_lazy("wishlist-list")
-
-    def get_queryset(self):
-        household = get_active_household(self.request.user)
-        return WhiskyWishlist.objects.filter(household=household)
 
 
-class WishlistPurchasedView(RequireHouseholdMixin, TemplateView):
-    """Mark a wishlist item as purchased."""
-
-    def get(self, request, *args, **kwargs):
-        household = get_active_household(request.user)
-        item = get_object_or_404(WhiskyWishlist, pk=kwargs["pk"], household=household)
-        item.purchased = True
-        item.save()
-        return redirect("wishlist-list")
+class WishlistPurchasedView(BaseWishlistPurchasedView):
+    wishlist_model = WhiskyWishlist
 
 
-class CellarValueView(RequireHouseholdMixin, TemplateView):
+class CellarValueView(BaseCellarValueView):
     template_name = "whisky/cellar_value.html"
+    storage_item_model = WhiskyStorageItem
+    price_fallback_path = "whisky__price"
+    beverage_fk_name = "whisky"
+    select_related_fields = ("whisky__distillery",)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-        household = get_active_household(user)
-        user_settings = get_user_settings(user)
-        currency = settings.CURRENCY_SYMBOLS.get(
-            getattr(user_settings, "currency", "EUR"), "€"
-        )
-
-        # Total value from storage items
-        storage_items = WhiskyStorageItem.objects.filter(
-            household=household, deleted=False
-        )
-        total_value = storage_items.aggregate(
-            total=Coalesce(Sum(Coalesce("price", "whisky__price")), Decimal("0.00"))
-        )["total"]
-        total_bottles = storage_items.count()
-
-        # Value by distillery and type
-        whiskies_by_distillery = {}
-        whiskies_by_type = {}
-        for item in storage_items.select_related("whisky__distillery"):
-            distillery = (
+    def get_groupings(self, item):
+        return {
+            "by_distillery": (
                 item.whisky.distillery.name if item.whisky.distillery else "Unknown"
-            )
-            whisky_type = item.whisky.get_whisky_type_display()
-
-            # Distillery stats
-            if distillery not in whiskies_by_distillery:
-                whiskies_by_distillery[distillery] = {"count": 0, "value": Decimal("0")}
-            whiskies_by_distillery[distillery]["count"] += 1
-            if item.price is not None:
-                item_price = item.price
-            elif item.whisky.price is not None:
-                item_price = item.whisky.price
-            else:
-                item_price = Decimal("0")
-            whiskies_by_distillery[distillery]["value"] += item_price
-
-            # Type stats
-            if whisky_type not in whiskies_by_type:
-                whiskies_by_type[whisky_type] = {"count": 0, "value": Decimal("0")}
-            whiskies_by_type[whisky_type]["count"] += 1
-            whiskies_by_type[whisky_type]["value"] += item_price
-
-        # Format values as integers
-        for data in whiskies_by_distillery.values():
-            data["value"] = int(data["value"])
-        for data in whiskies_by_type.values():
-            data["value"] = int(data["value"])
-
-        context.update(
-            {
-                "total_value": int(total_value),
-                "total_bottles": total_bottles,
-                "currency": currency,
-                "by_distillery": whiskies_by_distillery,
-                "by_type": whiskies_by_type,
-            }
-        )
-        return context
+            ),
+            "by_type": item.whisky.get_whisky_type_display(),
+        }
 
 
 class ConsumptionStatsView(RequireHouseholdMixin, TemplateView):
@@ -1411,34 +1277,12 @@ class ConsumptionStatsView(RequireHouseholdMixin, TemplateView):
         return context
 
 
-class BottleNoteCreateView(RequireMemberMixin, FormView):
+class BottleNoteCreateView(BaseBottleNoteCreateView):
     template_name = "whisky/bottle_note_create.html"
-    form_class = BottleNoteForm
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        context["storage_item"] = get_object_or_404(
-            WhiskyStorageItem, pk=self.kwargs["pk"], household=household
-        )
-        return context
-
-    def form_valid(self, form):
-        household = get_active_household(self.request.user)
-        storage_item = get_object_or_404(
-            WhiskyStorageItem, pk=self.kwargs["pk"], household=household
-        )
-        WhiskyBottleNote.objects.create(
-            storage_item=storage_item,
-            user=self.request.user,
-            household=household,
-            note_date=form.cleaned_data["note_date"],
-            note=form.cleaned_data["note"],
-        )
-        self.success_url = reverse_lazy(
-            "whisky-detail", kwargs={"pk": storage_item.whisky.pk}
-        )
-        return super().form_valid(form)
+    storage_item_model = WhiskyStorageItem
+    note_model = WhiskyBottleNote
+    beverage_fk_name = "whisky"
+    detail_url_name = "whisky-detail"
 
 
 class DrinkingWindowAlertsView(RequireHouseholdMixin, TemplateView):
@@ -1492,82 +1336,24 @@ class DrinkingWindowAlertsView(RequireHouseholdMixin, TemplateView):
         return context
 
 
-class ReorderRemindersView(RequireHouseholdMixin, TemplateView):
+class ReorderRemindersView(BaseReorderRemindersView):
     template_name = "whisky/reorder_reminders.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-        household = get_active_household(user)
-
-        reminders = (
-            WhiskyReorderReminder.objects.filter(household=household, is_active=True)
-            .select_related("whisky")
-            .annotate(
-                current_stock=Count(
-                    "whisky__whiskystorageitem",
-                    filter=Q(whisky__whiskystorageitem__deleted=False),
-                )
-            )
-        )
-
-        # Find whiskies that need reordering
-        needs_reorder = []
-        for reminder in reminders:
-            if reminder.current_stock <= reminder.min_stock:
-                needs_reorder.append(
-                    {
-                        "whisky": reminder.whisky,
-                        "current_stock": reminder.current_stock,
-                        "min_stock": reminder.min_stock,
-                        "reminder": reminder,
-                    }
-                )
-
-        context.update(
-            {
-                "reminders": reminders,
-                "needs_reorder": needs_reorder,
-            }
-        )
-        return context
+    reminder_model = WhiskyReorderReminder
+    beverage_fk_name = "whisky"
+    stock_reverse_path = "whisky__whiskystorageitem"
 
 
-class ReorderReminderCreateView(RequireMemberMixin, FormView):
+class ReorderReminderCreateView(BaseReorderReminderCreateView):
     template_name = "whisky/reorder_reminder_create.html"
-    form_class = ReorderReminderForm
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        context["whisky"] = get_object_or_404(
-            Whisky, pk=self.kwargs["pk"], household=household
-        )
-        return context
-
-    def form_valid(self, form):
-        household = get_active_household(self.request.user)
-        whisky = get_object_or_404(Whisky, pk=self.kwargs["pk"], household=household)
-        WhiskyReorderReminder.objects.update_or_create(
-            whisky=whisky,
-            user=self.request.user,
-            household=household,
-            defaults={
-                "min_stock": form.cleaned_data["min_stock"],
-                "is_active": True,
-            },
-        )
-        self.success_url = reverse_lazy("whisky-detail", kwargs={"pk": whisky.pk})
-        return super().form_valid(form)
+    beverage_model = Whisky
+    reminder_model = WhiskyReorderReminder
+    beverage_fk_name = "whisky"
+    detail_url_name = "whisky-detail"
 
 
-class ReorderReminderDeleteView(RequireMemberMixin, DeleteView):
+class ReorderReminderDeleteView(BaseReorderReminderDeleteView):
+    model = WhiskyReorderReminder
     template_name = "whisky/reorder_reminder_confirm_delete.html"
-    success_url = reverse_lazy("reorder-reminders")
-
-    def get_queryset(self):
-        household = get_active_household(self.request.user)
-        return WhiskyReorderReminder.objects.filter(household=household)
 
 
 class StorageItemAddView(RequireMemberMixin, FormView):
