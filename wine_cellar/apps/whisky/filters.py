@@ -245,10 +245,11 @@ class WhiskyFilter(django_filters.FilterSet):
         if not value:
             return queryset
         ordering = value[0] if isinstance(value, list) else value
-        if ordering.lstrip("-") == "age_statement":
+        if ordering.lstrip("-") in ("age_statement", "effective_price"):
+            field = F(ordering.lstrip("-"))
             if ordering.startswith("-"):
-                return queryset.order_by(F("age_statement").desc(nulls_last=True))
-            return queryset.order_by(F("age_statement").asc(nulls_last=True))
+                return queryset.order_by(field.desc(nulls_last=True))
+            return queryset.order_by(field.asc(nulls_last=True))
         return queryset.order_by(ordering)
 
     def filter_distillery(self, queryset, name, value):

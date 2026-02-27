@@ -191,19 +191,19 @@ class WineFilter(django_filters.FilterSet):
     )
 
     def filter_order(self, queryset, name, value):
-        """Custom ordering that puts NULL vintages at the end."""
+        """Custom ordering that puts NULLs at the end."""
         if not value:
             return queryset
 
         ordering = value[0] if isinstance(value, list) else value
 
-        # Handle vintage ordering with nulls_last
-        if ordering == "-vintage":
-            return queryset.order_by(F("vintage").desc(nulls_last=True))
-        elif ordering == "vintage":
-            return queryset.order_by(F("vintage").asc(nulls_last=True))
+        # Fields that can have NULLs need nulls_last to sort predictably
+        if ordering.lstrip("-") in ("vintage", "effective_price"):
+            field = F(ordering.lstrip("-"))
+            if ordering.startswith("-"):
+                return queryset.order_by(field.desc(nulls_last=True))
+            return queryset.order_by(field.asc(nulls_last=True))
         else:
-            # For other orderings, use default behavior
             return queryset.order_by(ordering)
 
     def filter_stock(self, queryset, name, value):

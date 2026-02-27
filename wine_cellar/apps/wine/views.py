@@ -13,24 +13,33 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.utils.formats import number_format
-from django.views.generic import DeleteView, DetailView, FormView, TemplateView
+from django.views.generic import FormView, TemplateView
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
 from wine_cellar.apps.core.utils import base64_to_uploaded_file
 from wine_cellar.apps.core.views import (
+    BaseBeverageDeleteView,
     BaseBottleNoteCreateView,
     BaseCellarValueView,
+    BaseConsumptionStatsView,
+    BaseDetailView,
     BaseDrinkRecordCreateView,
     BaseDrinkRecordDeleteView,
     BaseDrinkRecordEditView,
     BaseDrinkRecordListView,
+    BaseImagesView,
+    BaseListView,
     BaseReorderReminderCreateView,
     BaseReorderReminderDeleteView,
     BaseReorderRemindersView,
+    BaseScanView,
+    BaseWishlistCreateView,
     BaseWishlistDeleteView,
     BaseWishlistListView,
     BaseWishlistPurchasedView,
+    crop_image_ajax,
+    set_primary_image_ajax,
 )
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
 from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
@@ -768,114 +777,40 @@ class WineUpdateView(RequireMemberMixin, FormView):
                 )
 
 
-class WineDetailView(RequireHouseholdMixin, DetailView):
+class WineDetailView(BaseDetailView):
     template_name = "wine_detail.html"
     model = Wine
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        household = get_active_household(self.request.user)
-        return (
-            qs.select_related("size", "appellation")
-            .prefetch_related(
-                "grapes",
-                "attributes",
-                "food_pairings",
-                "wineimage_set",
-                "vineyard",
-                "source",
-                "barcodes",
-            )
-            .annotate(
-                stock_count=Count(
-                    "storageitem", filter=Q(storageitem__deleted=False), distinct=True
-                )
-            )
-            .filter(household=household)
-        )
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        wine = self.object
-        household = get_active_household(self.request.user)
-        duplicates = (
-            Wine.objects.filter(household=household, name=wine.name)
-            .exclude(pk=wine.pk)
-            .annotate(
-                stock_count=Count(
-                    "storageitem",
-                    filter=Q(storageitem__deleted=False),
-                    distinct=True,
-                ),
-                barcode_count=Count("barcodes", distinct=True),
-            )
-        )
-        context["duplicates"] = duplicates
-        return context
+    select_related_fields = ("size", "appellation")
+    prefetch_related_fields = (
+        "grapes",
+        "attributes",
+        "food_pairings",
+        "wineimage_set",
+        "vineyard",
+        "source",
+        "barcodes",
+    )
+    storage_item_reverse = "storageitem"
 
 
-class WineImagesView(RequireHouseholdMixin, DetailView):
-    """View for managing wine images (set primary, crop)."""
-
+class WineImagesView(BaseImagesView):
     template_name = "wine_images.html"
     model = Wine
     context_object_name = "wine"
-
-    def get_queryset(self):
-        household = get_active_household(self.request.user)
-        return Wine.objects.filter(household=household).prefetch_related(
-            "wineimage_set"
-        )
+    images_prefetch_name = "wineimage_set"
 
 
-class WineListView(RequireHouseholdMixin, FilterView):
+class WineListView(BaseListView, FilterView):
     model = Wine
     template_name = "wine_list.html"
     context_object_name = "wines"
     filterset_class = WineFilter
-    paginate_by = 10
-    per_page_options = [10, 25, 50, 100]
-
-    def get_paginate_by(self, queryset):
-        """Allow user to select number of items per page via URL parameter."""
-        per_page = self.request.GET.get("per_page")
-        if per_page:
-            try:
-                per_page = int(per_page)
-                if per_page in self.per_page_options:
-                    return per_page
-            except (ValueError, TypeError):
-                pass
-        return self.paginate_by
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["per_page_options"] = self.per_page_options
-        context["current_per_page"] = self.get_paginate_by(self.object_list)
-        return context
-
-    def get_queryset(self):
-        qs = (
-            super()
-            .get_queryset()
-            .select_related("size", "appellation")
-            .prefetch_related("grapes", "attributes", "food_pairings", "wineimage_set")
-            .order_by("-created")
-        )
-        qs = qs.annotate(
-            effective_price=Coalesce(
-                Avg("storageitem__price"),
-                "price",
-            ),
-            stock_count=Count(
-                "storageitem", filter=Q(storageitem__deleted=False), distinct=True
-            ),
-        )
-        household = get_active_household(self.request.user)
-        return qs.filter(household=household).distinct()
+    storage_item_reverse = "storageitem"
+    select_related_fields = ("size", "appellation")
+    prefetch_related_fields = ("grapes", "attributes", "food_pairings", "wineimage_set")
 
 
-class WineScanView(RequireHouseholdMixin, TemplateView):
+class WineScanView(BaseScanView):
     template_name = "scan_wine.html"
 
 
@@ -899,15 +834,10 @@ class WineScannedView(RequireHouseholdMixin, TemplateView):
         return super().dispatch(request, *args, **kwargs)
 
 
-class WineDeleteView(RequireMemberMixin, DeleteView):
+class WineDeleteView(BaseBeverageDeleteView):
     model = Wine
     template_name = "wine_confirm_delete.html"
     success_url = reverse_lazy("wine-list")
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        household = get_active_household(self.request.user)
-        return qs.filter(household=household)
 
 
 class WineMergeConfirmView(RequireMemberMixin, TemplateView):
@@ -1098,32 +1028,22 @@ class WishlistListView(BaseWishlistListView):
     wishlist_model = Wishlist
 
 
-class WishlistCreateView(RequireMemberMixin, FormView):
+class WishlistCreateView(BaseWishlistCreateView):
     template_name = "wishlist_create.html"
-    success_url = reverse_lazy("wishlist-list")
+    wishlist_model = Wishlist
 
     def get_form_class(self):
         from wine_cellar.apps.wine.forms import WishlistForm
 
         return WishlistForm
 
-    def form_valid(self, form):
-        from wine_cellar.apps.wine.models import Wishlist
-
-        household = get_active_household(self.request.user)
-        Wishlist.objects.create(
-            user=self.request.user,
-            household=household,
-            name=form.cleaned_data["name"],
-            wine_type=form.cleaned_data.get("wine_type") or None,
-            country=form.cleaned_data.get("country") or None,
-            subregion=form.cleaned_data.get("subregion"),
-            vintage=form.cleaned_data.get("vintage"),
-            price_limit=form.cleaned_data.get("price_limit"),
-            notes=form.cleaned_data.get("notes"),
-            priority=form.cleaned_data.get("priority", 1),
-        )
-        return super().form_valid(form)
+    def get_extra_create_kwargs(self, form):
+        return {
+            "wine_type": form.cleaned_data.get("wine_type") or None,
+            "country": form.cleaned_data.get("country") or None,
+            "subregion": form.cleaned_data.get("subregion"),
+            "vintage": form.cleaned_data.get("vintage"),
+        }
 
 
 class WishlistDeleteView(BaseWishlistDeleteView):
@@ -1210,65 +1130,23 @@ class DrinkingWindowAlertsView(RequireHouseholdMixin, TemplateView):
         return context
 
 
-class ConsumptionStatsView(RequireHouseholdMixin, TemplateView):
+class ConsumptionStatsView(BaseConsumptionStatsView):
     template_name = "consumption_stats.html"
+    drink_record_model = DrinkRecord
+    beverage_fk_name = "wine"
+    select_related_fields = ("wine",)
 
-    def get_context_data(self, **kwargs):
+    def get_type_display(self, beverage):
+        return beverage.get_type if beverage.wine_type else "Unknown"
+
+    def get_secondary_stats(self, records):
         from collections import defaultdict
 
-        from django.db.models import Count
-        from django.db.models.functions import TruncMonth
-
-        from wine_cellar.apps.wine.models import DrinkRecord
-
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-        household = get_active_household(user)
-
-        records = DrinkRecord.objects.filter(household=household).select_related("wine")
-
-        # Drinks by month (last 12 months)
-        by_month = (
-            records.annotate(month=TruncMonth("date_consumed"))
-            .values("month")
-            .annotate(count=Count("id"))
-            .order_by("month")
-        )
-
-        # Drinks by wine type
-        by_type = defaultdict(int)
-        for record in records:
-            wine_type = record.wine.get_type if record.wine.wine_type else "Unknown"
-            by_type[wine_type] += 1
-
-        # Drinks by country
         by_country = defaultdict(int)
         for record in records:
             country = record.wine.country_name if record.wine.country else "Unknown"
             by_country[country] += 1
-
-        # Average rating
-        avg_rating_result = records.filter(rating__isnull=False).aggregate(
-            avg=Avg("rating")
-        )
-        avg_rating = (
-            round(avg_rating_result["avg"], 1) if avg_rating_result["avg"] else None
-        )
-
-        # Top rated wines
-        top_rated = records.filter(rating__isnull=False).order_by("-rating")[:5]
-
-        context.update(
-            {
-                "total_consumed": records.count(),
-                "by_month": list(by_month),
-                "by_type": dict(by_type),
-                "by_country": dict(by_country),
-                "avg_rating": avg_rating,
-                "top_rated": top_rated,
-            }
-        )
-        return context
+        return {"by_country": dict(by_country)}
 
 
 class ReorderRemindersView(BaseReorderRemindersView):
@@ -1610,21 +1488,7 @@ def scan_barcode_ajax(request):
 @login_required
 def set_primary_image(request, pk):
     """Set a WineImage as the primary image for its wine."""
-    if request.method != "POST":
-        return JsonResponse({"error": "POST required"}, status=405)
-
-    wine_image = get_object_or_404(WineImage, pk=pk, user=request.user)
-
-    # Toggle: if already primary, unset it; otherwise set it as primary
-    if wine_image.is_primary:
-        wine_image.is_primary = False
-        wine_image.save(update_fields=["is_primary"])
-        return JsonResponse({"success": True, "is_primary": False})
-    else:
-        # The model's save() method will clear other primary flags
-        wine_image.is_primary = True
-        wine_image.save()
-        return JsonResponse({"success": True, "is_primary": True})
+    return set_primary_image_ajax(request, pk, WineImage)
 
 
 @login_required
@@ -1641,54 +1505,4 @@ def delete_wine_barcode(request, pk):
 @login_required
 def crop_wine_image(request, pk):
     """Apply manual crop to a WineImage and create a new thumbnail."""
-    import json
-
-    from wine_cellar.apps.wine.utils import apply_manual_crop
-
-    if request.method != "POST":
-        return JsonResponse({"error": "POST required"}, status=405)
-
-    wine_image = get_object_or_404(WineImage, pk=pk, user=request.user)
-
-    try:
-        data = json.loads(request.body)
-        x = int(data.get("x", 0))
-        y = int(data.get("y", 0))
-        width = int(data.get("width", 100))
-        height = int(data.get("height", 100))
-
-        # Validate crop dimensions
-        if width <= 0 or height <= 0:
-            return JsonResponse({"error": "Invalid crop dimensions"}, status=400)
-
-        # Delete old thumbnail if exists
-        old_thumbnail = wine_image.thumbnail
-        if old_thumbnail:
-            try:
-                old_thumbnail.delete(save=False)
-            except Exception:
-                pass  # Ignore errors deleting old file
-
-        # Apply the crop
-        thumb_path = apply_manual_crop(wine_image, x, y, width, height)
-
-        # Update the thumbnail field
-        wine_image.thumbnail = thumb_path
-        wine_image.save(update_fields=["thumbnail"])
-
-        return JsonResponse(
-            {
-                "success": True,
-                "thumbnail_url": wine_image.thumbnail.url,
-            }
-        )
-    except (json.JSONDecodeError, ValueError):
-        # Return a generic error message to avoid exposing internal details
-        return JsonResponse({"error": "Invalid request data"}, status=400)
-    except Exception:
-        logger.exception("Error cropping image")
-        # Do not expose the raw exception message to the client
-        return JsonResponse(
-            {"error": "An internal error occurred while processing the image."},
-            status=500,
-        )
+    return crop_image_ajax(request, pk, WineImage)

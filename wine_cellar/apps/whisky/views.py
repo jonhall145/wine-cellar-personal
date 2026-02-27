@@ -16,7 +16,6 @@ from django.utils.decorators import method_decorator
 from django.utils.formats import number_format
 from django.views.generic import (
     DeleteView,
-    DetailView,
     FormView,
     ListView,
     TemplateView,
@@ -26,18 +25,27 @@ from django_ratelimit.decorators import ratelimit
 
 from wine_cellar.apps.core.utils import base64_to_uploaded_file
 from wine_cellar.apps.core.views import (
+    BaseBeverageDeleteView,
     BaseBottleNoteCreateView,
     BaseCellarValueView,
+    BaseConsumptionStatsView,
+    BaseDetailView,
     BaseDrinkRecordCreateView,
     BaseDrinkRecordDeleteView,
     BaseDrinkRecordEditView,
     BaseDrinkRecordListView,
+    BaseImagesView,
+    BaseListView,
     BaseReorderReminderCreateView,
     BaseReorderReminderDeleteView,
     BaseReorderRemindersView,
+    BaseScanView,
+    BaseWishlistCreateView,
     BaseWishlistDeleteView,
     BaseWishlistListView,
     BaseWishlistPurchasedView,
+    crop_image_ajax,
+    set_primary_image_ajax,
 )
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
 from wine_cellar.apps.storage.models import Storage, get_app_type
@@ -671,111 +679,31 @@ class WhiskyUpdateView(RequireMemberMixin, FormView):
             )
 
 
-class WhiskyDetailView(RequireHouseholdMixin, DetailView):
+class WhiskyDetailView(BaseDetailView):
     template_name = "whisky/whisky_detail.html"
     model = Whisky
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        household = get_active_household(self.request.user)
-        return (
-            qs.select_related("distillery", "region", "bottler", "source")
-            .prefetch_related(
-                "cask_history",
-                "images",
-                "barcodes",
-            )
-            .annotate(
-                stock_count=Count(
-                    "whiskystorageitem",
-                    filter=Q(whiskystorageitem__deleted=False),
-                    distinct=True,
-                )
-            )
-            .filter(household=household)
-        )
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        whisky = self.object
-        household = get_active_household(self.request.user)
-        duplicates = (
-            Whisky.objects.filter(household=household, name=whisky.name)
-            .exclude(pk=whisky.pk)
-            .annotate(
-                stock_count=Count(
-                    "whiskystorageitem",
-                    filter=Q(whiskystorageitem__deleted=False),
-                    distinct=True,
-                ),
-                barcode_count=Count("barcodes", distinct=True),
-            )
-        )
-        context["duplicates"] = duplicates
-        return context
+    select_related_fields = ("distillery", "region", "bottler", "source")
+    prefetch_related_fields = ("cask_history", "images", "barcodes")
+    storage_item_reverse = "whiskystorageitem"
 
 
-class WhiskyDeleteView(RequireMemberMixin, DeleteView):
+class WhiskyDeleteView(BaseBeverageDeleteView):
     model = Whisky
     template_name = "whisky/whisky_confirm_delete.html"
     success_url = reverse_lazy("whisky-list")
 
-    def get_queryset(self):
-        qs = super().get_queryset()
-        household = get_active_household(self.request.user)
-        return qs.filter(household=household)
 
-
-class WhiskyListView(RequireHouseholdMixin, FilterView):
+class WhiskyListView(BaseListView, FilterView):
     model = Whisky
     template_name = "whisky/whisky_list.html"
     context_object_name = "whiskies"
     filterset_class = WhiskyFilter
-    paginate_by = 10
-    per_page_options = [10, 25, 50, 100]
-
-    def get_paginate_by(self, queryset):
-        """Allow user to select number of items per page via URL parameter."""
-        per_page = self.request.GET.get("per_page")
-        if per_page:
-            try:
-                per_page = int(per_page)
-                if per_page in self.per_page_options:
-                    return per_page
-            except (ValueError, TypeError):
-                pass
-        return self.paginate_by
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["per_page_options"] = self.per_page_options
-        context["current_per_page"] = self.get_paginate_by(self.object_list)
-        return context
-
-    def get_queryset(self):
-        qs = (
-            super()
-            .get_queryset()
-            .select_related("distillery", "region", "bottler")
-            .prefetch_related("images")
-            .order_by("-created")
-        )
-        qs = qs.annotate(
-            effective_price=Coalesce(
-                Avg("whiskystorageitem__price"),
-                "price",
-            ),
-            stock_count=Count(
-                "whiskystorageitem",
-                filter=Q(whiskystorageitem__deleted=False),
-                distinct=True,
-            ),
-        )
-        household = get_active_household(self.request.user)
-        return qs.filter(household=household).distinct()
+    storage_item_reverse = "whiskystorageitem"
+    select_related_fields = ("distillery", "region", "bottler")
+    prefetch_related_fields = ("images",)
 
 
-class WhiskyScanView(RequireHouseholdMixin, TemplateView):
+class WhiskyScanView(BaseScanView):
     template_name = "whisky/scan_whisky.html"
 
 
@@ -1167,26 +1095,18 @@ class WishlistListView(BaseWishlistListView):
     wishlist_model = WhiskyWishlist
 
 
-class WishlistCreateView(RequireMemberMixin, FormView):
+class WishlistCreateView(BaseWishlistCreateView):
     template_name = "whisky/wishlist_create.html"
     form_class = WhiskyWishlistForm
-    success_url = reverse_lazy("wishlist-list")
+    wishlist_model = WhiskyWishlist
 
-    def form_valid(self, form):
-        household = get_active_household(self.request.user)
-        WhiskyWishlist.objects.create(
-            user=self.request.user,
-            household=household,
-            name=form.cleaned_data["name"],
-            whisky_type=form.cleaned_data.get("whisky_type") or None,
-            distillery=form.cleaned_data.get("distillery"),
-            region=form.cleaned_data.get("region"),
-            age_statement=form.cleaned_data.get("age_statement"),
-            price_limit=form.cleaned_data.get("price_limit"),
-            notes=form.cleaned_data.get("notes"),
-            priority=form.cleaned_data.get("priority", 1),
-        )
-        return super().form_valid(form)
+    def get_extra_create_kwargs(self, form):
+        return {
+            "whisky_type": form.cleaned_data.get("whisky_type") or None,
+            "distillery": form.cleaned_data.get("distillery"),
+            "region": form.cleaned_data.get("region"),
+            "age_statement": form.cleaned_data.get("age_statement"),
+        }
 
 
 class WishlistDeleteView(BaseWishlistDeleteView):
@@ -1214,67 +1134,25 @@ class CellarValueView(BaseCellarValueView):
         }
 
 
-class ConsumptionStatsView(RequireHouseholdMixin, TemplateView):
+class ConsumptionStatsView(BaseConsumptionStatsView):
     template_name = "whisky/consumption_stats.html"
+    drink_record_model = WhiskyDrinkRecord
+    beverage_fk_name = "whisky"
+    select_related_fields = ("whisky__distillery",)
 
-    def get_context_data(self, **kwargs):
+    def get_type_display(self, beverage):
+        return beverage.get_whisky_type_display()
+
+    def get_secondary_stats(self, records):
         from collections import defaultdict
 
-        from django.db.models import Count
-        from django.db.models.functions import TruncMonth
-
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-        household = get_active_household(user)
-
-        records = WhiskyDrinkRecord.objects.filter(household=household).select_related(
-            "whisky__distillery"
-        )
-
-        # Drinks by month
-        by_month = (
-            records.annotate(month=TruncMonth("date_consumed"))
-            .values("month")
-            .annotate(count=Count("id"))
-            .order_by("month")
-        )
-
-        # Drinks by type
-        by_type = defaultdict(int)
-        for record in records:
-            whisky_type = record.whisky.get_whisky_type_display()
-            by_type[whisky_type] += 1
-
-        # Drinks by distillery
         by_distillery = defaultdict(int)
         for record in records:
             distillery = (
                 record.whisky.distillery.name if record.whisky.distillery else "Unknown"
             )
             by_distillery[distillery] += 1
-
-        # Average rating
-        avg_rating_result = records.filter(rating__isnull=False).aggregate(
-            avg=Avg("rating")
-        )
-        avg_rating = (
-            round(avg_rating_result["avg"], 1) if avg_rating_result["avg"] else None
-        )
-
-        # Top rated whiskies
-        top_rated = records.filter(rating__isnull=False).order_by("-rating")[:5]
-
-        context.update(
-            {
-                "total_consumed": records.count(),
-                "by_month": list(by_month),
-                "by_type": dict(by_type),
-                "by_distillery": dict(by_distillery),
-                "avg_rating": avg_rating,
-                "top_rated": top_rated,
-            }
-        )
-        return context
+        return {"by_distillery": dict(by_distillery)}
 
 
 class BottleNoteCreateView(BaseBottleNoteCreateView):
@@ -1617,89 +1495,20 @@ class WhiskyMergeConfirmView(RequireMemberMixin, TemplateView):
         return redirect("whisky-detail", pk=primary.pk)
 
 
-class WhiskyImagesView(RequireHouseholdMixin, DetailView):
-    """View for managing whisky images (set primary, crop)."""
-
+class WhiskyImagesView(BaseImagesView):
     template_name = "whisky/whisky_images.html"
     model = Whisky
     context_object_name = "whisky"
-
-    def get_queryset(self):
-        household = get_active_household(self.request.user)
-        return Whisky.objects.filter(household=household).prefetch_related("images")
+    images_prefetch_name = "images"
 
 
 @login_required
 def set_primary_image(request, pk):
     """Set a WhiskyImage as the primary image for its whisky."""
-    if request.method != "POST":
-        return JsonResponse({"error": "POST required"}, status=405)
-
-    whisky_image = get_object_or_404(WhiskyImage, pk=pk, user=request.user)
-
-    # Toggle: if already primary, unset it; otherwise set it as primary
-    if whisky_image.is_primary:
-        whisky_image.is_primary = False
-        whisky_image.save(update_fields=["is_primary"])
-        return JsonResponse({"success": True, "is_primary": False})
-    else:
-        # Clear other primary flags first
-        WhiskyImage.objects.filter(whisky=whisky_image.whisky, is_primary=True).update(
-            is_primary=False
-        )
-        whisky_image.is_primary = True
-        whisky_image.save()
-        return JsonResponse({"success": True, "is_primary": True})
+    return set_primary_image_ajax(request, pk, WhiskyImage)
 
 
 @login_required
 def crop_whisky_image(request, pk):
     """Apply manual crop to a WhiskyImage and create a new thumbnail."""
-    import json
-
-    from wine_cellar.apps.wine.utils import apply_manual_crop
-
-    if request.method != "POST":
-        return JsonResponse({"error": "POST required"}, status=405)
-
-    whisky_image = get_object_or_404(WhiskyImage, pk=pk, user=request.user)
-
-    try:
-        data = json.loads(request.body)
-        x = int(data.get("x", 0))
-        y = int(data.get("y", 0))
-        width = int(data.get("width", 100))
-        height = int(data.get("height", 100))
-
-        # Validate crop dimensions
-        if width <= 0 or height <= 0:
-            return JsonResponse({"error": "Invalid crop dimensions"}, status=400)
-
-        # Delete old thumbnail if exists
-        old_thumbnail = whisky_image.thumbnail
-        if old_thumbnail:
-            try:
-                old_thumbnail.delete(save=False)
-            except Exception:
-                pass
-
-        # Apply the crop
-        thumb_path = apply_manual_crop(whisky_image, x, y, width, height)
-
-        # Update the thumbnail field
-        whisky_image.thumbnail = thumb_path
-        whisky_image.save(update_fields=["thumbnail"])
-
-        return JsonResponse(
-            {
-                "success": True,
-                "thumbnail_url": whisky_image.thumbnail.url,
-            }
-        )
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
-    except ValueError:
-        return JsonResponse({"error": "Invalid crop parameters"}, status=400)
-    except Exception:
-        logger.exception("Error cropping image")
-        return JsonResponse({"error": "Unable to crop image"}, status=500)
+    return crop_image_ajax(request, pk, WhiskyImage)
