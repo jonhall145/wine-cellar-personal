@@ -17,6 +17,29 @@ except Exception:
         sleep 1
     done
     echo "PostgreSQL is up"
+
+    # Verify database authentication works (not just port availability)
+    echo "Verifying database credentials..."
+    if ! python -c "
+import os, sys
+try:
+    import psycopg
+    conn = psycopg.connect(
+        host=os.environ['SQL_HOST'],
+        port=int(os.environ['SQL_PORT']),
+        user=os.environ['SQL_USER'],
+        password=os.environ['SQL_PASSWORD'],
+        dbname=os.environ['SQL_DATABASE'],
+    )
+    conn.close()
+except Exception as e:
+    print(f'FATAL: Database authentication failed: {e}', file=sys.stderr)
+    print('Check that POSTGRES_USER/POSTGRES_DB in the db container match SQL_USER/SQL_DATABASE in the web container.', file=sys.stderr)
+    sys.exit(1)
+" 2>&1; then
+        exit 1
+    fi
+    echo "Database credentials verified"
 fi
 
 # Only run setup tasks for web server commands
