@@ -205,7 +205,6 @@ class WineVisionExtractor:
         "chablis": "FR",
         "côte": "FR",
         "cote": "FR",
-        "châteauneuf": "FR",
         "chateauneuf": "FR",
         "vouvray": "FR",
         "muscadet": "FR",

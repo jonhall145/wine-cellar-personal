@@ -4,6 +4,8 @@ Test settings for Wine Cellar.
 This module imports all base settings and overrides test-specific values.
 """
 
+import tempfile
+
 # Import all base settings explicitly
 from wine_cellar.conf.settings import (
     ACCOUNT_ADAPTER,
@@ -51,8 +53,8 @@ from wine_cellar.conf.settings import (
     X_FRAME_OPTIONS,
 )
 
-# Test-specific settings
-MEDIA_ROOT = BASE_DIR / "test_media/"
+# Test-specific settings — use /tmp so Docker containers (non-root user) can write
+MEDIA_ROOT = tempfile.mkdtemp(prefix="wine_cellar_test_media_")
 
 # Use dummy cache in tests to prevent cache interference between tests
 CACHES = {
