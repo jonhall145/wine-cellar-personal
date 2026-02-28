@@ -1,7 +1,11 @@
 import json
 
 from django import forms
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
+
+from wine_cellar.apps.storage.models import Storage, get_app_type
+from wine_cellar.apps.user.views import get_active_household, get_user_settings
 
 
 class TomSelectMixin:
@@ -36,6 +40,161 @@ class TomSelectMixin:
                 "data-search": "true" if search else "false",
             }
         )
+
+
+class BeverageBaseFormMixin:
+    """Shared __init__ logic for WineBaseForm and WhiskyBaseForm.
+
+    Subclasses must set:
+        image_fields_map: dict  — {field_name: image_type_code}
+        image_model: model class  — WineImage or WhiskyImage
+        beverage_fk_name: str  — "wine" or "whisky"
+    """
+
+    image_fields_map = {}
+    image_model = None
+    beverage_fk_name = None
+
+    def _init_beverage_form(self, user):
+        """Call from subclass __init__ after super().__init__."""
+        household = get_active_household(user)
+        self.user = user
+        self.household = household
+
+        # Currency-specific price help text
+        user_settings = get_user_settings(user)
+        self.fields["price"].help_text = _(
+            "Enter the price of the bottle in %(currency)s."
+        ) % {"currency": settings.CURRENCY_SYMBOLS[user_settings.currency]}
+
+        # Storage field queryset
+        if "storage" in self.fields:
+            self.fields["storage"].queryset = Storage.objects.filter(
+                household=household, app_type=get_app_type()
+            ).order_by("order", "created")
+
+        # Image field initialization
+        self._init_image_fields()
+
+    def _init_image_fields(self):
+        """Populate image fields with existing images for edit forms."""
+        for field_name, image_type_code in self.image_fields_map.items():
+            field = self.fields.get(field_name)
+            if not field:
+                continue
+            if getattr(self, "initial", None):
+                bev_id = self.initial.get("id")
+                if bev_id:
+                    image_obj = (
+                        self.image_model.objects.filter(
+                            **{
+                                self.beverage_fk_name: bev_id,
+                                "image_type": image_type_code,
+                            }
+                        )
+                        .order_by("-id")
+                        .first()
+                    )
+                    if image_obj:
+                        self.initial[field_name] = image_obj.image
+                        preview_url = (
+                            image_obj.thumbnail.url
+                            if image_obj.thumbnail
+                            else image_obj.image.url
+                        )
+                        self.fields[field_name].widget.attrs[
+                            "data-existing-url"
+                        ] = preview_url
+
+
+class BaseDrinkRecordForm(forms.Form):
+    """Shared drink record form for wine and whisky.
+
+    Subclasses must set:
+        storage_item_model: model class
+        beverage_fk_name: str  — "wine" or "whisky"
+        beverage_label: str  — "wine" or "whisky" (for messages)
+    """
+
+    storage_item_model = None
+    beverage_fk_name = None
+    beverage_label = "beverage"
+
+    storage_item = forms.ModelChoiceField(
+        queryset=None,  # Set in __init__
+        required=False,
+        label=_("Bottle"),
+        help_text=_("Select which bottle you consumed (optional)."),
+    )
+    date_consumed = forms.DateField(
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+        help_text=_("When did you drink this?"),
+    )
+    tasting_notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea,
+        help_text=_("Your tasting notes."),
+    )
+    rating = forms.TypedChoiceField(
+        required=False,
+        coerce=lambda x: int(x) if x else None,
+        empty_value=None,
+        choices=[("", "-")] + [(i, f"{i} ★" if i else "0") for i in range(4)],
+        help_text=_("Rate from 0 to 3 stars."),
+    )
+    shared_with = forms.CharField(
+        max_length=250,
+        required=False,
+        help_text=_("Who did you share this with?"),
+    )
+    occasion = forms.CharField(
+        max_length=100,
+        required=False,
+        help_text=_("What was the occasion?"),
+    )
+
+    def __init__(self, *args, **kwargs):
+        beverage = kwargs.pop(self.beverage_fk_name, None)
+        self._beverage = beverage
+        self.user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+
+        # Must set queryset — was None at class level
+        self.fields["storage_item"].queryset = self.storage_item_model.objects.none()
+
+        if beverage and self.user:
+            available_bottles = (
+                self.storage_item_model.objects.filter(
+                    **{self.beverage_fk_name: beverage},
+                    user=self.user,
+                    deleted=False,
+                )
+                .select_related("storage")
+                .order_by("storage__name", "row", "column")
+            )
+            self.fields["storage_item"].queryset = available_bottles
+
+            count = available_bottles.count()
+            if count == 0:
+                self.fields["storage_item"].help_text = _(
+                    "No bottles available in storage for this " "%(label)s."
+                ) % {"label": self.beverage_label}
+            else:
+                self.fields["storage_item"].help_text = _(
+                    "Select which bottle you consumed " "(%(count)d available)."
+                ) % {"count": count}
+
+    def clean_storage_item(self):
+        bottle = self.cleaned_data.get("storage_item")
+        if bottle and bottle.deleted:
+            raise forms.ValidationError(_("This bottle has already been consumed."))
+        if (
+            bottle
+            and self._beverage
+            and getattr(bottle, self.beverage_fk_name) != self._beverage
+        ):
+            raise forms.ValidationError(_("Invalid bottle selection."))
+        return bottle
 
 
 class BottleNoteForm(forms.Form):

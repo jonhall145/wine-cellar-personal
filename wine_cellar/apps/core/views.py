@@ -6,12 +6,14 @@ from decimal import Decimal
 from django.conf import settings
 from django.db.models import Avg, Count, Q, Sum
 from django.db.models.functions import Coalesce, TruncMonth
+from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views.generic import DeleteView, DetailView, FormView, TemplateView
 
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
+from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 
 logger = logging.getLogger(__name__)
@@ -684,3 +686,257 @@ def crop_image_ajax(request, pk, image_model):
             {"error": "An internal error occurred while processing the image."},
             status=500,
         )
+
+
+# --- Beverage update view ---
+
+
+class BaseBeverageUpdateView(RequireMemberMixin, FormView):
+    """Base view for editing an existing beverage (wine or whisky).
+
+    Subclasses must set:
+        beverage_model, beverage_fk_name, image_related_name,
+        detail_url_name
+    and implement process_form_data(beverage, user, cleaned_data).
+    """
+
+    beverage_model = None
+    beverage_fk_name = None  # "wine" or "whisky"
+    image_related_name = None  # e.g. "wineimage_set" or "images"
+    detail_url_name = None  # e.g. "wine-detail" or "whisky-detail"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        if "user" not in kwargs:
+            kwargs["user"] = self.request.user
+        return kwargs
+
+    def get_initial(self):
+        initial = super().get_initial()
+        household = get_active_household(self.request.user)
+        beverage = get_object_or_404(
+            self.beverage_model,
+            pk=self.kwargs["pk"],
+            household=household,
+        )
+        initial.update(model_to_dict(beverage))
+        first_barcode = beverage.barcodes.first()
+        if first_barcode:
+            initial["barcode"] = first_barcode.barcode
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        household = get_active_household(self.request.user)
+        beverage = get_object_or_404(
+            self.beverage_model,
+            pk=self.kwargs["pk"],
+            household=household,
+        )
+        context[self.beverage_fk_name] = beverage
+        context[f"{self.beverage_fk_name}_images"] = getattr(
+            beverage, self.image_related_name
+        ).all()
+        return context
+
+    def form_valid(self, form):
+        household = get_active_household(self.request.user)
+        beverage = get_object_or_404(
+            self.beverage_model,
+            pk=self.kwargs["pk"],
+            household=household,
+        )
+        self.process_form_data(beverage, self.request.user, form.cleaned_data)
+        self.success_url = reverse_lazy(
+            self.detail_url_name, kwargs={"pk": beverage.pk}
+        )
+        return super().form_valid(form)
+
+    def process_form_data(self, beverage, user, cleaned_data):
+        raise NotImplementedError
+
+
+# --- Beverage create view ---
+
+
+class BaseBeverageCreateView(RequireMemberMixin, FormView):
+    """Base view for creating a new beverage with vision extraction.
+
+    Subclasses must set:
+        vision_extractor_path, add_url_name, beverage_label
+    and implement:
+        process_form_data(user, household, cleaned_data) -> (beverage, created)
+        resolve_extracted_data(result_data, initial) — FK resolution
+    Optionally override:
+        post_create(beverage, created) — post-creation processing
+    """
+
+    vision_extractor_path = None  # dotted path for lazy import
+    add_url_name = None  # e.g. "wine-add" or "whisky-add"
+    beverage_label = None  # "wine" or "whisky"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        if "user" not in kwargs:
+            kwargs["user"] = self.request.user
+        if "code" in self.kwargs:
+            kwargs["initial"].update({"barcode": self.kwargs["code"]})
+        elif self.request.session.get("pending_barcode"):
+            kwargs["initial"].update(
+                {"barcode": self.request.session.pop("pending_barcode")}
+            )
+        return kwargs
+
+    def get_initial(self):
+        initial = super().get_initial()
+
+        scanned_label = self.request.session.get("scanned_label")
+        extraction_result = self.request.session.get("extraction_result")
+
+        should_extract = scanned_label and (
+            not extraction_result or extraction_result.get("errors")
+        )
+
+        if should_extract:
+            try:
+                extractor = self._get_extractor()
+                image_data = scanned_label.get("data")
+                user = self.request.user
+                if isinstance(image_data, list):
+                    result = extractor.extract_from_images(image_data, user=user)
+                else:
+                    result = extractor.extract_from_images([image_data], user=user)
+
+                self.request.session["extraction_result"] = {
+                    "confidence": result.get("confidence", "low"),
+                    "extracted_fields": result.get("extracted_fields", []),
+                    "errors": result.get("errors", []),
+                    "scanned_image": (
+                        image_data[0] if isinstance(image_data, list) else image_data
+                    ),
+                    "image_count": (
+                        len(image_data) if isinstance(image_data, list) else 1
+                    ),
+                    "extracted_data": result.get("data", {}),
+                }
+                extraction_result = self.request.session["extraction_result"]
+
+            except Exception:
+                logger.exception(
+                    "Error extracting %s data from scanned label",
+                    self.beverage_label,
+                )
+                self.request.session["extraction_result"] = {
+                    "confidence": "low",
+                    "extracted_fields": [],
+                    "errors": ["Extraction failed"],
+                    "scanned_image": scanned_label.get("data"),
+                    "extracted_data": {},
+                }
+                extraction_result = self.request.session["extraction_result"]
+
+        if extraction_result:
+            result_data = extraction_result.get("extracted_data", {})
+            if result_data:
+                self.resolve_extracted_data(result_data, initial)
+                initial.update(result_data)
+
+        return initial
+
+    def _get_extractor(self):
+        """Lazy-import the vision extractor from the dotted path."""
+        from importlib import import_module
+
+        module_path, class_name = self.vision_extractor_path.rsplit(".", 1)
+        module = import_module(module_path)
+        cls = getattr(module, class_name)
+        return cls()
+
+    def resolve_extracted_data(self, result_data, initial):
+        """Resolve FK fields in extracted data. Override per app."""
+        pass
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        household = get_active_household(self.request.user)
+        user_storages = Storage.objects.filter(
+            household=household, app_type=get_app_type()
+        )
+        free_cells_by_storage = {s.pk: s.get_free_cells_by_row() for s in user_storages}
+        context["free_cells_by_storage"] = free_cells_by_storage
+
+        extraction_result = self.request.session.get("extraction_result")
+        if extraction_result:
+            context["extraction_result"] = extraction_result
+            context["scanned_image"] = extraction_result.get("scanned_image")
+            context["extracted_fields"] = extraction_result.get("extracted_fields", [])
+            context["confidence"] = extraction_result.get("confidence", "low")
+
+        scanned_label = self.request.session.get("scanned_label")
+        if scanned_label:
+            image_data = scanned_label.get("data")
+            if isinstance(image_data, list):
+                if len(image_data) > 1:
+                    context["scanned_back_image"] = image_data[1]
+                if len(image_data) > 2:
+                    context["scanned_front_image"] = image_data[2]
+
+        return context
+
+    def form_valid(self, form):
+        from wine_cellar.apps.core.utils import base64_to_uploaded_file
+
+        # Attach scanned images if user hasn't uploaded their own
+        scanned_label = self.request.session.get("scanned_label")
+        if scanned_label:
+            image_data = scanned_label.get("data")
+            if isinstance(image_data, list):
+                use_front = self.request.POST.get("use_scanned_front", "0")
+                use_back = self.request.POST.get("use_scanned_back", "0")
+
+                if (
+                    use_back == "1"
+                    and len(image_data) > 1
+                    and not form.cleaned_data.get("image_back_label")
+                ):
+                    form.cleaned_data["image_back_label"] = base64_to_uploaded_file(
+                        image_data[1], "scanned_back_label.jpg"
+                    )
+
+                if (
+                    use_front == "1"
+                    and len(image_data) > 2
+                    and not form.cleaned_data.get("image_front_label")
+                ):
+                    form.cleaned_data["image_front_label"] = base64_to_uploaded_file(
+                        image_data[2], "scanned_front_label.jpg"
+                    )
+
+        household = get_active_household(self.request.user)
+        beverage, created = self.process_form_data(
+            self.request.user, household, form.cleaned_data
+        )
+
+        self.post_create(beverage, created)
+
+        # Clear session data
+        for key in ("scanned_label", "extraction_result"):
+            self.request.session.pop(key, None)
+
+        if not created:
+            from django.contrib import messages
+
+            messages.info(
+                self.request,
+                f"{self.beverage_label.title()} already exists. "
+                f"Added bottle to your cellar.",
+            )
+
+        return super().form_valid(form)
+
+    def process_form_data(self, user, household, cleaned_data):
+        raise NotImplementedError
+
+    def post_create(self, beverage, created):
+        """Hook for post-creation processing. Override per app."""
+        pass

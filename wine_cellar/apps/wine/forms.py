@@ -3,16 +3,18 @@ from datetime import datetime
 
 import pycountry
 from django import forms
-from django.conf import settings
 from django.core import validators
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db.models import Q
 from django.forms import ImageField
 from django.utils.translation import gettext_lazy as _
 
-from wine_cellar.apps.core.forms import TomSelectMixin
-from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
-from wine_cellar.apps.user.views import get_active_household, get_user_settings
+from wine_cellar.apps.core.forms import (
+    BaseDrinkRecordForm,
+    BeverageBaseFormMixin,
+    TomSelectMixin,
+)
+from wine_cellar.apps.storage.models import Storage, StorageItem
 from wine_cellar.apps.wine.fields import OpenMultipleChoiceField
 from wine_cellar.apps.wine.models import (
     Appellation,
@@ -28,11 +30,6 @@ from wine_cellar.apps.wine.models import (
     WineType,
 )
 from wine_cellar.apps.wine.widgets import NoFilenameClearableFileInput
-
-image_fields_map = {
-    "image_front_label": ImageType.LABEL_FRONT,
-    "image_back_label": ImageType.LABEL_BACK,
-}
 
 
 class WineFormPostCleanMixin:
@@ -101,11 +98,23 @@ class WineFormPostCleanMixin:
                 )
 
 
-class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
+class WineBaseForm(
+    BeverageBaseFormMixin, TomSelectMixin, WineFormPostCleanMixin, forms.Form
+):
+    image_fields_map = {
+        "image_front_label": ImageType.LABEL_FRONT,
+        "image_back_label": ImageType.LABEL_BACK,
+    }
+    image_model = WineImage
+    beverage_fk_name = "wine"
+
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user")
         super().__init__(*args, **kwargs)
-        household = get_active_household(user)
+        self._init_beverage_form(user)
+
+        # Wine-specific: M2M user fields
+        household = self.household
         user_fields = [
             "vineyard",
             "attributes",
@@ -119,14 +128,8 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
                 Q(household__isnull=True) | Q(household=household)
             )
             self.fields[user_field].user = user
-        self.user = user
-        self.household = household
-        user_settings = get_user_settings(user)
-        self.fields["price"].help_text = _(
-            "Enter the price of the bottle in %(currency)s."
-        ) % {"currency": settings.CURRENCY_SYMBOLS[user_settings.currency]}
 
-        # Set up drinking window year choices
+        # Wine-specific: drink window year choices
         current_year = datetime.now().year
         year_choices = [("", "---------"), (0, _("Now"))]
         year_choices += [
@@ -135,13 +138,7 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         self.fields["drink_from"].choices = year_choices
         self.fields["drink_to"].choices = year_choices
 
-        # Configure storage field for household's storages
-        if "storage" in self.fields:
-            self.fields["storage"].queryset = Storage.objects.filter(
-                household=household, app_type=get_app_type()
-            ).order_by("order", "created")
-
-        # Pass appellation->country mapping for JS-based country filtering
+        # Wine-specific: appellation->country mapping for JS
         if "appellation" in self.fields:
             country_map = {
                 str(pk): country
@@ -150,32 +147,6 @@ class WineBaseForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
             self.fields["appellation"].widget.attrs["data-appellation-countries"] = (
                 json.dumps(country_map)
             )
-
-        for field_name, image_type_code in image_fields_map.items():
-            field = self.fields.get(field_name)
-            if not field:
-                continue
-            if getattr(self, "initial", None):
-                wine_id = self.initial.get("id")
-                if wine_id:
-                    image_obj = (
-                        WineImage.objects.filter(
-                            wine=wine_id, image_type=image_type_code
-                        )
-                        .order_by("-id")
-                        .first()
-                    )
-                    if image_obj:
-                        self.initial[field_name] = image_obj.image
-                        # Use thumbnail for preview if available, else full image
-                        preview_url = (
-                            image_obj.thumbnail.url
-                            if image_obj.thumbnail
-                            else image_obj.image.url
-                        )
-                        self.fields[field_name].widget.attrs[
-                            "data-existing-url"
-                        ] = preview_url
 
     class Meta:
         abstract = True
@@ -572,81 +543,10 @@ class WineFilterForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         )
 
 
-class DrinkRecordForm(forms.Form):
-    def __init__(self, *args, **kwargs):
-        self.wine = kwargs.pop("wine", None)
-        self.user = kwargs.pop("user", None)
-        super().__init__(*args, **kwargs)
-
-        # Set up bottle selection queryset
-        if self.wine and self.user:
-            available_bottles = (
-                StorageItem.objects.filter(
-                    wine=self.wine, user=self.user, deleted=False
-                )
-                .select_related("storage")
-                .order_by("storage__name", "row", "column")
-            )
-
-            self.fields["storage_item"].queryset = available_bottles
-
-            # Update help text with count
-            count = available_bottles.count()
-            if count == 0:
-                self.fields["storage_item"].help_text = _(
-                    "No bottles available in storage for this wine."
-                )
-            else:
-                self.fields["storage_item"].help_text = _(
-                    "Select which bottle you consumed (%(count)d available)."
-                ) % {"count": count}
-
-    storage_item = forms.ModelChoiceField(
-        queryset=StorageItem.objects.none(),
-        required=False,
-        label=_("Bottle"),
-        help_text=_("Select which bottle you consumed (optional)."),
-    )
-    date_consumed = forms.DateField(
-        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
-        help_text=_("When did you drink this wine?"),
-    )
-    tasting_notes = forms.CharField(
-        required=False,
-        widget=forms.Textarea,
-        help_text=_("Your tasting notes for this wine."),
-    )
-    rating = forms.TypedChoiceField(
-        required=False,
-        coerce=lambda x: int(x) if x else None,
-        empty_value=None,
-        choices=[("", "-")] + [(i, f"{i} ★" if i else "0") for i in range(4)],
-        help_text=_("Rate this wine from 0 to 3 stars."),
-    )
-    shared_with = forms.CharField(
-        max_length=250,
-        required=False,
-        help_text=_("Who did you share this wine with?"),
-    )
-    occasion = forms.CharField(
-        max_length=100,
-        required=False,
-        help_text=_("What was the occasion?"),
-    )
-
-    def clean_storage_item(self):
-        """Validate bottle selection."""
-        bottle = self.cleaned_data.get("storage_item")
-
-        # Check bottle not already deleted
-        if bottle and bottle.deleted:
-            raise forms.ValidationError(_("This bottle has already been consumed."))
-
-        # Check bottle belongs to the correct wine
-        if bottle and self.wine and bottle.wine != self.wine:
-            raise forms.ValidationError(_("Invalid bottle selection."))
-
-        return bottle
+class DrinkRecordForm(BaseDrinkRecordForm):
+    storage_item_model = StorageItem
+    beverage_fk_name = "wine"
+    beverage_label = "wine"
 
 
 class WishlistForm(forms.Form):

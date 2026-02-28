@@ -1,10 +1,14 @@
 import django_filters
-import pycountry
 from django.core.cache import cache
-from django.db.models import F, Q
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django_filters import ChoiceFilter, OrderingFilter
 
+from wine_cellar.apps.core.filters import (
+    FILTER_CACHE_TIMEOUT,
+    BeverageFilterMixin,
+    get_country_choices_cached,
+)
 from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.models import (
@@ -17,9 +21,6 @@ from wine_cellar.apps.whisky.models import (
     WhiskyStorageItem,
     WhiskyType,
 )
-
-# Cache timeout for filter choices (5 minutes)
-FILTER_CACHE_TIMEOUT = 300
 
 
 def get_distillery_choices(user=None):
@@ -90,62 +91,23 @@ def get_region_choices(user=None):
     return choices
 
 
-DEFAULT_WHISKY_FAVOURITES = ["XS", "IE", "JP", "US", "XE", "XW"]
-
-
 def get_country_choices(user=None):
-    """
-    Build country choices with whisky-relevant favourites at the top.
-    Only includes countries that have whiskies in stock.
-    """
-    household = get_active_household(user) if user and user.is_authenticated else None
-    household_id = household.id if household else "anon"
-    cache_key = f"whisky_country_choices_{household_id}"
-    cached = cache.get(cache_key)
-    if cached is not None:
-        return cached
-
-    favourites = list(DEFAULT_WHISKY_FAVOURITES)
-    countries_in_stock = set()
-
-    if household:
-        countries_in_stock = set(
-            Whisky.objects.filter(
-                household=household,
-                whiskystorageitem__isnull=False,
-                whiskystorageitem__deleted=False,
-            )
-            .values_list("country", flat=True)
-            .distinct()
-        )
-
-    all_countries = {c.alpha_2: c.name for c in pycountry.countries}
-    all_countries.update(WHISKY_COUNTRIES)
-
-    favourite_choices = []
-    other_choices = []
-
-    for code in favourites:
-        if code in all_countries and code in countries_in_stock:
-            favourite_choices.append((code, all_countries[code]))
-
-    for code in sorted(countries_in_stock - set(favourites)):
-        name = all_countries.get(code, code)
-        other_choices.append((code, name))
-
-    choices = [("", _("Any"))]
-    if favourite_choices:
-        choices += favourite_choices
-    if other_choices:
-        if favourite_choices:
-            choices.append(("", "───────────"))
-        choices += other_choices
-
-    cache.set(cache_key, choices, FILTER_CACHE_TIMEOUT)
-    return choices
+    """Whisky-specific country choices with Scotland/Ireland/Japan favourites."""
+    return get_country_choices_cached(
+        user,
+        cache_key_prefix="whisky_country_choices",
+        beverage_model=Whisky,
+        storage_item_reverse="whiskystorageitem",
+        default_favourites=["XS", "IE", "JP", "US", "XE", "XW"],
+        extra_countries=WHISKY_COUNTRIES,
+        include_most_frequent=False,
+    )
 
 
-class WhiskyFilter(django_filters.FilterSet):
+class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
+    storage_item_reverse = "whiskystorageitem"
+    nullable_order_fields = ("age_statement", "effective_price")
+
     name = django_filters.CharFilter(field_name="name", lookup_expr="icontains")
 
     whisky_type = ChoiceFilter(
@@ -240,18 +202,6 @@ class WhiskyFilter(django_filters.FilterSet):
         method="filter_order",
     )
 
-    def filter_order(self, queryset, name, value):
-        """Custom ordering that puts NULLs at the end."""
-        if not value:
-            return queryset
-        ordering = value[0] if isinstance(value, list) else value
-        if ordering.lstrip("-") in ("age_statement", "effective_price"):
-            field = F(ordering.lstrip("-"))
-            if ordering.startswith("-"):
-                return queryset.order_by(field.desc(nulls_last=True))
-            return queryset.order_by(field.asc(nulls_last=True))
-        return queryset.order_by(ordering)
-
     def filter_distillery(self, queryset, name, value):
         if value:
             return queryset.filter(distillery_id=int(value))
@@ -261,14 +211,6 @@ class WhiskyFilter(django_filters.FilterSet):
         if value:
             return queryset.filter(region_id=int(value))
         return queryset
-
-    def filter_has_stock(self, queryset, name, value):
-        if value == "1":
-            return queryset.filter(
-                whiskystorageitem__isnull=False, whiskystorageitem__deleted=False
-            ).distinct()
-        else:
-            return queryset
 
     def filter_is_nas(self, queryset, name, value):
         if value == "1":
@@ -284,13 +226,6 @@ class WhiskyFilter(django_filters.FilterSet):
         elif value == "0":
             # Independent bottling - bottler is set
             return queryset.filter(bottler__isnull=False)
-        return queryset
-
-    def filter_rating(self, queryset, name, value):
-        if value == "0":
-            return queryset.filter(Q(rating=0) | Q(rating__isnull=True))
-        if value:
-            return queryset.filter(rating=int(value))
         return queryset
 
     class Meta:

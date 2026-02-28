@@ -7,7 +7,6 @@ from django.contrib.auth.decorators import login_not_required, login_required
 from django.db import connections, transaction
 from django.db.models import Avg, Count, F, Max, Min, Q, Sum
 from django.db.models.functions import Coalesce
-from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
@@ -17,9 +16,10 @@ from django.views.generic import FormView, TemplateView
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
-from wine_cellar.apps.core.utils import base64_to_uploaded_file
 from wine_cellar.apps.core.views import (
+    BaseBeverageCreateView,
     BaseBeverageDeleteView,
+    BaseBeverageUpdateView,
     BaseBottleNoteCreateView,
     BaseCellarValueView,
     BaseConsumptionStatsView,
@@ -42,10 +42,10 @@ from wine_cellar.apps.core.views import (
     set_primary_image_ajax,
 )
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
-from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
+from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 from wine_cellar.apps.wine.filters import WineFilter
-from wine_cellar.apps.wine.forms import WineEditForm, WineForm, image_fields_map
+from wine_cellar.apps.wine.forms import WineBaseForm, WineEditForm, WineForm
 from wine_cellar.apps.wine.models import (
     BottleNote,
     DrinkRecord,
@@ -220,190 +220,36 @@ class HomePageView(RequireHouseholdMixin, TemplateView):
 @method_decorator(
     ratelimit(key="user", rate="20/m", method="POST", block=True), name="post"
 )
-class WineCreateView(RequireMemberMixin, FormView):
+class WineCreateView(BaseBeverageCreateView):
     """View for creating new wines. Rate limited to 20 creations/minute per user."""
 
     template_name = "wine_create.html"
     form_class = WineForm
     success_url = reverse_lazy("wine-list")
+    vision_extractor_path = "wine_cellar.apps.wine.services.WineVisionExtractor"
+    add_url_name = "wine-add"
+    beverage_label = "wine"
 
-    def get_initial(self):
-        """Pre-fill form with data from scanned wine label if available."""
-        initial = super().get_initial()
-
-        # Check for scanned label in session
-        scanned_label = self.request.session.get("scanned_label")
-
-        # Check if we've already processed this scan
-        extraction_result = self.request.session.get("extraction_result")
-
-        # Determine if we should (re-)extract:
-        # - Extract if we have a scanned label and no extraction result
-        # - Re-extract if previous extraction had errors (don't get stuck on errors)
-        should_extract = scanned_label and (
-            not extraction_result
-            or extraction_result.get("errors")  # Retry if there were errors
-        )
-
-        if should_extract:
-            # Process extraction (or retry after error)
+    def resolve_extracted_data(self, result_data, initial):
+        # Vineyard: wrap string in list for form
+        if "vineyard" in result_data and isinstance(result_data["vineyard"], str):
+            result_data["vineyard"] = [result_data["vineyard"]]
+        # Appellation: convert PK to model instance for ModelChoiceField
+        if "appellation" in result_data and result_data["appellation"]:
             try:
-                from wine_cellar.apps.wine.services import WineVisionExtractor
+                from wine_cellar.apps.wine.models import Appellation
 
-                # Extract wine data using vision service
-                extractor = WineVisionExtractor()
-
-                # Handle both single and multiple images
-                image_data = scanned_label.get("data")
-                user = self.request.user
-                if isinstance(image_data, list):
-                    # Multiple images
-                    result = extractor.extract_from_images(image_data, user=user)
-                else:
-                    # Legacy single image (backwards compatibility)
-                    result = extractor.extract_from_image(image_data, user=user)
-
-                # Store extraction metadata for template display
-                self.request.session["extraction_result"] = {
-                    "confidence": result.get("confidence", "low"),
-                    "extracted_fields": result.get("extracted_fields", []),
-                    "errors": result.get("errors", []),
-                    "scanned_image": (
-                        image_data[0] if isinstance(image_data, list) else image_data
-                    ),  # Show first image
-                    "image_count": (
-                        len(image_data) if isinstance(image_data, list) else 1
-                    ),
-                    "extracted_data": result.get("data", {}),  # Store for reuse
-                }
-                # Update local variable for use below
-                extraction_result = self.request.session["extraction_result"]
-
-            except Exception:
-                # Log error but don't break the page
-                logger.exception("Error extracting wine data from scanned label")
-                self.request.session["extraction_result"] = {
-                    "confidence": "low",
-                    "extracted_fields": [],
-                    "errors": ["Extraction failed"],
-                    "scanned_image": scanned_label.get("data"),
-                    "extracted_data": {},
-                }
-                extraction_result = self.request.session["extraction_result"]
-
-        # If we have extraction results, use them
-        if extraction_result:
-            result_data = extraction_result.get("extracted_data", {})
-            if result_data:
-                # Map extracted data to form fields
-                initial.update(result_data)
-
-                # Handle special fields that need processing
-                # Grapes: convert list to initial format expected by form
-                if "grapes" in result_data and isinstance(result_data["grapes"], list):
-                    # Store as list for form to handle
-                    initial["grapes"] = result_data["grapes"]
-
-                # Vineyard: convert to list if string
-                if "vineyard" in result_data:
-                    if isinstance(result_data["vineyard"], str):
-                        initial["vineyard"] = [result_data["vineyard"]]
-                    elif isinstance(result_data["vineyard"], list):
-                        initial["vineyard"] = result_data["vineyard"]
-
-                # Size field mapping (already handled by service)
-                # wine_type field (already handled by service)
-                # category field (already handled by service)
-
-                # Appellation: convert PK to Appellation instance for ModelChoiceField
-                if "appellation" in result_data and result_data["appellation"]:
-                    try:
-                        from wine_cellar.apps.wine.models import Appellation
-
-                        initial["appellation"] = Appellation.objects.get(
-                            pk=result_data["appellation"]
-                        )
-                    except (Appellation.DoesNotExist, TypeError):
-                        pass  # Skip if invalid
-
-        return initial
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        if "user" not in kwargs:
-            kwargs["user"] = self.request.user
-        if "code" in self.kwargs:
-            kwargs["initial"].update({"barcode": self.kwargs["code"]})
-        elif self.request.session.get("pending_barcode"):
-            # Use barcode from previous scan if available
-            kwargs["initial"].update(
-                {"barcode": self.request.session.pop("pending_barcode")}
-            )
-        return kwargs
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Provide free cells for storage dropdown (for stock_add.js)
-        household = get_active_household(self.request.user)
-        user_storages = Storage.objects.filter(
-            household=household, app_type=get_app_type()
-        )
-        free_cells_by_storage = {
-            storage.pk: storage.get_free_cells_by_row() for storage in user_storages
-        }
-        context["free_cells_by_storage"] = free_cells_by_storage
-
-        # Add extraction result to context if available
-        extraction_result = self.request.session.get("extraction_result")
-        if extraction_result:
-            context["extraction_result"] = extraction_result
-            context["scanned_image"] = extraction_result.get("scanned_image")
-            context["extracted_fields"] = extraction_result.get("extracted_fields", [])
-            context["confidence"] = extraction_result.get("confidence", "low")
-
-        # Pass scanned front/back images for automatic attachment
-        scanned_label = self.request.session.get("scanned_label")
-        if scanned_label:
-            image_data = scanned_label.get("data")
-            if isinstance(image_data, list):
-                # Index 0 = barcode, index 1 = back label, index 2 = front label
-                if len(image_data) > 1:
-                    context["scanned_back_image"] = image_data[1]
-                if len(image_data) > 2:
-                    context["scanned_front_image"] = image_data[2]
-
-        return context
+                result_data["appellation"] = Appellation.objects.get(
+                    pk=result_data["appellation"]
+                )
+            except (Appellation.DoesNotExist, TypeError):
+                result_data.pop("appellation", None)
 
     def post(self, request, *args, **kwargs):
-        """
-        Handle wine creation form submission and optional vision-based auto-fill.
-
-        This method has two behaviors depending on the submitted POST data:
-
-        * Vision extraction mode: If the ``extract_vision`` key is present in
-          ``request.POST`` (e.g. when the user clicks an "Auto-fill from Images"
-          button), the form is validated and the configured image fields
-          (``image_front_label``, ``image_back_label``, ``image_front``,
-          ``image_back``) are read, base64-encoded, and sent to the external
-          vision API configured via ``settings.WINE_VISION_API_URL`` and
-          ``settings.WINE_VISION_API_KEY``. The response is stored in the
-          session under the ``"extraction_result"`` key, including the
-          ``scanned_image``, any ``extracted_fields``, and a ``confidence``
-          level. The user is then redirected back to this view so that the
-          extraction result can be displayed and used to pre-fill form fields.
-          If no images were uploaded, a warning message is added and the form
-          is treated as invalid.
-
-        * Normal submission mode: If ``extract_vision`` is not present in
-          ``request.POST``, this method delegates to ``FormView.post`` for the
-          standard form submission and validation flow, ultimately creating the
-          wine record on success.
-        """
+        """Handle optional vision-based auto-fill before normal form submission."""
         import base64
 
-        # Check if user clicked "Auto-fill from Images" button
         if "extract_vision" in request.POST:
-            # Don't validate the form - just collect uploaded images
             images = []
             image_fields = [
                 "image_front_label",
@@ -415,95 +261,38 @@ class WineCreateView(RequireMemberMixin, FormView):
             for field_name in image_fields:
                 image_file = request.FILES.get(field_name)
                 if image_file:
-                    # Read and encode to base64
                     image_data = image_file.read()
                     base64_image = base64.b64encode(image_data).decode("utf-8")
                     images.append(base64_image)
-                    # Reset file pointer for later use
                     image_file.seek(0)
 
             if images:
-                # Store images in session for vision extraction
                 self.request.session["scanned_label"] = {
                     "filename": "uploaded_images.jpg",
                     "size": sum(len(base64.b64decode(img)) for img in images),
                     "data": images,
                     "multi_image": True,
                 }
-                # Clear any previous extraction results to trigger new extraction
                 if "extraction_result" in self.request.session:
                     del self.request.session["extraction_result"]
-
-                # Reload the page to trigger vision extraction in get_initial()
                 return redirect("wine-add")
             else:
-                # No images uploaded, show error
-                from django.contrib import messages
-
                 messages.warning(
                     request, "Please upload at least one image before using auto-fill."
                 )
-                # Return to form without validation
                 return self.render_to_response(self.get_context_data())
 
-        # Normal form submission
         return super().post(request, *args, **kwargs)
 
-    def form_valid(self, form):
-        # Use scanned images if available and user hasn't uploaded/cleared them
-        scanned_label = self.request.session.get("scanned_label")
-        if scanned_label:
-            image_data = scanned_label.get("data")
-            if isinstance(image_data, list):
-                # Check hidden inputs for user intent
-                use_scanned_front = self.request.POST.get("use_scanned_front", "0")
-                use_scanned_back = self.request.POST.get("use_scanned_back", "0")
-
-                # Back label: use scanned if available and user wants it (index 1)
-                if (
-                    use_scanned_back == "1"
-                    and len(image_data) > 1
-                    and not form.cleaned_data.get("image_back_label")
-                ):
-                    form.cleaned_data["image_back_label"] = base64_to_uploaded_file(
-                        image_data[1], "scanned_back_label.jpg"
-                    )
-
-                # Front label: use scanned if available and user wants it (index 2)
-                if (
-                    use_scanned_front == "1"
-                    and len(image_data) > 2
-                    and not form.cleaned_data.get("image_front_label")
-                ):
-                    form.cleaned_data["image_front_label"] = base64_to_uploaded_file(
-                        image_data[2], "scanned_front_label.jpg"
-                    )
-
-        household = get_active_household(self.request.user)
-        wine, created = self.process_form_data(
-            self.request.user, household, form.cleaned_data
-        )
-
-        # Apply AI label bounds as auto-crop thumbnails if confidence is sufficient
-        extraction_result = self.request.session.get("extraction_result")
-        if extraction_result and created:
-            confidence = extraction_result.get("confidence", "low")
-            if confidence in ("high", "medium"):
-                extracted_data = extraction_result.get("extracted_data", {})
-                self._apply_auto_crop(wine, extracted_data)
-
-        # Clear scanned label data from session after successful save
-        if "scanned_label" in self.request.session:
-            del self.request.session["scanned_label"]
-        if "extraction_result" in self.request.session:
-            del self.request.session["extraction_result"]
-
-        if not created:
-            messages.info(
-                self.request, "Wine already exists. Added bottle to your cellar."
-            )
-
-        return super().form_valid(form)
+    def post_create(self, beverage, created):
+        """Apply AI label bounds as auto-crop thumbnails if confidence is sufficient."""
+        if created:
+            extraction_result = self.request.session.get("extraction_result")
+            if extraction_result:
+                confidence = extraction_result.get("confidence", "low")
+                if confidence in ("high", "medium"):
+                    extracted_data = extraction_result.get("extracted_data", {})
+                    self._apply_auto_crop(beverage, extracted_data)
 
     @staticmethod
     def _apply_auto_crop(wine, extracted_data):
@@ -616,7 +405,7 @@ class WineCreateView(RequireMemberMixin, FormView):
         wine.source.set(source)
         wine.attributes.set(attributes)
 
-        for form_field, image_type in image_fields_map.items():
+        for form_field, image_type in WineBaseForm.image_fields_map.items():
             image = cleaned_data.get(form_field)
             if image:
                 WineImage.objects.get_or_create(
@@ -648,42 +437,14 @@ class WineCreateView(RequireMemberMixin, FormView):
         return wine, created
 
 
-class WineUpdateView(RequireMemberMixin, FormView):
+class WineUpdateView(BaseBeverageUpdateView):
     template_name = "wine_edit.html"
     form_class = WineEditForm
     success_url = reverse_lazy("wine-list")
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        if "user" not in kwargs:
-            kwargs["user"] = self.request.user
-        return kwargs
-
-    def get_initial(self):
-        initial = super().get_initial()
-        household = get_active_household(self.request.user)
-        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], household=household)
-        initial.update(model_to_dict(wine))
-        # Populate barcode from related WineBarcode model
-        first_barcode = wine.barcodes.first()
-        if first_barcode:
-            initial["barcode"] = first_barcode.barcode
-        return initial
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], household=household)
-        context["wine"] = wine
-        context["wine_images"] = wine.wineimage_set.all()
-        return context
-
-    def form_valid(self, form):
-        household = get_active_household(self.request.user)
-        wine = get_object_or_404(Wine, pk=self.kwargs["pk"], household=household)
-        self.process_form_data(wine, self.request.user, form.cleaned_data)
-        self.success_url = reverse_lazy("wine-detail", kwargs={"pk": wine.pk})
-        return super().form_valid(form)
+    beverage_model = Wine
+    beverage_fk_name = "wine"
+    image_related_name = "wineimage_set"
+    detail_url_name = "wine-detail"
 
     @staticmethod
     @transaction.atomic
@@ -752,7 +513,7 @@ class WineUpdateView(RequireMemberMixin, FormView):
         wine.attributes.set(attributes)
         wine.source.set(source)
 
-        for form_field, image_type in image_fields_map.items():
+        for form_field, image_type in WineBaseForm.image_fields_map.items():
             image = cleaned_data.get(form_field)
             existing_image = WineImage.objects.filter(
                 wine=wine, user=user, image_type=image_type

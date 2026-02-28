@@ -14,18 +14,14 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.utils.formats import number_format
-from django.views.generic import (
-    DeleteView,
-    FormView,
-    ListView,
-    TemplateView,
-)
+from django.views.generic import DeleteView, FormView, ListView, TemplateView
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
-from wine_cellar.apps.core.utils import base64_to_uploaded_file
 from wine_cellar.apps.core.views import (
+    BaseBeverageCreateView,
     BaseBeverageDeleteView,
+    BaseBeverageUpdateView,
     BaseBottleNoteCreateView,
     BaseCellarValueView,
     BaseConsumptionStatsView,
@@ -230,182 +226,39 @@ class HomePageView(RequireHouseholdMixin, TemplateView):
 @method_decorator(
     ratelimit(key="user", rate="20/m", method="POST", block=True), name="post"
 )
-class WhiskyCreateView(RequireMemberMixin, FormView):
+class WhiskyCreateView(BaseBeverageCreateView):
     """View for creating new whiskies. Rate limited to 20 creations/minute per user."""
 
     template_name = "whisky/whisky_create.html"
     form_class = WhiskyForm
     success_url = reverse_lazy("whisky-list")
+    vision_extractor_path = "wine_cellar.apps.whisky.services.WhiskyVisionExtractor"
+    add_url_name = "whisky-add"
+    beverage_label = "whisky"
 
-    def get_initial(self):
-        """Pre-fill form with data from scanned whisky label if available."""
-        initial = super().get_initial()
-
-        scanned_label = self.request.session.get("scanned_label")
-        extraction_result = self.request.session.get("extraction_result")
-
-        should_extract = scanned_label and (
-            not extraction_result or extraction_result.get("errors")
-        )
-
-        if should_extract:
-            try:
-                from wine_cellar.apps.whisky.services import WhiskyVisionExtractor
-
-                extractor = WhiskyVisionExtractor()
-                image_data = scanned_label.get("data")
-                user = self.request.user
-                if isinstance(image_data, list):
-                    result = extractor.extract_from_images(image_data, user=user)
-                else:
-                    result = extractor.extract_from_images([image_data], user=user)
-
-                self.request.session["extraction_result"] = {
-                    "confidence": result.get("confidence", "low"),
-                    "extracted_fields": result.get("extracted_fields", []),
-                    "errors": result.get("errors", []),
-                    "scanned_image": (
-                        image_data[0] if isinstance(image_data, list) else image_data
-                    ),
-                    "image_count": (
-                        len(image_data) if isinstance(image_data, list) else 1
-                    ),
-                    "extracted_data": result.get("data", {}),
-                }
-                extraction_result = self.request.session["extraction_result"]
-
-            except Exception:
-                logger.exception("Error extracting whisky data from scanned label")
-                self.request.session["extraction_result"] = {
-                    "confidence": "low",
-                    "extracted_fields": [],
-                    "errors": ["Extraction failed"],
-                    "scanned_image": scanned_label.get("data"),
-                    "extracted_data": {},
-                }
-                extraction_result = self.request.session["extraction_result"]
-
-        if extraction_result:
-            result_data = extraction_result.get("extracted_data", {})
-            if result_data:
-                # Resolve FK fields to PKs for form initial values
-                if "distillery" in result_data and isinstance(
-                    result_data["distillery"], str
-                ):
-                    match = Distillery.objects.filter(
-                        name__iexact=result_data["distillery"]
-                    ).first()
-                    if match:
-                        result_data["distillery"] = match.pk
-                    else:
-                        result_data.pop("distillery")
-                if "region" in result_data and isinstance(result_data["region"], str):
-                    match = WhiskyRegion.objects.filter(
-                        name__iexact=result_data["region"]
-                    ).first()
-                    if match:
-                        result_data["region"] = match.pk
-                    else:
-                        result_data.pop("region")
-                if "bottler" in result_data and isinstance(result_data["bottler"], str):
-                    match = Bottler.objects.filter(
-                        name__iexact=result_data["bottler"]
-                    ).first()
-                    if match:
-                        result_data["bottler"] = match.pk
-                    else:
-                        result_data.pop("bottler")
-                initial.update(result_data)
-
-        return initial
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        if "user" not in kwargs:
-            kwargs["user"] = self.request.user
-        if "code" in self.kwargs:
-            kwargs["initial"].update({"barcode": self.kwargs["code"]})
-        elif self.request.session.get("pending_barcode"):
-            kwargs["initial"].update(
-                {"barcode": self.request.session.pop("pending_barcode")}
-            )
-        return kwargs
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        user_storages = Storage.objects.filter(
-            household=household, app_type=get_app_type()
-        )
-        free_cells_by_storage = {
-            storage.pk: storage.get_free_cells_by_row() for storage in user_storages
-        }
-        context["free_cells_by_storage"] = free_cells_by_storage
-
-        # Add extraction result to context if available
-        extraction_result = self.request.session.get("extraction_result")
-        if extraction_result:
-            context["extraction_result"] = extraction_result
-            context["scanned_image"] = extraction_result.get("scanned_image")
-            context["extracted_fields"] = extraction_result.get("extracted_fields", [])
-            context["confidence"] = extraction_result.get("confidence", "low")
-
-        # Pass scanned images for automatic attachment
-        scanned_label = self.request.session.get("scanned_label")
-        if scanned_label:
-            image_data = scanned_label.get("data")
-            if isinstance(image_data, list):
-                if len(image_data) > 1:
-                    context["scanned_back_image"] = image_data[1]
-                if len(image_data) > 2:
-                    context["scanned_front_image"] = image_data[2]
-
-        return context
-
-    def form_valid(self, form):
-        # Use scanned images if available and user hasn't uploaded their own
-        scanned_label = self.request.session.get("scanned_label")
-        if scanned_label:
-            image_data = scanned_label.get("data")
-            if isinstance(image_data, list):
-                use_scanned_front = self.request.POST.get("use_scanned_front", "0")
-                use_scanned_back = self.request.POST.get("use_scanned_back", "0")
-
-                if (
-                    use_scanned_back == "1"
-                    and len(image_data) > 1
-                    and not form.cleaned_data.get("image_back_label")
-                ):
-                    form.cleaned_data["image_back_label"] = base64_to_uploaded_file(
-                        image_data[1], "scanned_back_label.jpg"
-                    )
-
-                if (
-                    use_scanned_front == "1"
-                    and len(image_data) > 2
-                    and not form.cleaned_data.get("image_front_label")
-                ):
-                    form.cleaned_data["image_front_label"] = base64_to_uploaded_file(
-                        image_data[2], "scanned_front_label.jpg"
-                    )
-
-        household = get_active_household(self.request.user)
-        whisky, created = self.process_form_data(
-            self.request.user, household, form.cleaned_data
-        )
-
-        # Clear scanned label data from session after successful save
-        if "scanned_label" in self.request.session:
-            del self.request.session["scanned_label"]
-        if "extraction_result" in self.request.session:
-            del self.request.session["extraction_result"]
-
-        if not created:
-            messages.info(
-                self.request, "Whisky already exists. Added bottle to your cellar."
-            )
-
-        return super().form_valid(form)
+    def resolve_extracted_data(self, result_data, initial):
+        if "distillery" in result_data and isinstance(result_data["distillery"], str):
+            match = Distillery.objects.filter(
+                name__iexact=result_data["distillery"]
+            ).first()
+            if match:
+                result_data["distillery"] = match.pk
+            else:
+                result_data.pop("distillery")
+        if "region" in result_data and isinstance(result_data["region"], str):
+            match = WhiskyRegion.objects.filter(
+                name__iexact=result_data["region"]
+            ).first()
+            if match:
+                result_data["region"] = match.pk
+            else:
+                result_data.pop("region")
+        if "bottler" in result_data and isinstance(result_data["bottler"], str):
+            match = Bottler.objects.filter(name__iexact=result_data["bottler"]).first()
+            if match:
+                result_data["bottler"] = match.pk
+            else:
+                result_data.pop("bottler")
 
     @staticmethod
     @transaction.atomic
@@ -530,42 +383,14 @@ class WhiskyCreateView(RequireMemberMixin, FormView):
         return whisky, created
 
 
-class WhiskyUpdateView(RequireMemberMixin, FormView):
+class WhiskyUpdateView(BaseBeverageUpdateView):
     template_name = "whisky/whisky_edit.html"
     form_class = WhiskyEditForm
     success_url = reverse_lazy("whisky-list")
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        if "user" not in kwargs:
-            kwargs["user"] = self.request.user
-        return kwargs
-
-    def get_initial(self):
-        initial = super().get_initial()
-        household = get_active_household(self.request.user)
-        whisky = get_object_or_404(Whisky, pk=self.kwargs["pk"], household=household)
-        initial.update(model_to_dict(whisky))
-        # Populate barcode from related WhiskyBarcode model
-        first_barcode = whisky.barcodes.first()
-        if first_barcode:
-            initial["barcode"] = first_barcode.barcode
-        return initial
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        whisky = get_object_or_404(Whisky, pk=self.kwargs["pk"], household=household)
-        context["whisky"] = whisky
-        context["whisky_images"] = whisky.images.all()
-        return context
-
-    def form_valid(self, form):
-        household = get_active_household(self.request.user)
-        whisky = get_object_or_404(Whisky, pk=self.kwargs["pk"], household=household)
-        self.process_form_data(whisky, self.request.user, form.cleaned_data)
-        self.success_url = reverse_lazy("whisky-detail", kwargs={"pk": whisky.pk})
-        return super().form_valid(form)
+    beverage_model = Whisky
+    beverage_fk_name = "whisky"
+    image_related_name = "images"
+    detail_url_name = "whisky-detail"
 
     @staticmethod
     @transaction.atomic

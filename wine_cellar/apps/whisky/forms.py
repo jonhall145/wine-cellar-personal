@@ -2,15 +2,18 @@ from datetime import datetime
 
 import pycountry
 from django import forms
-from django.conf import settings
 from django.core import validators
 from django.forms import ImageField
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
-from wine_cellar.apps.core.forms import TomSelectMixin
+from wine_cellar.apps.core.forms import (
+    BaseDrinkRecordForm,
+    BeverageBaseFormMixin,
+    TomSelectMixin,
+)
 from wine_cellar.apps.storage.models import Storage, get_app_type
-from wine_cellar.apps.user.views import get_active_household, get_user_settings
+from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.models import (
     COMMON_CASK_TYPES,
     Bottler,
@@ -47,12 +50,6 @@ class CreatableMultipleChoiceField(forms.MultipleChoiceField):
 
     def valid_value(self, value):
         return True
-
-
-image_fields_map = {
-    "image_front_label": WhiskyImage.ImageType.LABEL_FRONT,
-    "image_back_label": WhiskyImage.ImageType.LABEL_BACK,
-}
 
 
 class WhiskyFormPostCleanMixin:
@@ -116,26 +113,32 @@ class WhiskyFormPostCleanMixin:
                 )
 
 
-class WhiskyBaseForm(WhiskyFormPostCleanMixin, TomSelectMixin, forms.Form):
+class WhiskyBaseForm(
+    BeverageBaseFormMixin,
+    WhiskyFormPostCleanMixin,
+    TomSelectMixin,
+    forms.Form,
+):
+    image_fields_map = {
+        "image_front_label": WhiskyImage.ImageType.LABEL_FRONT,
+        "image_back_label": WhiskyImage.ImageType.LABEL_BACK,
+    }
+    image_model = WhiskyImage
+    beverage_fk_name = "whisky"
+
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user")
         super().__init__(*args, **kwargs)
-        household = get_active_household(user)
-        self.user = user
-        self.household = household
-        user_settings = get_user_settings(user)
-        self.fields["price"].help_text = _(
-            "Enter the price of the bottle in %(currency)s."
-        ) % {"currency": settings.CURRENCY_SYMBOLS[user_settings.currency]}
+        self._init_beverage_form(user)
 
-        # Configure source queryset for household
+        # Whisky-specific: source queryset for household
         self.fields["source"].queryset = WhiskySource.objects.filter(
-            household=household
+            household=self.household
         ).order_by("name")
 
-        # Populate owner choices from existing values
+        # Whisky-specific: owner choices from existing values
         existing_owners = (
-            Whisky.objects.filter(household=household)
+            Whisky.objects.filter(household=self.household)
             .exclude(owner="")
             .values_list("owner", flat=True)
             .distinct()
@@ -143,38 +146,6 @@ class WhiskyBaseForm(WhiskyFormPostCleanMixin, TomSelectMixin, forms.Form):
         )
         owner_choices = [("", "---------")] + [(o, o) for o in existing_owners]
         self.fields["owner"].widget.choices = owner_choices
-
-        # Configure storage field for household's storages
-        if "storage" in self.fields:
-            self.fields["storage"].queryset = Storage.objects.filter(
-                household=household, app_type=get_app_type()
-            ).order_by("order", "created")
-
-        # Populate image fields with existing images for edit forms
-        for field_name, image_type_code in image_fields_map.items():
-            field = self.fields.get(field_name)
-            if not field:
-                continue
-            if getattr(self, "initial", None):
-                whisky_id = self.initial.get("id")
-                if whisky_id:
-                    image_obj = (
-                        WhiskyImage.objects.filter(
-                            whisky=whisky_id, image_type=image_type_code
-                        )
-                        .order_by("-id")
-                        .first()
-                    )
-                    if image_obj:
-                        self.initial[field_name] = image_obj.image
-                        preview_url = (
-                            image_obj.thumbnail.url
-                            if image_obj.thumbnail
-                            else image_obj.image.url
-                        )
-                        self.fields[field_name].widget.attrs[
-                            "data-existing-url"
-                        ] = preview_url
 
     name = forms.CharField(
         max_length=200,
@@ -829,94 +800,27 @@ class WhiskyStockAddForm(TomSelectMixin, forms.Form):
 POST_DRINK_STATUS_CONSUMED = "consumed"
 
 
-class WhiskyDrinkRecordForm(forms.Form):
-    def __init__(self, *args, **kwargs):
-        self.whisky = kwargs.pop("whisky", None)
-        self.user = kwargs.pop("user", None)
-        super().__init__(*args, **kwargs)
+class WhiskyDrinkRecordForm(BaseDrinkRecordForm):
+    storage_item_model = WhiskyStorageItem
+    beverage_fk_name = "whisky"
+    beverage_label = "whisky"
 
-        # Set up bottle selection queryset
-        if self.whisky and self.user:
-            available_bottles = (
-                WhiskyStorageItem.objects.filter(
-                    whisky=self.whisky, user=self.user, deleted=False
-                )
-                .select_related("storage")
-                .order_by("storage__name", "row", "column")
-            )
-
-            self.fields["storage_item"].queryset = available_bottles
-
-            # Update help text with count
-            count = available_bottles.count()
-            if count == 0:
-                self.fields["storage_item"].help_text = _(
-                    "No bottles available in storage for this whisky."
-                )
-            else:
-                self.fields["storage_item"].help_text = _(
-                    "Select which bottle you consumed (%(count)d available)."
-                ) % {"count": count}
-
-    storage_item = forms.ModelChoiceField(
-        queryset=WhiskyStorageItem.objects.none(),
-        required=False,
-        label=_("Bottle"),
-        help_text=_("Select which bottle you consumed (optional)."),
-    )
     post_drink_status = forms.ChoiceField(
         required=False,
         initial=POST_DRINK_STATUS_CONSUMED,
         label=_("Bottle status after drink"),
         choices=(
-            (POST_DRINK_STATUS_CONSUMED, _("Consumed (remove from stock)")),
+            (
+                POST_DRINK_STATUS_CONSUMED,
+                _("Consumed (remove from stock)"),
+            ),
             (FillLevel.OPENED, _("Opened (keep in stock)")),
             (FillLevel.DREG, _("Dreg (keep in stock)")),
         ),
         help_text=_(
-            "If you select a bottle, choose how that bottle should be updated."
+            "If you select a bottle, choose how that bottle " "should be updated."
         ),
     )
-    date_consumed = forms.DateField(
-        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
-        help_text=_("When did you drink this whisky?"),
-    )
-    tasting_notes = forms.CharField(
-        required=False,
-        widget=forms.Textarea,
-        help_text=_("Your tasting notes for this whisky."),
-    )
-    rating = forms.TypedChoiceField(
-        required=False,
-        coerce=lambda x: int(x) if x else None,
-        empty_value=None,
-        choices=[("", "-")] + [(i, f"{i} ★" if i else "0") for i in range(4)],
-        help_text=_("Rate this whisky from 0 to 3 stars."),
-    )
-    shared_with = forms.CharField(
-        max_length=250,
-        required=False,
-        help_text=_("Who did you share this whisky with?"),
-    )
-    occasion = forms.CharField(
-        max_length=100,
-        required=False,
-        help_text=_("What was the occasion?"),
-    )
-
-    def clean_storage_item(self):
-        """Validate bottle selection."""
-        bottle = self.cleaned_data.get("storage_item")
-
-        # Check bottle not already deleted
-        if bottle and bottle.deleted:
-            raise forms.ValidationError(_("This bottle has already been consumed."))
-
-        # Check bottle belongs to the correct whisky
-        if bottle and self.whisky and bottle.whisky != self.whisky:
-            raise forms.ValidationError(_("Invalid bottle selection."))
-
-        return bottle
 
     def clean(self):
         cleaned_data = super().clean()

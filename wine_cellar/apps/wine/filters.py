@@ -1,89 +1,30 @@
 from datetime import date
 
 import django_filters
-import pycountry
 from django.core.cache import cache
-from django.db.models import Count, F, Q
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django_filters import ChoiceFilter, OrderingFilter
 
+from wine_cellar.apps.core.filters import (
+    FILTER_CACHE_TIMEOUT,
+    BeverageFilterMixin,
+    get_country_choices_cached,
+)
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.forms import WineFilterForm
 from wine_cellar.apps.wine.models import Appellation, Wine
 
-# Default favourite countries (alpha_2 codes)
-DEFAULT_FAVOURITES = ["GB", "PT", "FR"]
-
-# Cache timeout for filter choices (5 minutes)
-FILTER_CACHE_TIMEOUT = 300
-
 
 def get_country_choices_with_favourites(user=None):
-    """
-    Build country choices with favourites at the top.
-    Only includes countries that have wines in stock.
-    Favourites: UK, Portugal, France + most frequent from user's cellar.
-    Results are cached per-household for 5 minutes.
-    """
-    household = get_active_household(user) if user and user.is_authenticated else None
-    household_id = household.id if household else "anon"
-    cache_key = f"country_choices_{household_id}"
-    cached = cache.get(cache_key)
-    if cached is not None:
-        return cached
-
-    favourites = list(DEFAULT_FAVOURITES)
-
-    # Get countries that have wines in stock
-    countries_in_stock = set()
-    if household:
-        countries_in_stock = set(
-            Wine.objects.filter(
-                household=household,
-                storageitem__isnull=False,
-                storageitem__deleted=False,
-            )
-            .values_list("country", flat=True)
-            .distinct()
-        )
-
-        # Get most frequent country from household's wines in stock
-        most_frequent = (
-            Wine.objects.filter(
-                household=household,
-                storageitem__isnull=False,
-                storageitem__deleted=False,
-            )
-            .values("country")
-            .annotate(count=Count("id"))
-            .order_by("-count")
-            .first()
-        )
-        if most_frequent and most_frequent["country"] not in favourites:
-            favourites.insert(0, most_frequent["country"])
-
-    # Build choices list - only include countries with stock
-    all_countries = {c.alpha_2: c.name for c in pycountry.countries}
-    favourite_choices = []
-    other_choices = []
-
-    for code in favourites:
-        if code in all_countries and code in countries_in_stock:
-            favourite_choices.append((code, all_countries[code]))
-
-    for code, name in sorted(all_countries.items(), key=lambda x: x[1]):
-        if code not in favourites and code in countries_in_stock:
-            other_choices.append((code, name))
-
-    # Return Any first, then favourites, then separator, then rest
-    any_choice = [("", _("Any"))]
-    if favourite_choices and other_choices:
-        choices = any_choice + favourite_choices + [("---", "─" * 20)] + other_choices
-    else:
-        choices = any_choice + favourite_choices + other_choices
-
-    cache.set(cache_key, choices, FILTER_CACHE_TIMEOUT)
-    return choices
+    """Wine-specific country choices with UK/PT/FR favourites."""
+    return get_country_choices_cached(
+        user,
+        cache_key_prefix="country_choices",
+        beverage_model=Wine,
+        storage_item_reverse="storageitem",
+        default_favourites=["GB", "PT", "FR"],
+    )
 
 
 def get_appellation_choices(user=None):
@@ -120,10 +61,13 @@ def get_appellation_choices(user=None):
     return choices
 
 
-class WineFilter(django_filters.FilterSet):
+class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
+    storage_item_reverse = "storageitem"
+    nullable_order_fields = ("vintage", "effective_price")
+
     name = django_filters.CharFilter(field_name="name", lookup_expr="icontains")
     stock = ChoiceFilter(
-        method="filter_stock",
+        method="filter_has_stock",
         label=_("Show only in stock"),
         choices=((0, _("No")), (1, _("Yes"))),
         empty_label=None,
@@ -189,37 +133,6 @@ class WineFilter(django_filters.FilterSet):
         null_label=None,
         method="filter_order",
     )
-
-    def filter_order(self, queryset, name, value):
-        """Custom ordering that puts NULLs at the end."""
-        if not value:
-            return queryset
-
-        ordering = value[0] if isinstance(value, list) else value
-
-        # Fields that can have NULLs need nulls_last to sort predictably
-        if ordering.lstrip("-") in ("vintage", "effective_price"):
-            field = F(ordering.lstrip("-"))
-            if ordering.startswith("-"):
-                return queryset.order_by(field.desc(nulls_last=True))
-            return queryset.order_by(field.asc(nulls_last=True))
-        else:
-            return queryset.order_by(ordering)
-
-    def filter_stock(self, queryset, name, value):
-        if value == "1":
-            return queryset.filter(
-                storageitem__isnull=False, storageitem__deleted=False
-            ).distinct()
-        else:
-            return queryset
-
-    def filter_rating(self, queryset, name, value):
-        if value == "0":
-            return queryset.filter(Q(rating=0) | Q(rating__isnull=True))
-        if value:
-            return queryset.filter(rating=int(value))
-        return queryset
 
     def filter_ready_to_drink(self, queryset, name, value):
         if not value:  # "Any" option selected
