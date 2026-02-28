@@ -1,18 +1,15 @@
 import logging
-from decimal import Decimal
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required, login_required
 from django.db import connections, transaction
-from django.db.models import Avg, Count, F, Max, Min, Q, Sum
-from django.db.models.functions import Coalesce
+from django.db.models import Count, Max, Min, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
-from django.utils.formats import number_format
-from django.views.generic import FormView, TemplateView
+from django.views.generic import TemplateView
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
@@ -28,8 +25,11 @@ from wine_cellar.apps.core.views import (
     BaseDrinkRecordDeleteView,
     BaseDrinkRecordEditView,
     BaseDrinkRecordListView,
+    BaseHomePageView,
     BaseImagesView,
+    BaseLabelScanView,
     BaseListView,
+    BaseMergeConfirmView,
     BaseReorderReminderCreateView,
     BaseReorderReminderDeleteView,
     BaseReorderRemindersView,
@@ -41,9 +41,9 @@ from wine_cellar.apps.core.views import (
     crop_image_ajax,
     set_primary_image_ajax,
 )
-from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
+from wine_cellar.apps.household.mixins import RequireHouseholdMixin
 from wine_cellar.apps.storage.models import StorageItem
-from wine_cellar.apps.user.views import get_active_household, get_user_settings
+from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.filters import WineFilter
 from wine_cellar.apps.wine.forms import WineBaseForm, WineEditForm, WineForm
 from wine_cellar.apps.wine.models import (
@@ -55,7 +55,7 @@ from wine_cellar.apps.wine.models import (
     WineImage,
     Wishlist,
 )
-from wine_cellar.apps.wine.services import BarcodeScanner, WineVisionExtractor
+from wine_cellar.apps.wine.services import BarcodeScanner
 
 logger = logging.getLogger(__name__)
 
@@ -63,25 +63,31 @@ logger = logging.getLogger(__name__)
 FINAL_FORM_STEP = 4
 
 # Maximum allowed image upload size (10MB) to prevent memory exhaustion
-MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
 
 
-class HomePageView(RequireHouseholdMixin, TemplateView):
+class HomePageView(BaseHomePageView):
     template_name = "homepage.html"
+    beverage_model = Wine
+    storage_item_model = StorageItem
+    drink_record_model = None  # Lazy-loaded in get_app_specific_context
+    wishlist_model = None
+    reminder_model = None
+    beverage_fk_name = "wine"
+    beverage_price_path = "wine__price"
+    stock_reverse_path = "wine__storageitem"
 
     def get_context_data(self, **kwargs):
-        from datetime import date
-
         from wine_cellar.apps.wine.models import DrinkRecord, ReorderReminder, Wishlist
 
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-        household = get_active_household(user)
+        self.drink_record_model = DrinkRecord
+        self.wishlist_model = Wishlist
+        self.reminder_model = ReorderReminder
+        return super().get_context_data(**kwargs)
 
-        # Get total wines count separately to avoid JOIN issues
+    def get_app_specific_context(self, household, user):
+        from datetime import date
+
         wines = Wine.objects.filter(household=household).count()
-
-        # Get other wine stats
         wine_stats = Wine.objects.filter(household=household).aggregate(
             wines_in_stock=Count(
                 "id", filter=Q(storageitem__deleted=False), distinct=True
@@ -93,7 +99,7 @@ class HomePageView(RequireHouseholdMixin, TemplateView):
                 "id",
                 filter=Q(
                     drink_to__isnull=False,
-                    drink_to__gt=0,  # Not "now"
+                    drink_to__gt=0,
                     drink_to__lt=date.today().year,
                     storageitem__deleted=False,
                 ),
@@ -103,88 +109,16 @@ class HomePageView(RequireHouseholdMixin, TemplateView):
                 "id",
                 filter=Q(
                     drink_to__isnull=False,
-                    drink_to__gt=0,  # Not "now"
+                    drink_to__gt=0,
                     drink_to__gte=date.today().year,
-                    drink_to__lte=date.today().year + 1,  # This year or next
+                    drink_to__lte=date.today().year + 1,
                     storageitem__deleted=False,
                 ),
                 distinct=True,
             ),
         )
 
-        wines_in_stock = wine_stats["wines_in_stock"]
-        countries = wine_stats["countries"]
-        oldest = wine_stats["oldest_vintage"] or "-"
-        youngest = wine_stats["youngest_vintage"] or "-"
-        overdue_count = wine_stats["overdue_count"]
-        upcoming_count = wine_stats["upcoming_count"]
-        total_value = StorageItem.objects.aggregate(
-            total=Sum(
-                Coalesce("price", "wine__price"),
-                filter=Q(deleted=False, household=household),
-            )
-        )["total"] or Decimal("0")
-        total_value = total_value.quantize(Decimal("0"))
-        user_settings = get_user_settings(self.request.user)
-        currency = settings.CURRENCY_SYMBOLS.get(
-            getattr(user_settings, "currency", "EUR"), "€"
-        )
-
-        formatted_price = number_format(total_value, use_l10n=True)
-        total_value = f"{currency}{formatted_price}"
-
-        # Calculate bottles in stock
-        bottles_in_stock = StorageItem.objects.filter(
-            household=household, deleted=False
-        ).count()
-
-        context.update(
-            {
-                "wines": wines,
-                "wines_in_stock": wines_in_stock,
-                "bottles_in_stock": bottles_in_stock,
-                "countries": countries,
-                "oldest": oldest,
-                "youngest": youngest,
-                "total_value": total_value,
-            }
-        )
-
-        # Low stock reminders - filter at database level for efficiency
-        low_stock_count = (
-            ReorderReminder.objects.filter(household=household, is_active=True)
-            .annotate(
-                current_stock=Count(
-                    "wine__storageitem", filter=Q(wine__storageitem__deleted=False)
-                )
-            )
-            .filter(current_stock__lte=F("min_stock"))
-            .count()
-        )
-
-        # Recent drinks
-        recent_drinks = (
-            DrinkRecord.objects.filter(household=household)
-            .select_related("wine")
-            .order_by("-date_consumed")[:3]
-        )
-
-        # Wishlist
-        wishlist_items = Wishlist.objects.filter(
-            household=household, purchased=False
-        ).order_by("-priority")[:3]
-
-        # Stats - consolidate into single query per model
-        drink_stats = DrinkRecord.objects.filter(household=household).aggregate(
-            total_consumed=Count("id"),
-            avg_rating=Avg("rating", filter=Q(rating__isnull=False)),
-        )
-        total_consumed = drink_stats["total_consumed"]
-        avg_rating = (
-            round(drink_stats["avg_rating"], 1) if drink_stats["avg_rating"] else None
-        )
-
-        # Pending hardware position reviews (gracefully handle if hardware not set up)
+        # Pending hardware position reviews
         pending_reviews_count = 0
         try:
             from wine_cellar.apps.hardware.models import (
@@ -197,24 +131,18 @@ class HomePageView(RequireHouseholdMixin, TemplateView):
                 status=ReviewStatus.PENDING,
             ).count()
         except Exception:
-            # Hardware app not configured or migration not run - skip silently
             pass
 
-        context.update(
-            {
-                "overdue_count": overdue_count,
-                "upcoming_count": upcoming_count,
-                "low_stock_count": low_stock_count,
-                "recent_drinks": recent_drinks,
-                "wishlist_items": wishlist_items,
-                "total_consumed": total_consumed,
-                "total_bottles": bottles_in_stock,
-                "avg_rating": avg_rating,
-                "pending_reviews_count": pending_reviews_count,
-            }
-        )
-
-        return context
+        return {
+            "wines": wines,
+            "wines_in_stock": wine_stats["wines_in_stock"],
+            "countries": wine_stats["countries"],
+            "oldest": wine_stats["oldest_vintage"] or "-",
+            "youngest": wine_stats["youngest_vintage"] or "-",
+            "overdue_count": wine_stats["overdue_count"],
+            "upcoming_count": wine_stats["upcoming_count"],
+            "pending_reviews_count": pending_reviews_count,
+        }
 
 
 @method_decorator(
@@ -601,86 +529,37 @@ class WineDeleteView(BaseBeverageDeleteView):
     success_url = reverse_lazy("wine-list")
 
 
-class WineMergeConfirmView(RequireMemberMixin, TemplateView):
+class WineMergeConfirmView(BaseMergeConfirmView):
     template_name = "wine_merge_confirm.html"
+    beverage_model = Wine
+    storage_item_model = StorageItem
+    beverage_fk_name = "wine"
+    detail_url_name = "wine-detail"
+    image_model = WineImage
+    m2m_fields = ("grapes", "attributes", "food_pairings", "vineyard", "source")
+    reminder_model = None  # Lazy-loaded
 
-    def get_wines(self):
-        household = get_active_household(self.request.user)
-        qs = Wine.objects.filter(household=household)
-        primary = get_object_or_404(qs, pk=self.kwargs["primary_pk"])
-        duplicate = get_object_or_404(qs, pk=self.kwargs["pk"])
-        return primary, duplicate
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        primary, duplicate = self.get_wines()
-        dup_stock = StorageItem.objects.filter(wine=duplicate, deleted=False).count()
-        dup_barcodes = duplicate.barcodes.count()
-        context.update(
-            {
-                "primary": primary,
-                "duplicate": duplicate,
-                "dup_stock": dup_stock,
-                "dup_barcodes": dup_barcodes,
-            }
-        )
-        return context
-
-    def post(self, request, *args, **kwargs):
+    @property
+    def related_models(self):
         from wine_cellar.apps.wine.models import (
             DrinkingWindowAlert,
             DrinkRecord,
             PriceHistory,
-            ReorderReminder,
             VisionExtractionLog,
         )
 
-        primary, duplicate = self.get_wines()
-
-        with transaction.atomic():
-            # Move bottles
-            StorageItem.objects.filter(wine=duplicate).update(wine=primary)
-
-            # Move barcodes (skip duplicates)
-            for barcode in duplicate.barcodes.all():
-                if not primary.barcodes.filter(barcode=barcode.barcode).exists():
-                    barcode.wine = primary
-                    barcode.save()
-
-            # Move images
-            WineImage.objects.filter(wine=duplicate).update(wine=primary)
-
-            # Merge M2M fields
-            primary.grapes.add(*duplicate.grapes.all())
-            primary.attributes.add(*duplicate.attributes.all())
-            primary.food_pairings.add(*duplicate.food_pairings.all())
-            primary.vineyard.add(*duplicate.vineyard.all())
-            primary.source.add(*duplicate.source.all())
-
-            # Move FK references
-            DrinkRecord.objects.filter(wine=duplicate).update(wine=primary)
-            DrinkingWindowAlert.objects.filter(wine=duplicate).update(wine=primary)
-            PriceHistory.objects.filter(wine=duplicate).update(wine=primary)
-            VisionExtractionLog.objects.filter(wine=duplicate).update(wine=primary)
-
-            # Handle ReorderReminder (unique on wine+user)
-            for reminder in ReorderReminder.objects.filter(wine=duplicate):
-                if not ReorderReminder.objects.filter(
-                    wine=primary, user=reminder.user
-                ).exists():
-                    reminder.wine = primary
-                    reminder.save()
-                else:
-                    reminder.delete()
-
-            # Delete the duplicate
-            duplicate.delete()
-
-        messages.success(
-            request,
-            f'Merged "{duplicate.name}" into "{primary.name}".',
+        return (
+            (DrinkRecord, "wine"),
+            (DrinkingWindowAlert, "wine"),
+            (PriceHistory, "wine"),
+            (VisionExtractionLog, "wine"),
         )
-        return redirect("wine-detail", pk=primary.pk)
+
+    def post(self, request, *args, **kwargs):
+        from wine_cellar.apps.wine.models import ReorderReminder
+
+        self.reminder_model = ReorderReminder
+        return super().post(request, *args, **kwargs)
 
 
 class WineMapView(RequireHouseholdMixin, TemplateView):
@@ -930,77 +809,56 @@ class ReorderReminderDeleteView(BaseReorderReminderDeleteView):
     template_name = "reorder_reminder_confirm_delete.html"
 
 
-class LabelScanView(RequireHouseholdMixin, FormView):
+class LabelScanView(BaseLabelScanView):
     template_name = "label_scan.html"
+    add_url_name = "wine-add"
 
     def get_form_class(self):
         from wine_cellar.apps.wine.forms import LabelScanForm
 
         return LabelScanForm
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if "form" not in context:
+            context["form"] = self.get_form_class()()
+        return context
+
     def post(self, request, *args, **kwargs):
         import base64
 
-        # Clear any previous extraction results when starting a new scan
-        if "extraction_result" in self.request.session:
-            del self.request.session["extraction_result"]
+        if "extraction_result" in request.session:
+            del request.session["extraction_result"]
 
-        # Handle camera capture data - check for multiple images
-        image_count = request.POST.get("image_count")
-        if image_count:
-            # Multiple images submitted
-            images = []
-            for i in range(int(image_count)):
-                image_data = request.POST.get(f"image_data_{i}")
-                if image_data:
-                    # Remove data URL prefix if present
-                    if "," in image_data:
-                        image_data = image_data.split(",")[1]
-                    images.append(image_data)
-
-            if images:
-                # Store all images in session
-                self.request.session["scanned_label"] = {
-                    "filename": "camera_captures.jpg",
-                    "size": sum(len(base64.b64decode(img)) for img in images),
-                    "data": images,  # List of base64 images
-                    "multi_image": True,
-                }
-                return redirect("wine-add")
+        # Camera capture (multi-image) — handled by base
+        result = self._handle_camera_capture(request)
+        if result:
+            return result
 
         # Handle single camera capture (legacy)
         image_data = request.POST.get("image_data")
         if image_data:
-            # Remove data URL prefix if present
             if "," in image_data:
                 image_data = image_data.split(",")[1]
-
-            # Decode base64 image
             image_bytes = base64.b64decode(image_data)
-
-            # Store in session for the create view to use
-            self.request.session["scanned_label"] = {
+            request.session["scanned_label"] = {
                 "filename": "camera_capture.jpg",
                 "size": len(image_bytes),
-                "data": [image_data],  # Wrap in list for consistency
+                "data": [image_data],
                 "multi_image": False,
             }
-
-            return redirect("wine-add")
+            return redirect(self.add_url_name)
 
         # Fallback to form handling for file uploads
-        return super().post(request, *args, **kwargs)
+        form = self.get_form_class()(request.POST, request.FILES)
+        if form.is_valid():
+            return self._form_valid(form)
+        return self.render_to_response(self.get_context_data(form=form))
 
-    def form_valid(self, form):
+    def _form_valid(self, form):
         import base64
 
-        # Clear any previous extraction results when starting a new scan
-        if "extraction_result" in self.request.session:
-            del self.request.session["extraction_result"]
-
         images = []
-
-        # Process all uploaded images in order: barcode, front, back
         for field_name in ["barcode_image", "front_image", "back_image"]:
             image = form.cleaned_data.get(field_name)
             if image:
@@ -1009,7 +867,6 @@ class LabelScanView(RequireHouseholdMixin, FormView):
                 images.append(base64_image)
 
         if images:
-            # Store in session for the create view to use
             self.request.session["scanned_label"] = {
                 "filename": "uploaded_images",
                 "size": sum(len(base64.b64decode(img)) for img in images),
@@ -1017,7 +874,7 @@ class LabelScanView(RequireHouseholdMixin, FormView):
                 "multi_image": len(images) > 1,
             }
 
-        return redirect("wine-add")
+        return redirect(self.add_url_name)
 
 
 class LabelScanResultView(RequireHouseholdMixin, TemplateView):
@@ -1058,120 +915,15 @@ class LabelScanResultView(RequireHouseholdMixin, TemplateView):
 @ratelimit(key="user", rate="10/m", method="POST", block=True)
 @login_required
 def extract_wine_vision_ajax(request):
-    """
-    AJAX endpoint for wine data extraction from uploaded images.
+    """AJAX endpoint for wine data extraction from uploaded images."""
+    from wine_cellar.apps.core.views import extract_vision_ajax
 
-    This endpoint first attempts to detect barcodes in the uploaded images
-    using non-AI tooling (pyzbar). If a barcode is found and matches an
-    existing wine in the user's collection, that wine's data is returned.
-    Otherwise, AI vision extraction is used to extract wine details from
-    the label images.
-
-    Rate limited to 10 requests per minute per user.
-    """
-    import base64
-
-    if request.method != "POST":
-        return JsonResponse({"error": "POST required"}, status=405)
-
-    try:
-        # Collect uploaded images
-        images = []
-        image_fields = [
-            "image_front_label",
-            "image_back_label",
-            "image_front",
-            "image_back",
-        ]
-
-        for field_name in image_fields:
-            image_file = request.FILES.get(field_name)
-            if image_file:
-                # Validate file size before processing
-                if image_file.size > MAX_IMAGE_SIZE:
-                    return JsonResponse(
-                        {
-                            "error": f"Image {field_name} is too large. "
-                            f"Maximum size is {MAX_IMAGE_SIZE // (1024 * 1024)}MB."
-                        },
-                        status=400,
-                    )
-                # Read and encode to base64
-                image_data = image_file.read()
-                base64_image = base64.b64encode(image_data).decode("utf-8")
-                images.append(base64_image)
-                # Reset file pointer so Django can read it again later
-                image_file.seek(0)
-
-        if not images:
-            return JsonResponse(
-                {"error": "No images uploaded. Please select at least one image."},
-                status=400,
-            )
-
-        # Step 1: Try barcode scanning first (non-AI, faster)
-        barcode_scanner = BarcodeScanner()
-        barcode_result = barcode_scanner.scan_and_match(images, request.user)
-
-        if barcode_result.get("matched"):
-            if barcode_result.get("multiple_matches"):
-                # Multiple wines share this barcode
-                return JsonResponse(
-                    {
-                        "success": True,
-                        "multiple_matches": True,
-                        "match_type": "barcode",
-                        "matched_barcode": barcode_result["barcode"],
-                        "wines": barcode_result["wines"],
-                        "message": "Multiple wines found with this barcode",
-                    }
-                )
-
-            # Single match — return wine data as before
-            wine_data = barcode_result["wine_data"]
-            extracted_fields = list(wine_data.keys())
-
-            return JsonResponse(
-                {
-                    "success": True,
-                    "data": wine_data,
-                    "confidence": "high",
-                    "extracted_fields": extracted_fields,
-                    "errors": [],
-                    "match_type": "barcode",
-                    "matched_barcode": barcode_result["barcode"],
-                    "message": f"Matched wine via barcode: {barcode_result['barcode']}",
-                }
-            )
-
-        # Step 2: No barcode match, use AI vision extraction
-        extractor = WineVisionExtractor()
-        result = extractor.extract_from_images(images, user=request.user)
-
-        # Include any barcodes found (even if no match) in the result
-        response_data = {
-            "success": True,
-            "data": result.get("data", {}),
-            "confidence": result.get("confidence", "low"),
-            "extracted_fields": result.get("extracted_fields", []),
-            "errors": result.get("errors", []),
-            "match_type": "vision",
-        }
-
-        # If barcodes were found but didn't match, include them
-        if barcode_result.get("all_barcodes"):
-            barcodes = barcode_result["all_barcodes"]
-            # Add first barcode to data if not already extracted by vision
-            if barcodes and "barcode" not in response_data["data"]:
-                response_data["data"]["barcode"] = barcodes[0]
-                if "barcode" not in response_data["extracted_fields"]:
-                    response_data["extracted_fields"].append("barcode")
-
-        return JsonResponse(response_data)
-
-    except Exception:
-        logger.exception("Error in AJAX vision extraction")
-        return JsonResponse({"error": "Vision extraction failed"}, status=500)
+    return extract_vision_ajax(
+        request,
+        barcode_scanner_factory=BarcodeScanner,
+        vision_extractor_path="wine_cellar.apps.wine.services.WineVisionExtractor",
+        beverage_label="wine",
+    )
 
 
 @ratelimit(key="user", rate="30/m", method="POST", block=True)

@@ -1,24 +1,21 @@
 import base64
 import logging
-from decimal import Decimal
 
 from django.conf import settings
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Avg, Count, F, Max, Min, Q, Sum
-from django.db.models.functions import Coalesce
+from django.db.models import Count, Max, Min, Q
 from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
-from django.utils.formats import number_format
 from django.views.generic import DeleteView, FormView, ListView, TemplateView
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
 from wine_cellar.apps.core.views import (
+    MAX_IMAGE_SIZE,
     BaseBeverageCreateView,
     BaseBeverageDeleteView,
     BaseBeverageUpdateView,
@@ -30,8 +27,11 @@ from wine_cellar.apps.core.views import (
     BaseDrinkRecordDeleteView,
     BaseDrinkRecordEditView,
     BaseDrinkRecordListView,
+    BaseHomePageView,
     BaseImagesView,
+    BaseLabelScanView,
     BaseListView,
+    BaseMergeConfirmView,
     BaseReorderReminderCreateView,
     BaseReorderReminderDeleteView,
     BaseReorderRemindersView,
@@ -45,7 +45,7 @@ from wine_cellar.apps.core.views import (
 )
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
 from wine_cellar.apps.storage.models import Storage, get_app_type
-from wine_cellar.apps.user.views import get_active_household, get_user_settings
+from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.filters import WhiskyFilter, WhiskyStorageItemFilter
 from wine_cellar.apps.whisky.forms import (
     POST_DRINK_STATUS_CONSUMED,
@@ -73,24 +73,24 @@ from wine_cellar.apps.whisky.models import (
     WhiskyWishlist,
 )
 
-# Maximum allowed image upload size (10MB)
-MAX_IMAGE_SIZE = 10 * 1024 * 1024
-
 logger = logging.getLogger(__name__)
 
 
-class HomePageView(RequireHouseholdMixin, TemplateView):
+class HomePageView(BaseHomePageView):
     template_name = "whisky/homepage.html"
+    beverage_model = Whisky
+    storage_item_model = WhiskyStorageItem
+    drink_record_model = WhiskyDrinkRecord
+    wishlist_model = WhiskyWishlist
+    reminder_model = WhiskyReorderReminder
+    beverage_fk_name = "whisky"
+    beverage_price_path = "whisky__price"
+    stock_reverse_path = "whisky__whiskystorageitem"
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-        household = get_active_household(user)
+    def get_app_specific_context(self, household, user):
+        import datetime
 
-        # Get total whiskies count separately
         whiskies = Whisky.objects.filter(household=household).count()
-
-        # Get other whisky stats
         whisky_stats = Whisky.objects.filter(household=household).aggregate(
             whiskies_in_stock=Count(
                 "id", filter=Q(whiskystorageitem__deleted=False), distinct=True
@@ -100,47 +100,18 @@ class HomePageView(RequireHouseholdMixin, TemplateView):
             youngest_vintage=Max("vintage_year", filter=Q(vintage_year__isnull=False)),
         )
 
-        whiskies_in_stock = whisky_stats["whiskies_in_stock"]
-        distilleries_count = whisky_stats["distilleries"]
-        oldest = whisky_stats["oldest_vintage"] or "-"
-        youngest = whisky_stats["youngest_vintage"] or "-"
-
-        total_value = WhiskyStorageItem.objects.aggregate(
-            total=Sum(
-                Coalesce("price", "whisky__price"),
-                filter=Q(deleted=False, household=household),
-            )
-        )["total"] or Decimal("0")
-        total_value = total_value.quantize(Decimal("0"))
-        user_settings = get_user_settings(self.request.user)
-        currency = settings.CURRENCY_SYMBOLS.get(
-            getattr(user_settings, "currency", "EUR"), "€"
-        )
-
-        formatted_price = number_format(total_value, use_l10n=True)
-        total_value = f"{currency}{formatted_price}"
-
-        # Calculate bottles in stock
-        bottles_in_stock = WhiskyStorageItem.objects.filter(
-            household=household, deleted=False
-        ).count()
-
-        # Open bottles (not Unopened fill level)
         open_bottles = (
             WhiskyStorageItem.objects.filter(household=household, deleted=False)
             .exclude(fill_level="UN")
             .count()
         )
 
-        # Oldest age statement
-        oldest_age_result = Whisky.objects.filter(
-            household=household,
-            age_statement__isnull=False,
-        ).aggregate(Max("age_statement"))
-        oldest_age = oldest_age_result["age_statement__max"] or 0
-
-        # Dreg alerts
-        import datetime
+        oldest_age = (
+            Whisky.objects.filter(
+                household=household, age_statement__isnull=False
+            ).aggregate(Max("age_statement"))["age_statement__max"]
+            or 0
+        )
 
         dreg_cutoff_warning = datetime.date.today() - datetime.timedelta(days=335)
         dreg_cutoff_expired = datetime.date.today() - datetime.timedelta(days=365)
@@ -158,69 +129,17 @@ class HomePageView(RequireHouseholdMixin, TemplateView):
             dreg_date__gt=dreg_cutoff_expired,
         ).count()
 
-        context.update(
-            {
-                "whiskies": whiskies,
-                "whiskies_in_stock": whiskies_in_stock,
-                "bottles_in_stock": bottles_in_stock,
-                "distilleries_count": distilleries_count,
-                "open_bottles": open_bottles,
-                "oldest_age": oldest_age,
-                "oldest": oldest,
-                "youngest": youngest,
-                "total_value": total_value,
-                "dreg_expired_count": dreg_expired_count,
-                "dreg_warning_count": dreg_warning_count,
-            }
-        )
-
-        # Low stock reminders
-        low_stock_count = (
-            WhiskyReorderReminder.objects.filter(household=household, is_active=True)
-            .annotate(
-                current_stock=Count(
-                    "whisky__whiskystorageitem",
-                    filter=Q(whisky__whiskystorageitem__deleted=False),
-                )
-            )
-            .filter(current_stock__lte=F("min_stock"))
-            .count()
-        )
-
-        # Recent drinks
-        recent_drinks = (
-            WhiskyDrinkRecord.objects.filter(household=household)
-            .select_related("whisky")
-            .order_by("-date_consumed")[:3]
-        )
-
-        # Wishlist
-        wishlist_items = WhiskyWishlist.objects.filter(
-            household=household, purchased=False
-        ).order_by("-priority")[:3]
-
-        # Stats
-        drink_stats = WhiskyDrinkRecord.objects.filter(household=household).aggregate(
-            total_consumed=Count("id"),
-            avg_rating=Avg("rating", filter=Q(rating__isnull=False)),
-        )
-        total_consumed = drink_stats["total_consumed"]
-        avg_rating = (
-            round(drink_stats["avg_rating"], 1) if drink_stats["avg_rating"] else None
-        )
-
-        context.update(
-            {
-                "low_stock_count": low_stock_count,
-                "recent_drinks": recent_drinks,
-                "wishlist_items": wishlist_items,
-                "total_consumed": total_consumed,
-                "total_bottles": bottles_in_stock,
-                "avg_rating": avg_rating,
-            }
-        )
-
-        return context
+        return {
+            "whiskies": whiskies,
+            "whiskies_in_stock": whisky_stats["whiskies_in_stock"],
+            "distilleries_count": whisky_stats["distilleries"],
+            "open_bottles": open_bottles,
+            "oldest_age": oldest_age,
+            "oldest": whisky_stats["oldest_vintage"] or "-",
+            "youngest": whisky_stats["youngest_vintage"] or "-",
+            "dreg_expired_count": dreg_expired_count,
+            "dreg_warning_count": dreg_warning_count,
+        }
 
 
 @method_decorator(
@@ -613,153 +532,20 @@ class WhiskyMapView(RequireHouseholdMixin, TemplateView):
         return context
 
 
-class LabelScanView(RequireHouseholdMixin, TemplateView):
+class LabelScanView(BaseLabelScanView):
     template_name = "whisky/label_scan.html"
-
-    def post(self, request, *args, **kwargs):
-        import base64
-
-        # Clear any previous extraction results
-        if "extraction_result" in request.session:
-            del request.session["extraction_result"]
-
-        # Handle camera capture data (multiple images from React component)
-        image_count = request.POST.get("image_count")
-        if image_count:
-            images = []
-            for i in range(int(image_count)):
-                image_data = request.POST.get(f"image_data_{i}")
-                if image_data:
-                    if "," in image_data:
-                        image_data = image_data.split(",")[1]
-                    images.append(image_data)
-
-            if images:
-                request.session["scanned_label"] = {
-                    "filename": "camera_captures.jpg",
-                    "size": sum(len(base64.b64decode(img)) for img in images),
-                    "data": images,
-                    "multi_image": True,
-                }
-                return redirect("whisky-add")
-
-        # Handle file uploads
-        images = []
-        for field_name in ["barcode_image", "front_image", "back_image"]:
-            image = request.FILES.get(field_name)
-            if image:
-                image_data = image.read()
-                base64_image = base64.b64encode(image_data).decode("utf-8")
-                images.append(base64_image)
-
-        if images:
-            request.session["scanned_label"] = {
-                "filename": "uploaded_images",
-                "size": sum(len(base64.b64decode(img)) for img in images),
-                "data": images,
-                "multi_image": len(images) > 1,
-            }
-            return redirect("whisky-add")
-
-        # No images submitted, re-render the page
-        return self.get(request, *args, **kwargs)
+    add_url_name = "whisky-add"
 
 
 @ratelimit(key="user", rate="10/m", method="POST", block=True)
 @login_required
 def extract_whisky_vision_ajax(request):
-    """
-    AJAX endpoint for whisky data extraction from uploaded images.
+    """AJAX endpoint for whisky data extraction from uploaded images."""
+    from wine_cellar.apps.core.views import extract_vision_ajax
+    from wine_cellar.apps.whisky.services.barcode_service import WhiskyBarcodeScanner
 
-    Attempts barcode scanning first (non-AI, faster), then falls back
-    to AI vision extraction if no barcode match is found.
-
-    Rate limited to 10 requests per minute per user.
-    """
-    if request.method != "POST":
-        return JsonResponse({"error": "POST required"}, status=405)
-
-    try:
-        # Collect uploaded images
-        images = []
-        image_fields = [
-            "image_front_label",
-            "image_back_label",
-            "image_front",
-            "image_back",
-        ]
-
-        for field_name in image_fields:
-            image_file = request.FILES.get(field_name)
-            if image_file:
-                if image_file.size > MAX_IMAGE_SIZE:
-                    return JsonResponse(
-                        {
-                            "error": f"Image {field_name} is too large. "
-                            f"Maximum size is {MAX_IMAGE_SIZE // (1024 * 1024)}MB."
-                        },
-                        status=400,
-                    )
-                image_data = image_file.read()
-                base64_image = base64.b64encode(image_data).decode("utf-8")
-                images.append(base64_image)
-                image_file.seek(0)
-
-        if not images:
-            return JsonResponse(
-                {"error": "No images uploaded. Please select at least one image."},
-                status=400,
-            )
-
-        # Step 1: Try barcode scanning first (non-AI, faster)
-        from wine_cellar.apps.whisky.services.barcode_service import (
-            WhiskyBarcodeScanner,
-        )
-
-        barcode_scanner = WhiskyBarcodeScanner()
-        barcode_result = barcode_scanner.scan_and_match(images, request.user)
-
-        if barcode_result.get("matched"):
-            if barcode_result.get("multiple_matches"):
-                return JsonResponse(
-                    {
-                        "success": True,
-                        "multiple_matches": True,
-                        "match_type": "barcode",
-                        "matched_barcode": barcode_result["barcode"],
-                        "whiskies": barcode_result["whiskies"],
-                        "message": "Multiple whiskies found with this barcode",
-                    }
-                )
-
-            whisky_data = barcode_result["whisky_data"]
-            extracted_fields = list(whisky_data.keys())
-
-            return JsonResponse(
-                {
-                    "success": True,
-                    "data": whisky_data,
-                    "confidence": "high",
-                    "extracted_fields": extracted_fields,
-                    "errors": [],
-                    "match_type": "barcode",
-                    "matched_barcode": barcode_result["barcode"],
-                    "message": (
-                        f"Matched whisky via barcode: " f"{barcode_result['barcode']}"
-                    ),
-                }
-            )
-
-        # Step 2: No barcode match, use AI vision extraction
-        from wine_cellar.apps.whisky.services.vision_extraction import (
-            WhiskyVisionExtractor,
-        )
-
-        extractor = WhiskyVisionExtractor()
-        result = extractor.extract_from_images(images, user=request.user)
-
-        # Resolve FK fields (distillery, region, bottler) to PKs for TomSelect
-        data = result.get("data", {})
+    def resolve_fks(data):
+        """Resolve distillery, region, bottler strings to PKs for TomSelect."""
         if "distillery" in data and isinstance(data["distillery"], str):
             match = Distillery.objects.filter(name__iexact=data["distillery"]).first()
             if match:
@@ -779,28 +565,16 @@ def extract_whisky_vision_ajax(request):
             else:
                 data["bottler_name"] = data.pop("bottler")
 
-        response_data = {
-            "success": True,
-            "data": data,
-            "confidence": result.get("confidence", "low"),
-            "extracted_fields": result.get("extracted_fields", []),
-            "errors": result.get("errors", []),
-            "match_type": "vision",
-        }
-
-        # If barcodes were found but didn't match, include them
-        if barcode_result.get("all_barcodes"):
-            barcodes = barcode_result["all_barcodes"]
-            if barcodes and "barcode" not in response_data["data"]:
-                response_data["data"]["barcode"] = barcodes[0]
-                if "barcode" not in response_data["extracted_fields"]:
-                    response_data["extracted_fields"].append("barcode")
-
-        return JsonResponse(response_data)
-
-    except Exception:
-        logger.exception("Error in whisky AJAX vision extraction")
-        return JsonResponse({"error": "Vision extraction failed"}, status=500)
+    return extract_vision_ajax(
+        request,
+        barcode_scanner_factory=WhiskyBarcodeScanner,
+        vision_extractor_path=(
+            "wine_cellar.apps.whisky.services.vision_extraction"
+            ".WhiskyVisionExtractor"
+        ),
+        beverage_label="whisky",
+        resolve_extracted_fks=resolve_fks,
+    )
 
 
 @ratelimit(key="user", rate="30/m", method="POST", block=True)
@@ -1245,79 +1019,21 @@ class StorageItemHistoryView(RequireHouseholdMixin, ListView):
         )
 
 
-class WhiskyMergeConfirmView(RequireMemberMixin, TemplateView):
+class WhiskyMergeConfirmView(BaseMergeConfirmView):
     template_name = "whisky/whisky_merge_confirm.html"
-
-    def get_whiskies(self):
-        household = get_active_household(self.request.user)
-        qs = Whisky.objects.filter(household=household)
-        primary = get_object_or_404(qs, pk=self.kwargs["primary_pk"])
-        duplicate = get_object_or_404(qs, pk=self.kwargs["pk"])
-        return primary, duplicate
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        primary, duplicate = self.get_whiskies()
-        dup_stock = WhiskyStorageItem.objects.filter(
-            whisky=duplicate, deleted=False
-        ).count()
-        dup_barcodes = duplicate.barcodes.count()
-        context.update(
-            {
-                "primary": primary,
-                "duplicate": duplicate,
-                "dup_stock": dup_stock,
-                "dup_barcodes": dup_barcodes,
-            }
-        )
-        return context
-
-    def post(self, request, *args, **kwargs):
-        primary, duplicate = self.get_whiskies()
-
-        with transaction.atomic():
-            # Move bottles
-            WhiskyStorageItem.objects.filter(whisky=duplicate).update(whisky=primary)
-
-            # Move barcodes (skip duplicates)
-            for barcode in duplicate.barcodes.all():
-                if not primary.barcodes.filter(barcode=barcode.barcode).exists():
-                    barcode.whisky = primary
-                    barcode.save()
-
-            # Move images
-            WhiskyImage.objects.filter(whisky=duplicate).update(whisky=primary)
-
-            # Merge M2M fields
-            primary.attributes.add(*duplicate.attributes.all())
-
-            # Move FK references
-            WhiskyDrinkRecord.objects.filter(whisky=duplicate).update(whisky=primary)
-            WhiskyDrinkingWindowAlert.objects.filter(whisky=duplicate).update(
-                whisky=primary
-            )
-            WhiskyPriceHistory.objects.filter(whisky=duplicate).update(whisky=primary)
-            WhiskyVisionExtractionLog.objects.filter(whisky=duplicate).update(
-                whisky=primary
-            )
-            # Handle ReorderReminder (unique on whisky+user)
-            for reminder in WhiskyReorderReminder.objects.filter(whisky=duplicate):
-                if not WhiskyReorderReminder.objects.filter(
-                    whisky=primary, user=reminder.user
-                ).exists():
-                    reminder.whisky = primary
-                    reminder.save()
-                else:
-                    reminder.delete()
-
-            # Delete the duplicate
-            duplicate.delete()
-
-        messages.success(
-            request,
-            f'Merged "{duplicate.name}" into "{primary.name}".',
-        )
-        return redirect("whisky-detail", pk=primary.pk)
+    beverage_model = Whisky
+    storage_item_model = WhiskyStorageItem
+    beverage_fk_name = "whisky"
+    detail_url_name = "whisky-detail"
+    image_model = WhiskyImage
+    m2m_fields = ("attributes",)
+    related_models = (
+        (WhiskyDrinkRecord, "whisky"),
+        (WhiskyDrinkingWindowAlert, "whisky"),
+        (WhiskyPriceHistory, "whisky"),
+        (WhiskyVisionExtractionLog, "whisky"),
+    )
+    reminder_model = WhiskyReorderReminder
 
 
 class WhiskyImagesView(BaseImagesView):

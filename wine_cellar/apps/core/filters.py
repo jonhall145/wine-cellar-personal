@@ -48,6 +48,65 @@ class BeverageFilterMixin:
         return queryset
 
 
+def get_related_model_choices_cached(
+    user=None,
+    *,
+    cache_key_prefix,
+    related_model,
+    beverage_fk_path,
+    storage_item_reverse,
+    name_field="name",
+    order_by=("name",),
+    format_choice=None,
+    extra_choices=None,
+):
+    """Build cached filter choices from a related model filtered by stock.
+
+    Args:
+        cache_key_prefix: Cache key prefix, e.g. "appellation_choices"
+        related_model: Model to query, e.g. Appellation, Distillery
+        beverage_fk_path: FK path from related model to beverage, e.g. "wine"
+        storage_item_reverse: Storage item reverse name, e.g. "storageitem"
+        name_field: Field to display (default "name")
+        order_by: Ordering tuple (default ("name",))
+        format_choice: Optional callable(item) -> display string
+        extra_choices: Optional list of extra (value, label) tuples after "Any"
+    """
+    household = get_active_household(user) if user and user.is_authenticated else None
+    household_id = household.id if household else "anon"
+    cache_key = f"{cache_key_prefix}_{household_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    choices = [("", _("Any"))]
+    if extra_choices:
+        choices.extend(extra_choices)
+
+    if household:
+        items_in_stock = (
+            related_model.objects.filter(
+                **{
+                    f"{beverage_fk_path}__household": household,
+                    f"{beverage_fk_path}__{storage_item_reverse}__isnull": False,
+                    f"{beverage_fk_path}__{storage_item_reverse}__deleted": False,
+                }
+            )
+            .distinct()
+            .order_by(*order_by)
+        )
+
+        for item in items_in_stock:
+            if format_choice:
+                label = format_choice(item)
+            else:
+                label = getattr(item, name_field)
+            choices.append((item.pk, label))
+
+    cache.set(cache_key, choices, FILTER_CACHE_TIMEOUT)
+    return choices
+
+
 def get_country_choices_cached(
     user=None,
     *,

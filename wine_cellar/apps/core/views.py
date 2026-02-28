@@ -4,12 +4,15 @@ from collections import defaultdict
 from decimal import Decimal
 
 from django.conf import settings
-from django.db.models import Avg, Count, Q, Sum
+from django.contrib import messages
+from django.db import transaction
+from django.db.models import Avg, Count, F, Q, Sum
 from django.db.models.functions import Coalesce, TruncMonth
 from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
+from django.utils.formats import number_format
 from django.views.generic import DeleteView, DetailView, FormView, TemplateView
 
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
@@ -17,6 +20,8 @@ from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 
 logger = logging.getLogger(__name__)
+
+MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
 
 # --- Wishlist views ---
 
@@ -940,3 +945,411 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
     def post_create(self, beverage, created):
         """Hook for post-creation processing. Override per app."""
         pass
+
+
+# --- Shared AJAX vision extraction ---
+
+
+def extract_vision_ajax(
+    request,
+    *,
+    barcode_scanner_factory,
+    vision_extractor_path,
+    beverage_label,
+    resolve_extracted_fks=None,
+):
+    """Shared AJAX endpoint for beverage data extraction from uploaded images.
+
+    Attempts barcode scanning first (non-AI, faster), then falls back
+    to AI vision extraction if no barcode match is found.
+
+    Args:
+        barcode_scanner_factory: Callable returning a scanner with scan_and_match()
+        vision_extractor_path: Dotted import path for vision extractor class
+        beverage_label: "wine" or "whisky" — used for response keys
+        resolve_extracted_fks: Optional callback(data) to resolve FK fields in-place
+    """
+    import base64
+
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    try:
+        # Collect uploaded images
+        images = []
+        image_fields = [
+            "image_front_label",
+            "image_back_label",
+            "image_front",
+            "image_back",
+        ]
+
+        for field_name in image_fields:
+            image_file = request.FILES.get(field_name)
+            if image_file:
+                if image_file.size > MAX_IMAGE_SIZE:
+                    return JsonResponse(
+                        {
+                            "error": f"Image {field_name} is too large. "
+                            f"Maximum size is {MAX_IMAGE_SIZE // (1024 * 1024)}MB."
+                        },
+                        status=400,
+                    )
+                image_data = image_file.read()
+                base64_image = base64.b64encode(image_data).decode("utf-8")
+                images.append(base64_image)
+                image_file.seek(0)
+
+        if not images:
+            return JsonResponse(
+                {"error": "No images uploaded. Please select at least one image."},
+                status=400,
+            )
+
+        # Step 1: Try barcode scanning first (non-AI, faster)
+        barcode_scanner = barcode_scanner_factory()
+        barcode_result = barcode_scanner.scan_and_match(images, request.user)
+
+        if barcode_result.get("matched"):
+            # Beverage-specific keys: "wines"/"wine_data" or "whiskies"/"whisky_data"
+            plural_key = (
+                f"{beverage_label}s" if beverage_label != "whisky" else "whiskies"
+            )
+            data_key = f"{beverage_label}_data"
+
+            if barcode_result.get("multiple_matches"):
+                return JsonResponse(
+                    {
+                        "success": True,
+                        "multiple_matches": True,
+                        "match_type": "barcode",
+                        "matched_barcode": barcode_result["barcode"],
+                        plural_key: barcode_result[plural_key],
+                        "message": f"Multiple {plural_key} found with this barcode",
+                    }
+                )
+
+            beverage_data = barcode_result[data_key]
+            extracted_fields = list(beverage_data.keys())
+
+            return JsonResponse(
+                {
+                    "success": True,
+                    "data": beverage_data,
+                    "confidence": "high",
+                    "extracted_fields": extracted_fields,
+                    "errors": [],
+                    "match_type": "barcode",
+                    "matched_barcode": barcode_result["barcode"],
+                    "message": (
+                        f"Matched {beverage_label} via barcode: "
+                        f"{barcode_result['barcode']}"
+                    ),
+                }
+            )
+
+        # Step 2: No barcode match, use AI vision extraction
+        from importlib import import_module
+
+        module_path, class_name = vision_extractor_path.rsplit(".", 1)
+        module = import_module(module_path)
+        extractor_cls = getattr(module, class_name)
+        extractor = extractor_cls()
+        result = extractor.extract_from_images(images, user=request.user)
+
+        data = result.get("data", {})
+
+        # Resolve FK fields if callback provided (e.g. whisky distillery/region/bottler)
+        if resolve_extracted_fks:
+            resolve_extracted_fks(data)
+
+        response_data = {
+            "success": True,
+            "data": data,
+            "confidence": result.get("confidence", "low"),
+            "extracted_fields": result.get("extracted_fields", []),
+            "errors": result.get("errors", []),
+            "match_type": "vision",
+        }
+
+        # If barcodes were found but didn't match, include them
+        if barcode_result.get("all_barcodes"):
+            barcodes = barcode_result["all_barcodes"]
+            if barcodes and "barcode" not in response_data["data"]:
+                response_data["data"]["barcode"] = barcodes[0]
+                if "barcode" not in response_data["extracted_fields"]:
+                    response_data["extracted_fields"].append("barcode")
+
+        return JsonResponse(response_data)
+
+    except Exception:
+        logger.exception("Error in %s AJAX vision extraction", beverage_label)
+        return JsonResponse({"error": "Vision extraction failed"}, status=500)
+
+
+# --- Label scan view ---
+
+
+class BaseLabelScanView(RequireHouseholdMixin, TemplateView):
+    """Base view for label scanning via camera capture or file upload."""
+
+    add_url_name = None  # e.g. "wine-add" or "whisky-add"
+
+    def _handle_camera_capture(self, request):
+        """Handle multi-image camera capture POST data. Returns redirect or None."""
+        import base64
+
+        image_count = request.POST.get("image_count")
+        if not image_count:
+            return None
+
+        images = []
+        for i in range(int(image_count)):
+            image_data = request.POST.get(f"image_data_{i}")
+            if image_data:
+                if "," in image_data:
+                    image_data = image_data.split(",")[1]
+                images.append(image_data)
+
+        if not images:
+            return None
+
+        request.session["scanned_label"] = {
+            "filename": "camera_captures.jpg",
+            "size": sum(len(base64.b64decode(img)) for img in images),
+            "data": images,
+            "multi_image": True,
+        }
+        return redirect(self.add_url_name)
+
+    def _handle_file_uploads(self, request):
+        """Handle file uploads from request.FILES. Returns redirect or None."""
+        import base64
+
+        images = []
+        for field_name in ["barcode_image", "front_image", "back_image"]:
+            image = request.FILES.get(field_name)
+            if image:
+                image_data = image.read()
+                base64_image = base64.b64encode(image_data).decode("utf-8")
+                images.append(base64_image)
+
+        if not images:
+            return None
+
+        request.session["scanned_label"] = {
+            "filename": "uploaded_images",
+            "size": sum(len(base64.b64decode(img)) for img in images),
+            "data": images,
+            "multi_image": len(images) > 1,
+        }
+        return redirect(self.add_url_name)
+
+    def post(self, request, *args, **kwargs):
+        if "extraction_result" in request.session:
+            del request.session["extraction_result"]
+
+        result = self._handle_camera_capture(request)
+        if result:
+            return result
+
+        result = self._handle_file_uploads(request)
+        if result:
+            return result
+
+        return self.get(request, *args, **kwargs)
+
+
+# --- Home page view ---
+
+
+class BaseHomePageView(RequireHouseholdMixin, TemplateView):
+    """Base dashboard view with shared stats (value, stock, drinks, wishlist)."""
+
+    beverage_model = None  # Set by subclass
+    storage_item_model = None
+    drink_record_model = None
+    wishlist_model = None
+    reminder_model = None
+    beverage_fk_name = None  # "wine" or "whisky"
+    beverage_price_path = None  # "wine__price" or "whisky__price"
+    stock_reverse_path = None  # "wine__storageitem" or "whisky__whiskystorageitem"
+
+    def get_app_specific_context(self, household, user):
+        """Return app-specific context dict. Override per app."""
+        return {}
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        household = get_active_household(user)
+
+        # Total value
+        total_value = self.storage_item_model.objects.aggregate(
+            total=Sum(
+                Coalesce("price", self.beverage_price_path),
+                filter=Q(deleted=False, household=household),
+            )
+        )["total"] or Decimal("0")
+        total_value = total_value.quantize(Decimal("0"))
+        user_settings = get_user_settings(user)
+        currency = settings.CURRENCY_SYMBOLS.get(
+            getattr(user_settings, "currency", "EUR"), "€"
+        )
+        formatted_price = number_format(total_value, use_l10n=True)
+
+        # Bottles in stock
+        bottles_in_stock = self.storage_item_model.objects.filter(
+            household=household, deleted=False
+        ).count()
+
+        # Low stock reminders
+        low_stock_count = (
+            self.reminder_model.objects.filter(household=household, is_active=True)
+            .annotate(
+                current_stock=Count(
+                    self.stock_reverse_path,
+                    filter=Q(**{f"{self.stock_reverse_path}__deleted": False}),
+                )
+            )
+            .filter(current_stock__lte=F("min_stock"))
+            .count()
+        )
+
+        # Recent drinks
+        recent_drinks = (
+            self.drink_record_model.objects.filter(household=household)
+            .select_related(self.beverage_fk_name)
+            .order_by("-date_consumed")[:3]
+        )
+
+        # Wishlist
+        wishlist_items = self.wishlist_model.objects.filter(
+            household=household, purchased=False
+        ).order_by("-priority")[:3]
+
+        # Drink stats
+        drink_stats = self.drink_record_model.objects.filter(
+            household=household
+        ).aggregate(
+            total_consumed=Count("id"),
+            avg_rating=Avg("rating", filter=Q(rating__isnull=False)),
+        )
+        total_consumed = drink_stats["total_consumed"]
+        avg_rating = (
+            round(drink_stats["avg_rating"], 1) if drink_stats["avg_rating"] else None
+        )
+
+        context.update(
+            {
+                "total_value": f"{currency}{formatted_price}",
+                "bottles_in_stock": bottles_in_stock,
+                "total_bottles": bottles_in_stock,
+                "low_stock_count": low_stock_count,
+                "recent_drinks": recent_drinks,
+                "wishlist_items": wishlist_items,
+                "total_consumed": total_consumed,
+                "avg_rating": avg_rating,
+            }
+        )
+
+        # App-specific context
+        context.update(self.get_app_specific_context(household, user))
+
+        return context
+
+
+# --- Merge confirm view ---
+
+
+class BaseMergeConfirmView(RequireMemberMixin, TemplateView):
+    """Base view for merging duplicate beverages.
+
+    Subclasses must set:
+        beverage_model, storage_item_model, beverage_fk_name, detail_url_name,
+        image_model, m2m_fields, related_models, reminder_model
+    """
+
+    beverage_model = None
+    storage_item_model = None
+    beverage_fk_name = None  # "wine" or "whisky"
+    detail_url_name = None  # e.g. "wine-detail" or "whisky-detail"
+    image_model = None
+    m2m_fields = ()  # M2M field names to merge, e.g. ("grapes", "attributes")
+    related_models = ()  # (Model, fk_field) tuples for FK reassignment
+    reminder_model = None
+
+    def get_beverages(self):
+        household = get_active_household(self.request.user)
+        qs = self.beverage_model.objects.filter(household=household)
+        primary = get_object_or_404(qs, pk=self.kwargs["primary_pk"])
+        duplicate = get_object_or_404(qs, pk=self.kwargs["pk"])
+        return primary, duplicate
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        primary, duplicate = self.get_beverages()
+        dup_stock = self.storage_item_model.objects.filter(
+            **{self.beverage_fk_name: duplicate}, deleted=False
+        ).count()
+        dup_barcodes = duplicate.barcodes.count()
+        context.update(
+            {
+                "primary": primary,
+                "duplicate": duplicate,
+                "dup_stock": dup_stock,
+                "dup_barcodes": dup_barcodes,
+            }
+        )
+        return context
+
+    def post(self, request, *args, **kwargs):
+        primary, duplicate = self.get_beverages()
+
+        with transaction.atomic():
+            # Move bottles
+            self.storage_item_model.objects.filter(
+                **{self.beverage_fk_name: duplicate}
+            ).update(**{self.beverage_fk_name: primary})
+
+            # Move barcodes (skip duplicates)
+            for barcode in duplicate.barcodes.all():
+                if not primary.barcodes.filter(barcode=barcode.barcode).exists():
+                    setattr(barcode, self.beverage_fk_name, primary)
+                    barcode.save()
+
+            # Move images
+            self.image_model.objects.filter(
+                **{self.beverage_fk_name: duplicate}
+            ).update(**{self.beverage_fk_name: primary})
+
+            # Merge M2M fields
+            for field_name in self.m2m_fields:
+                getattr(primary, field_name).add(*getattr(duplicate, field_name).all())
+
+            # Move FK references
+            for model, fk_field in self.related_models:
+                model.objects.filter(**{fk_field: duplicate}).update(
+                    **{fk_field: primary}
+                )
+
+            # Handle ReorderReminder (unique on beverage+user)
+            for reminder in self.reminder_model.objects.filter(
+                **{self.beverage_fk_name: duplicate}
+            ):
+                if not self.reminder_model.objects.filter(
+                    **{self.beverage_fk_name: primary}, user=reminder.user
+                ).exists():
+                    setattr(reminder, self.beverage_fk_name, primary)
+                    reminder.save()
+                else:
+                    reminder.delete()
+
+            # Delete the duplicate
+            duplicate.delete()
+
+        messages.success(
+            request,
+            f'Merged "{duplicate.name}" into "{primary.name}".',
+        )
+        return redirect(self.detail_url_name, pk=primary.pk)

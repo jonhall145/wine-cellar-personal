@@ -8,8 +8,8 @@ import pytest
 from django.urls import reverse
 from PIL import Image
 
+from wine_cellar.apps.core.views import MAX_IMAGE_SIZE
 from wine_cellar.apps.wine.models import WineBarcode
-from wine_cellar.apps.wine.views import MAX_IMAGE_SIZE
 
 
 def create_test_image_file():
@@ -115,7 +115,7 @@ class TestExtractWineVisionAjax:
         # Mock both barcode scanner (no match) and vision extractor
         with (
             patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner,
-            patch("wine_cellar.apps.wine.views.WineVisionExtractor") as MockVision,
+            patch("wine_cellar.apps.wine.services.WineVisionExtractor") as MockVision,
         ):
             # Barcode scanner returns no match
             mock_scanner = MagicMock()
@@ -166,7 +166,7 @@ class TestExtractWineVisionAjax:
         # Mock barcode scanner (barcode found but no match) and vision extractor
         with (
             patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner,
-            patch("wine_cellar.apps.wine.views.WineVisionExtractor") as MockVision,
+            patch("wine_cellar.apps.wine.services.WineVisionExtractor") as MockVision,
         ):
             # Barcode scanner finds barcode but no match
             mock_scanner = MagicMock()
@@ -215,7 +215,7 @@ class TestExtractWineVisionAjax:
 
         with (
             patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner,
-            patch("wine_cellar.apps.wine.views.WineVisionExtractor") as MockVision,
+            patch("wine_cellar.apps.wine.services.WineVisionExtractor") as MockVision,
         ):
             mock_scanner = MagicMock()
             mock_scanner.scan_and_match.return_value = {
@@ -260,7 +260,7 @@ class TestExtractWineVisionAjax:
 
         with (
             patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner,
-            patch("wine_cellar.apps.wine.views.WineVisionExtractor") as MockVision,
+            patch("wine_cellar.apps.wine.services.WineVisionExtractor") as MockVision,
         ):
             mock_scanner = MagicMock()
             mock_scanner.scan_and_match.return_value = {
@@ -351,7 +351,7 @@ class TestExtractWineVisionAjax:
 
         with (
             patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner,
-            patch("wine_cellar.apps.wine.views.WineVisionExtractor") as MockVision,
+            patch("wine_cellar.apps.wine.services.WineVisionExtractor") as MockVision,
         ):
             mock_scanner = MagicMock()
             mock_scanner.scan_and_match.return_value = {

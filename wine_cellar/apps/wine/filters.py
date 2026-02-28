@@ -1,15 +1,14 @@
 from datetime import date
 
 import django_filters
-from django.core.cache import cache
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django_filters import ChoiceFilter, OrderingFilter
 
 from wine_cellar.apps.core.filters import (
-    FILTER_CACHE_TIMEOUT,
     BeverageFilterMixin,
     get_country_choices_cached,
+    get_related_model_choices_cached,
 )
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.forms import WineFilterForm
@@ -28,37 +27,17 @@ def get_country_choices_with_favourites(user=None):
 
 
 def get_appellation_choices(user=None):
-    """
-    Build appellation choices for filter dropdown.
-    Only includes appellations that have wines in stock.
-    Results are cached per-household for 5 minutes.
-    """
-    household = get_active_household(user) if user and user.is_authenticated else None
-    household_id = household.id if household else "anon"
-    cache_key = f"appellation_choices_{household_id}"
-    cached = cache.get(cache_key)
-    if cached is not None:
-        return cached
-
-    choices = [("", _("Any")), ("missing", _("Missing"))]
-
-    if household:
-        # Get appellations that have wines in stock for this household
-        appellations_in_stock = (
-            Appellation.objects.filter(
-                wine__household=household,
-                wine__storageitem__isnull=False,
-                wine__storageitem__deleted=False,
-            )
-            .distinct()
-            .order_by("country", "name")
-        )
-
-        for app in appellations_in_stock:
-            choices.append((app.pk, f"{app.name} ({app.country})"))
-
-    cache.set(cache_key, choices, FILTER_CACHE_TIMEOUT)
-    return choices
+    """Build appellation choices for filter dropdown."""
+    return get_related_model_choices_cached(
+        user,
+        cache_key_prefix="appellation_choices",
+        related_model=Appellation,
+        beverage_fk_path="wine",
+        storage_item_reverse="storageitem",
+        order_by=("country", "name"),
+        format_choice=lambda app: f"{app.name} ({app.country})",
+        extra_choices=[("missing", _("Missing"))],
+    )
 
 
 class WineFilter(BeverageFilterMixin, django_filters.FilterSet):

@@ -1,13 +1,12 @@
 import django_filters
-from django.core.cache import cache
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django_filters import ChoiceFilter, OrderingFilter
 
 from wine_cellar.apps.core.filters import (
-    FILTER_CACHE_TIMEOUT,
     BeverageFilterMixin,
     get_country_choices_cached,
+    get_related_model_choices_cached,
 )
 from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household
@@ -24,71 +23,26 @@ from wine_cellar.apps.whisky.models import (
 
 
 def get_distillery_choices(user=None):
-    """
-    Build distillery choices for filter dropdown.
-    Only includes distilleries that have whiskies in stock.
-    Results are cached per-household for 5 minutes.
-    """
-    household = get_active_household(user) if user and user.is_authenticated else None
-    household_id = household.id if household else "anon"
-    cache_key = f"whisky_distillery_choices_{household_id}"
-    cached = cache.get(cache_key)
-    if cached is not None:
-        return cached
-
-    choices = [("", _("Any"))]
-
-    if household:
-        # Get distilleries that have whiskies in stock for this household
-        distilleries_in_stock = (
-            Distillery.objects.filter(
-                whisky__household=household,
-                whisky__whiskystorageitem__isnull=False,
-                whisky__whiskystorageitem__deleted=False,
-            )
-            .distinct()
-            .order_by("name")
-        )
-
-        for dist in distilleries_in_stock:
-            choices.append((dist.pk, dist.name))
-
-    cache.set(cache_key, choices, FILTER_CACHE_TIMEOUT)
-    return choices
+    """Build distillery choices for filter dropdown."""
+    return get_related_model_choices_cached(
+        user,
+        cache_key_prefix="whisky_distillery_choices",
+        related_model=Distillery,
+        beverage_fk_path="whisky",
+        storage_item_reverse="whiskystorageitem",
+    )
 
 
 def get_region_choices(user=None):
-    """
-    Build region choices for filter dropdown.
-    Only includes regions that have whiskies in stock.
-    Results are cached per-household for 5 minutes.
-    """
-    household = get_active_household(user) if user and user.is_authenticated else None
-    household_id = household.id if household else "anon"
-    cache_key = f"whisky_region_choices_{household_id}"
-    cached = cache.get(cache_key)
-    if cached is not None:
-        return cached
-
-    choices = [("", _("Any"))]
-
-    if household:
-        # Get regions that have whiskies in stock for this household
-        regions_in_stock = (
-            WhiskyRegion.objects.filter(
-                whisky__household=household,
-                whisky__whiskystorageitem__isnull=False,
-                whisky__whiskystorageitem__deleted=False,
-            )
-            .distinct()
-            .order_by("order", "name")
-        )
-
-        for region in regions_in_stock:
-            choices.append((region.pk, region.name))
-
-    cache.set(cache_key, choices, FILTER_CACHE_TIMEOUT)
-    return choices
+    """Build region choices for filter dropdown."""
+    return get_related_model_choices_cached(
+        user,
+        cache_key_prefix="whisky_region_choices",
+        related_model=WhiskyRegion,
+        beverage_fk_path="whisky",
+        storage_item_reverse="whiskystorageitem",
+        order_by=("order", "name"),
+    )
 
 
 def get_country_choices(user=None):
