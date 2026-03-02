@@ -5,6 +5,7 @@
 {% endblock header %}
 {% block styles %}
     {{ block.super }}
+    <link rel="stylesheet" href="{% static 'leaflet-vendors.css' %}" />
     <link rel="stylesheet" href="{% static 'maps.css' %}" />
 {% endblock styles %}
 {% block content %}
@@ -13,6 +14,7 @@
     </div>
 {% endblock content %}
 {% block extra_js %}
-    <script src="{% static 'leaflet-vendors.js' %}"></script>
-    <script src="{% static 'maps.js' %}"></script>
+    <script src="{% static 'react-vendors.js' %}" defer></script>
+    <script src="{% static 'leaflet-vendors.js' %}" defer></script>
+    <script src="{% static 'maps.js' %}" defer></script>
 {% endblock extra_js %}
