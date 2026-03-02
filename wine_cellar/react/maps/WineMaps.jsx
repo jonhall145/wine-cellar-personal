@@ -60,12 +60,13 @@ export const MapWithMarkers = ({ wines, withoutPopup, children, ...props }) => {
       </GeoJsonMarker>
     )
   })
+  const validMarkers = markers.filter(Boolean)
   return (
     <Map {...props}>
-      {markers.length > 1 ? (
-        <MarkerClusterLayer>{markers}</MarkerClusterLayer>
+      {validMarkers.length > 1 ? (
+        <MarkerClusterLayer>{validMarkers}</MarkerClusterLayer>
       ) : (
-        markers
+        validMarkers
       )}
       {children}
     </Map>
