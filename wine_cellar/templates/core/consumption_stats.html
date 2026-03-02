@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load static i18n core_tags %}
+{% block title %}
+    {% translate "Consumption Statistics" %}
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">{% translate "Consumption Statistics" %}</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1">
+            <div class="stats-summary mb-12">
+                <h2>{% blocktranslate with item_name=APP_ITEM_NAME_PLURAL %}Total {{ item_name }} Consumed{% endblocktranslate %}: {{ total_consumed }}</h2>
+                {% if avg_rating %}
+                    <p>{% translate "Average Rating" %}: {{ avg_rating }}/3</p>
+                {% endif %}
+            </div>
+
+            <div class="pure-g">
+                <div class="pure-u-1 pure-u-md-1-2">
+                    <h3>{% translate "By Month" %}</h3>
+                    {% if by_month %}
+                        <table class="pure-table pure-table-horizontal pure-table-striped">
+                            <thead>
+                                <tr>
+                                    <th>{% translate "Month" %}</th>
+                                    <th>{% translate "Count" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in by_month %}
+                                    <tr>
+                                        <td>{{ item.month|date:"F Y" }}</td>
+                                        <td>{{ item.count }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>{% translate "No data available." %}</p>
+                    {% endif %}
+                </div>
+
+                <div class="pure-u-1 pure-u-md-1-2">
+                    <h3>{% blocktranslate with item_name=APP_ITEM_NAME %}By {{ item_name }} Type{% endblocktranslate %}</h3>
+                    {% if by_type %}
+                        <table class="pure-table pure-table-horizontal pure-table-striped">
+                            <thead>
+                                <tr>
+                                    <th>{% translate "Type" %}</th>
+                                    <th>{% translate "Count" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for type_name, count in by_type.items %}
+                                    <tr>
+                                        <td>{{ type_name }}</td>
+                                        <td>{{ count }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>{% translate "No data available." %}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="pure-g mt-12">
+                <div class="pure-u-1 pure-u-md-1-2">
+                    <h3>{% blocktranslate with label=group_label %}By {{ label }}{% endblocktranslate %}</h3>
+                    {% if by_group %}
+                        <table class="pure-table pure-table-horizontal pure-table-striped">
+                            <thead>
+                                <tr>
+                                    <th>{{ group_label }}</th>
+                                    <th>{% translate "Count" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for name, count in by_group.items %}
+                                    <tr>
+                                        <td>{{ name }}</td>
+                                        <td>{{ count }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>{% translate "No data available." %}</p>
+                    {% endif %}
+                </div>
+
+                <div class="pure-u-1 pure-u-md-1-2">
+                    <h3>{% translate "Top Rated" %}</h3>
+                    {% if top_rated %}
+                        <table class="pure-table pure-table-horizontal pure-table-striped">
+                            <thead>
+                                <tr>
+                                    <th>{{ APP_ITEM_NAME|title }}</th>
+                                    <th>{% translate "Rating" %}</th>
+                                    <th>{% translate "Date" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in top_rated %}
+                                    {% with bev=record|getbeverage:beverage_fk_name %}
+                                        <tr>
+                                            <td><a href="{% bev_url 'detail' bev.pk %}">{{ bev.name }}</a></td>
+                                            <td>{{ record.rating }}/3</td>
+                                            <td>{{ record.date_consumed }}</td>
+                                        </tr>
+                                    {% endwith %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p>{% blocktranslate with item_name=APP_ITEM_NAME_PLURAL %}No rated {{ item_name }} yet.{% endblocktranslate %}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock content %}

@@ -10,15 +10,8 @@ CROPPER_JS_SCRIPT = (
 )
 
 
-def test_wine_images_template_uses_sri_for_cropperjs():
-    content = (
-        REPO_ROOT / "wine_cellar/apps/wine/templates/wine_images.html"
-    ).read_text(encoding="utf-8")
-    assert CROPPER_JS_SCRIPT in content
-
-
-def test_whisky_images_template_uses_sri_for_cropperjs():
-    content = (
-        REPO_ROOT / "wine_cellar/apps/whisky/templates/whisky/whisky_images.html"
-    ).read_text(encoding="utf-8")
+def test_images_template_uses_sri_for_cropperjs():
+    content = (REPO_ROOT / "wine_cellar/templates/core/beverage_images.html").read_text(
+        encoding="utf-8"
+    )
     assert CROPPER_JS_SCRIPT in content

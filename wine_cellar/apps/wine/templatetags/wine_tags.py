@@ -4,6 +4,8 @@ from django import template
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
+from wine_cellar.apps.core.templatetags.core_tags import _badge_impl, _rating_stars_impl
+
 register = template.Library()
 
 
@@ -37,45 +39,12 @@ def wine_type_css(wine_type: str) -> str:
 @register.simple_tag
 def wine_type_badge(wine_type: str) -> str:
     """Render a colored badge for the wine type."""
-    if not wine_type:
-        return ""
-
-    css_class = WINE_TYPE_CLASSES.get(wine_type, "")
-    label = WINE_TYPE_LABELS.get(wine_type, wine_type)
-
-    if not css_class:
-        return f'<span class="wine-type-badge">{label}</span>'
-
-    return mark_safe(
-        f'<span class="wine-type-badge wine-type-badge--{css_class}">{label}</span>'
+    return _badge_impl(
+        wine_type, WINE_TYPE_CLASSES, WINE_TYPE_LABELS, "wine-type-badge"
     )
 
 
-@register.simple_tag
-def rating_stars(rating, max_rating=3):
-    """Render star rating display (0-3 star scale)."""
-    if rating is None:
-        return mark_safe('<span class="rating-stars rating-stars--empty">—</span>')
-
-    # Ensure rating is within bounds
-    stars = min(int(rating), max_rating)
-
-    html = '<span class="rating-stars">'
-
-    # Full stars
-    for _i in range(stars):
-        html += (
-            '<i class="fa-solid fa-star rating-stars__star '
-            'rating-stars__star--filled"></i>'
-        )
-
-    # Empty stars
-    for _j in range(max_rating - stars):
-        html += '<i class="fa-regular fa-star rating-stars__star"></i>'
-
-    html += "</span>"
-
-    return mark_safe(html)
+rating_stars = register.simple_tag(_rating_stars_impl, name="rating_stars")
 
 
 @register.simple_tag

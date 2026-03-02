@@ -50,6 +50,10 @@ register(StorageItemFactory)
 @pytest.fixture
 def clear_image_folder():
     yield
-    path = settings.BASE_DIR / Path("test_media")
+    path = Path(settings.MEDIA_ROOT)
     if path.exists():
-        shutil.rmtree(path)
+        for child in path.iterdir():
+            if child.is_dir():
+                shutil.rmtree(child, ignore_errors=True)
+            else:
+                child.unlink(missing_ok=True)

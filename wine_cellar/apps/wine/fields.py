@@ -55,7 +55,7 @@ class OpenMultipleChoiceField(ModelMultipleChoiceField):
                     v = pk.removeprefix("tom_new_opt")
                     if self.field_class:
                         try:
-                            v = self.field_class(v)
+                            self.field_class(v)
                         except ValueError:
                             raise ValidationError(
                                 self.error_messages["invalid_new_value"],

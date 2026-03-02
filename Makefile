@@ -241,8 +241,9 @@ lint-html-fix:
 .PHONY: lint-html
 lint-html:
 	EXIT_STATUS=0; \
+	DOCKER_ARGS="$(patsubst $(CURDIR)/%,%,$(ARGUMENTS))"; \
 	$(DEV_COMPOSE) up -d web || EXIT_STATUS=$$?; \
-	$(DEV_COMPOSE) exec -T web djlint $(ARGUMENTS) --profile=django --ignore=H030,H031,T002 || EXIT_STATUS=$$?; \
+	$(DEV_COMPOSE) exec -T web djlint $${DOCKER_ARGS:-$(ARGUMENTS)} --profile=django --ignore=H030,H031,T002 || EXIT_STATUS=$$?; \
 	exit $${EXIT_STATUS}
 
 .PHONY: lint-py

@@ -63,7 +63,7 @@ services:
   db:
     image: postgres:16-alpine
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_prod_data:/var/lib/postgresql/data
     env_file:
       - .env.docker.prod
     healthcheck:
@@ -86,7 +86,7 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  postgres_prod_data:
   media_data:
   whisky_media_data:
   static_data:

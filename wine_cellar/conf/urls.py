@@ -21,17 +21,6 @@ from django.views.decorators.http import require_http_methods
 from django.views.i18n import JavaScriptCatalog
 from django.views.static import serve
 
-from wine_cellar.apps.storage.views import (
-    StorageCreateView,
-    StorageDeleteView,
-    StorageDetailView,
-    StorageListView,
-    StorageUpdateView,
-    move_bottle,
-    storage_grid_data,
-    storage_move_down,
-    storage_move_up,
-)
 from wine_cellar.apps.user.views import UserSettingsView
 
 logger = logging.getLogger("wine_cellar.health_check")
@@ -126,17 +115,7 @@ urlpatterns = [
     path("household/", include("wine_cellar.apps.household.urls")),
     path("user/settings/", UserSettingsView.as_view(), name="user-settings"),
     # Storage (shared across wine/whisky)
-    path("storages/", StorageListView.as_view(), name="storage-list"),
-    path("storage/<int:pk>/", StorageDetailView.as_view(), name="storage-detail"),
-    path("storage/add/", StorageCreateView.as_view(), name="storage-add"),
-    path(
-        "storage/delete/<int:pk>/", StorageDeleteView.as_view(), name="storage-delete"
-    ),
-    path("storage/edit/<int:pk>/", StorageUpdateView.as_view(), name="storage-edit"),
-    path("storage/move-up/<int:pk>/", storage_move_up, name="storage-move-up"),
-    path("storage/move-down/<int:pk>/", storage_move_down, name="storage-move-down"),
-    path("api/storage/grid-data/", storage_grid_data, name="storage-grid-data"),
-    path("api/storage/move-bottle/", move_bottle, name="storage-move-bottle"),
+    path("", include("wine_cellar.apps.storage.urls")),
     # Shared utilities
     path("health/", health_check, name="health_check"),
     path("jsi18n/", JavaScriptCatalog.as_view(), name="javascript-catalog"),

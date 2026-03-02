@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load static i18n core_tags %}
+{% block extra_js %}
+    {{ block.super }}
+    <script src="{% static 'tom_select.js' %}" type="module" defer></script>
+{% endblock extra_js %}
+{% block header %}
+    <h1 class="header__title">{% blocktranslate with item_name=APP_ITEM_NAME %}{{ item_name }} List{% endblocktranslate %}</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1 pure-u-sm-9-24 pure-u-md-7-24">
+            <!-- Filter toggle -->
+            <div class="filter-form__sm-container">
+                <details>
+                    <summary>
+                        <h2 class="filter-form__header">{% translate "Filter & Sorting" %}</h2>
+                    </summary>
+                    <div>
+                        <form action="."
+                              method="get"
+                              class="filter-form pure-form pure-form-stacked">
+                            <fieldset>
+                                <legend class="filter-legend">{% translate 'Narrow Your Selection' %}</legend>
+                                {% for field in filter.form %}
+                                    {% include filter_field_template %}
+                                {% endfor %}
+                            </fieldset>
+                            <div class="filter-button-group">
+                                <a href="?"
+                                   role="button"
+                                   class="pure-button button__secondary"
+                                   aria-label='{% translate "Clear all filters and reset the form" %}'>
+                                    {% translate "Clear" %}
+                                </a>
+                                <button type="submit" class="pure-button button__primary">{% translate "Filter" %}</button>
+                            </div>
+                        </form>
+                    </div>
+                </details>
+            </div>
+            <!-- Filter toggle ends-->
+            <form action="."
+                  method="get"
+                  class="filter-form--lg pure-form pure-form-stacked">
+                <fieldset>
+                    <div class="filter-legend">
+                        <legend>
+                            <h3 class="text-align-left">{% translate "Filter & Sorting" %}</h3>
+                        </legend>
+                    </div>
+                    {% for field in filter.form %}
+                        {% include filter_field_template %}
+                    {% endfor %}
+                </fieldset>
+                <div class="filter-button-group">
+                    <a href="?"
+                       role="button"
+                       class="pure-button button__secondary"
+                       aria-label='{% translate "Clear all filters and reset the form" %}'>{% translate "Clear" %}</a>
+                    <button type="submit" class="pure-button button__primary">{% translate "Filter" %}</button>
+                </div>
+            </form>
+        </div>
+        <div class="pure-u-1 pure-u-sm-15-24 pure-u-md-17-24">
+            {% if beverages %}
+            <div class="per-page-selector">
+                <label for="per-page" class="per-page-selector__label">{% translate "Per page:" %}</label>
+                <select id="per-page" class="per-page-selector__select">
+                    {% for option in per_page_options %}
+                        <option value="{% querystring per_page=option page=1 %}" {% if option == current_per_page %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            <ul class="wine-card__list">
+                {% for beverage in beverages %}
+                    {% include card_template with wine=beverage whisky=beverage %}
+                {% empty %}
+                    <li class="empty-state">
+                        <div class="empty-state__icon"><i class="fa-solid fa-{{ beverage_icon }}"></i></div>
+                        <h3 class="empty-state__title">{% blocktranslate with item_name=APP_ITEM_NAME_PLURAL %}No {{ item_name }} yet{% endblocktranslate %}</h3>
+                        <p class="empty-state__message">{% blocktranslate with item_name=APP_ITEM_NAME %}Start building your collection by adding your first {{ item_name }}.{% endblocktranslate %}</p>
+                        <a href="{% bev_url 'add' %}" class="pure-button button__primary empty-state__action">
+                            <i class="fa-solid fa-plus"></i> {% blocktranslate with item_name=APP_ITEM_NAME %}Add {{ item_name }}{% endblocktranslate %}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+            {% include "includes/pagination.html" %}
+        </div>
+    </div>
+    <script>
+        (function () {
+            var perPageSelect = document.getElementById('per-page');
+            if (perPageSelect) {
+                perPageSelect.addEventListener('change', function (event) {
+                    var target = event.target || perPageSelect;
+                    if (target && typeof target.value === 'string') {
+                        var value = target.value || '';
+                        try {
+                            var parsedUrl = new URL(value, window.location.origin);
+                            var isSameOrigin = parsedUrl.origin === window.location.origin;
+                            var isHttp = parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
+                            if (isSameOrigin && isHttp) {
+                                window.location.href = parsedUrl.href;
+                            }
+                        } catch (e) {
+                            // Ignore invalid URLs
+                        }
+                    }
+                });
+            }
+        })();
+    </script>
+{% endblock content %}

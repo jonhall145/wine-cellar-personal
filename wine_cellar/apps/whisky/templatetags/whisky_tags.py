@@ -3,6 +3,10 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
+from wine_cellar.apps.core.templatetags.core_tags import (
+    _badge_impl,
+    _rating_stars_impl,
+)
 from wine_cellar.apps.whisky.utils import classify_cask_type
 
 register = template.Library()
@@ -62,66 +66,22 @@ def cask_border_css(whisky):
     return suffix
 
 
-@register.simple_tag
-def rating_stars(rating, max_rating=3):
-    """Render star rating display (0-3 star scale)."""
-    if rating is None:
-        return mark_safe('<span class="rating-stars rating-stars--empty">—</span>')
-
-    # Ensure rating is within bounds
-    stars = min(int(rating), max_rating)
-
-    html = '<span class="rating-stars">'
-
-    # Full stars
-    for _i in range(stars):
-        html += (
-            '<i class="fa-solid fa-star rating-stars__star '
-            'rating-stars__star--filled"></i>'
-        )
-
-    # Empty stars
-    for _j in range(max_rating - stars):
-        html += '<i class="fa-regular fa-star rating-stars__star"></i>'
-
-    html += "</span>"
-
-    return mark_safe(html)
+rating_stars = register.simple_tag(_rating_stars_impl, name="rating_stars")
 
 
 @register.simple_tag
 def whisky_type_badge(whisky_type: str) -> str:
     """Render a colored badge for the whisky type."""
-    if not whisky_type:
-        return ""
-
-    css_class = WHISKY_TYPE_CLASSES.get(whisky_type, "")
-    label = WHISKY_TYPE_LABELS.get(whisky_type, whisky_type)
-
-    if not css_class:
-        return mark_safe(f'<span class="whisky-type-badge">{escape(label)}</span>')
-
-    return mark_safe(
-        f'<span class="whisky-type-badge whisky-type-badge--{escape(css_class)}">'
-        f"{escape(label)}</span>"
+    return _badge_impl(
+        whisky_type, WHISKY_TYPE_CLASSES, WHISKY_TYPE_LABELS, "whisky-type-badge"
     )
 
 
 @register.simple_tag
 def peated_badge(peated_level: str) -> str:
     """Render a badge for the peated level."""
-    if not peated_level:
-        return ""
-
-    css_class = PEATED_LEVEL_CLASSES.get(peated_level, "")
-    label = PEATED_LEVEL_LABELS.get(peated_level, peated_level)
-
-    if not css_class:
-        return mark_safe(f'<span class="peated-badge">{escape(label)}</span>')
-
-    return mark_safe(
-        f'<span class="peated-badge peated-badge--{escape(css_class)}">'
-        f"{escape(label)}</span>"
+    return _badge_impl(
+        peated_level, PEATED_LEVEL_CLASSES, PEATED_LEVEL_LABELS, "peated-badge"
     )
 
 
