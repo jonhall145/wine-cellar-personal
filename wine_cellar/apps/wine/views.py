@@ -66,7 +66,7 @@ FINAL_FORM_STEP = 4
 
 
 class HomePageView(BaseHomePageView):
-    template_name = "homepage.html"
+    template_name = "core/homepage.html"
     beverage_model = Wine
     storage_item_model = StorageItem
     drink_record_model = None  # Lazy-loaded in get_app_specific_context
@@ -75,6 +75,10 @@ class HomePageView(BaseHomePageView):
     beverage_fk_name = "wine"
     beverage_price_path = "wine__price"
     stock_reverse_path = "wine__storageitem"
+    homepage_title = "My Wine Cellar"
+    stats_template = "includes/homepage_stats.html"
+    alerts_template = "includes/homepage_alerts.html"
+    beverage_icon = "wine-glass"
 
     def get_context_data(self, **kwargs):
         from wine_cellar.apps.wine.models import DrinkRecord, ReorderReminder, Wishlist
@@ -366,13 +370,18 @@ class WineCreateView(BaseBeverageCreateView):
 
 
 class WineUpdateView(BaseBeverageUpdateView):
-    template_name = "wine_edit.html"
+    template_name = "core/beverage_edit.html"
     form_class = WineEditForm
     success_url = reverse_lazy("wine-list")
     beverage_model = Wine
     beverage_fk_name = "wine"
     image_related_name = "wineimage_set"
     detail_url_name = "wine-detail"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["barcode_delete_url_pattern"] = reverse("wine-barcode-delete", args=[0])
+        return context
 
     @staticmethod
     @transaction.atomic
@@ -483,20 +492,24 @@ class WineDetailView(BaseDetailView):
 
 
 class WineImagesView(BaseImagesView):
-    template_name = "wine_images.html"
+    template_name = "core/beverage_images.html"
     model = Wine
     context_object_name = "wine"
     images_prefetch_name = "wineimage_set"
+    image_api_prefix = "/wine/image"
 
 
 class WineListView(BaseListView, FilterView):
     model = Wine
-    template_name = "wine_list.html"
+    template_name = "core/beverage_list.html"
     context_object_name = "wines"
     filterset_class = WineFilter
     storage_item_reverse = "storageitem"
     select_related_fields = ("size", "appellation")
     prefetch_related_fields = ("grapes", "attributes", "food_pairings", "wineimage_set")
+    card_template = "wine_card.html"
+    filter_field_template = "wine_filter_field.html"
+    beverage_icon = "wine-glass"
 
 
 class WineScanView(BaseScanView):
@@ -504,7 +517,7 @@ class WineScanView(BaseScanView):
 
 
 class WineScannedView(RequireHouseholdMixin, TemplateView):
-    template_name = "scanned_wine.html"
+    template_name = "core/scanned_beverage.html"
 
     def dispatch(self, request, *args, **kwargs):
         code = self.kwargs["code"]
@@ -515,22 +528,30 @@ class WineScannedView(RequireHouseholdMixin, TemplateView):
             if wines.count() == 1:
                 return redirect(reverse("wine-detail", kwargs={"pk": wines.first().pk}))
             # Multiple matches — fall through to render selection template
-            self.extra_context = {"wines": wines, "barcode": code}
+            self.extra_context = {
+                "scanned_beverages": wines,
+                "barcode": code,
+                "card_template": "wine_card.html",
+            }
             return super().dispatch(request, *args, **kwargs)
 
         # No matches — store barcode in session for label scan flow
         request.session["pending_barcode"] = code
+        self.extra_context = {
+            "add_url": reverse("wine-add", kwargs={"code": code}),
+        }
         return super().dispatch(request, *args, **kwargs)
 
 
 class WineDeleteView(BaseBeverageDeleteView):
     model = Wine
-    template_name = "wine_confirm_delete.html"
+    template_name = "core/confirm_delete.html"
     success_url = reverse_lazy("wine-list")
+    context_object_name = "beverage"
 
 
 class WineMergeConfirmView(BaseMergeConfirmView):
-    template_name = "wine_merge_confirm.html"
+    template_name = "core/merge_confirm.html"
     beverage_model = Wine
     storage_item_model = StorageItem
     beverage_fk_name = "wine"
@@ -629,7 +650,7 @@ def health_check(request):
 
 
 class DrinkRecordCreateView(BaseDrinkRecordCreateView):
-    template_name = "drink_record_create.html"
+    template_name = "core/drink_record_create.html"
     beverage_model = Wine
     drink_record_model = DrinkRecord
     beverage_fk_name = "wine"
@@ -642,13 +663,14 @@ class DrinkRecordCreateView(BaseDrinkRecordCreateView):
 
 
 class DrinkRecordListView(BaseDrinkRecordListView):
-    template_name = "drink_record_list.html"
+    template_name = "core/drink_record_list.html"
     drink_record_model = DrinkRecord
     beverage_fk_name = "wine"
+    beverage_icon = "wine-glass"
 
 
 class DrinkRecordEditView(BaseDrinkRecordEditView):
-    template_name = "drink_record_edit.html"
+    template_name = "core/drink_record_edit.html"
     drink_record_model = DrinkRecord
     beverage_fk_name = "wine"
 
@@ -664,12 +686,14 @@ class DrinkRecordDeleteView(BaseDrinkRecordDeleteView):
 
 
 class WishlistListView(BaseWishlistListView):
-    template_name = "wishlist_list.html"
+    template_name = "core/wishlist_list.html"
     wishlist_model = Wishlist
+    wishlist_columns_header = "includes/wishlist_columns_header.html"
+    wishlist_columns_row = "includes/wishlist_columns_row.html"
 
 
 class WishlistCreateView(BaseWishlistCreateView):
-    template_name = "wishlist_create.html"
+    template_name = "core/wishlist_create.html"
     wishlist_model = Wishlist
 
     def get_form_class(self):
@@ -696,21 +720,22 @@ class WishlistPurchasedView(BaseWishlistPurchasedView):
 
 
 class CellarValueView(BaseCellarValueView):
-    template_name = "cellar_value.html"
+    template_name = "core/cellar_value.html"
     storage_item_model = StorageItem
     price_fallback_path = "wine__price"
     beverage_fk_name = "wine"
     select_related_fields = ("wine",)
+    group_label = "Country"
 
     def get_groupings(self, item):
         return {
-            "by_country": item.wine.country_name if item.wine.country else "Unknown",
+            "by_group": item.wine.country_name if item.wine.country else "Unknown",
             "by_type": item.wine.get_type if item.wine.wine_type else "Unknown",
         }
 
 
 class BottleNoteCreateView(BaseBottleNoteCreateView):
-    template_name = "bottle_note_create.html"
+    template_name = "core/bottle_note_create.html"
     storage_item_model = StorageItem
     note_model = BottleNote
     beverage_fk_name = "wine"
@@ -771,10 +796,11 @@ class DrinkingWindowAlertsView(RequireHouseholdMixin, TemplateView):
 
 
 class ConsumptionStatsView(BaseConsumptionStatsView):
-    template_name = "consumption_stats.html"
+    template_name = "core/consumption_stats.html"
     drink_record_model = DrinkRecord
     beverage_fk_name = "wine"
     select_related_fields = ("wine",)
+    group_label = "Country"
 
     def get_type_display(self, beverage):
         return beverage.get_type if beverage.wine_type else "Unknown"
@@ -786,18 +812,19 @@ class ConsumptionStatsView(BaseConsumptionStatsView):
         for record in records:
             country = record.wine.country_name if record.wine.country else "Unknown"
             by_country[country] += 1
-        return {"by_country": dict(by_country)}
+        return {"by_group": dict(by_country)}
 
 
 class ReorderRemindersView(BaseReorderRemindersView):
-    template_name = "reorder_reminders.html"
+    template_name = "core/reorder_reminders.html"
     reminder_model = ReorderReminder
     beverage_fk_name = "wine"
     stock_reverse_path = "wine__storageitem"
+    beverage_icon = "wine-bottle"
 
 
 class ReorderReminderCreateView(BaseReorderReminderCreateView):
-    template_name = "reorder_reminder_create.html"
+    template_name = "core/reorder_reminder_create.html"
     beverage_model = Wine
     reminder_model = ReorderReminder
     beverage_fk_name = "wine"
@@ -810,7 +837,7 @@ class ReorderReminderDeleteView(BaseReorderReminderDeleteView):
 
 
 class LabelScanView(BaseLabelScanView):
-    template_name = "label_scan.html"
+    template_name = "core/label_scan.html"
     add_url_name = "wine-add"
 
     def get_form_class(self):

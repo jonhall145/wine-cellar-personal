@@ -26,7 +26,7 @@ def test_homepage(client, user):
     r = client.get(reverse("homepage"), follow=True)
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="base.html")
-    assertTemplateUsed(response=r, template_name="homepage.html")
+    assertTemplateUsed(response=r, template_name="core/homepage.html")
     assertTemplateNotUsed(response=r, template_name="account/login.html")
 
 
@@ -47,7 +47,7 @@ def test_homepage_stats(client, user, wine_factory, storage_item_factory):
     r = client.get(reverse("homepage"), follow=True)
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="base.html")
-    assertTemplateUsed(response=r, template_name="homepage.html")
+    assertTemplateUsed(response=r, template_name="core/homepage.html")
     assertTemplateNotUsed(response=r, template_name="registration/login.html")
     assert r.context_data["oldest"] == 2020
     assert r.context_data["youngest"] == 2024
@@ -145,7 +145,7 @@ def test_wine_create_post_with_barcode(client, user):
     assert r.status_code == HTTPStatus.OK
     assertRedirects(response=r, expected_url=reverse("wine-list"))
     assertTemplateUsed(response=r, template_name="base.html")
-    assertTemplateUsed(response=r, template_name="wine_list.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_list.html")
     assert Wine.objects.exists()
     wine = Wine.objects.first()
     assert wine.name == data["name"]
@@ -182,7 +182,7 @@ def test_wine_create_post_with_drinking_window(client, user):
     assert r.status_code == HTTPStatus.OK
     assertRedirects(response=r, expected_url=reverse("wine-list"))
     assertTemplateUsed(response=r, template_name="base.html")
-    assertTemplateUsed(response=r, template_name="wine_list.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_list.html")
     assert Wine.objects.exists()
     wine = Wine.objects.first()
     assert wine.name == data["name"]
@@ -250,7 +250,7 @@ def test_wine_create_post_single_page(client, user):
     assert r.status_code == HTTPStatus.OK
     assertRedirects(response=r, expected_url=reverse("wine-list"))
     assertTemplateUsed(response=r, template_name="base.html")
-    assertTemplateUsed(response=r, template_name="wine_list.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_list.html")
     assert Wine.objects.exists()
     wine = Wine.objects.first()
     assert wine.name == data["name"]
@@ -303,7 +303,7 @@ def test_wine_create_post_valid(client, user):
     assert r.status_code == HTTPStatus.OK
     assertRedirects(response=r, expected_url=reverse("wine-list"))
     assertTemplateUsed(response=r, template_name="base.html")
-    assertTemplateUsed(response=r, template_name="wine_list.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_list.html")
     assert Wine.objects.exists()
     wine = Wine.objects.first()
     assert wine.name == data["name"]
@@ -370,7 +370,7 @@ def test_wine_create_post_single_grape_valid(client, user, grape_factory):
     assert r.status_code == HTTPStatus.OK
     assertRedirects(response=r, expected_url=reverse("wine-list"))
     assertTemplateUsed(response=r, template_name="base.html")
-    assertTemplateUsed(response=r, template_name="wine_list.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_list.html")
     assert Wine.objects.exists()
     wine = Wine.objects.first()
     assert wine.name == data["name"]
@@ -403,7 +403,7 @@ def test_wine_create_post_multiple_grape_valid(client, user, grape_factory):
     assert r.status_code == HTTPStatus.OK
     assertRedirects(response=r, expected_url=reverse("wine-list"))
     assertTemplateUsed(response=r, template_name="base.html")
-    assertTemplateUsed(response=r, template_name="wine_list.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_list.html")
     assert Wine.objects.exists()
     wine = Wine.objects.first()
     assert wine.name == data["name"]
@@ -434,7 +434,7 @@ def test_wine_create_post_new_grape_valid(client, user, grape_factory):
     assert r.status_code == HTTPStatus.OK
     assertRedirects(response=r, expected_url=reverse("wine-list"))
     assertTemplateUsed(response=r, template_name="base.html")
-    assertTemplateUsed(response=r, template_name="wine_list.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_list.html")
     assert Wine.objects.exists()
     wine = Wine.objects.first()
     assert wine.name == data["name"]
@@ -509,7 +509,7 @@ def test_wine_create_post_new_grape_multiple_valid(client, user, grape_factory):
     assert r.status_code == HTTPStatus.OK
     assertRedirects(response=r, expected_url=reverse("wine-list"))
     assertTemplateUsed(response=r, template_name="base.html")
-    assertTemplateUsed(response=r, template_name="wine_list.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_list.html")
     assert Wine.objects.exists()
     wine = Wine.objects.first()
     assert wine.name == data["name"]
@@ -559,7 +559,7 @@ def test_wine_create_post_all_valid_fields(
     assert r.status_code == HTTPStatus.OK
     assertRedirects(response=r, expected_url=reverse("wine-list"))
     assertTemplateUsed(response=r, template_name="base.html")
-    assertTemplateUsed(response=r, template_name="wine_list.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_list.html")
     assert Wine.objects.exists()
     wine = Wine.objects.first()
     assert wine.name == data["name"]
@@ -669,7 +669,7 @@ def test_wine_scanned_non_existing(
     r = client.get(reverse("wine-scan", kwargs={"code": "00000"}), follow=True)
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="base.html")
-    assertTemplateUsed(response=r, template_name="scanned_wine.html")
+    assertTemplateUsed(response=r, template_name="core/scanned_beverage.html")
 
 
 @pytest.mark.django_db
@@ -688,7 +688,7 @@ def test_wine_filter_in_stock(client, user, wine_factory, storage_item_factory):
     r = client.get(reverse("wine-list"))
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="base.html")
-    assertTemplateUsed(response=r, template_name="wine_list.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_list.html")
     assert set(r.context_data["wines"]) == {
         wine_in_stock,
         wine_not_in_stock,
@@ -697,7 +697,7 @@ def test_wine_filter_in_stock(client, user, wine_factory, storage_item_factory):
     r = client.get(reverse("wine-list") + "?stock=1")
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="base.html")
-    assertTemplateUsed(response=r, template_name="wine_list.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_list.html")
     assert list(r.context_data["wines"]) == [wine_in_stock]
 
 
@@ -724,7 +724,7 @@ def test_wine_filter_price(client, user, wine_factory, storage_item_factory):
     r = client.get(reverse("wine-list") + "?order=-effective_price", follow=True)
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="base.html")
-    assertTemplateUsed(response=r, template_name="wine_list.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_list.html")
     assert list(r.context_data["wines"]) == [
         wine_in_stock_expensive,
         wine_in_stock_middle,
@@ -736,7 +736,7 @@ def test_wine_filter_price(client, user, wine_factory, storage_item_factory):
     r = client.get(reverse("wine-list") + "?order=effective_price", follow=True)
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="base.html")
-    assertTemplateUsed(response=r, template_name="wine_list.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_list.html")
     assert list(r.context_data["wines"]) == [
         wine_in_stock_cheap,
         wine_not_in_stock,
@@ -875,5 +875,5 @@ def test_cellar_value_by_country_uses_wine_price_fallback(
     client.force_login(user)
     r = client.get(reverse("cellar-value"))
     assert r.status_code == HTTPStatus.OK
-    by_country = r.context_data["by_country"]
-    assert by_country["France"]["value"] == 30
+    by_group = r.context_data["by_group"]
+    assert by_group["France"]["value"] == 30

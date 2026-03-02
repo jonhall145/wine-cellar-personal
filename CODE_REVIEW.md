@@ -16,7 +16,7 @@
 | 4 | Custom QuerySets with `prefetch_related` | ✅ Done | `WineQuerySet`, `WhiskyQuerySet`, `StorageItemQuerySet`, `WhiskyStorageItemQuerySet` with `HouseholdQuerySet` base |
 | 5 | Adopt household mixin pattern across all apps | ✅ Done | `RequireHouseholdMixin` / `RequireMemberMixin` on all wine/whisky CBVs |
 | 6 | Extract service layer from views | ❌ Open | Business logic still in views; only `WineVisionExtractor` is service-extracted |
-| 7 | Extract shared wine/whisky abstract base | 🔄 Phase 5 | Phase 1: foundation (mixins, JS merge, storage URLs). Phase 2: 13 base views + 2 AJAX helpers to core. Phase 3: shared filters, forms, Create/Update views to core (~620 lines saved). Phase 4: extract_vision_ajax, LabelScanView, HomePageView, MergeConfirmView, filter factory to core (~450 lines saved). Phase 5: templates |
+| 7 | Extract shared wine/whisky abstract base | ✅ Done | Phase 1-4: views, filters, forms to core (~1,070 lines saved). Phase 5: unified 15 template pairs into `templates/core/` with `bev_url` tag + `getbeverage` filter (~1,700 lines saved). Total dedup: ~2,770 lines. |
 | 8 | Increase test coverage to 75% | ❌ Open | Still at 59% threshold; `views.py` still excluded from coverage |
 | 9 | TypeScript definitions for Django | ✅ Done | `types/django.d.ts` with proper `declare module` |
 | 10 | React error boundaries | ✅ Done | `ErrorBoundary` component wrapping all 5 React mount points |

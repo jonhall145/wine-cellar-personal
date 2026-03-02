@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load static i18n core_tags %}
+{% block header %}
+    <h1 class="header__title">{{ homepage_title }}</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g j-center">
+        <div class="pure-u-1 pure-u-md-2-3">
+            <ul class="stats__card-container">
+                {% include stats_template %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Dashboard Widgets -->
+    <div class="pure-g j-center mt-12">
+        <div class="pure-u-1 pure-u-md-2-3">
+            <div class="pure-g">
+                <!-- Alerts Widget -->
+                <div class="pure-u-1 pure-u-md-1-2 dashboard-widget">
+                    <div class="widget-card">
+                        <h3 class="widget-card__title">
+                            <i class="fa-solid fa-bell"></i> {% translate "Alerts" %}
+                        </h3>
+                        <div class="widget-card__content">
+                            {% include alerts_template %}
+                        </div>
+                        <a href="{% url 'drinking-alerts' %}" class="widget-card__link">{% translate "View all alerts" %} →</a>
+                    </div>
+                </div>
+
+                <!-- Recent Drinks Widget -->
+                <div class="pure-u-1 pure-u-md-1-2 dashboard-widget">
+                    <div class="widget-card">
+                        <h3 class="widget-card__title">
+                            <i class="fa-solid fa-{{ beverage_icon }}"></i> {% translate "Recent Drinks" %}
+                        </h3>
+                        <div class="widget-card__content">
+                            {% if recent_drinks %}
+                                <ul class="widget-list">
+                                    {% for drink in recent_drinks %}
+                                        {% with bev=drink|getbeverage:beverage_fk_name %}
+                                            <li>
+                                                <a href="{% bev_url 'detail' bev.pk %}">{{ bev.name }}</a>
+                                                <span class="text--gray">{{ drink.date_consumed }}</span>
+                                            </li>
+                                        {% endwith %}
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <div class="widget-empty"><i class="fa-regular fa-{{ beverage_icon }}"></i><span>{% translate "No drinks recorded yet" %}</span></div>
+                            {% endif %}
+                        </div>
+                        <a href="{% url 'drink-history' %}" class="widget-card__link">{% translate "View drink history" %} →</a>
+                    </div>
+                </div>
+
+                <!-- Wishlist Widget -->
+                <div class="pure-u-1 pure-u-md-1-2 dashboard-widget">
+                    <div class="widget-card">
+                        <h3 class="widget-card__title">
+                            <i class="fa-solid fa-heart"></i> {% translate "Wishlist" %}
+                        </h3>
+                        <div class="widget-card__content">
+                            {% if wishlist_items %}
+                                <ul class="widget-list">
+                                    {% for item in wishlist_items %}
+                                        <li>
+                                            {{ item.name }}
+                                            <span class="priority-badge priority-badge--{{ item.priority }}">★{{ item.priority }}</span>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <div class="widget-empty"><i class="fa-regular fa-heart"></i><span>{% translate "Wishlist is empty" %}</span></div>
+                            {% endif %}
+                        </div>
+                        <a href="{% url 'wishlist-list' %}" class="widget-card__link">{% translate "View wishlist" %} →</a>
+                    </div>
+                </div>
+
+                <!-- Quick Stats Widget -->
+                <div class="pure-u-1 pure-u-md-1-2 dashboard-widget">
+                    <div class="widget-card">
+                        <h3 class="widget-card__title">
+                            <i class="fa-solid fa-chart-bar"></i> {% translate "Quick Stats" %}
+                        </h3>
+                        <div class="widget-card__content">
+                            <ul class="widget-list">
+                                <li>
+                                    {% translate "Total consumed" %}:
+                                    <strong>{{ total_consumed }}</strong>
+                                </li>
+                                <li>
+                                    {% translate "Total bottles" %}:
+                                    <strong>{{ total_bottles }}</strong>
+                                </li>
+                                {% if avg_rating %}
+                                    <li>
+                                        {% translate "Avg rating" %}:
+                                        <strong>{{ avg_rating }}/3</strong>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        <a href="{% url 'consumption-stats' %}" class="widget-card__link">{% translate "View statistics" %} →</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock content %}

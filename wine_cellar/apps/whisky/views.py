@@ -77,7 +77,7 @@ logger = logging.getLogger(__name__)
 
 
 class HomePageView(BaseHomePageView):
-    template_name = "whisky/homepage.html"
+    template_name = "core/homepage.html"
     beverage_model = Whisky
     storage_item_model = WhiskyStorageItem
     drink_record_model = WhiskyDrinkRecord
@@ -86,6 +86,10 @@ class HomePageView(BaseHomePageView):
     beverage_fk_name = "whisky"
     beverage_price_path = "whisky__price"
     stock_reverse_path = "whisky__whiskystorageitem"
+    homepage_title = "My Whisky Cabinet"
+    stats_template = "whisky/includes/homepage_stats.html"
+    alerts_template = "whisky/includes/homepage_alerts.html"
+    beverage_icon = "whiskey-glass"
 
     def get_app_specific_context(self, household, user):
         import datetime
@@ -303,7 +307,7 @@ class WhiskyCreateView(BaseBeverageCreateView):
 
 
 class WhiskyUpdateView(BaseBeverageUpdateView):
-    template_name = "whisky/whisky_edit.html"
+    template_name = "core/beverage_edit.html"
     form_class = WhiskyEditForm
     success_url = reverse_lazy("whisky-list")
     beverage_model = Whisky
@@ -433,18 +437,22 @@ class WhiskyDetailView(BaseDetailView):
 
 class WhiskyDeleteView(BaseBeverageDeleteView):
     model = Whisky
-    template_name = "whisky/whisky_confirm_delete.html"
+    template_name = "core/confirm_delete.html"
     success_url = reverse_lazy("whisky-list")
+    context_object_name = "beverage"
 
 
 class WhiskyListView(BaseListView, FilterView):
     model = Whisky
-    template_name = "whisky/whisky_list.html"
+    template_name = "core/beverage_list.html"
     context_object_name = "whiskies"
     filterset_class = WhiskyFilter
     storage_item_reverse = "whiskystorageitem"
     select_related_fields = ("distillery", "region", "bottler")
     prefetch_related_fields = ("images",)
+    card_template = "whisky/whisky_card.html"
+    filter_field_template = "whisky/whisky_filter_field.html"
+    beverage_icon = "whiskey-glass"
 
 
 class WhiskyScanView(BaseScanView):
@@ -452,7 +460,7 @@ class WhiskyScanView(BaseScanView):
 
 
 class WhiskyScannedView(RequireHouseholdMixin, TemplateView):
-    template_name = "whisky/scanned_whisky.html"
+    template_name = "core/scanned_beverage.html"
 
     def dispatch(self, request, *args, **kwargs):
         code = self.kwargs["code"]
@@ -465,11 +473,18 @@ class WhiskyScannedView(RequireHouseholdMixin, TemplateView):
                 whisky = whiskies.first()
                 return redirect(reverse("whisky-detail", kwargs={"pk": whisky.pk}))
             # Multiple matches
-            self.extra_context = {"whiskies": whiskies, "barcode": code}
+            self.extra_context = {
+                "scanned_beverages": whiskies,
+                "barcode": code,
+                "card_template": "whisky/whisky_card.html",
+            }
             return super().dispatch(request, *args, **kwargs)
 
         # No matches
         request.session["pending_barcode"] = code
+        self.extra_context = {
+            "add_url": reverse("whisky-add"),
+        }
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -533,7 +548,7 @@ class WhiskyMapView(RequireHouseholdMixin, TemplateView):
 
 
 class LabelScanView(BaseLabelScanView):
-    template_name = "whisky/label_scan.html"
+    template_name = "core/label_scan.html"
     add_url_name = "whisky-add"
 
 
@@ -636,7 +651,7 @@ def scan_barcode_ajax(request):
 
 
 class DrinkRecordCreateView(BaseDrinkRecordCreateView):
-    template_name = "whisky/drink_record_create.html"
+    template_name = "core/drink_record_create.html"
     form_class = WhiskyDrinkRecordForm
     beverage_model = Whisky
     drink_record_model = WhiskyDrinkRecord
@@ -672,13 +687,14 @@ class DrinkRecordCreateView(BaseDrinkRecordCreateView):
 
 
 class DrinkRecordListView(BaseDrinkRecordListView):
-    template_name = "whisky/drink_record_list.html"
+    template_name = "core/drink_record_list.html"
     drink_record_model = WhiskyDrinkRecord
     beverage_fk_name = "whisky"
+    beverage_icon = "whiskey-glass"
 
 
 class DrinkRecordEditView(BaseDrinkRecordEditView):
-    template_name = "whisky/drink_record_edit.html"
+    template_name = "core/drink_record_edit.html"
     form_class = WhiskyDrinkRecordForm
     drink_record_model = WhiskyDrinkRecord
     beverage_fk_name = "whisky"
@@ -690,12 +706,14 @@ class DrinkRecordDeleteView(BaseDrinkRecordDeleteView):
 
 
 class WishlistListView(BaseWishlistListView):
-    template_name = "whisky/wishlist_list.html"
+    template_name = "core/wishlist_list.html"
     wishlist_model = WhiskyWishlist
+    wishlist_columns_header = "whisky/includes/wishlist_columns_header.html"
+    wishlist_columns_row = "whisky/includes/wishlist_columns_row.html"
 
 
 class WishlistCreateView(BaseWishlistCreateView):
-    template_name = "whisky/wishlist_create.html"
+    template_name = "core/wishlist_create.html"
     form_class = WhiskyWishlistForm
     wishlist_model = WhiskyWishlist
 
@@ -718,15 +736,16 @@ class WishlistPurchasedView(BaseWishlistPurchasedView):
 
 
 class CellarValueView(BaseCellarValueView):
-    template_name = "whisky/cellar_value.html"
+    template_name = "core/cellar_value.html"
     storage_item_model = WhiskyStorageItem
     price_fallback_path = "whisky__price"
     beverage_fk_name = "whisky"
     select_related_fields = ("whisky__distillery",)
+    group_label = "Distillery"
 
     def get_groupings(self, item):
         return {
-            "by_distillery": (
+            "by_group": (
                 item.whisky.distillery.name if item.whisky.distillery else "Unknown"
             ),
             "by_type": item.whisky.get_whisky_type_display(),
@@ -734,10 +753,11 @@ class CellarValueView(BaseCellarValueView):
 
 
 class ConsumptionStatsView(BaseConsumptionStatsView):
-    template_name = "whisky/consumption_stats.html"
+    template_name = "core/consumption_stats.html"
     drink_record_model = WhiskyDrinkRecord
     beverage_fk_name = "whisky"
     select_related_fields = ("whisky__distillery",)
+    group_label = "Distillery"
 
     def get_type_display(self, beverage):
         return beverage.get_whisky_type_display()
@@ -751,11 +771,11 @@ class ConsumptionStatsView(BaseConsumptionStatsView):
                 record.whisky.distillery.name if record.whisky.distillery else "Unknown"
             )
             by_distillery[distillery] += 1
-        return {"by_distillery": dict(by_distillery)}
+        return {"by_group": dict(by_distillery)}
 
 
 class BottleNoteCreateView(BaseBottleNoteCreateView):
-    template_name = "whisky/bottle_note_create.html"
+    template_name = "core/bottle_note_create.html"
     storage_item_model = WhiskyStorageItem
     note_model = WhiskyBottleNote
     beverage_fk_name = "whisky"
@@ -814,14 +834,15 @@ class DrinkingWindowAlertsView(RequireHouseholdMixin, TemplateView):
 
 
 class ReorderRemindersView(BaseReorderRemindersView):
-    template_name = "whisky/reorder_reminders.html"
+    template_name = "core/reorder_reminders.html"
     reminder_model = WhiskyReorderReminder
     beverage_fk_name = "whisky"
     stock_reverse_path = "whisky__whiskystorageitem"
+    beverage_icon = "whiskey-glass"
 
 
 class ReorderReminderCreateView(BaseReorderReminderCreateView):
-    template_name = "whisky/reorder_reminder_create.html"
+    template_name = "core/reorder_reminder_create.html"
     beverage_model = Whisky
     reminder_model = WhiskyReorderReminder
     beverage_fk_name = "whisky"
@@ -1020,7 +1041,7 @@ class StorageItemHistoryView(RequireHouseholdMixin, ListView):
 
 
 class WhiskyMergeConfirmView(BaseMergeConfirmView):
-    template_name = "whisky/whisky_merge_confirm.html"
+    template_name = "core/merge_confirm.html"
     beverage_model = Whisky
     storage_item_model = WhiskyStorageItem
     beverage_fk_name = "whisky"
@@ -1037,10 +1058,11 @@ class WhiskyMergeConfirmView(BaseMergeConfirmView):
 
 
 class WhiskyImagesView(BaseImagesView):
-    template_name = "whisky/whisky_images.html"
+    template_name = "core/beverage_images.html"
     model = Whisky
     context_object_name = "whisky"
     images_prefetch_name = "images"
+    image_api_prefix = "/whisky/image"
 
 
 @login_required

@@ -24,7 +24,7 @@ def test_homepage_authenticated(client, user):
     client.force_login(user)
     r = client.get(reverse("homepage"), follow=True)
     assert r.status_code == HTTPStatus.OK
-    assertTemplateUsed(response=r, template_name="whisky/homepage.html")
+    assertTemplateUsed(response=r, template_name="core/homepage.html")
 
 
 @pytest.mark.django_db
@@ -44,7 +44,7 @@ def test_whisky_list_loads(client, user):
     client.force_login(user)
     r = client.get(reverse("whisky-list"))
     assert r.status_code == HTTPStatus.OK
-    assertTemplateUsed(response=r, template_name="whisky/whisky_list.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_list.html")
 
 
 @pytest.mark.django_db
@@ -288,7 +288,7 @@ def test_whisky_delete(client, user, whisky_factory):
     # GET shows confirmation page
     r = client.get(reverse("whisky-delete", kwargs={"pk": whisky_pk}))
     assert r.status_code == HTTPStatus.OK
-    assertTemplateUsed(response=r, template_name="whisky/whisky_confirm_delete.html")
+    assertTemplateUsed(response=r, template_name="core/confirm_delete.html")
 
     # POST deletes the whisky
     r = client.post(reverse("whisky-delete", kwargs={"pk": whisky_pk}), follow=True)

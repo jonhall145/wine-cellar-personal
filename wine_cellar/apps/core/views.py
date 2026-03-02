@@ -28,6 +28,8 @@ MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
 
 class BaseWishlistListView(RequireHouseholdMixin, TemplateView):
     wishlist_model = None  # Set by subclass
+    wishlist_columns_header = None  # Template path for column headers
+    wishlist_columns_row = None  # Template path for column cells
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -35,6 +37,8 @@ class BaseWishlistListView(RequireHouseholdMixin, TemplateView):
         context["wishlist_items"] = self.wishlist_model.objects.filter(
             household=household, purchased=False
         )
+        context["wishlist_columns_header"] = self.wishlist_columns_header
+        context["wishlist_columns_row"] = self.wishlist_columns_row
         return context
 
 
@@ -67,6 +71,7 @@ class BaseWishlistPurchasedView(RequireHouseholdMixin, TemplateView):
 class BaseDrinkRecordListView(RequireHouseholdMixin, TemplateView):
     drink_record_model = None  # Set by subclass
     beverage_fk_name = None  # "wine" or "whisky"
+    beverage_icon = None  # e.g. "wine-glass" or "whiskey-glass"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -74,6 +79,8 @@ class BaseDrinkRecordListView(RequireHouseholdMixin, TemplateView):
         context["drink_records"] = self.drink_record_model.objects.filter(
             household=household
         ).select_related(self.beverage_fk_name)
+        context["beverage_fk_name"] = self.beverage_fk_name
+        context["beverage_icon"] = self.beverage_icon or "wine-glass"
         return context
 
 
@@ -101,7 +108,9 @@ class BaseDrinkRecordEditView(RequireMemberMixin, FormView):
         context = super().get_context_data(**kwargs)
         record = self.get_object()
         context["record"] = record
-        context[self.beverage_fk_name] = getattr(record, self.beverage_fk_name)
+        beverage = getattr(record, self.beverage_fk_name)
+        context[self.beverage_fk_name] = beverage
+        context["beverage"] = beverage
         return context
 
     def form_valid(self, form):
@@ -141,9 +150,11 @@ class BaseBottleNoteCreateView(RequireMemberMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         household = get_active_household(self.request.user)
-        context["storage_item"] = get_object_or_404(
+        storage_item = get_object_or_404(
             self.storage_item_model, pk=self.kwargs["pk"], household=household
         )
+        context["storage_item"] = storage_item
+        context["beverage"] = getattr(storage_item, self.beverage_fk_name)
         return context
 
     def form_valid(self, form):
@@ -172,6 +183,7 @@ class BaseReorderRemindersView(RequireHouseholdMixin, TemplateView):
     reminder_model = None  # Set by subclass
     beverage_fk_name = None  # "wine" or "whisky"
     stock_reverse_path = None  # e.g. "wine__storageitem" or "whisky__whiskystorageitem"
+    beverage_icon = None  # e.g. "wine-bottle" or "whiskey-glass"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -205,6 +217,8 @@ class BaseReorderRemindersView(RequireHouseholdMixin, TemplateView):
             {
                 "reminders": reminders,
                 "needs_reorder": needs_reorder,
+                "beverage_fk_name": self.beverage_fk_name,
+                "beverage_icon": self.beverage_icon or "wine-bottle",
             }
         )
         return context
@@ -224,9 +238,11 @@ class BaseReorderReminderCreateView(RequireMemberMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         household = get_active_household(self.request.user)
-        context[self.beverage_fk_name] = get_object_or_404(
+        beverage = get_object_or_404(
             self.beverage_model, pk=self.kwargs["pk"], household=household
         )
+        context[self.beverage_fk_name] = beverage
+        context["beverage"] = beverage
         return context
 
     def form_valid(self, form):
@@ -271,9 +287,11 @@ class BaseDrinkRecordCreateView(RequireMemberMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         household = get_active_household(self.request.user)
-        context[self.beverage_fk_name] = get_object_or_404(
+        beverage = get_object_or_404(
             self.beverage_model, pk=self.kwargs["pk"], household=household
         )
+        context[self.beverage_fk_name] = beverage
+        context["beverage"] = beverage
         return context
 
     def form_valid(self, form):
@@ -325,12 +343,13 @@ class BaseCellarValueView(RequireHouseholdMixin, TemplateView):
     price_fallback_path = None  # e.g. "wine__price" or "whisky__price"
     beverage_fk_name = None  # "wine" or "whisky"
     select_related_fields = ()  # e.g. ("wine",) or ("whisky__distillery",)
+    group_label = None  # e.g. "Country" or "Distillery"
 
     def get_groupings(self, item):
         """Return {context_key: group_name} dict for this item.
 
         Subclasses must implement. Example return:
-            {"by_country": "France", "by_type": "Red"}
+            {"by_group": "France", "by_type": "Red"}
         """
         raise NotImplementedError
 
@@ -378,6 +397,7 @@ class BaseCellarValueView(RequireHouseholdMixin, TemplateView):
                 "total_value": int(total_value),
                 "total_bottles": total_bottles,
                 "currency": currency,
+                "group_label": self.group_label,
                 **groups,
             }
         )
@@ -401,12 +421,22 @@ class BaseImagesView(RequireHouseholdMixin, DetailView):
     """View for managing beverage images (set primary, crop)."""
 
     images_prefetch_name = None  # e.g. "wineimage_set" or "images"
+    image_api_prefix = None  # e.g. "/wine/image" or "/whisky/image"
 
     def get_queryset(self):
         household = get_active_household(self.request.user)
         return self.model.objects.filter(household=household).prefetch_related(
             self.images_prefetch_name
         )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        beverage = self.object
+        context["beverage"] = beverage
+        context["images"] = getattr(beverage, self.images_prefetch_name).all()
+        if self.image_api_prefix:
+            context["image_api_prefix"] = self.image_api_prefix
+        return context
 
 
 # --- List view with pagination ---
@@ -425,6 +455,9 @@ class BaseListView(RequireHouseholdMixin):
     storage_item_reverse = None  # e.g. "storageitem" or "whiskystorageitem"
     select_related_fields = ()  # e.g. ("size", "appellation")
     prefetch_related_fields = ()  # e.g. ("grapes", "wineimage_set")
+    card_template = None  # e.g. "wine_card.html"
+    filter_field_template = None  # e.g. "wine_filter_field.html"
+    beverage_icon = None  # e.g. "wine-glass"
 
     def get_paginate_by(self, queryset):
         """Allow user to select number of items per page via URL parameter."""
@@ -442,6 +475,10 @@ class BaseListView(RequireHouseholdMixin):
         context = super().get_context_data(**kwargs)
         context["per_page_options"] = self.per_page_options
         context["current_per_page"] = self.get_paginate_by(self.object_list)
+        context["beverages"] = context.get("object_list", [])
+        context["card_template"] = self.card_template
+        context["filter_field_template"] = self.filter_field_template
+        context["beverage_icon"] = self.beverage_icon
         return context
 
     def get_queryset(self):
@@ -494,6 +531,7 @@ class BaseDetailView(RequireHouseholdMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         beverage = self.object
+        context["beverage"] = beverage
         household = get_active_household(self.request.user)
         duplicates = (
             self.model.objects.filter(household=household, name=beverage.name)
@@ -529,12 +567,13 @@ class BaseConsumptionStatsView(RequireHouseholdMixin, TemplateView):
     drink_record_model = None  # Set by subclass
     beverage_fk_name = None  # "wine" or "whisky"
     select_related_fields = ()  # e.g. ("wine",) or ("whisky__distillery",)
+    group_label = None  # e.g. "Country" or "Distillery"
 
     def get_secondary_stats(self, records):
         """Return app-specific groupings as {context_key: dict}.
 
         Subclasses must implement. Example return:
-            {"by_country": {"France": 5, "Italy": 3}}
+            {"by_group": {"France": 5, "Italy": 3}}
         """
         raise NotImplementedError
 
@@ -578,6 +617,8 @@ class BaseConsumptionStatsView(RequireHouseholdMixin, TemplateView):
                 "by_type": dict(by_type),
                 "avg_rating": avg_rating,
                 "top_rated": top_rated,
+                "group_label": self.group_label,
+                "beverage_fk_name": self.beverage_fk_name,
                 **self.get_secondary_stats(records),
             }
         )
@@ -739,9 +780,10 @@ class BaseBeverageUpdateView(RequireMemberMixin, FormView):
             household=household,
         )
         context[self.beverage_fk_name] = beverage
-        context[f"{self.beverage_fk_name}_images"] = getattr(
-            beverage, self.image_related_name
-        ).all()
+        context["beverage"] = beverage
+        context["beverage_images"] = getattr(beverage, self.image_related_name).all()
+        # Keep legacy key for backward compat with app-specific templates
+        context[f"{self.beverage_fk_name}_images"] = context["beverage_images"]
         return context
 
     def form_valid(self, form):
@@ -1174,6 +1216,10 @@ class BaseHomePageView(RequireHouseholdMixin, TemplateView):
     beverage_fk_name = None  # "wine" or "whisky"
     beverage_price_path = None  # "wine__price" or "whisky__price"
     stock_reverse_path = None  # "wine__storageitem" or "whisky__whiskystorageitem"
+    homepage_title = None  # e.g. "My Wine Cellar"
+    stats_template = None  # e.g. "includes/homepage_stats.html"
+    alerts_template = None  # e.g. "includes/homepage_alerts.html"
+    beverage_icon = None  # e.g. "wine-glass"
 
     def get_app_specific_context(self, household, user):
         """Return app-specific context dict. Override per app."""
@@ -1250,6 +1296,11 @@ class BaseHomePageView(RequireHouseholdMixin, TemplateView):
                 "wishlist_items": wishlist_items,
                 "total_consumed": total_consumed,
                 "avg_rating": avg_rating,
+                "homepage_title": self.homepage_title,
+                "stats_template": self.stats_template,
+                "alerts_template": self.alerts_template,
+                "beverage_icon": self.beverage_icon,
+                "beverage_fk_name": self.beverage_fk_name,
             }
         )
 
