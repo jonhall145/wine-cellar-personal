@@ -198,7 +198,7 @@ def test_wishlist_purchased_marks_item(client, user):
     client.force_login(user)
     household = user.user_settings.active_household
     item = Wishlist.objects.create(name="Barolo", user=user, household=household)
-    r = client.get(reverse("wishlist-purchased", args=[item.pk]))
+    r = client.post(reverse("wishlist-purchased", args=[item.pk]))
     assert r.status_code == HTTPStatus.FOUND
     item.refresh_from_db()
     assert item.purchased is True

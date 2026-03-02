@@ -50,12 +50,12 @@ class BaseWishlistDeleteView(RequireMemberMixin, DeleteView):
         return self.model.objects.filter(household=household)
 
 
-class BaseWishlistPurchasedView(RequireHouseholdMixin, TemplateView):
+class BaseWishlistPurchasedView(RequireMemberMixin, TemplateView):
     """Mark a wishlist item as purchased."""
 
     wishlist_model = None  # Set by subclass
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         household = get_active_household(request.user)
         item = get_object_or_404(
             self.wishlist_model, pk=kwargs["pk"], household=household

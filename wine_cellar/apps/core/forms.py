@@ -4,7 +4,7 @@ from django import forms
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
-from wine_cellar.apps.storage.models import Storage, get_app_type
+from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 
 
@@ -121,7 +121,7 @@ class BaseDrinkRecordForm(forms.Form):
     beverage_label = "beverage"
 
     storage_item = forms.ModelChoiceField(
-        queryset=None,  # Set in __init__
+        queryset=StorageItem.objects.none(),
         required=False,
         label=_("Bottle"),
         help_text=_("Select which bottle you consumed (optional)."),
@@ -159,7 +159,6 @@ class BaseDrinkRecordForm(forms.Form):
         self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
 
-        # Must set queryset — was None at class level
         self.fields["storage_item"].queryset = self.storage_item_model.objects.none()
 
         if beverage and self.user:

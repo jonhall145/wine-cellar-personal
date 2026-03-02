@@ -23,7 +23,7 @@
         {% if scanned_beverages %}
             <ul class="wine-card__list">
                 {% for item in scanned_beverages %}
-                    {% include card_template with beverage=item %}
+                    {% include card_template with wine=item whisky=item %}
                 {% endfor %}
             </ul>
         {% else %}
