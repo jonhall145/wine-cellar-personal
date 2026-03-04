@@ -6,8 +6,6 @@ Extends docker_settings with production security headers and Sentry.
 
 import os
 
-import sentry_sdk
-
 from wine_cellar.conf.docker_settings import (  # noqa: F401
     ACCOUNT_ADAPTER,
     ACCOUNT_RATE_LIMITS,
@@ -65,6 +63,8 @@ from wine_cellar.conf.docker_settings import (  # noqa: F401
 # Sentry error tracking (only if DSN is configured)
 _sentry_dsn = os.environ.get("SENTRY_DSN")
 if _sentry_dsn:
+    import sentry_sdk
+
     sentry_sdk.init(
         dsn=_sentry_dsn,
         traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.1")),

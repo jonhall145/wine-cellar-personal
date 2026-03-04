@@ -10,7 +10,7 @@ Be respectful and inclusive. We welcome contributors of all backgrounds and expe
 
 1. **Clone the repository**
    ```bash
-   git clone git@github.com:jonhall145/wine-cellar-personal.git
+   git clone <your-fork-url>
    cd wine-cellar-personal
    ```
 
@@ -31,7 +31,7 @@ Be respectful and inclusive. We welcome contributors of all backgrounds and expe
    make server       # dev server only (port 8003)
    ```
 
-A test user is available: `testuser` / `testpass123`
+A test user is created by `make fixtures` for **local development only**: `testuser` / `testpass123`
 
 ### HTTPS for Camera Access
 

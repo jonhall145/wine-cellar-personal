@@ -415,7 +415,7 @@ class BaseBeverageDeleteView(RequireMemberMixin, DeleteView):
         return qs.filter(household=household)
 
     def form_valid(self, form):
-        log_delete(self.request.user, self.get_object())
+        log_delete(self.request.user, self.object)
         return super().form_valid(form)
 
 

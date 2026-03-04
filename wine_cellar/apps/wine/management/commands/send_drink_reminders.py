@@ -49,13 +49,14 @@ def drink_by_reminder() -> int:
             storageitem__isnull=False,
             storageitem__deleted=False,
         ).distinct()
-        if wines.count() > 0:
+        wine_count = wines.count()
+        if wine_count > 0:
             send_drink_by_reminder(user, wines)
             sent += 1
             logger.info(
                 "Sent drink-by reminder to %s (%d wines)",
                 user.email,
-                wines.count(),
+                wine_count,
             )
     return sent
 
