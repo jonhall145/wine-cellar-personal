@@ -38,7 +38,6 @@ omit = [
     "wine_cellar/conf/*",
     "**/tests/*",
     "**/migrations/*",
-    "**/views.py",
 ]
 
 [tool.coverage.report]

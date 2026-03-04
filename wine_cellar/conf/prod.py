@@ -5,9 +5,59 @@ This module imports all base settings and overrides production-specific values.
 """
 
 # Import all base settings explicitly
-from wine_cellar.conf.settings import *  # noqa: F403, F401
-
-# Production-specific static file storage uses base settings (gzip-only manifest)
+from wine_cellar.conf.settings import (  # noqa: F401
+    ACCOUNT_ADAPTER,
+    ACCOUNT_RATE_LIMITS,
+    ALLOWED_HOSTS,
+    ANTHROPIC_API_KEY,
+    AUTH_PASSWORD_VALIDATORS,
+    AUTHENTICATION_BACKENDS,
+    BASE_DIR,
+    CACHES,
+    CELLAR_APP_TYPE,
+    CSRF_TRUSTED_ORIGINS,
+    CURRENCIES,
+    CURRENCY_SYMBOLS,
+    DATABASES,
+    DEBUG,
+    DEFAULT_AUTO_FIELD,
+    DEFAULT_WINE_IMAGE,
+    EMAIL_BACKEND,
+    INSTALLED_APPS,
+    LANGUAGE_CODE,
+    LANGUAGES,
+    LOCALE_PATHS,
+    LOG_LEVEL,
+    LOGGING,
+    LOGIN_REDIRECT_URL,
+    LOGOUT_REDIRECT_URL,
+    MAP_BASEURL,
+    MEDIA_ROOT,
+    MEDIA_URL,
+    MIDDLEWARE,
+    ROOT_DIR,
+    ROOT_URLCONF,
+    SECRET_KEY,
+    SECURE_BROWSER_XSS_FILTER,
+    SECURE_CONTENT_TYPE_NOSNIFF,
+    SECURE_PROXY_SSL_HEADER,
+    SECURE_REFERRER_POLICY,
+    SITE_URL,
+    STATIC_ROOT,
+    STATIC_URL,
+    STATIC_VERSION,
+    STATICFILES_DIRS,
+    STORAGES,
+    TEMPLATES,
+    TIME_ZONE,
+    USE_I18N,
+    USE_TZ,
+    USE_X_FORWARDED_HOST,
+    USE_X_FORWARDED_PORT,
+    VERSION,
+    WSGI_APPLICATION,
+    X_FRAME_OPTIONS,
+)
 
 # Production security settings - enforce HTTPS
 SECURE_SSL_REDIRECT = True

@@ -7,6 +7,7 @@ from django.templatetags.static import static
 from django.utils.formats import number_format
 
 from wine_cellar.apps.user.models import UserSettings
+from wine_cellar.apps.wine.models import Wine
 
 
 @pytest.mark.django_db
@@ -98,3 +99,30 @@ def test_get_average_respects_user_currency(user, wine_factory, storage_item_fac
     currency = settings.CURRENCY_SYMBOLS.get(us.currency)
     expected = f"{currency}{number_format(avg, use_l10n=True)}"
     assert wine.get_average_price_with_currency == expected
+
+
+@pytest.mark.django_db
+def test_image_properties_use_prefetch_cache(
+    user, wine_factory, wine_image_factory, clear_image_folder
+):
+    """Image properties should not cause extra queries when prefetch is used."""
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    wine = wine_factory(user=user)
+    wine_image_factory(user=user, wine=wine)
+    wine_image_factory(user=user, wine=wine, image_type="LB")
+
+    # Fetch with prefetch_related — image properties should not add queries
+    qs = Wine.objects.prefetch_related("wineimage_set").filter(pk=wine.pk)
+    prefetched_wine = qs.first()
+
+    # Accessing all three image properties should use the prefetch cache (0 extra)
+    with CaptureQueriesContext(connection) as ctx:
+        _ = prefetched_wine.image
+        _ = prefetched_wine.image_thumbnail
+        _ = prefetched_wine.image_thumbnails
+    assert len(ctx.captured_queries) == 0, (
+        f"Expected 0 queries but got {len(ctx.captured_queries)}: "
+        f"{[q['sql'] for q in ctx.captured_queries]}"
+    )

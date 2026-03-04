@@ -71,6 +71,16 @@
                         <option value="{% querystring per_page=option page=1 %}" {% if option == current_per_page %}selected{% endif %}>{{ option }}</option>
                     {% endfor %}
                 </select>
+                {% if export_csv_url %}
+                <span class="export-links">
+                    <a href="{{ export_csv_url }}" class="pure-button button__secondary button--sm" title="{% translate 'Export CSV' %}">
+                        <i class="fa-solid fa-file-csv"></i> CSV
+                    </a>
+                    <a href="{{ export_json_url }}" class="pure-button button__secondary button--sm" title="{% translate 'Export JSON' %}">
+                        <i class="fa-solid fa-file-code"></i> JSON
+                    </a>
+                </span>
+                {% endif %}
             </div>
             {% endif %}
             <ul class="wine-card__list">

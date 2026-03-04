@@ -415,34 +415,38 @@ class Wine(UserContentModel):
             "storage", "row", "column"
         )
 
-    @property
-    def image(self):
-        i = self.wineimage_set.first()
-        if not i:
-            return static(settings.DEFAULT_WINE_IMAGE)
-        return _versioned_media_url(i.image) or i.image.url
+    def _cached_images(self) -> list:
+        """Return wineimage_set from prefetch cache if available, else query."""
+        return list(self.wineimage_set.all())
 
     @property
-    def image_thumbnail(self):
+    def image(self) -> str:
+        images = self._cached_images()
+        if not images:
+            return static(settings.DEFAULT_WINE_IMAGE)
+        return _versioned_media_url(images[0].image) or images[0].image.url
+
+    @property
+    def image_thumbnail(self) -> str:
+        images = self._cached_images()
         # First check for explicitly selected primary image
-        primary = self.wineimage_set.filter(is_primary=True).first()
+        primary = next((i for i in images if i.is_primary), None)
         if primary:
             if primary.thumbnail:
                 return _versioned_media_url(primary.thumbnail) or primary.thumbnail.url
             return _versioned_media_url(primary.image) or primary.image.url
         # Fall back to front label
-        front = self.wineimage_set.filter(image_type=ImageType.LABEL_FRONT).first()
+        front = next((i for i in images if i.image_type == ImageType.LABEL_FRONT), None)
         if not front:
             return static(settings.DEFAULT_WINE_IMAGE)
         if front.thumbnail:
             return _versioned_media_url(front.thumbnail) or front.thumbnail.url
-        # return normal image as fallback
         return _versioned_media_url(front.image) or front.image.url
 
     @property
-    def image_thumbnails(self):
+    def image_thumbnails(self) -> list[str]:
         """Return all images: thumbnails and full images for front and back labels."""
-        images = {img.image_type: img for img in self.wineimage_set.all()}
+        images = {img.image_type: img for img in self._cached_images()}
         order = [
             ImageType.LABEL_FRONT,
             ImageType.LABEL_BACK,

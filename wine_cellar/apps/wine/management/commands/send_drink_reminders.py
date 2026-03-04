@@ -11,13 +11,21 @@ from wine_cellar.apps.wine.models import Wine
 logger = logging.getLogger(__name__)
 
 
-def drink_by_reminder():
-    """Send reminders for wines in their final drinking year."""
+def drink_by_reminder() -> int:
+    """Send reminders for wines approaching their drink-by year.
+
+    Respects per-user preferences:
+    - reminder_enabled: whether to send reminders at all
+    - reminder_years_before: how many years before drink_to to start reminding
+    """
+    from wine_cellar.apps.user.models import UserSettings
+
     User = get_user_model()
     users = (
         User.objects.exclude(email__isnull=True)
         .exclude(email__exact="")
         .exclude(user_settings__notifications=False)
+        .exclude(user_settings__reminder_enabled=False)
     )
     current_year = timezone.now().year
     sent = 0
@@ -25,9 +33,19 @@ def drink_by_reminder():
         household = get_active_household(user)
         if not household:
             continue
+
+        # Get per-user reminder preference (default: 0 years before)
+        try:
+            years_before = user.user_settings.reminder_years_before
+        except UserSettings.DoesNotExist:
+            years_before = 0
+
+        # Find wines with drink_to in the reminder window
+        max_drink_to = current_year + years_before
         wines = Wine.objects.filter(
             household=household,
-            drink_to=current_year,
+            drink_to__lte=max_drink_to,
+            drink_to__gte=current_year,
             storageitem__isnull=False,
             storageitem__deleted=False,
         ).distinct()

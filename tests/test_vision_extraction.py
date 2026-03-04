@@ -74,7 +74,7 @@ class TestExtractWineVisionAjax:
         image_file = create_test_image_file()
 
         # Mock the barcode scanner to return our test barcode
-        with patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner:
+        with patch("wine_cellar.apps.wine.views.scan.BarcodeScanner") as MockScanner:
             mock_scanner = MagicMock()
             mock_scanner.scan_and_match.return_value = {
                 "matched": True,
@@ -114,7 +114,7 @@ class TestExtractWineVisionAjax:
 
         # Mock both barcode scanner (no match) and vision extractor
         with (
-            patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner,
+            patch("wine_cellar.apps.wine.views.scan.BarcodeScanner") as MockScanner,
             patch("wine_cellar.apps.wine.services.WineVisionExtractor") as MockVision,
         ):
             # Barcode scanner returns no match
@@ -165,7 +165,7 @@ class TestExtractWineVisionAjax:
 
         # Mock barcode scanner (barcode found but no match) and vision extractor
         with (
-            patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner,
+            patch("wine_cellar.apps.wine.views.scan.BarcodeScanner") as MockScanner,
             patch("wine_cellar.apps.wine.services.WineVisionExtractor") as MockVision,
         ):
             # Barcode scanner finds barcode but no match
@@ -214,7 +214,7 @@ class TestExtractWineVisionAjax:
         image_back = create_test_image_file()
 
         with (
-            patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner,
+            patch("wine_cellar.apps.wine.views.scan.BarcodeScanner") as MockScanner,
             patch("wine_cellar.apps.wine.services.WineVisionExtractor") as MockVision,
         ):
             mock_scanner = MagicMock()
@@ -259,7 +259,7 @@ class TestExtractWineVisionAjax:
         image_file = create_test_image_file()
 
         with (
-            patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner,
+            patch("wine_cellar.apps.wine.views.scan.BarcodeScanner") as MockScanner,
             patch("wine_cellar.apps.wine.services.WineVisionExtractor") as MockVision,
         ):
             mock_scanner = MagicMock()
@@ -300,7 +300,7 @@ class TestExtractWineVisionAjax:
 
         image_file = create_test_image_file()
 
-        with patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner:
+        with patch("wine_cellar.apps.wine.views.scan.BarcodeScanner") as MockScanner:
             MockScanner.side_effect = Exception("Test exception")
 
             response = client.post(
@@ -350,7 +350,7 @@ class TestExtractWineVisionAjax:
         image_file = create_test_image_file()
 
         with (
-            patch("wine_cellar.apps.wine.views.BarcodeScanner") as MockScanner,
+            patch("wine_cellar.apps.wine.views.scan.BarcodeScanner") as MockScanner,
             patch("wine_cellar.apps.wine.services.WineVisionExtractor") as MockVision,
         ):
             mock_scanner = MagicMock()

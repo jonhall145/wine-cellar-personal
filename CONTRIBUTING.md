@@ -4,80 +4,73 @@ Thank you for your interest in contributing to Wine Cellar!
 
 ## Code of Conduct
 
-Be respectful and inclusive. We welcome contributors of all backgrounds and experience levels. Harassment, discrimination, or toxic behavior will not be tolerated.
-
-## How to Contribute
-
-### Reporting Issues
-
-1. **Search existing issues** to avoid duplicates
-2. **Use a clear title** that describes the problem
-3. **Provide details**: steps to reproduce, expected vs actual behavior, screenshots
-4. **Include environment info**: browser, OS, Python/Node versions
-
-### Suggesting Features
-
-Open an issue with the `enhancement` label, describing the use case and benefit.
+Be respectful and inclusive. We welcome contributors of all backgrounds and experience levels.
 
 ## Development Setup
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/wine-cellar.git
-   cd wine-cellar
+   git clone git@github.com:jonhall145/wine-cellar-personal.git
+   cd wine-cellar-personal
    ```
 
-2. **Create a virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
+2. **Install dependencies and start Docker dev stack**
    ```bash
    make install
    ```
 
-4. **Set up the database**
+3. **Load sample data (optional)**
    ```bash
-   make migrate
-   make fixtures  # Load sample data (optional)
+   make fixtures           # wine sample data
+   make whisky-fixtures    # whisky sample data
    ```
 
-5. **Start the development server**
+4. **Start the development server**
    ```bash
-   make watch  # Runs server with frontend rebuild on changes
+   make watch        # dev server + frontend rebuild on changes
+   make server       # dev server only (port 8003)
    ```
+
+A test user is available: `testuser` / `testpass123`
+
+### HTTPS for Camera Access
+
+Mobile browsers require HTTPS for camera access. Use `./run_https.sh` which generates self-signed certificates and runs on `https://0.0.0.0:8000`.
 
 ## Code Style
 
 This project uses automated formatting and linting:
 
-- **Black** for Python code formatting
-- **isort** for import sorting
-- **flake8** for linting
-- **Prettier** for JavaScript/TypeScript
+- **Black** for Python code formatting (line length 88)
+- **isort** for import sorting (black-compatible profile)
+- **flake8** for Python linting
+- **ESLint** for JavaScript/TypeScript
+- **djLint** for Django templates
 
-Run all linters:
+Run all linters before committing:
 ```bash
 make lint
 ```
 
-Pre-commit hooks are configured to run these checks automatically.
+Auto-fix JS lint errors:
+```bash
+make lint-js-fix
+```
+
+Auto-fix template lint errors:
+```bash
+make lint-html-fix
+```
 
 ## Testing
 
-Run the test suite:
 ```bash
-make pytest
+make pytest               # run all tests
+make pytest-lastfailed    # re-run failed tests
+make coverage             # tests with coverage report
 ```
 
-For coverage report:
-```bash
-pytest --cov=wine_cellar --cov-report=html
-```
-
-Minimum coverage threshold is **80%**.
+Tests use `pytest` with `pytest-django`. Settings module: `wine_cellar.conf.test`.
 
 ## Commit Messages
 
@@ -91,7 +84,7 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 - `test:` Adding or updating tests
 - `chore:` Maintenance tasks
 
-Examples:
+Keep messages short and lowercase:
 ```
 feat: add wine recommendation system
 fix: correct price calculation in storage view
@@ -100,70 +93,33 @@ refactor(views): split large views file into modules
 
 ## Pull Request Process
 
-1. **Create a feature branch**
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
+1. Create a feature branch from `main`
+2. Make your changes — write tests for new functionality
+3. Run `make lint` and fix any issues
+4. Run `make pytest` and ensure all tests pass
+5. Push to your fork and open a PR against `main`
+6. Address any review feedback
 
-2. **Make your changes**
-   - Write tests for new functionality
-   - Update documentation if needed
-   - Follow code style guidelines
-
-3. **Run checks locally**
-   ```bash
-   make lint
-   make pytest
-   ```
-
-4. **Push and create PR**
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-   Then create a Pull Request on GitHub.
-
-5. **PR Review**
-   - Address any review feedback
-   - Keep commits focused and atomic
-   - Rebase on main if needed
+Keep PRs focused — one feature or fix per PR.
 
 ## Project Structure
 
 ```
 wine_cellar/
 ├── apps/
-│   ├── wine/       # Wine management (models, views, forms)
-│   ├── storage/    # Inventory and storage locations
-│   ├── user/       # User settings and preferences
-│   └── hardware/   # Raspberry Pi integration
+│   ├── core/       # shared base views, forms, filters
+│   ├── wine/       # wine tracking and management
+│   ├── storage/    # inventory and storage locations
+│   ├── user/       # user settings and preferences
+│   └── household/  # multi-user household support
 ├── conf/           # Django settings
 ├── templates/      # Django templates
-├── static/         # Compiled static assets
-├── assets/         # Source CSS/JS (compiled by webpack)
-└── react/          # React components
+├── react/          # React components (barcode scanner, maps)
+├── assets/         # Source CSS/JS
+tests/              # pytest test suite
+docs/               # MkDocs documentation
+fixtures/           # sample data (grapes, wines, stock)
 ```
-
-## Translations
-
-Wine Cellar supports internationalization. To contribute translations:
-
-1. Extract translatable strings:
-   ```bash
-   make po
-   ```
-
-2. Edit `.po` files in `locale/<lang>/LC_MESSAGES/`
-
-3. Compile translations:
-   ```bash
-   make mo
-   ```
-
-## Getting Help
-
-- Check existing [issues](https://github.com/the-broke-sommeliers/wine-cellar/issues)
-- Open a [GitHub Discussion](https://github.com/the-broke-sommeliers/wine-cellar/discussions)
-- Read the [documentation](https://the-broke-sommeliers.github.io/wine-cellar/)
 
 ## License
 

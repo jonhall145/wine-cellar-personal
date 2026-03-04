@@ -15,6 +15,7 @@ from django.urls import reverse_lazy
 from django.utils.formats import number_format
 from django.views.generic import DeleteView, DetailView, FormView, TemplateView
 
+from wine_cellar.apps.core.audit import log_create, log_delete, log_update
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
 from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
@@ -413,6 +414,10 @@ class BaseBeverageDeleteView(RequireMemberMixin, DeleteView):
         household = get_active_household(self.request.user)
         return qs.filter(household=household)
 
+    def form_valid(self, form):
+        log_delete(self.request.user, self.get_object())
+        return super().form_valid(form)
+
 
 # --- Images view ---
 
@@ -794,6 +799,7 @@ class BaseBeverageUpdateView(RequireMemberMixin, FormView):
             household=household,
         )
         self.process_form_data(beverage, self.request.user, form.cleaned_data)
+        log_update(self.request.user, beverage)
         self.success_url = reverse_lazy(
             self.detail_url_name, kwargs={"pk": beverage.pk}
         )
@@ -963,6 +969,9 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
         beverage, created = self.process_form_data(
             self.request.user, household, form.cleaned_data
         )
+
+        if created:
+            log_create(self.request.user, beverage)
 
         self.post_create(beverage, created)
 
