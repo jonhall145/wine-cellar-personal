@@ -77,6 +77,7 @@ jobs:
           npm ci --no-audit --no-fund
           npm run build
           pip install -r requirements/dev.txt
+          playwright install --with-deps chromium
       - name: Run Tests
         env:
           PGPASSWORD: postgres
