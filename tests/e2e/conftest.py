@@ -1,6 +1,11 @@
 """E2E test fixtures using Playwright with pytest-django live_server."""
 
+import os
+
 import pytest
+
+# Playwright runs in an async context; allow Django ORM calls in test fixtures
+os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
 # Mobile-first viewport (iPhone 14 equivalent)
 MOBILE_VIEWPORT = {"width": 390, "height": 844}
