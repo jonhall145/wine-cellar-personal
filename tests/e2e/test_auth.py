@@ -23,10 +23,10 @@ class TestAuth:
     def test_logout(self, authenticated_page, live_server):
         """Logging out redirects to the login page."""
         page = authenticated_page
-        # Navigate to logout page directly (POST form)
+        # POST directly to the logout endpoint to avoid multiple submit buttons
         page.goto(f"{live_server.url}/accounts/logout/")
-        # Click the sign out submit button on the logout confirmation page
-        page.locator("button[type='submit']").click()
+        # Click the Sign Out button in the main content area (not nav)
+        page.locator("main button[type='submit']").first.click()
         page.wait_for_load_state("networkidle")
         # Should be redirected away from authenticated pages
         page.goto(f"{live_server.url}/wines/")

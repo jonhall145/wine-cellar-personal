@@ -22,7 +22,7 @@ class TestWineList:
                 household=self.household,
                 user=self.user,
                 country="FR" if i % 2 == 0 else "IT",
-                wine_type="RED" if i % 3 == 0 else "WHITE",
+                wine_type="RE" if i % 3 == 0 else "WH",
                 vintage=2020 + (i % 5),
             )
             self.wines.append(wine)

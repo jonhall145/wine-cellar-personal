@@ -40,7 +40,7 @@ class TestWineCrud:
             household=membership.household,
             user=membership.user,
             country="FR",
-            wine_type="RED",
+            wine_type="RE",
         )
 
         page.goto(f"{live_server.url}/wine/edit/{wine.pk}/")
@@ -64,7 +64,7 @@ class TestWineCrud:
             household=membership.household,
             user=membership.user,
             country="IT",
-            wine_type="RED",
+            wine_type="RE",
         )
 
         page.goto(f"{live_server.url}/wine/delete/{wine.pk}/")
