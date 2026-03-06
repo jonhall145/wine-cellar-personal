@@ -8,25 +8,25 @@ class TestWineCrud:
     def test_create_wine(self, authenticated_page, live_server):
         """Create a wine through the form."""
         page = authenticated_page
-        page.goto(f"{live_server.url}/wine/add/")
+        response = page.goto(f"{live_server.url}/wine/add/")
         page.wait_for_load_state("networkidle")
 
-        # Wait for the form to appear
-        form = page.locator("form.wine-form")
-        form.wait_for(state="visible")
+        # Debug: capture page content if form not found
+        assert response.status == 200, f"Page returned {response.status}"
+        assert page.locator("form.wine-form").count() > 0, (
+            f"No wine-form found. URL: {page.url}, "
+            f"Title: {page.title()}, "
+            f"Body text: {page.locator('body').inner_text()[:500]}"
+        )
 
-        # Fill minimum required fields
+        form = page.locator("form.wine-form")
         form.locator("input[name='name']").fill("E2E Test Merlot")
-        # Select wine type
         wine_type = form.locator("select[name='wine_type']")
         if wine_type.count() > 0:
             wine_type.select_option(index=1)
 
-        # Submit — button is name="save_finish" on create page
         form.locator("button[type='submit']").click()
         page.wait_for_load_state("networkidle")
-
-        # Should redirect away from the add page
         assert "/wine/add" not in page.url
 
     def test_edit_wine(self, authenticated_page, live_server):
@@ -35,7 +35,6 @@ class TestWineCrud:
         from wine_cellar.apps.wine.models import Wine
 
         page = authenticated_page
-
         membership = HouseholdMembership.objects.first()
         wine = Wine.objects.create(
             name="Wine To Edit",
@@ -45,11 +44,17 @@ class TestWineCrud:
             wine_type="RE",
         )
 
-        page.goto(f"{live_server.url}/wine/edit/{wine.pk}/")
+        response = page.goto(f"{live_server.url}/wine/edit/{wine.pk}/")
         page.wait_for_load_state("networkidle")
 
+        assert response.status == 200, f"Page returned {response.status}"
+        assert page.locator("form.wine-form").count() > 0, (
+            f"No wine-form found. URL: {page.url}, "
+            f"Title: {page.title()}, "
+            f"Body text: {page.locator('body').inner_text()[:500]}"
+        )
+
         form = page.locator("form.wine-form")
-        form.wait_for(state="visible")
         form.locator("input[name='name']").fill("Edited Wine Name")
         form.locator("button[type='submit']").click()
         page.wait_for_load_state("networkidle")
@@ -72,9 +77,16 @@ class TestWineCrud:
             wine_type="RE",
         )
 
-        page.goto(f"{live_server.url}/wine/delete/{wine.pk}/")
+        response = page.goto(f"{live_server.url}/wine/delete/{wine.pk}/")
         page.wait_for_load_state("networkidle")
-        # Use the delete button inside main content (name="save")
+
+        assert response.status == 200, f"Page returned {response.status}"
+        assert page.locator("form.wine-form, main form").count() > 0, (
+            f"No form found. URL: {page.url}, "
+            f"Title: {page.title()}, "
+            f"Body text: {page.locator('body').inner_text()[:500]}"
+        )
+
         page.locator("main button[type='submit'][name='save']").click()
         page.wait_for_load_state("networkidle")
 
