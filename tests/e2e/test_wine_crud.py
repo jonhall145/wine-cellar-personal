@@ -8,18 +8,11 @@ class TestWineCrud:
     def test_create_wine(self, authenticated_page, live_server):
         """Create a wine through the form."""
         page = authenticated_page
-        response = page.goto(f"{live_server.url}/wine/add/")
+        page.goto(f"{live_server.url}/wine/add/")
         page.wait_for_load_state("networkidle")
 
-        # Debug: capture page content if form not found
-        assert response.status == 200, f"Page returned {response.status}"
-        assert page.locator("form.wine-form").count() > 0, (
-            f"No wine-form found. URL: {page.url}, "
-            f"Title: {page.title()}, "
-            f"Body text: {page.locator('body').inner_text()[:500]}"
-        )
-
         form = page.locator("form.wine-form")
+        form.wait_for(state="visible")
         form.locator("input[name='name']").fill("E2E Test Merlot")
         wine_type = form.locator("select[name='wine_type']")
         if wine_type.count() > 0:
@@ -44,17 +37,11 @@ class TestWineCrud:
             wine_type="RE",
         )
 
-        response = page.goto(f"{live_server.url}/wine/edit/{wine.pk}/")
+        page.goto(f"{live_server.url}/wine/edit/{wine.pk}/")
         page.wait_for_load_state("networkidle")
 
-        assert response.status == 200, f"Page returned {response.status}"
-        assert page.locator("form.wine-form").count() > 0, (
-            f"No wine-form found. URL: {page.url}, "
-            f"Title: {page.title()}, "
-            f"Body text: {page.locator('body').inner_text()[:500]}"
-        )
-
         form = page.locator("form.wine-form")
+        form.wait_for(state="visible")
         form.locator("input[name='name']").fill("Edited Wine Name")
         form.locator("button[type='submit']").click()
         page.wait_for_load_state("networkidle")
@@ -77,16 +64,8 @@ class TestWineCrud:
             wine_type="RE",
         )
 
-        response = page.goto(f"{live_server.url}/wine/delete/{wine.pk}/")
+        page.goto(f"{live_server.url}/wine/delete/{wine.pk}/")
         page.wait_for_load_state("networkidle")
-
-        assert response.status == 200, f"Page returned {response.status}"
-        assert page.locator("form.wine-form, main form").count() > 0, (
-            f"No form found. URL: {page.url}, "
-            f"Title: {page.title()}, "
-            f"Body text: {page.locator('body').inner_text()[:500]}"
-        )
-
         page.locator("main button[type='submit'][name='save']").click()
         page.wait_for_load_state("networkidle")
 

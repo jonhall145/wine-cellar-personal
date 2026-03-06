@@ -42,7 +42,7 @@ def e2e_user(db):
         email="e2e@test.com",
     )
     household = Household.objects.create(name="E2E Household")
-    HouseholdMembership.objects.create(user=user, household=household, role="owner")
+    HouseholdMembership.objects.create(user=user, household=household, role="OW")
     # Set active household so views don't redirect to /household/
     user_settings, _ = UserSettings.objects.get_or_create(user=user)
     user_settings.active_household = household
