@@ -8,8 +8,9 @@ class TestWineCrud:
     def test_create_wine(self, authenticated_page, live_server):
         """Create a wine through the form."""
         page = authenticated_page
-        page.goto(f"{live_server.url}/wines/add/")
-        assert page.url.endswith("/wines/add/") or "add" in page.url
+        page.goto(f"{live_server.url}/wine/add/")
+        page.wait_for_load_state("networkidle")
+        assert "/wine/add" in page.url
 
         # Fill minimum required fields
         page.fill("input[name='name']", "E2E Test Merlot")
@@ -19,11 +20,11 @@ class TestWineCrud:
             wine_type.select_option(index=1)
 
         # Submit the form
-        page.click("button[type='submit'], input[type='submit']")
+        page.locator("button[type='submit'][name='save']").click()
         page.wait_for_load_state("networkidle")
 
-        # Should redirect to the wine detail page
-        assert "/wines/add/" not in page.url
+        # Should redirect away from the add page
+        assert "/wine/add" not in page.url
 
     def test_edit_wine(self, authenticated_page, live_server):
         """Edit an existing wine."""
@@ -33,19 +34,19 @@ class TestWineCrud:
         page = authenticated_page
 
         # Create a wine via ORM
-        user = HouseholdMembership.objects.first().user
-        household = HouseholdMembership.objects.first().household
+        membership = HouseholdMembership.objects.first()
         wine = Wine.objects.create(
             name="Wine To Edit",
-            household=household,
-            user=user,
+            household=membership.household,
+            user=membership.user,
             country="FR",
             wine_type="RED",
         )
 
-        page.goto(f"{live_server.url}/wines/{wine.pk}/edit/")
+        page.goto(f"{live_server.url}/wine/edit/{wine.pk}/")
+        page.wait_for_load_state("networkidle")
         page.fill("input[name='name']", "Edited Wine Name")
-        page.click("button[type='submit'], input[type='submit']")
+        page.locator("button[type='submit'][name='save']").click()
         page.wait_for_load_state("networkidle")
 
         wine.refresh_from_db()
@@ -57,18 +58,19 @@ class TestWineCrud:
         from wine_cellar.apps.wine.models import Wine
 
         page = authenticated_page
-        user = HouseholdMembership.objects.first().user
-        household = HouseholdMembership.objects.first().household
+        membership = HouseholdMembership.objects.first()
         wine = Wine.objects.create(
             name="Wine To Delete",
-            household=household,
-            user=user,
+            household=membership.household,
+            user=membership.user,
             country="IT",
             wine_type="RED",
         )
 
-        page.goto(f"{live_server.url}/wines/{wine.pk}/delete/")
-        page.click("button[type='submit'], input[type='submit']")
+        page.goto(f"{live_server.url}/wine/delete/{wine.pk}/")
+        page.wait_for_load_state("networkidle")
+        # Use the specific delete button (name="save") to avoid matching nav buttons
+        page.locator("button[type='submit'][name='save']").click()
         page.wait_for_load_state("networkidle")
 
         assert not Wine.objects.filter(pk=wine.pk).exists()

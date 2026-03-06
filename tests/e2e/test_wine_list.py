@@ -31,14 +31,16 @@ class TestWineList:
         """Wine list page loads and shows wines."""
         page = authenticated_page
         page.goto(f"{live_server.url}/wines/")
-        assert page.locator(".wine-card, .card, [class*='card']").count() > 0
+        page.wait_for_load_state("networkidle")
+        assert page.locator(".wine-card").count() > 0
 
     def test_wine_list_pagination(self, authenticated_page, live_server):
         """Wine list paginates with default 10 per page."""
         page = authenticated_page
         page.goto(f"{live_server.url}/wines/")
-        # Should have pagination controls since we have 15 wines
-        pagination = page.locator("nav.pagination, .pagination, [class*='pagination']")
+        page.wait_for_load_state("networkidle")
+        # Should have pagination since we have 15 wines
+        pagination = page.locator("ul.pagination")
         assert pagination.count() > 0 or "page=2" in page.content()
 
     def test_wine_list_name_filter(self, authenticated_page, live_server):
@@ -46,7 +48,6 @@ class TestWineList:
         page = authenticated_page
         page.goto(f"{live_server.url}/wines/?name=Test+Wine+01")
         page.wait_for_load_state("networkidle")
-        # Should show fewer results than the full list
         content = page.content()
         assert "Test Wine 01" in content
 
@@ -56,5 +57,5 @@ class TestWineList:
         page.goto(f"{live_server.url}/wines/?per_page=25")
         page.wait_for_load_state("networkidle")
         # All 15 wines should fit on one page with per_page=25
-        cards = page.locator(".wine-card, .card, [class*='card']")
+        cards = page.locator(".wine-card")
         assert cards.count() >= 15

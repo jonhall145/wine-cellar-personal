@@ -29,10 +29,11 @@ def browser_context_args():
 
 @pytest.fixture()
 def e2e_user(db):
-    """Create a test user with a household for E2E tests."""
+    """Create a test user with a household and active_household set."""
     from django.contrib.auth import get_user_model
 
     from wine_cellar.apps.household.models import Household, HouseholdMembership
+    from wine_cellar.apps.user.models import UserSettings
 
     User = get_user_model()
     user = User.objects.create_user(
@@ -42,6 +43,10 @@ def e2e_user(db):
     )
     household = Household.objects.create(name="E2E Household")
     HouseholdMembership.objects.create(user=user, household=household, role="owner")
+    # Set active household so views don't redirect to /household/
+    user_settings, _ = UserSettings.objects.get_or_create(user=user)
+    user_settings.active_household = household
+    user_settings.save()
     return user
 
 

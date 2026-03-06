@@ -23,13 +23,11 @@ class TestAuth:
     def test_logout(self, authenticated_page, live_server):
         """Logging out redirects to the login page."""
         page = authenticated_page
-        # Navigate to logout — allauth uses POST for logout
+        # Navigate to logout page directly (POST form)
         page.goto(f"{live_server.url}/accounts/logout/")
-        # If there's a confirm button, click it
-        confirm_btn = page.locator("button[type='submit']")
-        if confirm_btn.count() > 0:
-            confirm_btn.first.click()
-            page.wait_for_load_state("networkidle")
+        # Click the sign out submit button on the logout confirmation page
+        page.locator("button[type='submit']").click()
+        page.wait_for_load_state("networkidle")
         # Should be redirected away from authenticated pages
         page.goto(f"{live_server.url}/wines/")
         assert "/accounts/login" in page.url
