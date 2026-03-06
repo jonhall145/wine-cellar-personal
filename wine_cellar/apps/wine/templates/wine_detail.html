@@ -10,6 +10,9 @@
                 {% url 'wine-edit' wine.pk as edit_url %}
                 {% url 'wine-delete' wine.pk as delete_url %}
                 {% include "includes/edit_delete_buttons.html" with edit_url=edit_url delete_url=delete_url %}
+                <div class="wine__edit-delete-buttons j-center">
+                    <a class="pure-button button__neutral" href="{% url 'wine-qr' wine.pk %}" target="_blank" title="{% translate 'QR Code' %}"><i class="fa-solid fa-qrcode"></i> <span>{% translate "QR Code" %}</span></a>
+                </div>
             </div>
             <div class="pure-u-1 pure-u-md-1-2">
                 {% if wine.image_thumbnail %}

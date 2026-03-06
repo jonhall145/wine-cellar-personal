@@ -1,10 +1,20 @@
-import React, { useImperativeHandle } from 'react'
+import React, { ReactNode, Ref, useImperativeHandle } from 'react'
 import { MapContainer, useMap } from 'react-leaflet'
 import MaplibreGlLayer from './MaplibreGlLayer'
+import type { Map as LeafletMap } from 'leaflet'
+
+interface MapProps {
+  attribution?: string
+  baseUrl?: string
+  polygon?: unknown
+  omtToken?: string
+  children?: ReactNode
+  [key: string]: unknown
+}
 
 const Map = React.forwardRef(function Map(
-  { attribution, baseUrl, polygon, omtToken, children, ...rest },
-  ref
+  { attribution, baseUrl, children, ...rest }: MapProps,
+  ref: Ref<LeafletMap>
 ) {
   const MapLayers = () => {
     const map = useMap()

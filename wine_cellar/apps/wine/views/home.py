@@ -2,11 +2,26 @@ import logging
 
 from django.db.models import Count, Max, Min, Q
 
-from wine_cellar.apps.core.views import BaseHomePageView
+from wine_cellar.apps.core.views import (
+    BaseHomePageView,
+    BaseQRCodeView,
+    BaseRandomBottleView,
+)
 from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.wine.models import Wine
 
 logger = logging.getLogger(__name__)
+
+
+class QRCodeView(BaseQRCodeView):
+    beverage_model = Wine
+    detail_url_name = "wine-detail"
+
+
+class RandomBottleView(BaseRandomBottleView):
+    storage_item_model = StorageItem
+    beverage_fk_name = "wine"
+    detail_url_name = "wine-detail"
 
 
 class HomePageView(BaseHomePageView):

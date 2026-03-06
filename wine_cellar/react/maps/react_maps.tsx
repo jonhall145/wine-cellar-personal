@@ -1,6 +1,5 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
-// @ts-ignore - WineMaps is a .jsx file
 import { MapWithMarkers, Map } from './WineMaps'
 import ErrorBoundary from '../components/ErrorBoundary'
 

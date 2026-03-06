@@ -1,19 +1,21 @@
+import io
 import json
 import logging
 from collections import defaultdict
 from decimal import Decimal
 
+import qrcode
 from django.conf import settings
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Avg, Count, F, Q, Sum
 from django.db.models.functions import Coalesce, TruncMonth
 from django.forms import model_to_dict
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils.formats import number_format
-from django.views.generic import DeleteView, DetailView, FormView, TemplateView
+from django.views.generic import DeleteView, DetailView, FormView, TemplateView, View
 
 from wine_cellar.apps.core.audit import log_create, log_delete, log_update
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
@@ -551,7 +553,27 @@ class BaseDetailView(RequireHouseholdMixin, DetailView):
             )
         )
         context["duplicates"] = duplicates
+
+        # Track recently viewed beverages in session
+        _track_recent_view(self.request, beverage)
+
         return context
+
+
+MAX_RECENT_VIEWS = 8
+
+
+def _track_recent_view(request, beverage):
+    """Store recently viewed beverage IDs in the session."""
+    key = "recent_views"
+    recent = request.session.get(key, [])
+    entry = {"pk": beverage.pk, "name": str(beverage.name)}
+    # Remove existing entry for this beverage
+    recent = [r for r in recent if r["pk"] != beverage.pk]
+    # Prepend new entry
+    recent.insert(0, entry)
+    # Limit to MAX_RECENT_VIEWS
+    request.session[key] = recent[:MAX_RECENT_VIEWS]
 
 
 # --- Scan view ---
@@ -1316,7 +1338,72 @@ class BaseHomePageView(RequireHouseholdMixin, TemplateView):
         # App-specific context
         context.update(self.get_app_specific_context(household, user))
 
+        # Recently viewed beverages from session
+        recent_session = self.request.session.get("recent_views", [])
+        if recent_session:
+            recent_pks = [r["pk"] for r in recent_session]
+            recent_qs = self.beverage_model.objects.filter(
+                pk__in=recent_pks, household=household
+            )
+            recent_map = {b.pk: b for b in recent_qs}
+            # Preserve session order
+            context["recent_views"] = [
+                recent_map[pk] for pk in recent_pks if pk in recent_map
+            ]
+        else:
+            context["recent_views"] = []
+
         return context
+
+
+# --- QR code generation ---
+
+
+class BaseQRCodeView(RequireHouseholdMixin, View):
+    """Generate a QR code PNG linking to a beverage's detail page."""
+
+    beverage_model = None  # Set by subclass
+    detail_url_name = None  # "wine-detail" or "whisky-detail"
+
+    def get(self, request, pk):
+        household = get_active_household(request.user)
+        beverage = get_object_or_404(
+            self.beverage_model.objects.filter(household=household), pk=pk
+        )
+        url = request.build_absolute_uri(
+            reverse_lazy(self.detail_url_name, kwargs={"pk": beverage.pk})
+        )
+        img = qrcode.make(url, box_size=8, border=2)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        return HttpResponse(buf.getvalue(), content_type="image/png")
+
+
+# --- Random bottle picker ---
+
+
+class BaseRandomBottleView(RequireHouseholdMixin, TemplateView):
+    """Pick a random in-stock bottle and redirect to its detail page."""
+
+    template_name = "core/random_bottle.html"
+    storage_item_model = None  # Set by subclass
+    beverage_fk_name = None  # "wine" or "whisky"
+    detail_url_name = None  # "wine-detail" or "whisky-detail"
+
+    def get(self, request, *args, **kwargs):
+        household = get_active_household(request.user)
+        item = (
+            self.storage_item_model.objects.filter(household=household, deleted=False)
+            .select_related(self.beverage_fk_name)
+            .order_by("?")
+            .first()
+        )
+        if item:
+            beverage = getattr(item, self.beverage_fk_name)
+            return redirect(self.detail_url_name, pk=beverage.pk)
+        messages.info(request, "No bottles in stock to pick from!")
+        return redirect("homepage")
 
 
 # --- Merge confirm view ---

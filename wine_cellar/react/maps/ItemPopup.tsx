@@ -14,11 +14,8 @@ const translations = {
  * Allows only http/https absolute URLs and path-relative URLs (e.g., "/static/img.png").
  * Rejects protocol-relative URLs (e.g., "//evil.com") and dangerous schemes.
  * Returns undefined for anything else.
- *
- * @param {string} value
- * @returns {string|undefined}
  */
-const sanitizeUrl = (value) => {
+const sanitizeUrl = (value: unknown): string | undefined => {
   if (!value || typeof value !== 'string') {
     return undefined
   }
@@ -48,22 +45,20 @@ const sanitizeUrl = (value) => {
     }
     // For other protocols, do not use the value.
     return undefined
-  } catch (e) {
+  } catch {
     // If URL construction fails (e.g., malformed), do not use the value.
     return undefined
   }
 }
 
-/**
- * Renders a popup for an item feature on a map.
- *
- * @param {Object} props - The component props.
- * @param {Object} props.feature - The geojson feature.
- * @returns {JSX.Element} The JSX element representing the popup.
- */
-export const ItemPopup = ({ feature }) => {
-  const imageSrc = sanitizeUrl(feature?.properties?.image)
-  const linkHref = sanitizeUrl(feature?.properties?.url)
+interface ItemPopupProps {
+  feature: GeoJSON.Feature
+}
+
+export const ItemPopup = ({ feature }: ItemPopupProps) => {
+  const props = feature?.properties ?? {}
+  const imageSrc = sanitizeUrl(props.image)
+  const linkHref = sanitizeUrl(props.url)
 
   return (
     <MapPopup feature={feature}>
@@ -79,25 +74,25 @@ export const ItemPopup = ({ feature }) => {
       <div className="popup-content">
         {linkHref ? (
           <a href={linkHref} className="popup-title">
-            {feature.properties.name}
+            {props.name}
           </a>
         ) : (
           <span className="popup-title">
-            {feature.properties.name}
+            {props.name}
           </span>
         )}
         <div className="popup-details">
           <div className="popup-detail">
             <span className="popup-label">{translations.country}:</span>
             <span className="country-info">
-              {feature.properties.country_icon}{' '}
-              {feature.properties.country_name}
+              {props.country_icon}{' '}
+              {props.country_name}
             </span>
           </div>
-          {feature.properties.vintage && (
+          {props.vintage && (
             <div className="popup-detail">
               <span className="popup-label">{translations.vintage}:</span>
-              <span>{feature.properties.vintage}</span>
+              <span>{props.vintage}</span>
             </div>
           )}
         </div>

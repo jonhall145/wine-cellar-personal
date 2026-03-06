@@ -32,7 +32,7 @@
         <a href="{% url 'storage-list' %}" class="pure-menu-link">{% translate "Storage" %}</a>
     </li>
     <li class="pure-menu-item">
-        <a href="{% url 'bottle-list' %}" class="pure-menu-link">{% translate "Bottles" %}</a>
+        <a href="{% url 'bottle-list' %}" class="pure-menu-link">{% translate "Bottles" %}{% if nav_bottle_count %} <span class="nav-badge">{{ nav_bottle_count }}</span>{% endif %}</a>
     </li>
     <li class="pure-menu-item pure-menu-has-children pure-menu-allow-hover">
         <a href="#" class="pure-menu-link">{% translate "More" %}{% if show_dropdown_indicator %} ▾{% endif %}</a>

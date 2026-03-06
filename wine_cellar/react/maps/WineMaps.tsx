@@ -1,20 +1,34 @@
-import React from 'react'
+import React, { ReactNode, Ref } from 'react'
 import BaseMap from './Map'
 import MarkerClusterLayer from './MarkerClusterLayer'
 import GeoJsonMarker from './GeoJsonMarker'
 import { ItemPopup } from './ItemPopup'
 import countries from './country.json'
+import type { Map as LeafletMap } from 'leaflet'
 
-/**
- * Creates a Map component.
- *
- * @param {object} props - The properties for the Map component.
- * @param {string} props.id - The unique identifier for the Map component.
- * @param {string} props.title - The title for the Map component.
- * @returns {React.Element} - The rendered Map component.
- * @throws {Error} - If id is not defined.
- */
-export const Map = React.forwardRef(function Map({ id, title, ...props }, ref) {
+interface WineAppellation {
+  lat?: number
+  lng?: number
+}
+
+interface WinePoint {
+  country: string
+  appellation?: WineAppellation
+  [key: string]: unknown
+}
+
+interface MapProps {
+  id: string
+  title?: string
+  [key: string]: unknown
+}
+
+const countriesMap = countries as Record<string, GeoJSON.Feature>
+
+export const Map = React.forwardRef(function Map(
+  { id, title, ...props }: MapProps,
+  ref: Ref<LeafletMap>
+) {
   if (!id) {
     throw new Error('id must be defined when using Map')
   }
@@ -29,21 +43,19 @@ export const Map = React.forwardRef(function Map({ id, title, ...props }, ref) {
   )
 })
 
-/**
- * Represents a map component with markers.
- *
- * @param {object} props - The properties to pass to the Map component.
- * @param {Array<object>} points - The array of points to create markers from.
- * @param {boolean} withoutPopup - Indicates whether to exclude the popup for each marker.
- * @param {ReactNode} children - Any additional controls etc. to be added to the map
- * @returns {JSX.Element} - The rendered map component with markers.
- */
-export const MapWithMarkers = ({ wines, withoutPopup, children, ...props }) => {
+interface MapWithMarkersProps {
+  wines: WinePoint[]
+  withoutPopup?: boolean
+  children?: ReactNode
+  [key: string]: unknown
+}
+
+export const MapWithMarkers = ({ wines, withoutPopup, children, ...props }: MapWithMarkersProps) => {
   const markers = wines.map((wine, index) => {
-    if (!countries[wine.country]) {
+    if (!countriesMap[wine.country]) {
       return null
     }
-    const feature = { ...countries[wine.country] }
+    const feature = { ...countriesMap[wine.country] }
     feature.properties = { ...feature.properties, ...wine }
 
     // Use appellation coordinates when available, otherwise fall back to country center
@@ -51,7 +63,7 @@ export const MapWithMarkers = ({ wines, withoutPopup, children, ...props }) => {
       feature.geometry = {
         ...feature.geometry,
         coordinates: [wine.appellation.lng, wine.appellation.lat]
-      }
+      } as GeoJSON.Geometry
     }
 
     return (

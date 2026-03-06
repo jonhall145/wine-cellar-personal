@@ -9,8 +9,37 @@
             <ul class="stats__card-container">
                 {% include stats_template %}
             </ul>
+            {% if bottles_in_stock %}
+                <div class="t-center mt-12">
+                    <a href="{% url 'random-bottle' %}" class="button button--primary">
+                        <i class="fa-solid fa-dice"></i> {% translate "What should I drink?" %}
+                    </a>
+                </div>
+            {% endif %}
         </div>
     </div>
+
+    {% if recent_views %}
+    <!-- Recently Viewed -->
+    <div class="pure-g j-center mt-12">
+        <div class="pure-u-1 pure-u-md-2-3">
+            <h3 class="widget-card__title"><i class="fa-solid fa-clock-rotate-left"></i> {% translate "Recently Viewed" %}</h3>
+            <div class="recent-views">
+                {% for bev in recent_views %}
+                    <a href="{% bev_url 'detail' bev.pk %}" class="recent-views__item">
+                        {% if bev.image_thumbnail %}
+                            <img src="{{ bev.image_thumbnail }}" alt="{{ bev.name }}" class="recent-views__img" loading="lazy" width="64" height="64">
+                        {% else %}
+                            <div class="recent-views__img recent-views__img--placeholder"><i class="fa-solid fa-{{ beverage_icon }}"></i></div>
+                        {% endif %}
+                        <span class="recent-views__name">{{ bev.name }}</span>
+                        {% if bev.vintage %}<span class="recent-views__vintage">{{ bev.vintage }}</span>{% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Dashboard Widgets -->
     <div class="pure-g j-center mt-12">

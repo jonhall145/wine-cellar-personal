@@ -18,6 +18,8 @@ from wine_cellar.apps.wine.views import (
     DrinkRecordListView,
     HomePageView,
     LabelScanView,
+    QRCodeView,
+    RandomBottleView,
     ReorderReminderCreateView,
     ReorderReminderDeleteView,
     ReorderRemindersView,
@@ -59,6 +61,7 @@ urlpatterns = [
     path("wine/add/<str:code>/", WineCreateView.as_view(), name="wine-add"),
     path("wine/extract-vision/", extract_wine_vision_ajax, name="wine-extract-vision"),
     path("wine/<int:pk>/", WineDetailView.as_view(), name="wine-detail"),
+    path("wine/<int:pk>/qr/", QRCodeView.as_view(), name="wine-qr"),
     path("wine/<int:pk>/images/", WineImagesView.as_view(), name="wine-images"),
     path("wine/edit/<int:pk>/", WineUpdateView.as_view(), name="wine-edit"),
     path(
@@ -134,6 +137,8 @@ urlpatterns = [
     ),
     # Label scanning
     path("label-scan/", LabelScanView.as_view(), name="label-scan"),
+    # Random bottle picker
+    path("random/", RandomBottleView.as_view(), name="random-bottle"),
     # Homepage
     path("", HomePageView.as_view(), name="homepage"),
 ]

@@ -5,10 +5,13 @@ from wine_cellar.apps.whisky import views
 urlpatterns = [
     # Homepage
     path("", views.HomePageView.as_view(), name="homepage"),
+    # Random bottle picker
+    path("random/", views.RandomBottleView.as_view(), name="random-bottle"),
     # Whisky CRUD
     path("whiskies/", views.WhiskyListView.as_view(), name="whisky-list"),
     path("whisky/add/", views.WhiskyCreateView.as_view(), name="whisky-add"),
     path("whisky/<int:pk>/", views.WhiskyDetailView.as_view(), name="whisky-detail"),
+    path("whisky/<int:pk>/qr/", views.QRCodeView.as_view(), name="whisky-qr"),
     path("whisky/<int:pk>/edit/", views.WhiskyUpdateView.as_view(), name="whisky-edit"),
     path(
         "whisky/<int:pk>/delete/",

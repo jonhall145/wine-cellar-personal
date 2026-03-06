@@ -32,6 +32,8 @@ from wine_cellar.apps.core.views import (
     BaseLabelScanView,
     BaseListView,
     BaseMergeConfirmView,
+    BaseQRCodeView,
+    BaseRandomBottleView,
     BaseReorderReminderCreateView,
     BaseReorderReminderDeleteView,
     BaseReorderRemindersView,
@@ -74,6 +76,17 @@ from wine_cellar.apps.whisky.models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class QRCodeView(BaseQRCodeView):
+    beverage_model = Whisky
+    detail_url_name = "whisky-detail"
+
+
+class RandomBottleView(BaseRandomBottleView):
+    storage_item_model = WhiskyStorageItem
+    beverage_fk_name = "whisky"
+    detail_url_name = "whisky-detail"
 
 
 class HomePageView(BaseHomePageView):
