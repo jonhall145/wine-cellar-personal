@@ -35,6 +35,19 @@ class UserSettings(models.Model):
         default=True,
         verbose_name=_("Notifications"),
     )
+    reminder_enabled = models.BooleanField(
+        default=True,
+        verbose_name=_("Drink Window Reminders"),
+        help_text=_("Receive reminders when wines approach their drink-by date"),
+    )
+    reminder_years_before = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Years Before Drink-By"),
+        help_text=_(
+            "How many years before the drink-by date to start reminding"
+            " (0 = in the year itself)"
+        ),
+    )
 
     class Meta:
         verbose_name = _("User Settings")

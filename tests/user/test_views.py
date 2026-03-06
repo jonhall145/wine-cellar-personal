@@ -18,6 +18,8 @@ def test_user_settings_page(client, user):
         "language": "en-gb",
         "currency": "EUR",
         "notifications": True,
+        "reminder_enabled": True,
+        "reminder_years_before": 0,
     }
     r = client.post(reverse("user-settings"), data, follow=True)
     assert r.status_code == HTTPStatus.OK
@@ -31,6 +33,8 @@ def test_user_settings_page(client, user):
         "language": "en-gb",
         "currency": "EUR",
         "notifications": False,
+        "reminder_enabled": True,
+        "reminder_years_before": 0,
     }
     r = client.post(reverse("user-settings"), data, follow=True)
     assert r.status_code == HTTPStatus.OK

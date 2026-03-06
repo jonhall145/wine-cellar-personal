@@ -9,6 +9,7 @@ import tempfile
 # Import all base settings explicitly
 from wine_cellar.conf.settings import (
     ACCOUNT_ADAPTER,
+    ACCOUNT_RATE_LIMITS,
     ALLOWED_HOSTS,
     ANTHROPIC_API_KEY,
     AUTH_PASSWORD_VALIDATORS,
@@ -39,15 +40,20 @@ from wine_cellar.conf.settings import (
     SECRET_KEY,
     SECURE_BROWSER_XSS_FILTER,
     SECURE_CONTENT_TYPE_NOSNIFF,
+    SECURE_PROXY_SSL_HEADER,
     SECURE_REFERRER_POLICY,
     SITE_URL,
     STATIC_ROOT,
     STATIC_URL,
+    STATIC_VERSION,
     STATICFILES_DIRS,
+    STORAGES,
     TEMPLATES,
     TIME_ZONE,
     USE_I18N,
     USE_TZ,
+    USE_X_FORWARDED_HOST,
+    USE_X_FORWARDED_PORT,
     VERSION,
     WSGI_APPLICATION,
     X_FRAME_OPTIONS,
@@ -55,6 +61,16 @@ from wine_cellar.conf.settings import (
 
 # Test-specific settings — use /tmp so Docker containers (non-root user) can write
 MEDIA_ROOT = tempfile.mkdtemp(prefix="wine_cellar_test_media_")
+
+# Use simple static files storage in tests (no manifest required)
+STORAGES = {  # noqa: F811
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 
 # Use dummy cache in tests to prevent cache interference between tests
 CACHES = {
@@ -66,13 +82,14 @@ CACHES = {
 # Ensure all exports are available
 __all__ = [
     "ACCOUNT_ADAPTER",
-    "CACHES",
-    "CELLAR_APP_TYPE",
+    "ACCOUNT_RATE_LIMITS",
     "ALLOWED_HOSTS",
     "ANTHROPIC_API_KEY",
     "AUTH_PASSWORD_VALIDATORS",
     "AUTHENTICATION_BACKENDS",
     "BASE_DIR",
+    "CACHES",
+    "CELLAR_APP_TYPE",
     "CSRF_TRUSTED_ORIGINS",
     "CURRENCIES",
     "CURRENCY_SYMBOLS",
@@ -98,15 +115,20 @@ __all__ = [
     "SECRET_KEY",
     "SECURE_BROWSER_XSS_FILTER",
     "SECURE_CONTENT_TYPE_NOSNIFF",
+    "SECURE_PROXY_SSL_HEADER",
     "SECURE_REFERRER_POLICY",
     "SITE_URL",
     "STATIC_ROOT",
     "STATIC_URL",
+    "STATIC_VERSION",
     "STATICFILES_DIRS",
+    "STORAGES",
     "TEMPLATES",
     "TIME_ZONE",
     "USE_I18N",
     "USE_TZ",
+    "USE_X_FORWARDED_HOST",
+    "USE_X_FORWARDED_PORT",
     "VERSION",
     "WSGI_APPLICATION",
     "X_FRAME_OPTIONS",

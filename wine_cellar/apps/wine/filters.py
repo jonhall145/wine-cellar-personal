@@ -42,7 +42,7 @@ def get_appellation_choices(user=None):
 
 class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
     storage_item_reverse = "storageitem"
-    nullable_order_fields = ("vintage", "effective_price")
+    nullable_order_fields = ("vintage", "effective_price", "drink_to")
 
     name = django_filters.CharFilter(field_name="name", lookup_expr="icontains")
     stock = ChoiceFilter(
