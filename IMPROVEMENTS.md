@@ -389,7 +389,7 @@ Issues collected from user testing sessions:
 | Country rarely autofills correctly (TomSelect issue?) | Open | |
 | Clear and filter buttons misaligned in wine filter page | Fixed | Commit 649b824 |
 | Maps should show wines in region, not just country | Open | Would require region data |
-| Star rating in wine add is free text, should be dropdown | Open | Like filter/bottle edit |
+| Star rating in wine add is free text, should be dropdown | Fixed | Now uses TypedChoiceField with star choices |
 | Option to display more wines per page | Fixed | Added pagination options |
 | Wines with no data should sort to end of date queries | Open | |
 | "More" button on left does nothing | Open | Investigate |
@@ -429,6 +429,74 @@ django-ratelimit>=4.1.0    # Rate limiting
 python-json-logger>=2.0.0  # Structured logging
 sentry-sdk>=1.40.0         # Error tracking (optional)
 ```
+
+---
+
+## Progress Log
+
+_Last updated: 2026-03-06_
+
+### Overall Status
+
+| Priority | Items | Status |
+|----------|-------|--------|
+| 1 (Security) | 3/3 | **Complete** |
+| 2 (Performance) | 3/3 | **Complete** |
+| 3 (Code Quality) | 3/3 | **Complete** |
+| 4 (Testing) | 2/3 | **Mostly complete** — missing `test_emails.py`, coverage threshold at 59% (target 80%) |
+| 5 (Logging) | 3/3 | **Complete** |
+| 6 (Documentation) | 3/3 | **Complete** |
+| 7 (Features) | 3/4 | **Mostly complete** — stats dashboard is partial (homepage stats only, no dedicated page) |
+
+### Priority 1: Security — Done
+
+- [x] 1.1 Security headers added to `settings.py` (lines 255-271) and `prod.py` (lines 63-68)
+- [x] 1.2 Rate limiting via `django-ratelimit==4.1.0` on scan/vision/wine endpoints
+- [x] 1.3 Wildcard imports replaced with explicit imports in `prod.py` and `docker_settings.py`
+
+### Priority 2: Performance — Done
+
+- [x] 2.1 N+1 queries fixed — `Wine.with_related()` queryset method, `select_related`/`prefetch_related` in views
+- [x] 2.2 Caching — LocMemCache (dev), Redis (docker/prod) with 1hr timeout
+- [x] 2.3 Database indexes — comprehensive indexes on Wine, Appellation, WineBarcode, DrinkRecord, etc.
+
+### Priority 3: Code Quality — Done
+
+- [x] 3.1 Views split into `wine_cellar/apps/wine/views/` with 12 modules (ajax, bulk, cellar, drink, health, home, map, reminders, scan, wine_crud, wishlist)
+- [x] 3.2 Service layer at `wine_cellar/apps/wine/services/` (barcode_service.py, vision_extraction.py)
+- [x] 3.3 Type hints added to key services and utilities (partial but sufficient)
+
+### Priority 4: Testing — Mostly Done
+
+- [x] 4.1 E2E tests in `tests/e2e/` (test_auth.py, test_wine_crud.py, test_wine_list.py)
+- [x] 4.2 Coverage threshold set in pyproject.toml (`fail_under = 59` — below 80% target)
+- [ ] 4.3 Integration tests — `test_image_processing.py` and `test_vision_extraction.py` exist, but `test_emails.py` still missing
+
+### Priority 5: Logging — Done
+
+- [x] 5.1 Structured logging configured in settings.py (lines 276-336), JSON formatter in docker prod
+- [x] 5.2 Audit logging via `wine_cellar.audit` logger in views
+- [x] 5.3 Sentry integration via `sentry-sdk==2.48.0` in prod requirements, conditional on `SENTRY_DSN`
+
+### Priority 6: Documentation — Done
+
+- [x] 6.1 API docs at `docs/api.md`
+- [x] 6.2 Environment docs at `docs/environment.md`
+- [x] 6.3 `CONTRIBUTING.md` created
+
+### Priority 7: Features — Mostly Done
+
+- [x] 7.1 Data export — CSV and JSON export in `wine_cellar/apps/wine/export.py` and `views/ajax.py`
+- [x] 7.2 Drink reminders — `reminder_enabled` and `reminder_years_before` fields on UserSettings (note: uses years not days)
+- [x] 7.3 Bulk operations — `bulk_action_view()` in `views/bulk.py`
+- [ ] 7.4 Statistics dashboard — homepage stats with caching exist, but no dedicated stats page with charts/maps/trends
+
+### Dependency Bumps (2026-03-06)
+
+- [x] Django 6.0.2 → 6.0.3 (fixes CVE: uncontrolled resource consumption, race condition)
+- [x] django-allauth 65.13.1 → 65.14.1 (fixes open redirect vulnerability)
+- [x] immutable 5.1.4 → 5.1.5 (JS dev dependency)
+- [x] serialize-javascript overridden to 7.0.3 (RCE fix, PR #81)
 
 ---
 
