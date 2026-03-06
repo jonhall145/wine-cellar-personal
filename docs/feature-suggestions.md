@@ -254,3 +254,53 @@ Replace cron-based tasks with a proper task queue (Django-Q2, Celery, or Huey):
 | Keyboard shortcuts | Low | `n` for new wine, `s` for scan, `/` for search |
 | Empty state illustrations | Low | Friendly empty states for new users with no wines/bottles/drinks |
 | Cellar summary email | Low | Weekly/monthly digest email with cellar stats and upcoming drinking windows |
+
+---
+
+## Review Notes
+
+Observations and suggestions from reviewing this feature list (March 2026).
+
+### Prioritisation Recommendation
+
+**#2 Recently Viewed Wines** is the highest-ROI item on the list — low complexity, high impact, no model changes required. Recommend tackling this first.
+
+### Complexity Corrections
+
+- **#5 PWA Support**: Background sync and offline-first architecture are notoriously tricky in practice. Real-world complexity is closer to **High** than Medium, especially for data sync conflict resolution.
+- **Dark mode (Quick Wins)**: Marked as Low effort, which is accurate only if CSS custom properties are already used throughout. If styles use hardcoded colour values, the migration effort increases significantly.
+
+### Strategic Observations
+
+- **#4 Full REST API**: Marked High impact / High complexity. Worth questioning whether this is needed now — unless there's a concrete mobile app plan, this is speculative and could be deferred indefinitely. The existing AJAX endpoints may be sufficient.
+- **#8 Price Tracking**: The CSS selector scraping approach is inherently fragile — retailer sites change layouts frequently, breaking selectors. For a personal app, consider API-based price lookups or simple manual price logging instead of maintaining scrapers.
+- **#14 Background Task Queue**: django-q2 with the ORM broker is the right fit for a Raspberry Pi deployment. Celery + Redis would be overkill for this scale.
+
+### Progress (improvements/comprehensive-sprint branch)
+
+Work completed or started as of March 2026:
+
+| Item | Status | What was done |
+|---|---|---|
+| #1 CSV/Excel Import & Export | **Partial** | CSV/JSON export added (`wine_cellar/apps/wine/export.py`). Import not yet implemented. |
+| #7 Advanced Analytics Dashboard | **Partial** | Chart.js charts added to consumption stats page. |
+| #11 Notification Centre | **Partial** | Per-user drink reminder preferences added (new `UserSettings` fields, updated `send_drink_reminders` command). No in-app notification bell yet. |
+| #15 Database Query Optimisation | **Partial** | N+1 fix for Wine image properties. Homepage stats caching with signal-based invalidation. |
+| #16 Improved Test Coverage | **Partial** | E2E scaffolding with Playwright (auth, CRUD, list tests). Image processing and settings integration tests added. |
+
+**Also completed (not on this list):**
+- Sentry SDK integration (gated by `SENTRY_DSN`)
+- JSON structured logging for production
+- Audit logging helpers integrated into base CRUD views
+- Split `views.py` (1049 lines) into a `views/` package (11 modules)
+- Bulk operations view (delete, update drink-by year)
+- Wildcard import cleanup in settings modules
+- CONTRIBUTING.md updated with accurate project info
+
+### Missing Items to Consider
+
+| Suggestion | Effort | Description |
+|---|---|---|
+| Full-text search | Medium | Search across tasting notes, wine notes, and descriptions — not just name/vintage filters |
+| Multi-language / i18n | Medium | Django has built-in i18n support; useful if the app is shared with non-English-speaking household members |
+| User-facing backup & restore | Low-Medium | Let users export/import their complete account data (wines, notes, history) independently of infrastructure-level R2 backups |
