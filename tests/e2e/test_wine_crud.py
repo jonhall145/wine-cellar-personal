@@ -10,17 +10,20 @@ class TestWineCrud:
         page = authenticated_page
         page.goto(f"{live_server.url}/wine/add/")
         page.wait_for_load_state("networkidle")
-        assert "/wine/add" in page.url
+
+        # Wait for the form to appear
+        form = page.locator("form.wine-form")
+        form.wait_for(state="visible")
 
         # Fill minimum required fields
-        page.fill("input[name='name']", "E2E Test Merlot")
-        # Select wine type if it's a dropdown
-        wine_type = page.locator("select[name='wine_type']")
+        form.locator("input[name='name']").fill("E2E Test Merlot")
+        # Select wine type
+        wine_type = form.locator("select[name='wine_type']")
         if wine_type.count() > 0:
             wine_type.select_option(index=1)
 
-        # Submit the form
-        page.locator("button[type='submit'][name='save']").click()
+        # Submit — button is name="save_finish" on create page
+        form.locator("button[type='submit']").click()
         page.wait_for_load_state("networkidle")
 
         # Should redirect away from the add page
@@ -33,7 +36,6 @@ class TestWineCrud:
 
         page = authenticated_page
 
-        # Create a wine via ORM
         membership = HouseholdMembership.objects.first()
         wine = Wine.objects.create(
             name="Wine To Edit",
@@ -45,8 +47,11 @@ class TestWineCrud:
 
         page.goto(f"{live_server.url}/wine/edit/{wine.pk}/")
         page.wait_for_load_state("networkidle")
-        page.fill("input[name='name']", "Edited Wine Name")
-        page.locator("button[type='submit'][name='save']").click()
+
+        form = page.locator("form.wine-form")
+        form.wait_for(state="visible")
+        form.locator("input[name='name']").fill("Edited Wine Name")
+        form.locator("button[type='submit']").click()
         page.wait_for_load_state("networkidle")
 
         wine.refresh_from_db()
@@ -69,8 +74,8 @@ class TestWineCrud:
 
         page.goto(f"{live_server.url}/wine/delete/{wine.pk}/")
         page.wait_for_load_state("networkidle")
-        # Use the specific delete button (name="save") to avoid matching nav buttons
-        page.locator("button[type='submit'][name='save']").click()
+        # Use the delete button inside main content (name="save")
+        page.locator("main button[type='submit'][name='save']").click()
         page.wait_for_load_state("networkidle")
 
         assert not Wine.objects.filter(pk=wine.pk).exists()
