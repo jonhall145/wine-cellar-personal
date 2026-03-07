@@ -3,10 +3,15 @@ import logging
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django_ratelimit.decorators import ratelimit
 
-from wine_cellar.apps.core.views import crop_image_ajax, set_primary_image_ajax
+from wine_cellar.apps.core.views import (
+    check_beverage_duplicate_ajax,
+    crop_image_ajax,
+    set_primary_image_ajax,
+)
 from wine_cellar.apps.user.views import get_active_household
-from wine_cellar.apps.wine.models import WineBarcode, WineImage
+from wine_cellar.apps.wine.models import Wine, WineBarcode, WineImage
 
 logger = logging.getLogger(__name__)
 
@@ -50,3 +55,14 @@ def export_wines_json_view(request):
 
     household = get_active_household(request.user)
     return export_wines_json(household)
+
+
+@ratelimit(key="user", rate="60/m", method="GET", block=True)
+@login_required
+def wine_check_duplicate_ajax(request):
+    """AJAX endpoint to check for wines with similar names."""
+    return check_beverage_duplicate_ajax(
+        request,
+        beverage_model=Wine,
+        detail_url_name="wine-detail",
+    )

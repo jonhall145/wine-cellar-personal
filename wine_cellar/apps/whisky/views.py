@@ -42,6 +42,7 @@ from wine_cellar.apps.core.views import (
     BaseWishlistDeleteView,
     BaseWishlistListView,
     BaseWishlistPurchasedView,
+    check_beverage_duplicate_ajax,
     crop_image_ajax,
     set_primary_image_ajax,
 )
@@ -602,6 +603,17 @@ def extract_whisky_vision_ajax(request):
         ),
         beverage_label="whisky",
         resolve_extracted_fks=resolve_fks,
+    )
+
+
+@ratelimit(key="user", rate="60/m", method="GET", block=True)
+@login_required
+def whisky_check_duplicate_ajax(request):
+    """AJAX endpoint to check for whiskies with similar names."""
+    return check_beverage_duplicate_ajax(
+        request,
+        beverage_model=Whisky,
+        detail_url_name="whisky-detail",
     )
 
 

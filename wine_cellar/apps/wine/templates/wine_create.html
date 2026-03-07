@@ -6,6 +6,7 @@
     <script src="{% static 'image_preview.js' %}" type="module" defer></script>
     <script src="{% static 'stock_add.js' %}" defer></script>
     <script src="{% static 'vision_extraction.js' %}" defer></script>
+    <script src="{% static 'duplicate_check.js' %}" defer></script>
 {% endblock extra_js %}
 {% block extra_head %}
     {{ block.super }}
@@ -86,6 +87,7 @@
                 </div>
             {% endif %}
             {% storage_cells free_cells_by_storage %}
+            <input type="hidden" id="duplicate-check-url" value="{% url 'wine-check-duplicate' %}" data-beverage-type="{% translate 'wine' %}">
             <form method="post"
                   enctype="multipart/form-data"
                   class="pure-form pure-form-stacked wine-form"

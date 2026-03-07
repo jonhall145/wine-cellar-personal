@@ -45,6 +45,7 @@ from wine_cellar.apps.wine.views import (
     extract_wine_vision_ajax,
     scan_barcode_ajax,
     set_primary_image,
+    wine_check_duplicate_ajax,
 )
 
 urlpatterns = [
@@ -59,6 +60,11 @@ urlpatterns = [
     # Wine CRUD
     path("wine/add/", WineCreateView.as_view(), name="wine-add"),
     path("wine/add/<str:code>/", WineCreateView.as_view(), name="wine-add"),
+    path(
+        "wine/check-duplicate/",
+        wine_check_duplicate_ajax,
+        name="wine-check-duplicate",
+    ),
     path("wine/extract-vision/", extract_wine_vision_ajax, name="wine-extract-vision"),
     path("wine/<int:pk>/", WineDetailView.as_view(), name="wine-detail"),
     path("wine/<int:pk>/qr/", QRCodeView.as_view(), name="wine-qr"),
