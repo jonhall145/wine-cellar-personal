@@ -243,6 +243,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const dot = document.createElement('span');
             dot.className = `field-confidence field-confidence--${level}`;
             dot.title = `AI confidence: ${level}`;
+            dot.setAttribute('role', 'img');
+            dot.setAttribute('aria-label', `AI confidence: ${level}`);
             label.appendChild(dot);
         });
     }
