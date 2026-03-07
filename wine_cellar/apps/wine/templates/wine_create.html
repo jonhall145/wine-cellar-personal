@@ -87,8 +87,7 @@
                 </div>
             {% endif %}
             {% storage_cells free_cells_by_storage %}
-            <input type="hidden" id="duplicate-check-url" value="{% url 'wine-check-duplicate' %}">
-            <meta name="beverage-type" content="{% translate 'wine' %}">
+            <input type="hidden" id="duplicate-check-url" value="{% url 'wine-check-duplicate' %}" data-beverage-type="{% translate 'wine' %}">
             <form method="post"
                   enctype="multipart/form-data"
                   class="pure-form pure-form-stacked wine-form"

@@ -3,6 +3,7 @@ import logging
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django_ratelimit.decorators import ratelimit
 
 from wine_cellar.apps.core.views import (
     check_beverage_duplicate_ajax,
@@ -56,6 +57,7 @@ def export_wines_json_view(request):
     return export_wines_json(household)
 
 
+@ratelimit(key="user", rate="60/m", method="GET", block=True)
 @login_required
 def wine_check_duplicate_ajax(request):
     """AJAX endpoint to check for wines with similar names."""

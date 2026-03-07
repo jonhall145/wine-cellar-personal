@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function showWarning(items) {
         const links = items.map(function (item) {
-            return '<a href="' + item.url + '" target="_blank" rel="noopener">' + escapeHtml(item.name) + '</a>';
+            return '<a href="' + escapeHtml(item.url) + '" target="_blank" rel="noopener">' + escapeHtml(item.name) + '</a>';
         }).join(', ');
 
         warning.innerHTML =
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function getBeverageLabel() {
-        return (document.querySelector('meta[name="beverage-type"]') || {}).content || 'entry';
+        return urlInput.dataset.beverageType || 'entry';
     }
 
     function escapeHtml(str) {

@@ -1036,9 +1036,6 @@ def check_beverage_duplicate_ajax(request, *, beverage_model, detail_url_name):
 
     from django.urls import reverse
 
-    if not request.user.is_authenticated:
-        return JsonResponse({"error": "Not authenticated"}, status=401)
-
     name = request.GET.get("name", "").strip()
     if len(name) < 3:
         return JsonResponse({"similar": []})
