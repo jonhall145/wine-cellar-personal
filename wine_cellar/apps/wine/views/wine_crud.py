@@ -105,6 +105,29 @@ class WineCreateView(BaseBeverageCreateView):
                     extracted_data = extraction_result.get("extracted_data", {})
                     self._apply_auto_crop(beverage, extracted_data)
 
+    def _link_extraction_log(self, beverage, cleaned_data, extraction_result):
+        """Link the most recent VisionExtractionLog to the created wine."""
+        from wine_cellar.apps.wine.models import VisionExtractionLog
+
+        try:
+            log = (
+                VisionExtractionLog.objects.filter(
+                    user=self.request.user, wine__isnull=True
+                )
+                .order_by("-created")
+                .first()
+            )
+            if log:
+                extracted_data = extraction_result.get("extracted_data", {})
+                corrections = self._detect_corrections(cleaned_data, extracted_data)
+                log.wine = beverage
+                log.was_successful = True
+                if corrections:
+                    log.user_corrections = corrections
+                log.save(update_fields=["wine", "was_successful", "user_corrections"])
+        except Exception:
+            logger.exception("Failed to link extraction log to wine %s", beverage.pk)
+
     @staticmethod
     def _apply_auto_crop(wine, extracted_data):
         """Apply AI-extracted label bounds as auto-crop thumbnails."""
@@ -355,6 +378,19 @@ class WineDetailView(BaseDetailView):
         "barcodes",
     )
     storage_item_reverse = "storageitem"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from wine_cellar.apps.wine.models import VisionExtractionLog
+
+        extraction_log = (
+            VisionExtractionLog.objects.filter(wine=self.object, was_successful=True)
+            .order_by("-created")
+            .first()
+        )
+        if extraction_log:
+            context["extraction_log"] = extraction_log
+        return context
 
 
 class WineImagesView(BaseImagesView):

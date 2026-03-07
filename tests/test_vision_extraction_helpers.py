@@ -42,6 +42,7 @@ TYPE: red
 VINTAGE: 2020
 COUNTRY: France
 CONFIDENCE: high
+FIELD_CONFIDENCE: name=high, type=high, vintage=medium, country=low
 """
     parsed = extractor._parse_claude_response(response)
     assert parsed["data"]["name"] == "Test Wine"
@@ -49,6 +50,19 @@ CONFIDENCE: high
     assert parsed["data"]["vintage"] == 2020
     assert parsed["data"]["country"] == "FR"
     assert parsed["confidence"] == "high"
+    assert parsed["field_confidence"]["name"] == "high"
+    assert parsed["field_confidence"]["vintage"] == "medium"
+    assert parsed["field_confidence"]["country"] == "low"
+
+
+def test_parse_claude_response_without_field_confidence():
+    extractor = WineVisionExtractor()
+    response = """
+NAME: Test Wine
+CONFIDENCE: medium
+"""
+    parsed = extractor._parse_claude_response(response)
+    assert parsed["field_confidence"] == {}
 
 
 def test_fallback_regex_extraction_extracts_volume_and_abv():

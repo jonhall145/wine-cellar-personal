@@ -88,6 +88,9 @@
             {% endif %}
             {% storage_cells free_cells_by_storage %}
             <input type="hidden" id="duplicate-check-url" value="{% url 'whisky-check-duplicate' %}" data-beverage-type="{% translate 'whisky' %}">
+            {% if field_confidence %}
+                {{ field_confidence|json_script:"field-confidence-data" }}
+            {% endif %}
             <form method="post"
                   enctype="multipart/form-data"
                   class="pure-form pure-form-stacked wine-form"
@@ -241,6 +244,13 @@
                                     name="save_finish"
                                     class="pure-button button__primary">
                                 {% translate "Save Whisky" %}
+                            </button>
+                            <button type="submit"
+                                    name="save_scan_another"
+                                    class="pure-button button__secondary"
+                                    title="{% translate 'Save and scan the next bottle' %}">
+                                <i class="fa-solid fa-camera"></i>
+                                {% translate "Save & Scan Another" %}
                             </button>
                         </div>
                     </div>

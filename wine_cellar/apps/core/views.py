@@ -893,6 +893,7 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
                         len(image_data) if isinstance(image_data, list) else 1
                     ),
                     "extracted_data": result.get("data", {}),
+                    "field_confidence": result.get("field_confidence", {}),
                 }
                 extraction_result = self.request.session["extraction_result"]
 
@@ -946,6 +947,7 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
             context["scanned_image"] = extraction_result.get("scanned_image")
             context["extracted_fields"] = extraction_result.get("extracted_fields", [])
             context["confidence"] = extraction_result.get("confidence", "low")
+            context["field_confidence"] = extraction_result.get("field_confidence", {})
 
         scanned_label = self.request.session.get("scanned_label")
         if scanned_label:
@@ -997,6 +999,11 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
 
         self.post_create(beverage, created)
 
+        # Link extraction log to created beverage and record corrections
+        extraction_result = self.request.session.get("extraction_result")
+        if extraction_result and created:
+            self._link_extraction_log(beverage, form.cleaned_data, extraction_result)
+
         # Clear session data
         for key in ("scanned_label", "extraction_result"):
             self.request.session.pop(key, None)
@@ -1010,6 +1017,16 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
                 f"Added bottle to your cellar.",
             )
 
+        # Check if user wants to continue batch scanning
+        if "save_scan_another" in self.request.POST:
+            from django.contrib import messages
+
+            messages.success(
+                self.request,
+                f"{self.beverage_label.title()} saved. Scan the next bottle.",
+            )
+            return redirect("label-scan")
+
         return super().form_valid(form)
 
     def process_form_data(self, user, household, cleaned_data):
@@ -1018,6 +1035,56 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
     def post_create(self, beverage, created):
         """Hook for post-creation processing. Override per app."""
         pass
+
+    def _link_extraction_log(self, beverage, cleaned_data, extraction_result):
+        """Link the most recent extraction log to the created beverage
+        and record any user corrections."""
+        pass  # Override per app
+
+    @staticmethod
+    def _detect_corrections(cleaned_data, extracted_data):
+        """Compare submitted form data with extracted data to find corrections."""
+        corrections = {}
+        for field, extracted_val in extracted_data.items():
+            if field in (
+                "label_bounds_front",
+                "label_bounds_back",
+                "appellation",
+                "designation",
+            ):
+                continue
+            submitted_val = cleaned_data.get(field)
+            if submitted_val is None:
+                continue
+            # Normalize for comparison
+            if hasattr(submitted_val, "pk"):
+                submitted_val = submitted_val.pk
+            elif hasattr(submitted_val, "__iter__") and not isinstance(
+                submitted_val, str
+            ):
+                submitted_val = sorted(str(v) for v in submitted_val)
+                extracted_val = (
+                    sorted(str(v) for v in extracted_val)
+                    if isinstance(extracted_val, list)
+                    else [str(extracted_val)]
+                )
+            else:
+                submitted_val = str(submitted_val)
+                extracted_val = str(extracted_val)
+            if submitted_val != extracted_val:
+                corrections[field] = {
+                    "extracted": (
+                        extracted_val
+                        if isinstance(extracted_val, (str, int, float, list))
+                        else str(extracted_val)
+                    ),
+                    "submitted": (
+                        submitted_val
+                        if isinstance(submitted_val, (str, int, float, list))
+                        else str(submitted_val)
+                    ),
+                }
+        return corrections
 
 
 # --- Shared duplicate check AJAX ---
@@ -1192,6 +1259,7 @@ def extract_vision_ajax(
             "extracted_fields": result.get("extracted_fields", []),
             "errors": result.get("errors", []),
             "match_type": "vision",
+            "field_confidence": result.get("field_confidence", {}),
         }
 
         # If barcodes were found but didn't match, include them

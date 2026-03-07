@@ -133,6 +133,7 @@ class WhiskyVisionExtractor:
             "raw_text": "",
             "errors": [],
             "extracted_fields": [],
+            "field_confidence": {},
         }
 
         start_time = time.time()
@@ -152,6 +153,7 @@ class WhiskyVisionExtractor:
                 result["confidence"] = vision_result.get("confidence", "medium")
                 result["raw_text"] = vision_result.get("raw_text", "")
                 result["extracted_fields"] = vision_result.get("extracted_fields", [])
+                result["field_confidence"] = vision_result.get("field_confidence", {})
             else:
                 result["errors"].append(vision_result.get("error", "Unknown error"))
                 logger.error(f"Vision extraction failed: {vision_result.get('error')}")
@@ -230,6 +232,7 @@ class WhiskyVisionExtractor:
                 "confidence": extracted_data["confidence"],
                 "raw_text": response_text,
                 "extracted_fields": extracted_data["extracted_fields"],
+                "field_confidence": extracted_data.get("field_confidence", {}),
             }
 
         except Exception:
@@ -294,12 +297,15 @@ BOTTLER: [bottler name or "not found"]
 BOTTLER_SERIES: [series or "not found"]
 BARCODE: [barcode or "not found"]
 CONFIDENCE: [high/medium/low]
+FIELD_CONFIDENCE: [field1=high, field2=medium, field3=low, ...]
 ```
 
 **Important**:
 - Combine information from ALL images provided
 - If you cannot read or find a field in any image, write "not found"
 - For confidence: "high" if confident, "medium" if some unclear, "low" if hard to read
+- For FIELD_CONFIDENCE: rate each extracted field individually as high/medium/low \
+(e.g., "name=high, distillery=high, country=medium, age_statement=low")
 - Be precise and only extract what you can actually see on the labels
 """
 
@@ -349,6 +355,22 @@ CONFIDENCE: [high/medium/low]
             if conf_value in ["high", "medium", "low"]:
                 confidence = conf_value
 
+        # Parse per-field confidence
+        field_confidence = {}
+        fc_match = re.search(
+            r"FIELD_CONFIDENCE:\s*(.+?)(?:\n|$)", response_text, re.IGNORECASE
+        )
+        if fc_match:
+            fc_text = fc_match.group(1).strip()
+            for pair in fc_text.split(","):
+                pair = pair.strip()
+                if "=" in pair:
+                    fname, fconf = pair.split("=", 1)
+                    fname = fname.strip().lower()
+                    fconf = fconf.strip().lower()
+                    if fconf in ("high", "medium", "low"):
+                        field_confidence[fname] = fconf
+
         # Try to infer country from region if not found
         if "country" not in data and "region" in data:
             inferred_country = self._infer_country_from_region(data["region"])
@@ -360,6 +382,7 @@ CONFIDENCE: [high/medium/low]
             "data": data,
             "confidence": confidence,
             "extracted_fields": extracted_fields,
+            "field_confidence": field_confidence,
         }
 
     def _process_field_value(self, field: str, value: str) -> Any:

@@ -1,5 +1,11 @@
 {% extends 'base.html' %}
 {% load static i18n l10n whisky_tags %}
+{% block extra_head %}
+    {{ block.super }}
+    {% if extraction_log %}
+        {% include 'extraction_badges.html' %}
+    {% endif %}
+{% endblock extra_head %}
 {% block header %}
     <h1 class="header__title">{{ whisky.name }}</h1>
 {% endblock header %}
@@ -185,6 +191,18 @@
                         </tr>
                     {% endif %}
                 </table>
+                {% if extraction_log %}
+                    <div class="extraction-origin">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        {% translate "Added via label scan" %}
+                        <span class="text--gray text--small">
+                            ({{ extraction_log.created|date:"SHORT_DATE_FORMAT" }} ·
+                            {{ extraction_log.confidence }} {% translate "confidence" %} ·
+                            {{ extraction_log.extracted_fields|length }} {% translate "fields" %}{% if extraction_log.user_corrections %} ·
+                            {{ extraction_log.user_corrections|length }} {% translate "corrected" %}{% endif %})
+                        </span>
+                    </div>
+                {% endif %}
             </div>
 
             <!-- Cask History Section -->
