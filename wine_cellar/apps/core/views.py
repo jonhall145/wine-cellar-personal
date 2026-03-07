@@ -721,7 +721,8 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
             sorted(by_storage.items(), key=lambda x: x[1]["value"], reverse=True)
         )
 
-        # --- Purchase trends over time (bottles added per month) ---
+        # --- Purchase trends over time (all bottles ever added, including consumed) ---
+        # Intentionally includes deleted items so the chart reflects true purchase history.
         by_month = (
             self.storage_item_model.objects.filter(household=household)
             .annotate(month=TruncMonth("created"))
