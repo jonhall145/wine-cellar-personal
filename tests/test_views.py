@@ -926,7 +926,9 @@ def test_stats_dashboard_by_storage(client, user, wine_factory, storage_item_fac
 
 
 @pytest.mark.django_db
-def test_stats_dashboard_purchase_trends(client, user, wine_factory, storage_item_factory):
+def test_stats_dashboard_purchase_trends(
+    client, user, wine_factory, storage_item_factory
+):
     """Stats dashboard shows purchase trends over time."""
     storage = user.storage_set.first()
     wine = wine_factory(user=user)

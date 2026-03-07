@@ -685,7 +685,7 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
 
         items_qs = self.storage_item_model.objects.filter(
             household=household, deleted=False
-        ).select_related(*self.select_related_fields)
+        ).select_related(*self.select_related_fields, "storage")
 
         # --- By type (count in stock) ---
         by_type = defaultdict(int)
@@ -694,7 +694,7 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
         # --- Value by storage location ---
         by_storage = {}
 
-        for item in items_qs.select_related("storage"):
+        for item in items_qs:
             beverage = getattr(item, self.beverage_fk_name)
             by_type[self.get_type_display(beverage)] += 1
             by_country[self.get_country_name(beverage)] += 1
@@ -721,8 +721,8 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
             sorted(by_storage.items(), key=lambda x: x[1]["value"], reverse=True)
         )
 
-        # --- Purchase trends over time (all bottles ever added, including consumed) ---
-        # Intentionally includes deleted items so the chart reflects true purchase history.
+        # Purchase trends (all bottles ever added, including consumed).
+        # Includes deleted items so the chart reflects true purchase history.
         by_month = (
             self.storage_item_model.objects.filter(household=household)
             .annotate(month=TruncMonth("created"))
@@ -738,7 +738,7 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
                 "by_storage": by_storage,
                 "by_month": list(by_month),
                 "currency": currency,
-                "total_in_stock": sum(v for v in by_type.values()),
+                "total_in_stock": sum(by_type.values()),
             }
         )
         return context

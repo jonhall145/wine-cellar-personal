@@ -527,8 +527,8 @@ def test_cellar_value_by_distillery_uses_whisky_price_fallback(
     client.force_login(user)
     r = client.get(reverse("cellar-value"))
     assert r.status_code == HTTPStatus.OK
-    by_distillery = r.context_data["by_distillery"]
-    assert by_distillery[distillery.name]["value"] == 75
+    by_group = r.context_data["by_group"]
+    assert by_group[distillery.name]["value"] == 75
 
 
 @pytest.mark.django_db

@@ -153,7 +153,7 @@
         new Chart(document.getElementById('chartByType'), {
             type: 'doughnut',
             data: {
-                labels: [{% for type_name, count in by_type.items %}'{{ type_name }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                labels: [{% for type_name, count in by_type.items %}'{{ type_name|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
                 datasets: [{
                     data: [{% for type_name, count in by_type.items %}{{ count }}{% if not forloop.last %},{% endif %}{% endfor %}],
                     backgroundColor: chartColors
@@ -167,7 +167,7 @@
         new Chart(document.getElementById('chartByCountry'), {
             type: 'doughnut',
             data: {
-                labels: [{% for country_name, count in by_country.items %}'{{ country_name }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                labels: [{% for country_name, count in by_country.items %}'{{ country_name|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
                 datasets: [{
                     data: [{% for country_name, count in by_country.items %}{{ count }}{% if not forloop.last %},{% endif %}{% endfor %}],
                     backgroundColor: chartColors
@@ -181,7 +181,7 @@
         new Chart(document.getElementById('chartByMonth'), {
             type: 'bar',
             data: {
-                labels: [{% for item in by_month %}'{{ item.month|date:"M Y" }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                labels: [{% for item in by_month %}'{{ item.month|date:"M Y"|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
                 datasets: [{
                     label: '{% translate "Bottles Added" %}',
                     data: [{% for item in by_month %}{{ item.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
@@ -196,7 +196,7 @@
         new Chart(document.getElementById('chartByStorage'), {
             type: 'bar',
             data: {
-                labels: [{% for name, data in by_storage.items %}'{{ name }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                labels: [{% for name, data in by_storage.items %}'{{ name|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
                 datasets: [{
                     label: '{% translate "Value" %} ({{ currency }})',
                     data: [{% for name, data in by_storage.items %}{{ data.value }}{% if not forloop.last %},{% endif %}{% endfor %}],
