@@ -121,6 +121,7 @@ urlpatterns = [
     # Stats & reports
     path("cellar-value/", views.CellarValueView.as_view(), name="cellar-value"),
     path("stats/", views.ConsumptionStatsView.as_view(), name="consumption-stats"),
+    path("dashboard/", views.StatsDashboardView.as_view(), name="stats-dashboard"),
     path(
         "alerts/",
         views.DrinkingWindowAlertsView.as_view(),

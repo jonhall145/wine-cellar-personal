@@ -38,6 +38,7 @@ from wine_cellar.apps.core.views import (
     BaseReorderReminderDeleteView,
     BaseReorderRemindersView,
     BaseScanView,
+    BaseStatsDashboardView,
     BaseWishlistCreateView,
     BaseWishlistDeleteView,
     BaseWishlistListView,
@@ -835,6 +836,20 @@ class ConsumptionStatsView(BaseConsumptionStatsView):
             )
             by_distillery[distillery] += 1
         return {"by_group": dict(by_distillery)}
+
+
+class StatsDashboardView(BaseStatsDashboardView):
+    template_name = "core/stats_dashboard.html"
+    storage_item_model = WhiskyStorageItem
+    beverage_fk_name = "whisky"
+    price_fallback_path = "whisky__price"
+    select_related_fields = ("whisky",)
+
+    def get_type_display(self, beverage):
+        return beverage.get_whisky_type_display()
+
+    def get_country_name(self, beverage):
+        return beverage.country_name if beverage.country else "Unknown"
 
 
 class BottleNoteCreateView(BaseBottleNoteCreateView):
