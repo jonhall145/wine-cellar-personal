@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% load static i18n l10n whisky_tags %}
-{% block extra_head %}
+{% block styles %}
     {{ block.super }}
     {% if extraction_log %}
         {% include 'extraction_badges.html' %}
     {% endif %}
-{% endblock extra_head %}
+{% endblock styles %}
 {% block header %}
     <h1 class="header__title">{{ whisky.name }}</h1>
 {% endblock header %}
