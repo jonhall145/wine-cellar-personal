@@ -1055,7 +1055,7 @@ def check_beverage_duplicate_ajax(request, *, beverage_model, detail_url_name):
         if ratio >= 0.6:
             scored.append((ratio, candidate))
 
-    scored.sort(reverse=True)
+    scored.sort(key=lambda x: x[0], reverse=True)
 
     similar = [
         {
