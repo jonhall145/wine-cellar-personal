@@ -272,6 +272,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const dot = document.createElement('span');
             dot.className = `field-confidence field-confidence--${level}`;
             dot.title = `AI confidence: ${level}`;
+            dot.setAttribute('role', 'img');
+            dot.setAttribute('aria-label', `AI confidence: ${level}`);
+            // Optional visually hidden text for users who rely on text instead of color
+            const srText = document.createElement('span');
+            srText.className = 'sr-only';
+            srText.textContent = `AI confidence: ${level}`;
+            dot.appendChild(srText);
             label.appendChild(dot);
         });
     }
