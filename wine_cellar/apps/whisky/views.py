@@ -605,6 +605,18 @@ def extract_whisky_vision_ajax(request):
     )
 
 
+@login_required
+def whisky_check_duplicate_ajax(request):
+    """AJAX endpoint to check for whiskies with similar names."""
+    from wine_cellar.apps.core.views import check_beverage_duplicate_ajax
+
+    return check_beverage_duplicate_ajax(
+        request,
+        beverage_model=Whisky,
+        detail_url_name="whisky-detail",
+    )
+
+
 @ratelimit(key="user", rate="30/m", method="POST", block=True)
 @login_required
 def scan_barcode_ajax(request):

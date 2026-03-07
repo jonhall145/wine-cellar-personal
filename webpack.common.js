@@ -69,6 +69,9 @@ module.exports = {
     },
     mask_editor: {
       import: ['./wine_cellar/assets/js/mask_editor.ts'],
+    },
+    duplicate_check: {
+      import: ['./wine_cellar/assets/js/duplicate_check.js'],
     }
   },
   output: {

@@ -877,3 +877,76 @@ def test_cellar_value_by_country_uses_wine_price_fallback(
     assert r.status_code == HTTPStatus.OK
     by_group = r.context_data["by_group"]
     assert by_group["France"]["value"] == 30
+
+
+@pytest.mark.django_db
+def test_wine_check_duplicate_unauthenticated(client):
+    """Unauthenticated requests to the check-duplicate endpoint are redirected."""
+    r = client.get(reverse("wine-check-duplicate"), {"name": "Chateau Margaux"})
+    assert r.status_code == HTTPStatus.FOUND
+
+
+@pytest.mark.django_db
+def test_wine_check_duplicate_no_matches(client, user):
+    """Returns empty list when no similar wines exist."""
+    client.force_login(user)
+    r = client.get(reverse("wine-check-duplicate"), {"name": "Unique Vintage 2020"})
+    assert r.status_code == HTTPStatus.OK
+    data = r.json()
+    assert data["similar"] == []
+
+
+@pytest.mark.django_db
+def test_wine_check_duplicate_short_name(client, user):
+    """Returns empty list when name is too short to check."""
+    client.force_login(user)
+    r = client.get(reverse("wine-check-duplicate"), {"name": "Ch"})
+    assert r.status_code == HTTPStatus.OK
+    assert r.json()["similar"] == []
+
+
+@pytest.mark.django_db
+def test_wine_check_duplicate_finds_similar(client, user, wine_factory):
+    """Returns existing wine when name closely matches."""
+    wine_factory(user=user, name="Chateau Margaux")
+    client.force_login(user)
+    r = client.get(reverse("wine-check-duplicate"), {"name": "Chateau Margaux"})
+    assert r.status_code == HTTPStatus.OK
+    data = r.json()
+    assert len(data["similar"]) >= 1
+    names = [item["name"] for item in data["similar"]]
+    assert "Chateau Margaux" in names
+
+
+@pytest.mark.django_db
+def test_wine_check_duplicate_case_insensitive(client, user, wine_factory):
+    """Match is case-insensitive."""
+    wine_factory(user=user, name="chateau petrus")
+    client.force_login(user)
+    r = client.get(reverse("wine-check-duplicate"), {"name": "Chateau Petrus"})
+    assert r.status_code == HTTPStatus.OK
+    data = r.json()
+    assert len(data["similar"]) >= 1
+
+
+@pytest.mark.django_db
+def test_wine_check_duplicate_returns_url(client, user, wine_factory):
+    """Each similar entry contains a URL."""
+    wine = wine_factory(user=user, name="Opus One")
+    client.force_login(user)
+    r = client.get(reverse("wine-check-duplicate"), {"name": "Opus One"})
+    assert r.status_code == HTTPStatus.OK
+    data = r.json()
+    assert len(data["similar"]) >= 1
+    assert f"/wine/{wine.pk}/" in data["similar"][0]["url"]
+
+
+@pytest.mark.django_db
+def test_wine_check_duplicate_no_cross_household(client, user, wine_factory, user_factory):
+    """Does not return wines belonging to a different user's household."""
+    other_user = user_factory()
+    wine_factory(user=other_user, name="Shared Name Wine")
+    client.force_login(user)
+    r = client.get(reverse("wine-check-duplicate"), {"name": "Shared Name Wine"})
+    assert r.status_code == HTTPStatus.OK
+    assert r.json()["similar"] == []

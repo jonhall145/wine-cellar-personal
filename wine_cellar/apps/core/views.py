@@ -1020,6 +1020,58 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
         pass
 
 
+# --- Shared duplicate check AJAX ---
+
+
+def check_beverage_duplicate_ajax(request, *, beverage_model, detail_url_name):
+    """Shared AJAX endpoint to warn about beverages with similar names.
+
+    Accepts GET requests with a ``name`` query parameter and returns up to 5
+    existing beverages from the user's household whose name closely matches the
+    supplied value.  Matching uses Python difflib ratio filtering (≥ 0.6) on a
+    capped set of household beverages so the response is fast even for larger
+    collections.
+    """
+    from difflib import SequenceMatcher
+
+    from django.urls import reverse
+
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Not authenticated"}, status=401)
+
+    name = request.GET.get("name", "").strip()
+    if len(name) < 3:
+        return JsonResponse({"similar": []})
+
+    household = get_active_household(request.user)
+    name_lower = name.lower()
+
+    # Fetch candidates (limited for performance) and score by similarity.
+    all_candidates = list(
+        beverage_model.objects.filter(household=household).values("pk", "name")[:500]
+    )
+
+    scored = []
+    for candidate in all_candidates:
+        cname_lower = candidate["name"].lower()
+        ratio = SequenceMatcher(None, name_lower, cname_lower).ratio()
+        if ratio >= 0.6:
+            scored.append((ratio, candidate))
+
+    scored.sort(reverse=True)
+
+    similar = [
+        {
+            "pk": c["pk"],
+            "name": c["name"],
+            "url": reverse(detail_url_name, kwargs={"pk": c["pk"]}),
+        }
+        for _, c in scored[:5]
+    ]
+
+    return JsonResponse({"similar": similar})
+
+
 # --- Shared AJAX vision extraction ---
 
 

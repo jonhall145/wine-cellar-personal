@@ -28,6 +28,11 @@ urlpatterns = [
     path("label-scan/", views.LabelScanView.as_view(), name="label-scan"),
     # AJAX endpoints
     path(
+        "whisky/check-duplicate/",
+        views.whisky_check_duplicate_ajax,
+        name="whisky-check-duplicate",
+    ),
+    path(
         "whisky/extract-vision/",
         views.extract_whisky_vision_ajax,
         name="whisky-extract-vision",

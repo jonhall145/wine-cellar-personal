@@ -529,3 +529,65 @@ def test_cellar_value_by_distillery_uses_whisky_price_fallback(
     assert r.status_code == HTTPStatus.OK
     by_distillery = r.context_data["by_distillery"]
     assert by_distillery[distillery.name]["value"] == 75
+
+
+@pytest.mark.django_db
+def test_whisky_check_duplicate_unauthenticated(client):
+    """Unauthenticated requests to the check-duplicate endpoint are redirected."""
+    r = client.get(reverse("whisky-check-duplicate"), {"name": "Lagavulin 16"})
+    assert r.status_code == HTTPStatus.FOUND
+
+
+@pytest.mark.django_db
+def test_whisky_check_duplicate_no_matches(client, user):
+    """Returns empty list when no similar whiskies exist."""
+    client.force_login(user)
+    r = client.get(reverse("whisky-check-duplicate"), {"name": "Unique Distillery"})
+    assert r.status_code == HTTPStatus.OK
+    data = r.json()
+    assert data["similar"] == []
+
+
+@pytest.mark.django_db
+def test_whisky_check_duplicate_short_name(client, user):
+    """Returns empty list when name is too short to check."""
+    client.force_login(user)
+    r = client.get(reverse("whisky-check-duplicate"), {"name": "La"})
+    assert r.status_code == HTTPStatus.OK
+    assert r.json()["similar"] == []
+
+
+@pytest.mark.django_db
+def test_whisky_check_duplicate_finds_similar(client, user, whisky_factory):
+    """Returns existing whisky when name closely matches."""
+    whisky_factory(user=user, name="Lagavulin 16")
+    client.force_login(user)
+    r = client.get(reverse("whisky-check-duplicate"), {"name": "Lagavulin 16"})
+    assert r.status_code == HTTPStatus.OK
+    data = r.json()
+    assert len(data["similar"]) >= 1
+    names = [item["name"] for item in data["similar"]]
+    assert "Lagavulin 16" in names
+
+
+@pytest.mark.django_db
+def test_whisky_check_duplicate_returns_url(client, user, whisky_factory):
+    """Each similar entry contains a URL linking to the whisky detail page."""
+    whisky = whisky_factory(user=user, name="Glenfarclas 15")
+    client.force_login(user)
+    r = client.get(reverse("whisky-check-duplicate"), {"name": "Glenfarclas 15"})
+    assert r.status_code == HTTPStatus.OK
+    data = r.json()
+    assert len(data["similar"]) >= 1
+    assert f"/whisky/{whisky.pk}/" in data["similar"][0]["url"]
+
+
+@pytest.mark.django_db
+def test_whisky_check_duplicate_no_cross_household(client, user, whisky_factory, user_factory):
+    """Does not return whiskies belonging to a different user's household."""
+    other_user = user_factory()
+    whisky_factory(user=other_user, name="Ardbeg Uigeadail")
+    client.force_login(user)
+    r = client.get(reverse("whisky-check-duplicate"), {"name": "Ardbeg Uigeadail"})
+    assert r.status_code == HTTPStatus.OK
+    assert r.json()["similar"] == []

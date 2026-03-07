@@ -6,6 +6,7 @@ from wine_cellar.apps.wine.views.ajax import (  # noqa: F401
     export_wines_csv_view,
     export_wines_json_view,
     set_primary_image,
+    wine_check_duplicate_ajax,
 )
 from wine_cellar.apps.wine.views.bulk import bulk_action_view  # noqa: F401
 from wine_cellar.apps.wine.views.cellar import (  # noqa: F401
