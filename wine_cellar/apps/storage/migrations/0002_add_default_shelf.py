@@ -8,10 +8,19 @@ def add_default_shelf(apps, schema_editor):
     Storage = apps.get_model("storage", "Storage")
     StorageItem = apps.get_model("storage", "StorageItem")
     for user in User.objects.all():
-        default_storage = Storage.objects.create(name="Default Shelf", user=user, description="Default storage for wines", location="Cellar", rows=0, columns=0)
+        default_storage = Storage.objects.create(
+            name="Default Shelf",
+            user=user,
+            description="Default storage for wines",
+            location="Cellar",
+            rows=0,
+            columns=0,
+        )
         for wine in user.wine_set.all():
             for x in range(wine.stock):
-                StorageItem.objects.create(storage=default_storage, user=user, wine=wine, row=None, column=None)
+                StorageItem.objects.create(
+                    storage=default_storage, user=user, wine=wine, row=None, column=None
+                )
 
 
 class Migration(migrations.Migration):
