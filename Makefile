@@ -1,5 +1,6 @@
 VIRTUAL_ENV ?= venv
-PYTHON ?= python3.12
+VENV_BIN = $(VIRTUAL_ENV)/bin
+PYTHON ?= python3
 NODE_BIN = node_modules/.bin
 SOURCE_DIRS = wine_cellar tests
 ARGUMENTS=$(filter-out $(firstword $(MAKECMDGOALS)), $(MAKECMDGOALS))
@@ -19,6 +20,7 @@ help:
 	@echo ""
 	@echo "  Setup"
 	@echo "    make install              Build and start Docker dev stack"
+	@echo "    make venv                 Create venv and install dev dependencies"
 	@echo "    make clean                Remove local node/venv artifacts"
 	@echo "    make fixtures             Load wine sample data"
 	@echo "    make whisky-fixtures      Load whisky sample data"
@@ -68,6 +70,11 @@ help:
 install:
 	$(DEV_COMPOSE) build web
 	$(DEV_COMPOSE) up -d web
+
+.PHONY: venv
+venv:
+	$(PYTHON) -m venv $(VIRTUAL_ENV)
+	$(VENV_BIN)/pip install -r requirements/dev.txt
 
 .PHONY: clean
 clean:
@@ -209,18 +216,19 @@ coverage:
 .PHONY: lint
 lint:
 	EXIT_STATUS=0; \
-	$(DEV_COMPOSE) up -d web || EXIT_STATUS=$$?; \
-	$(DEV_COMPOSE) exec -T web isort --diff -c $(SOURCE_DIRS) || EXIT_STATUS=$$?; \
-	$(DEV_COMPOSE) exec -T web flake8 $(SOURCE_DIRS) --exclude migrations,settings || EXIT_STATUS=$$?; \
+	$(VENV_BIN)/black --check $(SOURCE_DIRS) || EXIT_STATUS=$$?; \
+	$(VENV_BIN)/isort --diff -c $(SOURCE_DIRS) || EXIT_STATUS=$$?; \
+	$(VENV_BIN)/flake8 $(SOURCE_DIRS) --exclude migrations,settings || EXIT_STATUS=$$?; \
 	$(NODE_RUN) sh -lc "npm ci --no-audit --no-fund >/dev/null && npm run lint" || EXIT_STATUS=$$?; \
+	$(DEV_COMPOSE) up -d web || EXIT_STATUS=$$?; \
 	$(DEV_COMPOSE) exec -T web python manage.py makemigrations --dry-run --check --noinput || EXIT_STATUS=$$?; \
 	exit $${EXIT_STATUS}
 
 .PHONY: lint-quick
 lint-quick:
 	EXIT_STATUS=0; \
-	$(DEV_COMPOSE) up -d web || EXIT_STATUS=$$?; \
 	npx lint-staged || EXIT_STATUS=$$?; \
+	$(DEV_COMPOSE) up -d web || EXIT_STATUS=$$?; \
 	$(DEV_COMPOSE) exec -T web python manage.py makemigrations --dry-run --check --noinput || EXIT_STATUS=$$?; \
 	exit $${EXIT_STATUS}
 
@@ -233,25 +241,20 @@ lint-js-fix:
 # Use with caution, the automatic fixing might produce bad results
 .PHONY: lint-html-fix
 lint-html-fix:
-	EXIT_STATUS=0; \
-	$(DEV_COMPOSE) up -d web || EXIT_STATUS=$$?; \
-	$(DEV_COMPOSE) exec -T web djlint $(ARGUMENTS) --reformat --profile=django --ignore=H030,H031,T002 || EXIT_STATUS=$$?; \
-	exit $${EXIT_STATUS}
+	$(VENV_BIN)/djlint $(ARGUMENTS) --reformat --profile=django --ignore=H030,H031,T002
 
 .PHONY: lint-html
 lint-html:
 	EXIT_STATUS=0; \
-	DOCKER_ARGS="$(patsubst $(CURDIR)/%,%,$(ARGUMENTS))"; \
-	$(DEV_COMPOSE) up -d web || EXIT_STATUS=$$?; \
-	$(DEV_COMPOSE) exec -T web djlint $${DOCKER_ARGS:-$(ARGUMENTS)} --profile=django --ignore=H030,H031,T002 || EXIT_STATUS=$$?; \
+	ARGS="$(patsubst $(CURDIR)/%,%,$(ARGUMENTS))"; \
+	$(VENV_BIN)/djlint $${ARGS:-$(ARGUMENTS)} --profile=django --ignore=H030,H031,T002 || EXIT_STATUS=$$?; \
 	exit $${EXIT_STATUS}
 
 .PHONY: lint-py
 lint-py:
 	EXIT_STATUS=0; \
-	DOCKER_ARGS="$(patsubst $(CURDIR)/%,%,$(ARGUMENTS))"; \
-	if ! docker image inspect wine-cellar:dev >/dev/null 2>&1; then $(DEV_COMPOSE) build web || EXIT_STATUS=$$?; fi; \
-	docker run --rm -v "$$(pwd)":/app -w /app -e DOCKER_ARGS="$$DOCKER_ARGS" wine-cellar:dev sh -lc 'black --check $$DOCKER_ARGS' || EXIT_STATUS=$$?; \
-	docker run --rm -v "$$(pwd)":/app -w /app -e DOCKER_ARGS="$$DOCKER_ARGS" wine-cellar:dev sh -lc 'isort $$DOCKER_ARGS --check-only' || EXIT_STATUS=$$?; \
-	docker run --rm -v "$$(pwd)":/app -w /app -e DOCKER_ARGS="$$DOCKER_ARGS" wine-cellar:dev sh -lc 'flake8 $$DOCKER_ARGS --exclude migrations,settings' || EXIT_STATUS=$$?; \
+	ARGS="$(patsubst $(CURDIR)/%,%,$(ARGUMENTS))"; \
+	$(VENV_BIN)/black --check $${ARGS} || EXIT_STATUS=$$?; \
+	$(VENV_BIN)/isort $${ARGS} --check-only || EXIT_STATUS=$$?; \
+	$(VENV_BIN)/flake8 $${ARGS} --exclude migrations,settings || EXIT_STATUS=$$?; \
 	exit $${EXIT_STATUS}

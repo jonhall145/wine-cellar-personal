@@ -583,7 +583,9 @@ def test_whisky_check_duplicate_returns_url(client, user, whisky_factory):
 
 
 @pytest.mark.django_db
-def test_whisky_check_duplicate_no_cross_household(client, user, whisky_factory, user_factory):
+def test_whisky_check_duplicate_no_cross_household(
+    client, user, whisky_factory, user_factory
+):
     """Does not return whiskies belonging to a different user's household."""
     other_user = user_factory()
     whisky_factory(user=other_user, name="Ardbeg Uigeadail")
