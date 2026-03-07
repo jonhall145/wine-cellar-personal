@@ -551,7 +551,6 @@ def test_whisky_stats_dashboard_by_type(
     client, user, whisky_factory, whisky_storage_item_factory
 ):
     """Stats dashboard shows correct by-type breakdown for whiskies."""
-    from wine_cellar.apps.whisky.models import Whisky
 
     Whisky.objects.filter(user=user).delete()
     storage = user.storage_set.first()
