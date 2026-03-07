@@ -880,6 +880,65 @@ def test_cellar_value_by_country_uses_wine_price_fallback(
 
 
 @pytest.mark.django_db
+def test_stats_dashboard_renders(client, user):
+    """Stats dashboard page loads successfully for authenticated users."""
+    client.force_login(user)
+    r = client.get(reverse("stats-dashboard"))
+    assert r.status_code == HTTPStatus.OK
+
+
+@pytest.mark.django_db
+def test_stats_dashboard_unauthenticated(client):
+    """Unauthenticated users are redirected from the stats dashboard."""
+    r = client.get(reverse("stats-dashboard"))
+    assert r.status_code == HTTPStatus.FOUND
+
+
+@pytest.mark.django_db
+def test_stats_dashboard_by_type(client, user, wine_factory, storage_item_factory):
+    """Stats dashboard shows correct by-type breakdown."""
+    Wine.objects.filter(user=user).delete()
+    storage = user.storage_set.first()
+    wine_factory(user=user, wine_type="RE")  # Red, no storage item
+    w = wine_factory(user=user, wine_type="WH")  # White, in stock
+    storage_item_factory(wine=w, storage=storage)
+    client.force_login(user)
+    r = client.get(reverse("stats-dashboard"))
+    assert r.status_code == HTTPStatus.OK
+    by_type = r.context_data["by_type"]
+    assert by_type.get("White", 0) == 1
+    assert "Red" not in by_type
+
+
+@pytest.mark.django_db
+def test_stats_dashboard_by_storage(client, user, wine_factory, storage_item_factory):
+    """Stats dashboard shows value grouped by storage location."""
+    Wine.objects.filter(user=user).delete()
+    storage = user.storage_set.first()
+    wine = wine_factory(user=user, price=50.00)
+    storage_item_factory(wine=wine, storage=storage, price=None)
+    client.force_login(user)
+    r = client.get(reverse("stats-dashboard"))
+    assert r.status_code == HTTPStatus.OK
+    by_storage = r.context_data["by_storage"]
+    assert storage.name in by_storage
+    assert by_storage[storage.name]["value"] == 50
+
+
+@pytest.mark.django_db
+def test_stats_dashboard_purchase_trends(client, user, wine_factory, storage_item_factory):
+    """Stats dashboard shows purchase trends over time."""
+    storage = user.storage_set.first()
+    wine = wine_factory(user=user)
+    storage_item_factory(wine=wine, storage=storage)
+    client.force_login(user)
+    r = client.get(reverse("stats-dashboard"))
+    assert r.status_code == HTTPStatus.OK
+    by_month = r.context_data["by_month"]
+    assert len(by_month) >= 1
+
+
+@pytest.mark.django_db
 def test_wine_check_duplicate_unauthenticated(client):
     """Unauthenticated requests to the check-duplicate endpoint are redirected."""
     r = client.get(reverse("wine-check-duplicate"), {"name": "Chateau Margaux"})

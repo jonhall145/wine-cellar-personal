@@ -656,6 +656,93 @@ class BaseConsumptionStatsView(RequireHouseholdMixin, TemplateView):
         raise NotImplementedError
 
 
+# --- Stats dashboard view ---
+
+
+class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
+    """Dedicated statistics dashboard showing cellar-level charts and trends."""
+
+    storage_item_model = None  # Set by subclass
+    beverage_fk_name = None  # "wine" or "whisky"
+    price_fallback_path = None  # e.g. "wine__price" or "whisky__price"
+    select_related_fields = ()  # for storage items
+
+    def get_type_display(self, beverage):
+        """Return display string for the beverage type. Override per app."""
+        raise NotImplementedError
+
+    def get_country_name(self, beverage):
+        """Return country display name for the beverage. Override per app."""
+        raise NotImplementedError
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        household = get_active_household(self.request.user)
+        user_settings = get_user_settings(self.request.user)
+        currency = settings.CURRENCY_SYMBOLS.get(
+            getattr(user_settings, "currency", "EUR"), "€"
+        )
+
+        items_qs = self.storage_item_model.objects.filter(
+            household=household, deleted=False
+        ).select_related(*self.select_related_fields)
+
+        # --- By type (count in stock) ---
+        by_type = defaultdict(int)
+        # --- By country (count in stock) ---
+        by_country = defaultdict(int)
+        # --- Value by storage location ---
+        by_storage = {}
+
+        for item in items_qs.select_related("storage"):
+            beverage = getattr(item, self.beverage_fk_name)
+            by_type[self.get_type_display(beverage)] += 1
+            by_country[self.get_country_name(beverage)] += 1
+
+            storage_name = item.storage.name if item.storage else "Unknown"
+            if storage_name not in by_storage:
+                by_storage[storage_name] = {"count": 0, "value": Decimal("0")}
+            by_storage[storage_name]["count"] += 1
+            if item.price is not None:
+                item_price = item.price
+            elif beverage.price is not None:
+                item_price = beverage.price
+            else:
+                item_price = Decimal("0")
+            by_storage[storage_name]["value"] += item_price
+
+        for data in by_storage.values():
+            data["value"] = int(data["value"])
+
+        # Sort by count descending
+        by_type = dict(sorted(by_type.items(), key=lambda x: x[1], reverse=True))
+        by_country = dict(sorted(by_country.items(), key=lambda x: x[1], reverse=True))
+        by_storage = dict(
+            sorted(by_storage.items(), key=lambda x: x[1]["value"], reverse=True)
+        )
+
+        # --- Purchase trends over time (bottles added per month) ---
+        by_month = (
+            self.storage_item_model.objects.filter(household=household)
+            .annotate(month=TruncMonth("created"))
+            .values("month")
+            .annotate(count=Count("id"))
+            .order_by("month")
+        )
+
+        context.update(
+            {
+                "by_type": by_type,
+                "by_country": by_country,
+                "by_storage": by_storage,
+                "by_month": list(by_month),
+                "currency": currency,
+                "total_in_stock": sum(v for v in by_type.values()),
+            }
+        )
+        return context
+
+
 # --- Wishlist create view ---
 
 

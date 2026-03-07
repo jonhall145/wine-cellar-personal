@@ -1,6 +1,10 @@
 from collections import defaultdict
 
-from wine_cellar.apps.core.views import BaseCellarValueView, BaseConsumptionStatsView
+from wine_cellar.apps.core.views import (
+    BaseCellarValueView,
+    BaseConsumptionStatsView,
+    BaseStatsDashboardView,
+)
 from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.wine.models import DrinkRecord
 
@@ -36,3 +40,17 @@ class ConsumptionStatsView(BaseConsumptionStatsView):
             country = record.wine.country_name if record.wine.country else "Unknown"
             by_country[country] += 1
         return {"by_group": dict(by_country)}
+
+
+class StatsDashboardView(BaseStatsDashboardView):
+    template_name = "core/stats_dashboard.html"
+    storage_item_model = StorageItem
+    beverage_fk_name = "wine"
+    price_fallback_path = "wine__price"
+    select_related_fields = ("wine",)
+
+    def get_type_display(self, beverage):
+        return beverage.get_type if beverage.wine_type else "Unknown"
+
+    def get_country_name(self, beverage):
+        return beverage.country_name if beverage.country else "Unknown"

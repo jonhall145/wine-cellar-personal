@@ -532,6 +532,39 @@ def test_cellar_value_by_distillery_uses_whisky_price_fallback(
 
 
 @pytest.mark.django_db
+def test_whisky_stats_dashboard_renders(client, user):
+    """Stats dashboard page loads successfully for authenticated whisky users."""
+    client.force_login(user)
+    r = client.get(reverse("stats-dashboard"))
+    assert r.status_code == HTTPStatus.OK
+
+
+@pytest.mark.django_db
+def test_whisky_stats_dashboard_unauthenticated(client):
+    """Unauthenticated users are redirected from the stats dashboard."""
+    r = client.get(reverse("stats-dashboard"))
+    assert r.status_code == HTTPStatus.FOUND
+
+
+@pytest.mark.django_db
+def test_whisky_stats_dashboard_by_type(
+    client, user, whisky_factory, whisky_storage_item_factory
+):
+    """Stats dashboard shows correct by-type breakdown for whiskies."""
+    from wine_cellar.apps.whisky.models import Whisky
+
+    Whisky.objects.filter(user=user).delete()
+    storage = user.storage_set.first()
+    w = whisky_factory(user=user, whisky_type="SM")  # Single Malt, in stock
+    whisky_storage_item_factory(whisky=w, storage=storage)
+    client.force_login(user)
+    r = client.get(reverse("stats-dashboard"))
+    assert r.status_code == HTTPStatus.OK
+    by_type = r.context_data["by_type"]
+    assert by_type.get("Single Malt", 0) == 1
+
+
+@pytest.mark.django_db
 def test_whisky_check_duplicate_unauthenticated(client):
     """Unauthenticated requests to the check-duplicate endpoint are redirected."""
     r = client.get(reverse("whisky-check-duplicate"), {"name": "Lagavulin 16"})

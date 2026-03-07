@@ -12,6 +12,7 @@ from wine_cellar.apps.wine.views.bulk import bulk_action_view  # noqa: F401
 from wine_cellar.apps.wine.views.cellar import (  # noqa: F401
     CellarValueView,
     ConsumptionStatsView,
+    StatsDashboardView,
 )
 from wine_cellar.apps.wine.views.drink import (  # noqa: F401
     BottleNoteCreateView,

@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% load static i18n core_tags %}
+{% block title %}
+    {% translate "Statistics Dashboard" %}
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">{% translate "Statistics Dashboard" %}</h1>
+{% endblock header %}
+{% block extra_js %}
+    {{ block.super }}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" integrity="sha384-T/4KgSWuZEPozpPz7rnnp/5lDSnpY1VPJCojf1S81uTHS1E38qgLfMgVsAeRCWc4" crossorigin="anonymous" defer></script>
+{% endblock extra_js %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1">
+            <div class="stats-summary mb-12">
+                <h2>{% blocktranslate with count=total_in_stock %}{{ count }} bottles in stock{% endblocktranslate %}</h2>
+            </div>
+
+            <div class="pure-g">
+                {# --- By Type --- #}
+                <div class="pure-u-1 pure-u-md-1-2">
+                    <h3>{% blocktranslate with item_name=APP_ITEM_NAME %}{{ item_name }} by Type{% endblocktranslate %}</h3>
+                    {% if by_type %}
+                        <canvas id="chartByType" height="250"></canvas>
+                        <details class="mt-4">
+                            <summary>{% translate "Show table" %}</summary>
+                            <table class="pure-table pure-table-horizontal pure-table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>{% translate "Type" %}</th>
+                                        <th class="text-right">{% translate "Bottles" %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for type_name, count in by_type.items %}
+                                        <tr>
+                                            <td>{{ type_name }}</td>
+                                            <td class="text-right">{{ count }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </details>
+                    {% else %}
+                        <p>{% translate "No data available." %}</p>
+                    {% endif %}
+                </div>
+
+                {# --- By Country --- #}
+                <div class="pure-u-1 pure-u-md-1-2">
+                    <h3>{% translate "By Country" %}</h3>
+                    {% if by_country %}
+                        <canvas id="chartByCountry" height="250"></canvas>
+                        <details class="mt-4">
+                            <summary>{% translate "Show table" %}</summary>
+                            <table class="pure-table pure-table-horizontal pure-table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>{% translate "Country" %}</th>
+                                        <th class="text-right">{% translate "Bottles" %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for country_name, count in by_country.items %}
+                                        <tr>
+                                            <td>{{ country_name }}</td>
+                                            <td class="text-right">{{ count }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </details>
+                    {% else %}
+                        <p>{% translate "No data available." %}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="pure-g mt-12">
+                {# --- Purchase Trends --- #}
+                <div class="pure-u-1 pure-u-md-1-2">
+                    <h3>{% translate "Purchase Trends" %}</h3>
+                    {% if by_month %}
+                        <canvas id="chartByMonth" height="250"></canvas>
+                        <details class="mt-4">
+                            <summary>{% translate "Show table" %}</summary>
+                            <table class="pure-table pure-table-horizontal pure-table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>{% translate "Month" %}</th>
+                                        <th>{% translate "Bottles Added" %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in by_month %}
+                                        <tr>
+                                            <td>{{ item.month|date:"F Y" }}</td>
+                                            <td>{{ item.count }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </details>
+                    {% else %}
+                        <p>{% translate "No data available." %}</p>
+                    {% endif %}
+                </div>
+
+                {# --- Value by Storage Location --- #}
+                <div class="pure-u-1 pure-u-md-1-2">
+                    <h3>{% translate "Value by Storage Location" %}</h3>
+                    {% if by_storage %}
+                        <canvas id="chartByStorage" height="250"></canvas>
+                        <details class="mt-4">
+                            <summary>{% translate "Show table" %}</summary>
+                            <table class="pure-table pure-table-horizontal pure-table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>{% translate "Location" %}</th>
+                                        <th class="text-right">{% translate "Bottles" %}</th>
+                                        <th class="text-right">{% translate "Value" %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for name, data in by_storage.items %}
+                                        <tr>
+                                            <td>{{ name }}</td>
+                                            <td class="text-right">{{ data.count }}</td>
+                                            <td class="text-right">{{ currency }}{{ data.value }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </details>
+                    {% else %}
+                        <p>{% translate "No data available." %}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof Chart === 'undefined') return;
+        var chartColors = [
+            '#722f37', '#b5651d', '#2e7d32', '#1565c0', '#6a1b9a',
+            '#c62828', '#ef6c00', '#00838f', '#4527a0', '#558b2f'
+        ];
+
+        {% if by_type %}
+        new Chart(document.getElementById('chartByType'), {
+            type: 'doughnut',
+            data: {
+                labels: [{% for type_name, count in by_type.items %}'{{ type_name }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for type_name, count in by_type.items %}{{ count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: chartColors
+                }]
+            },
+            options: { responsive: true }
+        });
+        {% endif %}
+
+        {% if by_country %}
+        new Chart(document.getElementById('chartByCountry'), {
+            type: 'doughnut',
+            data: {
+                labels: [{% for country_name, count in by_country.items %}'{{ country_name }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for country_name, count in by_country.items %}{{ count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: chartColors
+                }]
+            },
+            options: { responsive: true }
+        });
+        {% endif %}
+
+        {% if by_month %}
+        new Chart(document.getElementById('chartByMonth'), {
+            type: 'bar',
+            data: {
+                labels: [{% for item in by_month %}'{{ item.month|date:"M Y" }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: '{% translate "Bottles Added" %}',
+                    data: [{% for item in by_month %}{{ item.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: '#722f37'
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+        {% endif %}
+
+        {% if by_storage %}
+        new Chart(document.getElementById('chartByStorage'), {
+            type: 'bar',
+            data: {
+                labels: [{% for name, data in by_storage.items %}'{{ name }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: '{% translate "Value" %} ({{ currency }})',
+                    data: [{% for name, data in by_storage.items %}{{ data.value }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: chartColors
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { x: { ticks: { maxRotation: 45, minRotation: 0 } } }
+            }
+        });
+        {% endif %}
+    });
+    </script>
+{% endblock content %}
