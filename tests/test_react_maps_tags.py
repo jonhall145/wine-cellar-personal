@@ -1,4 +1,5 @@
 """Tests for react_maps_tags template tags."""
+
 import pytest
 
 from wine_cellar.apps.wine.templatetags.react_maps_tags import react_map, wine_to_json
@@ -32,7 +33,7 @@ class TestReactMap:
     def test_react_map_returns_div_with_data(self, wine):
         result = react_map([wine])
         assert '<div id="wine_map"' in result
-        assert 'data-attributes' in result
+        assert "data-attributes" in result
 
     def test_react_map_empty_wines_list(self):
         result = react_map([])
@@ -41,4 +42,4 @@ class TestReactMap:
     def test_react_map_data_structure(self, wine):
         result = react_map([wine])
         # Extract the JSON from the data-attributes
-        assert 'OpenFreeMap' in str(result) or 'data-attributes' in result
+        assert "OpenFreeMap" in str(result) or "data-attributes" in result

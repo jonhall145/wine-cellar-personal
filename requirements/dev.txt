@@ -1,16 +1,16 @@
 -r base.txt
 
-Faker==40.1.0
-black==25.12.0
-django-debug-toolbar==6.1.0
+Faker==40.8.0
+black==26.3.0
+django-debug-toolbar==6.2.0
 djlint==1.36.4
 factory-boy==3.3.3
 flake8==7.3.0
-isort==7.0.0
-mkdocs-material==9.7.1
+isort==8.0.1
+mkdocs-material==9.7.4
 pytest-cov==7.0.0
-pytest-django==4.11.1
+pytest-django==4.12.0
 pytest-factoryboy==2.8.1
 pytest==9.0.2
-commitizen==4.11.0
+commitizen==4.13.9
 pytest-playwright==0.7.2
