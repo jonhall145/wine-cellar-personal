@@ -319,6 +319,29 @@ class WhiskyCreateView(BaseBeverageCreateView):
 
         return whisky, created
 
+    def _link_extraction_log(self, beverage, cleaned_data, extraction_result):
+        """Link the most recent WhiskyVisionExtractionLog to the created whisky."""
+        from wine_cellar.apps.whisky.models import WhiskyVisionExtractionLog
+
+        try:
+            log = (
+                WhiskyVisionExtractionLog.objects.filter(
+                    user=self.request.user, whisky__isnull=True
+                )
+                .order_by("-created")
+                .first()
+            )
+            if log:
+                extracted_data = extraction_result.get("extracted_data", {})
+                corrections = self._detect_corrections(cleaned_data, extracted_data)
+                log.whisky = beverage
+                log.was_successful = True
+                if corrections:
+                    log.user_corrections = corrections
+                log.save(update_fields=["whisky", "was_successful", "user_corrections"])
+        except Exception:
+            logger.exception("Failed to link extraction log to whisky %s", beverage.pk)
+
 
 class WhiskyUpdateView(BaseBeverageUpdateView):
     template_name = "core/beverage_edit.html"
@@ -447,6 +470,21 @@ class WhiskyDetailView(BaseDetailView):
     select_related_fields = ("distillery", "region", "bottler", "source")
     prefetch_related_fields = ("cask_history", "images", "barcodes")
     storage_item_reverse = "whiskystorageitem"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from wine_cellar.apps.whisky.models import WhiskyVisionExtractionLog
+
+        extraction_log = (
+            WhiskyVisionExtractionLog.objects.filter(
+                whisky=self.object, was_successful=True
+            )
+            .order_by("-created")
+            .first()
+        )
+        if extraction_log:
+            context["extraction_log"] = extraction_log
+        return context
 
 
 class WhiskyDeleteView(BaseBeverageDeleteView):

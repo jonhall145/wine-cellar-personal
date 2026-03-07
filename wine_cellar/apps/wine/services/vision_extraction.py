@@ -422,6 +422,7 @@ class WineVisionExtractor:
             "raw_text": "",
             "errors": [],
             "extracted_fields": [],
+            "field_confidence": {},
         }
 
         start_time = time.time()
@@ -442,6 +443,7 @@ class WineVisionExtractor:
                 result["confidence"] = vision_result.get("confidence", "medium")
                 result["raw_text"] = vision_result.get("raw_text", "")
                 result["extracted_fields"] = vision_result.get("extracted_fields", [])
+                result["field_confidence"] = vision_result.get("field_confidence", {})
             else:
                 result["errors"].append(vision_result.get("error", "Unknown error"))
                 logger.error(f"Vision extraction failed: {vision_result.get('error')}")
@@ -561,6 +563,7 @@ class WineVisionExtractor:
                 "confidence": extracted_data["confidence"],
                 "raw_text": response_text,
                 "extracted_fields": extracted_data["extracted_fields"],
+                "field_confidence": extracted_data.get("field_confidence", {}),
             }
 
         except Exception:
@@ -618,6 +621,7 @@ VOLUME: [ml as number or "not found"]
 SWEETNESS: [sweetness level or "not found"]
 BARCODE: [barcode or "not found"]
 CONFIDENCE: [high/medium/low]
+FIELD_CONFIDENCE: [field1=high, field2=medium, field3=low, ...]
 LABEL_BOUNDS_FRONT: [x1,y1,x2,y2 or "not found"]
 LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
 ```
@@ -627,6 +631,8 @@ LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
 - If you cannot read or find a field in any image, write "not found"
 - For grapes, use comma-separated list
 - For confidence: "high" if confident, "medium" if some unclear, "low" if hard to read
+- For FIELD_CONFIDENCE: rate each extracted field individually as high/medium/low \
+(e.g., "name=high, vintage=high, country=medium, grapes=low")
 - For label bounds, estimate the rectangular area containing the main label
 - Be precise and only extract what you can actually see on the labels
 """
@@ -690,6 +696,22 @@ LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
                 data["country"] = inferred_country
                 extracted_fields.append("country")
 
+        # Parse per-field confidence
+        field_confidence = {}
+        fc_match = re.search(
+            r"FIELD_CONFIDENCE:\s*(.+?)(?:\n|$)", response_text, re.IGNORECASE
+        )
+        if fc_match:
+            fc_text = fc_match.group(1).strip()
+            for pair in fc_text.split(","):
+                pair = pair.strip()
+                if "=" in pair:
+                    fname, fconf = pair.split("=", 1)
+                    fname = fname.strip().lower()
+                    fconf = fconf.strip().lower()
+                    if fconf in ("high", "medium", "low"):
+                        field_confidence[fname] = fconf
+
         # Try to match subregion to an Appellation for map coordinates
         if "subregion" in data:
             appellation = self._match_appellation(
@@ -703,6 +725,7 @@ LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
             "data": data,
             "confidence": confidence,
             "extracted_fields": extracted_fields,
+            "field_confidence": field_confidence,
         }
 
     def _process_field_value(self, field: str, value: str) -> Any:
@@ -884,6 +907,8 @@ LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
         """
         Try to match extracted subregion to an Appellation record.
 
+        Uses exact, contains, and fuzzy matching strategies.
+
         Args:
             subregion: Extracted subregion/region name
             country: Optional country code to narrow matches
@@ -891,6 +916,8 @@ LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
         Returns:
             Appellation ID if matched, else None
         """
+        from difflib import SequenceMatcher
+
         try:
             from wine_cellar.apps.wine.models import Appellation
 
@@ -915,10 +942,29 @@ LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
                 return appellation.pk
 
             # Try matching subregion within appellation name
-            for app in Appellation.objects.all():
+            candidates = Appellation.objects.all()
+            if country:
+                candidates = candidates.filter(country=country)
+
+            for app in candidates:
                 if app.name.lower() in subregion_lower:
-                    if not country or app.country == country:
-                        return app.pk
+                    return app.pk
+
+            # Fuzzy matching: find best match above threshold
+            best_match = None
+            best_ratio = 0.0
+            for app in candidates:
+                ratio = SequenceMatcher(None, subregion_lower, app.name.lower()).ratio()
+                if ratio > best_ratio:
+                    best_ratio = ratio
+                    best_match = app
+
+            if best_match and best_ratio >= 0.7:
+                logger.info(
+                    f"Fuzzy matched appellation '{subregion}' -> "
+                    f"'{best_match.name}' (ratio={best_ratio:.2f})"
+                )
+                return best_match.pk
 
             return None
 

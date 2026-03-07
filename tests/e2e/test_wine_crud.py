@@ -18,7 +18,7 @@ class TestWineCrud:
         if wine_type.count() > 0:
             wine_type.select_option(index=1)
 
-        form.locator("button[type='submit']").click()
+        form.locator("button[name='save_finish']").click()
         page.wait_for_load_state("networkidle")
         assert "/wine/add" not in page.url
 

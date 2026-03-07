@@ -112,6 +112,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Auto-fill form fields with extracted data
                 fillFormFields(data.data);
 
+                // Show per-field confidence indicators
+                if (data.field_confidence) {
+                    showFieldConfidence(data.field_confidence);
+                }
+
                 // Show success message based on match type
                 if (data.match_type === 'barcode') {
                     // Barcode match found - show special message
@@ -211,6 +216,50 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Field name mapping: API/response field names to form field names
+    const confidenceFieldMap = {
+        'name': 'name', 'wine_type': 'wine_type', 'type': 'wine_type',
+        'vintage': 'vintage', 'country': 'country', 'subregion': 'subregion',
+        'region': 'subregion', 'grapes': 'grapes', 'vineyard': 'vineyard',
+        'abv': 'abv', 'size': 'size', 'volume': 'size',
+        'category': 'category', 'sweetness': 'category', 'barcode': 'barcode',
+        'appellation': 'appellation',
+    };
+
+    function showFieldConfidence(fieldConfidence) {
+        // Remove any existing indicators
+        document.querySelectorAll('.field-confidence').forEach(el => el.remove());
+
+        Object.entries(fieldConfidence).forEach(([field, level]) => {
+            const formField = confidenceFieldMap[field] || field;
+            const input = form.querySelector(`[name="${formField}"]`);
+            if (!input) return;
+
+            // Find the label for this field
+            const wrapper = input.closest('.form-group') || input.parentElement;
+            const label = wrapper ? wrapper.querySelector('label') : null;
+            if (!label) return;
+
+            const dot = document.createElement('span');
+            dot.className = `field-confidence field-confidence--${level}`;
+            dot.title = `AI confidence: ${level}`;
+            dot.setAttribute('role', 'img');
+            dot.setAttribute('aria-label', `AI confidence: ${level}`);
+            label.appendChild(dot);
+        });
+    }
+
+    // On page load, apply confidence indicators from session data
+    const confidenceDataEl = document.getElementById('field-confidence-data');
+    if (confidenceDataEl) {
+        try {
+            const fieldConfidence = JSON.parse(confidenceDataEl.textContent);
+            showFieldConfidence(fieldConfidence);
+        } catch (e) {
+            // ignore parse errors
+        }
+    }
+
     function showMessage(type, message) {
         // Create message element
         const messageDiv = document.createElement('div');
