@@ -942,7 +942,9 @@ def test_wine_check_duplicate_returns_url(client, user, wine_factory):
 
 
 @pytest.mark.django_db
-def test_wine_check_duplicate_no_cross_household(client, user, wine_factory, user_factory):
+def test_wine_check_duplicate_no_cross_household(
+    client, user, wine_factory, user_factory
+):
     """Does not return wines belonging to a different user's household."""
     other_user = user_factory()
     wine_factory(user=other_user, name="Shared Name Wine")
