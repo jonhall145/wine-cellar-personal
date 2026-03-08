@@ -28,6 +28,7 @@ from wine_cellar.apps.core.views import (
     BaseDrinkRecordDeleteView,
     BaseDrinkRecordEditView,
     BaseDrinkRecordListView,
+    BaseJourneyTimelineView,
     BaseHomePageView,
     BaseImagesView,
     BaseLabelScanView,
@@ -803,6 +804,14 @@ class DrinkRecordCreateView(BaseDrinkRecordCreateView):
 
 class DrinkRecordListView(BaseDrinkRecordListView):
     template_name = "core/drink_record_list.html"
+    drink_record_model = WhiskyDrinkRecord
+    beverage_fk_name = "whisky"
+    beverage_icon = "whiskey-glass"
+
+
+class JourneyTimelineView(BaseJourneyTimelineView):
+    template_name = "core/journey_timeline.html"
+    storage_item_model = WhiskyStorageItem
     drink_record_model = WhiskyDrinkRecord
     beverage_fk_name = "whisky"
     beverage_icon = "whiskey-glass"

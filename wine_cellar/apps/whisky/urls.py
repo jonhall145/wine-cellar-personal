@@ -105,6 +105,7 @@ urlpatterns = [
         name="drink-record-add",
     ),
     path("drink-history/", views.DrinkRecordListView.as_view(), name="drink-history"),
+    path("journey/", views.JourneyTimelineView.as_view(), name="journey-timeline"),
     path(
         "drink-record/<int:pk>/edit/",
         views.DrinkRecordEditView.as_view(),

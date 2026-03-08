@@ -2,6 +2,7 @@ from django.views.generic import TemplateView
 
 from wine_cellar.apps.core.views import (
     BaseBottleNoteCreateView,
+    BaseJourneyTimelineView,
     BaseDrinkRecordCreateView,
     BaseDrinkRecordDeleteView,
     BaseDrinkRecordEditView,
@@ -28,6 +29,14 @@ class DrinkRecordCreateView(BaseDrinkRecordCreateView):
 
 class DrinkRecordListView(BaseDrinkRecordListView):
     template_name = "core/drink_record_list.html"
+    drink_record_model = DrinkRecord
+    beverage_fk_name = "wine"
+    beverage_icon = "wine-glass"
+
+
+class JourneyTimelineView(BaseJourneyTimelineView):
+    template_name = "core/journey_timeline.html"
+    storage_item_model = StorageItem
     drink_record_model = DrinkRecord
     beverage_fk_name = "wine"
     beverage_icon = "wine-glass"
