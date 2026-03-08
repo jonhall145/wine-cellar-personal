@@ -2,11 +2,11 @@ from django.views.generic import TemplateView
 
 from wine_cellar.apps.core.views import (
     BaseBottleNoteCreateView,
-    BaseJourneyTimelineView,
     BaseDrinkRecordCreateView,
     BaseDrinkRecordDeleteView,
     BaseDrinkRecordEditView,
     BaseDrinkRecordListView,
+    BaseJourneyTimelineView,
 )
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin
 from wine_cellar.apps.storage.models import StorageItem

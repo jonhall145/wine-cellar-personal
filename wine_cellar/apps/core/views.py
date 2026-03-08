@@ -152,9 +152,14 @@ class BaseJourneyTimelineView(RequireHouseholdMixin, TemplateView):
                 }
             )
 
-        # Milestone: 100th bottle added (by creation order, including any later deleted)
-        if len(storage_items) >= 100:
-            hundredth_item = storage_items[99]
+        # Milestone: 100th bottle ever added (including deleted)
+        hundredth_item = (
+            self.storage_item_model.objects.filter(household=household)
+            .select_related(self.beverage_fk_name)
+            .order_by("created", "pk")[99:100]
+            .first()
+        )
+        if hundredth_item:
             timeline_events.append(
                 {
                     "date": hundredth_item.created.date(),
