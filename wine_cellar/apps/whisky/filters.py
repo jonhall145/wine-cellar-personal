@@ -5,6 +5,7 @@ from django_filters import ChoiceFilter, OrderingFilter
 
 from wine_cellar.apps.core.filters import (
     BeverageFilterMixin,
+    get_collection_choices,
     get_country_choices_cached,
     get_related_model_choices_cached,
 )
@@ -57,15 +58,6 @@ def get_country_choices(user=None):
         extra_countries=WHISKY_COUNTRIES,
         include_most_frequent=False,
     )
-
-
-def get_collection_choices(user=None):
-    household = get_active_household(user) if user and user.is_authenticated else None
-    choices = [("", _("Any"))]
-    if household:
-        collections = Collection.objects.filter(household=household).order_by("name")
-        choices.extend((collection.pk, collection.name) for collection in collections)
-    return choices
 
 
 class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
@@ -234,7 +226,9 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
 
         # Update country filter with favourites-ordered choices
         self.filters["country"].extra["choices"] = get_country_choices(user)
-        self.filters["collection"].extra["choices"] = get_collection_choices(user)
+        self.filters["collection"].extra["choices"] = get_collection_choices(
+            user, collection_model=Collection
+        )
 
 
 class WhiskyStorageItemFilter(django_filters.FilterSet):

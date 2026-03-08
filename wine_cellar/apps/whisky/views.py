@@ -494,6 +494,7 @@ class WhiskyDetailView(BaseDetailView):
         return context
 
 
+@login_required
 @require_POST
 def add_whisky_to_collection(request, pk):
     household = get_active_household(request.user)
@@ -519,6 +520,7 @@ def add_whisky_to_collection(request, pk):
     return redirect("whisky-detail", pk=whisky.pk)
 
 
+@login_required
 @require_POST
 def remove_whisky_from_collection(request, pk, collection_pk):
     household = get_active_household(request.user)

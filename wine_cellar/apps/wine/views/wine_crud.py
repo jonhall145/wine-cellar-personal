@@ -1,6 +1,7 @@
 import logging
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
@@ -467,6 +468,7 @@ class WineMergeConfirmView(BaseMergeConfirmView):
         return super().post(request, *args, **kwargs)
 
 
+@login_required
 @require_POST
 def add_wine_to_collection(request, pk):
     household = get_active_household(request.user)
@@ -492,6 +494,7 @@ def add_wine_to_collection(request, pk):
     return redirect("wine-detail", pk=wine.pk)
 
 
+@login_required
 @require_POST
 def remove_wine_from_collection(request, pk, collection_pk):
     household = get_active_household(request.user)

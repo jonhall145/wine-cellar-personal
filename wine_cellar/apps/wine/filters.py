@@ -7,6 +7,7 @@ from django_filters import ChoiceFilter, OrderingFilter
 
 from wine_cellar.apps.core.filters import (
     BeverageFilterMixin,
+    get_collection_choices,
     get_country_choices_cached,
     get_related_model_choices_cached,
 )
@@ -38,15 +39,6 @@ def get_appellation_choices(user=None):
         format_choice=lambda app: f"{app.name} ({app.country})",
         extra_choices=[("missing", _("Missing"))],
     )
-
-
-def get_collection_choices(user=None):
-    household = get_active_household(user) if user and user.is_authenticated else None
-    choices = [("", _("Any"))]
-    if household:
-        collections = Collection.objects.filter(household=household).order_by("name")
-        choices.extend((collection.pk, collection.name) for collection in collections)
-    return choices
 
 
 class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
@@ -236,5 +228,5 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
             request.user if request else None
         )
         self.filters["collection"].extra["choices"] = get_collection_choices(
-            request.user if request else None
+            request.user if request else None, collection_model=Collection
         )

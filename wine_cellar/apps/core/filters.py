@@ -107,6 +107,16 @@ def get_related_model_choices_cached(
     return choices
 
 
+def get_collection_choices(user, *, collection_model):
+    """Build collection filter choices scoped to the user's active household."""
+    household = get_active_household(user) if user and user.is_authenticated else None
+    choices = [("", _("Any"))]
+    if household:
+        qs = collection_model.objects.filter(household=household).order_by("name")
+        choices.extend((c.pk, c.name) for c in qs)
+    return choices
+
+
 def get_country_choices_cached(
     user=None,
     *,

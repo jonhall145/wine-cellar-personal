@@ -38,16 +38,16 @@ from wine_cellar.apps.wine.views import (
     WishlistDeleteView,
     WishlistListView,
     WishlistPurchasedView,
-    bulk_action_view,
     add_wine_to_collection,
+    bulk_action_view,
     crop_wine_image,
     delete_wine_barcode,
     export_wines_csv_view,
     export_wines_json_view,
     extract_wine_vision_ajax,
+    remove_wine_from_collection,
     scan_barcode_ajax,
     set_primary_image,
-    remove_wine_from_collection,
     wine_check_duplicate_ajax,
 )
 

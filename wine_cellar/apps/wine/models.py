@@ -275,6 +275,7 @@ class Collection(UserContentModel):
     )
 
     class Meta:
+        ordering = ["name"]
         verbose_name = _("Collection")
         verbose_name_plural = _("Collections")
         constraints = [
