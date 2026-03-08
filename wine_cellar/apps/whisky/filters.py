@@ -12,6 +12,7 @@ from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.models import (
     WHISKY_COUNTRIES,
+    Collection,
     Distillery,
     FillLevel,
     PeatedLevel,
@@ -58,6 +59,15 @@ def get_country_choices(user=None):
     )
 
 
+def get_collection_choices(user=None):
+    household = get_active_household(user) if user and user.is_authenticated else None
+    choices = [("", _("Any"))]
+    if household:
+        collections = Collection.objects.filter(household=household).order_by("name")
+        choices.extend((collection.pk, collection.name) for collection in collections)
+    return choices
+
+
 class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
     storage_item_reverse = "whiskystorageitem"
     nullable_order_fields = ("age_statement", "effective_price")
@@ -84,6 +94,11 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
     country = ChoiceFilter(
         choices=[],
         label=_("Country"),
+    )
+    collection = ChoiceFilter(
+        choices=[],
+        label=_("Collection"),
+        method="filter_collection",
     )
 
     peated_level = ChoiceFilter(
@@ -166,6 +181,11 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
             return queryset.filter(region_id=int(value))
         return queryset
 
+    def filter_collection(self, queryset, name, value):
+        if value:
+            return queryset.filter(collections__pk=int(value)).distinct()
+        return queryset
+
     def filter_is_nas(self, queryset, name, value):
         if value == "1":
             return queryset.filter(age_statement__isnull=True)
@@ -190,6 +210,7 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
             "distillery",
             "region",
             "country",
+            "collection",
             "peated_level",
             "has_stock",
             "abv_min",
@@ -213,6 +234,7 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
 
         # Update country filter with favourites-ordered choices
         self.filters["country"].extra["choices"] = get_country_choices(user)
+        self.filters["collection"].extra["choices"] = get_collection_choices(user)
 
 
 class WhiskyStorageItemFilter(django_filters.FilterSet):

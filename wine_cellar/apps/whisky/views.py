@@ -10,6 +10,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
 from django.views.generic import DeleteView, FormView, ListView, TemplateView
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
@@ -61,6 +62,7 @@ from wine_cellar.apps.whisky.forms import (
 )
 from wine_cellar.apps.whisky.models import (
     Bottler,
+    Collection,
     Distillery,
     FillLevel,
     Whisky,
@@ -469,11 +471,15 @@ class WhiskyDetailView(BaseDetailView):
     template_name = "whisky/whisky_detail.html"
     model = Whisky
     select_related_fields = ("distillery", "region", "bottler", "source")
-    prefetch_related_fields = ("cask_history", "images", "barcodes")
+    prefetch_related_fields = ("cask_history", "images", "barcodes", "collections")
     storage_item_reverse = "whiskystorageitem"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        household = get_active_household(self.request.user)
+        context["all_collections"] = Collection.objects.filter(
+            household=household
+        ).order_by("name")
         from wine_cellar.apps.whisky.models import WhiskyVisionExtractionLog
 
         extraction_log = (
@@ -486,6 +492,40 @@ class WhiskyDetailView(BaseDetailView):
         if extraction_log:
             context["extraction_log"] = extraction_log
         return context
+
+
+@require_POST
+def add_whisky_to_collection(request, pk):
+    household = get_active_household(request.user)
+    whisky = get_object_or_404(Whisky, pk=pk, household=household)
+    collection_id = request.POST.get("collection_id")
+    new_collection_name = (request.POST.get("new_collection_name") or "").strip()
+
+    collection = None
+    if collection_id:
+        collection = Collection.objects.filter(
+            pk=collection_id, household=household
+        ).first()
+    elif new_collection_name:
+        collection, _ = Collection.objects.get_or_create(
+            name=new_collection_name,
+            household=household,
+            defaults={"user": request.user},
+        )
+
+    if collection:
+        collection.whiskies.add(whisky)
+
+    return redirect("whisky-detail", pk=whisky.pk)
+
+
+@require_POST
+def remove_whisky_from_collection(request, pk, collection_pk):
+    household = get_active_household(request.user)
+    whisky = get_object_or_404(Whisky, pk=pk, household=household)
+    collection = get_object_or_404(Collection, pk=collection_pk, household=household)
+    collection.whiskies.remove(whisky)
+    return redirect("whisky-detail", pk=whisky.pk)
 
 
 class WhiskyDeleteView(BaseBeverageDeleteView):

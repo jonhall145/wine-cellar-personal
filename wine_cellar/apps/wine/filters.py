@@ -12,7 +12,7 @@ from wine_cellar.apps.core.filters import (
 )
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.forms import WineFilterForm
-from wine_cellar.apps.wine.models import Appellation, Wine
+from wine_cellar.apps.wine.models import Appellation, Collection, Wine
 
 
 def get_country_choices_with_favourites(user=None):
@@ -38,6 +38,15 @@ def get_appellation_choices(user=None):
         format_choice=lambda app: f"{app.name} ({app.country})",
         extra_choices=[("missing", _("Missing"))],
     )
+
+
+def get_collection_choices(user=None):
+    household = get_active_household(user) if user and user.is_authenticated else None
+    choices = [("", _("Any"))]
+    if household:
+        collections = Collection.objects.filter(household=household).order_by("name")
+        choices.extend((collection.pk, collection.name) for collection in collections)
+    return choices
 
 
 class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
@@ -94,6 +103,11 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
         method="filter_is_cold",
         label=_("Cold Storage"),
         choices=(("", _("Any")), (0, _("No")), (1, _("Yes"))),
+    )
+    collection = ChoiceFilter(
+        choices=[],
+        label=_("Collection"),
+        method="filter_collection",
     )
     order = OrderingFilter(
         choices=(
@@ -166,6 +180,11 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
             return queryset.filter(appellation_id=int(value))
         return queryset
 
+    def filter_collection(self, queryset, name, value):
+        if value:
+            return queryset.filter(collections__pk=int(value)).distinct()
+        return queryset
+
     class Meta:
         form = WineFilterForm
         model = Wine
@@ -185,6 +204,7 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
             "source",
             "country",
             "appellation",
+            "collection",
             "stock",
         ]
 
@@ -213,5 +233,8 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
 
         # Update appellation filter with choices from user's wines
         self.filters["appellation"].extra["choices"] = get_appellation_choices(
+            request.user if request else None
+        )
+        self.filters["collection"].extra["choices"] = get_collection_choices(
             request.user if request else None
         )

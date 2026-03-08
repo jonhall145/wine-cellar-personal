@@ -39,6 +39,7 @@ from wine_cellar.apps.wine.views import (
     WishlistListView,
     WishlistPurchasedView,
     bulk_action_view,
+    add_wine_to_collection,
     crop_wine_image,
     delete_wine_barcode,
     export_wines_csv_view,
@@ -46,6 +47,7 @@ from wine_cellar.apps.wine.views import (
     extract_wine_vision_ajax,
     scan_barcode_ajax,
     set_primary_image,
+    remove_wine_from_collection,
     wine_check_duplicate_ajax,
 )
 
@@ -68,6 +70,16 @@ urlpatterns = [
     ),
     path("wine/extract-vision/", extract_wine_vision_ajax, name="wine-extract-vision"),
     path("wine/<int:pk>/", WineDetailView.as_view(), name="wine-detail"),
+    path(
+        "wine/<int:pk>/collections/add/",
+        add_wine_to_collection,
+        name="wine-collection-add",
+    ),
+    path(
+        "wine/<int:pk>/collections/<int:collection_pk>/remove/",
+        remove_wine_from_collection,
+        name="wine-collection-remove",
+    ),
     path("wine/<int:pk>/qr/", QRCodeView.as_view(), name="wine-qr"),
     path("wine/<int:pk>/images/", WineImagesView.as_view(), name="wine-images"),
     path("wine/edit/<int:pk>/", WineUpdateView.as_view(), name="wine-edit"),
