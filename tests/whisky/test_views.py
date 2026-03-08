@@ -6,7 +6,12 @@ import pytest
 from django.urls import reverse
 from pytest_django.asserts import assertRedirects, assertTemplateUsed
 
-from wine_cellar.apps.whisky.models import FillLevel, Whisky, WhiskyDrinkRecord
+from wine_cellar.apps.whisky.models import (
+    Collection,
+    FillLevel,
+    Whisky,
+    WhiskyDrinkRecord,
+)
 
 
 @pytest.mark.django_db
@@ -55,6 +60,81 @@ def test_whisky_list_shows_user_whiskies(client, user, whisky_factory):
     r = client.get(reverse("whisky-list"))
     assert r.status_code == HTTPStatus.OK
     assert whisky in r.context["whiskies"]
+
+
+@pytest.mark.django_db
+def test_whisky_filter_by_collection(client, user, whisky_factory):
+    whisky_in_collection = whisky_factory(user=user)
+    whisky_outside_collection = whisky_factory(user=user)
+    collection = Collection.objects.create(
+        name="Investment Bottles",
+        user=user,
+        household=whisky_in_collection.household,
+    )
+    collection.whiskies.add(whisky_in_collection)
+
+    client.force_login(user)
+    r = client.get(reverse("whisky-list") + f"?collection={collection.pk}")
+
+    assert r.status_code == HTTPStatus.OK
+    assert list(r.context["whiskies"]) == [whisky_in_collection]
+    assert whisky_outside_collection not in r.context["whiskies"]
+
+
+@pytest.mark.django_db
+def test_whisky_collection_add_and_remove(client, user, whisky_factory):
+    whisky = whisky_factory(user=user)
+    collection = Collection.objects.create(
+        name="Dinner Party Picks",
+        user=user,
+        household=whisky.household,
+    )
+
+    client.force_login(user)
+    add_url = reverse("whisky-collection-add", kwargs={"pk": whisky.pk})
+    remove_url = reverse(
+        "whisky-collection-remove",
+        kwargs={"pk": whisky.pk, "collection_pk": collection.pk},
+    )
+
+    add_response = client.post(
+        add_url, data={"collection_id": collection.pk}, follow=True
+    )
+    assert add_response.status_code == HTTPStatus.OK
+    assert collection.whiskies.filter(pk=whisky.pk).exists()
+
+    remove_response = client.post(remove_url, follow=True)
+    assert remove_response.status_code == HTTPStatus.OK
+    assert not collection.whiskies.filter(pk=whisky.pk).exists()
+
+
+@pytest.mark.django_db
+def test_whisky_collection_create_new_by_name(client, user, whisky_factory):
+    whisky = whisky_factory(user=user)
+    client.force_login(user)
+    url = reverse("whisky-collection-add", kwargs={"pk": whisky.pk})
+
+    response = client.post(
+        url, data={"new_collection_name": "Investment Bottles"}, follow=True
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert Collection.objects.filter(
+        name="Investment Bottles", household=whisky.household
+    ).exists()
+    collection = Collection.objects.get(
+        name="Investment Bottles", household=whisky.household
+    )
+    assert collection.whiskies.filter(pk=whisky.pk).exists()
+
+
+@pytest.mark.django_db
+def test_whisky_collection_add_invalid_id(client, user, whisky_factory):
+    whisky = whisky_factory(user=user)
+    client.force_login(user)
+    url = reverse("whisky-collection-add", kwargs={"pk": whisky.pk})
+
+    response = client.post(url, data={"collection_id": "abc"}, follow=True)
+    assert response.status_code == HTTPStatus.OK
 
 
 @pytest.mark.django_db

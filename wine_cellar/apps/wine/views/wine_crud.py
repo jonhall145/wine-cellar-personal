@@ -1,10 +1,12 @@
 import logging
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
@@ -17,10 +19,12 @@ from wine_cellar.apps.core.views import (
     BaseListView,
     BaseMergeConfirmView,
 )
+from wine_cellar.apps.household.mixins import require_member
 from wine_cellar.apps.storage.models import StorageItem
+from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.filters import WineFilter
 from wine_cellar.apps.wine.forms import WineBaseForm, WineEditForm, WineForm
-from wine_cellar.apps.wine.models import Wine, WineBarcode, WineImage
+from wine_cellar.apps.wine.models import Collection, Wine, WineBarcode, WineImage
 
 logger = logging.getLogger(__name__)
 
@@ -376,6 +380,7 @@ class WineDetailView(BaseDetailView):
         "vineyard",
         "source",
         "barcodes",
+        "collections",
     )
     storage_item_reverse = "storageitem"
 
@@ -383,6 +388,10 @@ class WineDetailView(BaseDetailView):
         context = super().get_context_data(**kwargs)
         from wine_cellar.apps.wine.models import VisionExtractionLog
 
+        household = get_active_household(self.request.user)
+        context["all_collections"] = Collection.objects.filter(
+            household=household
+        ).order_by("name")
         extraction_log = (
             VisionExtractionLog.objects.filter(wine=self.object, was_successful=True)
             .order_by("-created")
@@ -434,7 +443,14 @@ class WineMergeConfirmView(BaseMergeConfirmView):
     beverage_fk_name = "wine"
     detail_url_name = "wine-detail"
     image_model = WineImage
-    m2m_fields = ("grapes", "attributes", "food_pairings", "vineyard", "source")
+    m2m_fields = (
+        "grapes",
+        "attributes",
+        "food_pairings",
+        "vineyard",
+        "source",
+        "collections",
+    )
     reminder_model = None  # Lazy-loaded
 
     @property
@@ -458,3 +474,44 @@ class WineMergeConfirmView(BaseMergeConfirmView):
 
         self.reminder_model = ReorderReminder
         return super().post(request, *args, **kwargs)
+
+
+@login_required
+@require_member
+@require_POST
+def add_wine_to_collection(request, pk):
+    household = get_active_household(request.user)
+    wine = get_object_or_404(Wine, pk=pk, household=household)
+    collection_id = request.POST.get("collection_id")
+    new_collection_name = (request.POST.get("new_collection_name") or "").strip()[:100]
+
+    collection = None
+    if collection_id:
+        try:
+            collection = Collection.objects.filter(
+                pk=int(collection_id), household=household
+            ).first()
+        except (ValueError, TypeError):
+            pass
+    elif new_collection_name:
+        collection, _ = Collection.objects.get_or_create(
+            name=new_collection_name,
+            household=household,
+            defaults={"user": request.user},
+        )
+
+    if collection:
+        collection.wines.add(wine)
+
+    return redirect("wine-detail", pk=wine.pk)
+
+
+@login_required
+@require_member
+@require_POST
+def remove_wine_from_collection(request, pk, collection_pk):
+    household = get_active_household(request.user)
+    wine = get_object_or_404(Wine, pk=pk, household=household)
+    collection = get_object_or_404(Collection, pk=collection_pk, household=household)
+    collection.wines.remove(wine)
+    return redirect("wine-detail", pk=wine.pk)

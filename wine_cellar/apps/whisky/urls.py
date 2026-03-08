@@ -11,6 +11,16 @@ urlpatterns = [
     path("whiskies/", views.WhiskyListView.as_view(), name="whisky-list"),
     path("whisky/add/", views.WhiskyCreateView.as_view(), name="whisky-add"),
     path("whisky/<int:pk>/", views.WhiskyDetailView.as_view(), name="whisky-detail"),
+    path(
+        "whisky/<int:pk>/collections/add/",
+        views.add_whisky_to_collection,
+        name="whisky-collection-add",
+    ),
+    path(
+        "whisky/<int:pk>/collections/<int:collection_pk>/remove/",
+        views.remove_whisky_from_collection,
+        name="whisky-collection-remove",
+    ),
     path("whisky/<int:pk>/qr/", views.QRCodeView.as_view(), name="whisky-qr"),
     path("whisky/<int:pk>/edit/", views.WhiskyUpdateView.as_view(), name="whisky-edit"),
     path(

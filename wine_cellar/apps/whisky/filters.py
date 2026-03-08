@@ -5,6 +5,7 @@ from django_filters import ChoiceFilter, OrderingFilter
 
 from wine_cellar.apps.core.filters import (
     BeverageFilterMixin,
+    get_collection_choices,
     get_country_choices_cached,
     get_related_model_choices_cached,
 )
@@ -12,6 +13,7 @@ from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.models import (
     WHISKY_COUNTRIES,
+    Collection,
     Distillery,
     FillLevel,
     PeatedLevel,
@@ -84,6 +86,11 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
     country = ChoiceFilter(
         choices=[],
         label=_("Country"),
+    )
+    collection = ChoiceFilter(
+        choices=[],
+        label=_("Collection"),
+        method="filter_collection",
     )
 
     peated_level = ChoiceFilter(
@@ -166,6 +173,11 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
             return queryset.filter(region_id=int(value))
         return queryset
 
+    def filter_collection(self, queryset, name, value):
+        if value:
+            return queryset.filter(collections__pk=int(value)).distinct()
+        return queryset
+
     def filter_is_nas(self, queryset, name, value):
         if value == "1":
             return queryset.filter(age_statement__isnull=True)
@@ -190,6 +202,7 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
             "distillery",
             "region",
             "country",
+            "collection",
             "peated_level",
             "has_stock",
             "abv_min",
@@ -213,6 +226,9 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
 
         # Update country filter with favourites-ordered choices
         self.filters["country"].extra["choices"] = get_country_choices(user)
+        self.filters["collection"].extra["choices"] = get_collection_choices(
+            user, collection_model=Collection
+        )
 
 
 class WhiskyStorageItemFilter(django_filters.FilterSet):

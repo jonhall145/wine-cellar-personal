@@ -232,6 +232,63 @@ class Source(UserContentModel):
         return self.name
 
 
+class Collection(UserContentModel):
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        null=True,
+        related_name="wine_collections",
+        verbose_name=_("User"),
+    )
+    household = models.ForeignKey(
+        "household.Household",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="wine_collection_items",
+        verbose_name=_("Household"),
+    )
+    name = models.CharField(max_length=100, verbose_name=_("Name"))
+    description = models.CharField(
+        max_length=250,
+        blank=True,
+        default="",
+        verbose_name=_("Description"),
+    )
+    color = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        verbose_name=_("Color"),
+    )
+    icon = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        verbose_name=_("Icon"),
+    )
+    wines = models.ManyToManyField(
+        "wine.Wine",
+        blank=True,
+        related_name="collections",
+        verbose_name=_("Wines"),
+    )
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = _("Collection")
+        verbose_name_plural = _("Collections")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["name", "household"],
+                name="unique_wine_collection_name_per_household",
+            )
+        ]
+
+    def __str__(self):
+        return self.name
+
+
 class WineQuerySet(HouseholdQuerySet):
     """Custom queryset for Wine with prefetch optimization."""
 

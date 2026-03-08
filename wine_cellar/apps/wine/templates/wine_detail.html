@@ -162,6 +162,38 @@
                         {% endif %}
                     {% endwith %}
                 </table>
+                <div class="mt-12">
+                    <h3>{% translate "Collections" %}</h3>
+                    <div class="mb-12">
+                        {% for collection in wine.collections.all %}
+                            <form action="{% url 'wine-collection-remove' wine.pk collection.pk %}"
+                                  method="post"
+                                  class="display-inline-block">
+                                {% csrf_token %}
+                                <button type="submit" class="pure-button button__neutral button--sm">
+                                    {{ collection.name }} ×
+                                </button>
+                            </form>
+                        {% empty %}
+                            <span class="text--gray">{% translate "Not in any collection yet." %}</span>
+                        {% endfor %}
+                    </div>
+                    <form action="{% url 'wine-collection-add' wine.pk %}" method="post" class="pure-form">
+                        {% csrf_token %}
+                        <select name="collection_id">
+                            <option value="">{% translate "Select collection" %}</option>
+                            {% for collection in all_collections %}
+                                <option value="{{ collection.pk }}">{{ collection.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text"
+                               name="new_collection_name"
+                               placeholder="{% translate 'Or create new collection' %}">
+                        <button type="submit" class="pure-button button__neutral">
+                            {% translate "Add" %}
+                        </button>
+                    </form>
+                </div>
                 {% if extraction_log %}
                     <div class="extraction-origin">
                         <i class="fa-solid fa-wand-magic-sparkles"></i>

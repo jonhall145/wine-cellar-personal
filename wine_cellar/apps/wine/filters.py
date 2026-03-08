@@ -7,12 +7,13 @@ from django_filters import ChoiceFilter, OrderingFilter
 
 from wine_cellar.apps.core.filters import (
     BeverageFilterMixin,
+    get_collection_choices,
     get_country_choices_cached,
     get_related_model_choices_cached,
 )
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.forms import WineFilterForm
-from wine_cellar.apps.wine.models import Appellation, Wine
+from wine_cellar.apps.wine.models import Appellation, Collection, Wine
 
 
 def get_country_choices_with_favourites(user=None):
@@ -95,6 +96,11 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
         label=_("Cold Storage"),
         choices=(("", _("Any")), (0, _("No")), (1, _("Yes"))),
     )
+    collection = ChoiceFilter(
+        choices=[],
+        label=_("Collection"),
+        method="filter_collection",
+    )
     order = OrderingFilter(
         choices=(
             ("-created", _("Recently Added")),
@@ -166,6 +172,11 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
             return queryset.filter(appellation_id=int(value))
         return queryset
 
+    def filter_collection(self, queryset, name, value):
+        if value:
+            return queryset.filter(collections__pk=int(value)).distinct()
+        return queryset
+
     class Meta:
         form = WineFilterForm
         model = Wine
@@ -185,6 +196,7 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
             "source",
             "country",
             "appellation",
+            "collection",
             "stock",
         ]
 
@@ -214,4 +226,7 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
         # Update appellation filter with choices from user's wines
         self.filters["appellation"].extra["choices"] = get_appellation_choices(
             request.user if request else None
+        )
+        self.filters["collection"].extra["choices"] = get_collection_choices(
+            request.user if request else None, collection_model=Collection
         )

@@ -51,6 +51,8 @@ from wine_cellar.apps.wine.views.wine_crud import (  # noqa: F401
     WineListView,
     WineMergeConfirmView,
     WineUpdateView,
+    add_wine_to_collection,
+    remove_wine_from_collection,
 )
 from wine_cellar.apps.wine.views.wishlist import (  # noqa: F401
     WishlistCreateView,
