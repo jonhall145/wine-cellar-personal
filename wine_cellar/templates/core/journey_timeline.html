@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load i18n core_tags %}
+{% block title %}
+    {% translate "Journey Timeline" %}
+{% endblock title %}
+{% block styles %}
+    <style>
+        .journey-timeline {
+            list-style: none;
+            margin: 0;
+            padding: 0 0 0 1rem;
+            border-left: 2px solid var(--border-color);
+        }
+        .journey-timeline__item {
+            position: relative;
+            padding: 0 0 1rem 1rem;
+        }
+        .journey-timeline__item::before {
+            position: absolute;
+            top: 0.25rem;
+            left: -0.55rem;
+            width: 0.7rem;
+            height: 0.7rem;
+            border-radius: 999px;
+            background: var(--primary);
+            content: "";
+        }
+        .journey-timeline__date {
+            color: var(--text-color-gray);
+            font-size: 0.85rem;
+        }
+        .journey-timeline__title {
+            font-weight: 600;
+            margin: 0.1rem 0;
+        }
+        .journey-metrics {
+            margin-bottom: 1rem;
+        }
+    </style>
+{% endblock styles %}
+{% block header %}
+    <h1 class="header__title">{% translate "Journey Timeline" %}</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1 pure-u-md-1-2 journey-metrics">
+            <div class="widget-card">
+                <h3 class="widget-card__title"><i class="fa-solid fa-chart-line"></i> {% translate "Purchase price trends" %}</h3>
+                <div class="widget-card__content">
+                    {% if price_trends %}
+                        <ul class="widget-list">
+                            {% for trend in price_trends %}
+                                <li>
+                                    {{ trend.month|date:"M Y" }}:
+                                    <strong>{{ trend.purchases }}</strong> {% translate "purchases" %}
+                                    {% if trend.avg_price %}({{ currency }}{{ trend.avg_price|floatformat:2 }}){% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="widget-empty"><i class="fa-regular fa-chart-line"></i><span>{% translate "No purchases yet" %}</span></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="pure-u-1 pure-u-md-1-2 journey-metrics">
+            <div class="widget-card">
+                <h3 class="widget-card__title"><i class="fa-solid fa-calendar-days"></i> {% translate "Consumption patterns" %}</h3>
+                <div class="widget-card__content">
+                    {% if monthly_consumption or yearly_consumption %}
+                        <ul class="widget-list">
+                            {% for item in monthly_consumption|slice:":6" %}
+                                <li>{{ item.month|date:"M Y" }}: <strong>{{ item.total }}</strong></li>
+                            {% endfor %}
+                            {% for item in yearly_consumption|slice:":3" %}
+                                <li>{{ item.date_consumed__year }}: <strong>{{ item.total }}</strong></li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="widget-empty"><i class="fa-regular fa-calendar-days"></i><span>{% translate "No consumption yet" %}</span></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="pure-u-1">
+            {% if timeline_events %}
+                <ul class="journey-timeline">
+                    {% for event in timeline_events %}
+                        <li class="journey-timeline__item">
+                            <div class="journey-timeline__date">{{ event.date|date:"SHORT_DATE_FORMAT" }}</div>
+                            {% if event.event_type == "added" %}
+                                <div class="journey-timeline__title">
+                                    {% blocktranslate with item_name=APP_ITEM_NAME %}Added {{ item_name }}{% endblocktranslate %}: <a href="{% bev_url 'detail' event.beverage.pk %}">{{ event.beverage.name }}</a>
+                                </div>
+                                {% if event.price %}<div>{% translate "Price" %}: {{ currency }}{{ event.price|floatformat:2 }}</div>{% endif %}
+                            {% elif event.event_type == "consumed" %}
+                                <div class="journey-timeline__title">
+                                    {% blocktranslate with item_name=APP_ITEM_NAME %}Consumed {{ item_name }}{% endblocktranslate %}: <a href="{% bev_url 'detail' event.beverage.pk %}">{{ event.beverage.name }}</a>
+                                </div>
+                                {% if event.rating is not None %}<div>{% translate "Rating" %}: {{ event.rating }}/3</div>{% endif %}
+                                {% if event.tasting_notes %}<div>{{ event.tasting_notes|truncatewords:25 }}</div>{% endif %}
+                            {% else %}
+                                <div class="journey-timeline__title">
+                                    <i class="fa-solid fa-award"></i>
+                                    {% if event.milestone_type == "hundredth_bottle" %}
+                                        {% translate "100th bottle added" %}
+                                    {% elif event.milestone_type == "first_three_star" %}
+                                        {% translate "First 3-star drink" %}
+                                    {% endif %}
+                                </div>
+                                <div><a href="{% bev_url 'detail' event.beverage.pk %}">{{ event.beverage.name }}</a></div>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state__icon"><i class="fa-solid fa-{{ beverage_icon }}"></i></div>
+                    <h3 class="empty-state__title">{% translate "No journey events yet" %}</h3>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock content %}

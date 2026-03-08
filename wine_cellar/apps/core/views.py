@@ -87,6 +87,144 @@ class BaseDrinkRecordListView(RequireHouseholdMixin, TemplateView):
         return context
 
 
+class BaseJourneyTimelineView(RequireHouseholdMixin, TemplateView):
+    storage_item_model = None  # Set by subclass
+    drink_record_model = None  # Set by subclass
+    beverage_fk_name = None  # "wine" or "whisky"
+    beverage_icon = None  # e.g. "wine-glass" or "whiskey-glass"
+    max_timeline_events = 200
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        household = get_active_household(self.request.user)
+        user_settings = get_user_settings(self.request.user)
+        currency = settings.CURRENCY_SYMBOLS.get(
+            getattr(user_settings, "currency", "EUR"), "€"
+        )
+
+        storage_items = list(
+            self.storage_item_model.objects.filter(household=household, deleted=False)
+            .select_related(self.beverage_fk_name)
+            .only(
+                "created",
+                "price",
+                "household_id",
+                f"{self.beverage_fk_name}__name",
+                f"{self.beverage_fk_name}__price",
+                f"{self.beverage_fk_name}__id",
+            )
+            .order_by("created", "pk")
+        )
+        drink_records = list(
+            self.drink_record_model.objects.filter(household=household)
+            .select_related(self.beverage_fk_name)
+            .only(
+                "date_consumed",
+                "rating",
+                "tasting_notes",
+                "household_id",
+                f"{self.beverage_fk_name}__name",
+                f"{self.beverage_fk_name}__id",
+            )
+            .order_by("date_consumed", "pk")
+        )
+
+        timeline_events = []
+        for item in storage_items:
+            beverage = getattr(item, self.beverage_fk_name)
+            timeline_events.append(
+                {
+                    "date": item.created.date(),
+                    "event_type": "added",
+                    "beverage": beverage,
+                    "price": item.price if item.price is not None else beverage.price,
+                }
+            )
+
+        for record in drink_records:
+            timeline_events.append(
+                {
+                    "date": record.date_consumed,
+                    "event_type": "consumed",
+                    "beverage": getattr(record, self.beverage_fk_name),
+                    "rating": record.rating,
+                    "tasting_notes": record.tasting_notes,
+                }
+            )
+
+        # Milestone: 100th bottle ever added (including deleted)
+        hundredth_item = (
+            self.storage_item_model.objects.filter(household=household)
+            .select_related(self.beverage_fk_name)
+            .order_by("created", "pk")[99:100]
+            .first()
+        )
+        if hundredth_item:
+            timeline_events.append(
+                {
+                    "date": hundredth_item.created.date(),
+                    "event_type": "milestone",
+                    "milestone_type": "hundredth_bottle",
+                    "beverage": getattr(hundredth_item, self.beverage_fk_name),
+                }
+            )
+
+        first_three_star = next(
+            (record for record in drink_records if record.rating == 3), None
+        )
+        if first_three_star:
+            timeline_events.append(
+                {
+                    "date": first_three_star.date_consumed,
+                    "event_type": "milestone",
+                    "milestone_type": "first_three_star",
+                    "beverage": getattr(first_three_star, self.beverage_fk_name),
+                }
+            )
+
+        timeline_events = sorted(
+            timeline_events,
+            key=lambda event: event["date"],
+            reverse=True,
+        )[: self.max_timeline_events]
+
+        monthly_consumption = (
+            self.drink_record_model.objects.filter(household=household)
+            .annotate(month=TruncMonth("date_consumed"))
+            .values("month")
+            .annotate(total=Count("id"))
+            .order_by("-month")[:12]
+        )
+        yearly_consumption = (
+            self.drink_record_model.objects.filter(household=household)
+            .values("date_consumed__year")
+            .annotate(total=Count("id"))
+            .order_by("-date_consumed__year")
+        )
+        price_trends = (
+            self.storage_item_model.objects.filter(household=household, deleted=False)
+            .annotate(month=TruncMonth("created"))
+            .values("month")
+            .annotate(
+                purchases=Count("id"),
+                avg_price=Avg(Coalesce("price", F(f"{self.beverage_fk_name}__price"))),
+            )
+            .order_by("-month")[:12]
+        )
+
+        context.update(
+            {
+                "timeline_events": timeline_events,
+                "monthly_consumption": monthly_consumption,
+                "yearly_consumption": yearly_consumption,
+                "price_trends": price_trends,
+                "currency": currency,
+                "beverage_icon": self.beverage_icon or "wine-glass",
+            }
+        )
+        return context
+
+
 class BaseDrinkRecordEditView(RequireMemberMixin, FormView):
     drink_record_model = None  # Set by subclass
     beverage_fk_name = None  # "wine" or "whisky"

@@ -17,6 +17,7 @@ from wine_cellar.apps.wine.views import (
     DrinkRecordEditView,
     DrinkRecordListView,
     HomePageView,
+    JourneyTimelineView,
     LabelScanView,
     QRCodeView,
     RandomBottleView,
@@ -116,6 +117,7 @@ urlpatterns = [
         DrinkRecordDeleteView.as_view(),
         name="drink-record-delete",
     ),
+    path("journey/", JourneyTimelineView.as_view(), name="journey-timeline"),
     # Wishlist
     path("wishlist/", WishlistListView.as_view(), name="wishlist-list"),
     path("wishlist/add/", WishlistCreateView.as_view(), name="wishlist-add"),

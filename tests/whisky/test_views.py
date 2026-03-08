@@ -248,6 +248,35 @@ def test_drink_record_with_selected_bottle_can_mark_consumed(
 
 
 @pytest.mark.django_db
+def test_journey_timeline_view(client, user, whisky_storage_item_factory):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        price=42,
+    )
+    WhiskyDrinkRecord.objects.create(
+        whisky=bottle.whisky,
+        user=user,
+        household=household,
+        date_consumed=datetime.date(2025, 1, 5),
+        rating=2,
+    )
+
+    client.force_login(user)
+    response = client.get(reverse("journey-timeline"))
+
+    assert response.status_code == HTTPStatus.OK
+    assert len(response.context["timeline_events"]) == 2
+    assert len(response.context["monthly_consumption"]) == 1
+    assert len(response.context["price_trends"]) == 1
+
+
+@pytest.mark.django_db
 def test_drink_record_with_selected_bottle_can_mark_opened(
     client, user, whisky_storage_item_factory
 ):

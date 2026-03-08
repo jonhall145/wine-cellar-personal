@@ -244,6 +244,39 @@ def test_drink_history_view(client, user, wine_factory):
 
 
 @pytest.mark.django_db
+def test_journey_timeline_view(client, user, wine_factory, storage_item_factory):
+    client.force_login(user)
+    hh = user.user_settings.active_household
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    storage_item_factory(wine=wine, storage=storage, price=Decimal("14.20"))
+    DrinkRecord.objects.create(
+        wine=wine,
+        user=user,
+        household=hh,
+        date_consumed=date(2025, 1, 2),
+        rating=3,
+        tasting_notes="Excellent bottle.",
+    )
+
+    r = client.get(reverse("journey-timeline"))
+    assert r.status_code == HTTPStatus.OK
+    assert len(r.context["timeline_events"]) == 3
+    assert (
+        r.context["timeline_events"][0]["date"]
+        >= r.context["timeline_events"][-1]["date"]
+    )
+    milestone_types = [
+        event.get("milestone_type")
+        for event in r.context["timeline_events"]
+        if event["event_type"] == "milestone"
+    ]
+    assert "first_three_star" in milestone_types
+    assert len(r.context["monthly_consumption"]) == 1
+    assert len(r.context["price_trends"]) == 1
+
+
+@pytest.mark.django_db
 def test_drink_record_delete_view(client, user, wine_factory):
     client.force_login(user)
     hh = user.user_settings.active_household
