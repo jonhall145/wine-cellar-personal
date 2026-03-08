@@ -108,12 +108,25 @@ def get_related_model_choices_cached(
 
 
 def get_collection_choices(user, *, collection_model):
-    """Build collection filter choices scoped to the user's active household."""
+    """Build cached collection filter choices scoped to the user's household."""
     household = get_active_household(user) if user and user.is_authenticated else None
+    household_id = household.id if household else "anon"
+    model_label = collection_model._meta.label_lower
+    cache_key = f"collection_choices_{model_label}_{household_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     choices = [("", _("Any"))]
     if household:
-        qs = collection_model.objects.filter(household=household).order_by("name")
-        choices.extend((c.pk, c.name) for c in qs)
+        qs = (
+            collection_model.objects.filter(household=household)
+            .values_list("pk", "name")
+            .order_by("name")
+        )
+        choices.extend(qs)
+
+    cache.set(cache_key, choices, FILTER_CACHE_TIMEOUT)
     return choices
 
 

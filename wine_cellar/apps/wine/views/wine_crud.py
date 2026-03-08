@@ -19,6 +19,7 @@ from wine_cellar.apps.core.views import (
     BaseListView,
     BaseMergeConfirmView,
 )
+from wine_cellar.apps.household.mixins import require_member
 from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.filters import WineFilter
@@ -442,7 +443,14 @@ class WineMergeConfirmView(BaseMergeConfirmView):
     beverage_fk_name = "wine"
     detail_url_name = "wine-detail"
     image_model = WineImage
-    m2m_fields = ("grapes", "attributes", "food_pairings", "vineyard", "source")
+    m2m_fields = (
+        "grapes",
+        "attributes",
+        "food_pairings",
+        "vineyard",
+        "source",
+        "collections",
+    )
     reminder_model = None  # Lazy-loaded
 
     @property
@@ -469,18 +477,22 @@ class WineMergeConfirmView(BaseMergeConfirmView):
 
 
 @login_required
+@require_member
 @require_POST
 def add_wine_to_collection(request, pk):
     household = get_active_household(request.user)
     wine = get_object_or_404(Wine, pk=pk, household=household)
     collection_id = request.POST.get("collection_id")
-    new_collection_name = (request.POST.get("new_collection_name") or "").strip()
+    new_collection_name = (request.POST.get("new_collection_name") or "").strip()[:100]
 
     collection = None
     if collection_id:
-        collection = Collection.objects.filter(
-            pk=collection_id, household=household
-        ).first()
+        try:
+            collection = Collection.objects.filter(
+                pk=int(collection_id), household=household
+            ).first()
+        except (ValueError, TypeError):
+            pass
     elif new_collection_name:
         collection, _ = Collection.objects.get_or_create(
             name=new_collection_name,
@@ -495,6 +507,7 @@ def add_wine_to_collection(request, pk):
 
 
 @login_required
+@require_member
 @require_POST
 def remove_wine_from_collection(request, pk, collection_pk):
     household = get_active_household(request.user)

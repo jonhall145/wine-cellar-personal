@@ -1,3 +1,5 @@
+from functools import wraps
+
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.http.response import HttpResponseRedirectBase
@@ -9,6 +11,35 @@ from wine_cellar.apps.household.models import (
     HouseholdMembership,
     HouseholdRole,
 )
+
+
+def require_member(view_func):
+    """Decorator for function-based views that require Member role."""
+
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        from wine_cellar.apps.user.views import get_active_household
+
+        household = get_active_household(request.user)
+        if not household:
+            return redirect("household-list")
+        try:
+            membership = HouseholdMembership.objects.get(
+                user=request.user, household=household
+            )
+        except HouseholdMembership.DoesNotExist:
+            raise PermissionDenied(
+                _("You need Member role or higher to perform this action.")
+            )
+        if ROLE_HIERARCHY.get(membership.role, 0) < ROLE_HIERARCHY.get(
+            HouseholdRole.MEMBER, 0
+        ):
+            raise PermissionDenied(
+                _("You need Member role or higher to perform this action.")
+            )
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
 
 
 class HouseholdContextMixin:

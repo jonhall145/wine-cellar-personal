@@ -794,6 +794,33 @@ def test_wine_collection_add_and_remove(client, user, wine_factory):
 
 
 @pytest.mark.django_db
+def test_wine_collection_create_new_by_name(client, user, wine_factory):
+    wine = wine_factory(user=user)
+    client.force_login(user)
+    url = reverse("wine-collection-add", kwargs={"pk": wine.pk})
+
+    response = client.post(
+        url, data={"new_collection_name": "Party Picks"}, follow=True
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert Collection.objects.filter(
+        name="Party Picks", household=wine.household
+    ).exists()
+    collection = Collection.objects.get(name="Party Picks", household=wine.household)
+    assert collection.wines.filter(pk=wine.pk).exists()
+
+
+@pytest.mark.django_db
+def test_wine_collection_add_invalid_id(client, user, wine_factory):
+    wine = wine_factory(user=user)
+    client.force_login(user)
+    url = reverse("wine-collection-add", kwargs={"pk": wine.pk})
+
+    response = client.post(url, data={"collection_id": "abc"}, follow=True)
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.django_db
 def test_drink_record_with_bottle_selection_marks_deleted(
     client, user, wine_factory, storage_item_factory
 ):

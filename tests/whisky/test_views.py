@@ -109,6 +109,35 @@ def test_whisky_collection_add_and_remove(client, user, whisky_factory):
 
 
 @pytest.mark.django_db
+def test_whisky_collection_create_new_by_name(client, user, whisky_factory):
+    whisky = whisky_factory(user=user)
+    client.force_login(user)
+    url = reverse("whisky-collection-add", kwargs={"pk": whisky.pk})
+
+    response = client.post(
+        url, data={"new_collection_name": "Investment Bottles"}, follow=True
+    )
+    assert response.status_code == HTTPStatus.OK
+    assert Collection.objects.filter(
+        name="Investment Bottles", household=whisky.household
+    ).exists()
+    collection = Collection.objects.get(
+        name="Investment Bottles", household=whisky.household
+    )
+    assert collection.whiskies.filter(pk=whisky.pk).exists()
+
+
+@pytest.mark.django_db
+def test_whisky_collection_add_invalid_id(client, user, whisky_factory):
+    whisky = whisky_factory(user=user)
+    client.force_login(user)
+    url = reverse("whisky-collection-add", kwargs={"pk": whisky.pk})
+
+    response = client.post(url, data={"collection_id": "abc"}, follow=True)
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.django_db
 def test_bottle_list_loads(client, user, whisky_storage_item_factory):
     """Test that whisky bottle list page loads and exposes filter context."""
     household = user.user_settings.active_household
