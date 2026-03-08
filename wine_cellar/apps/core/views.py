@@ -92,19 +92,40 @@ class BaseJourneyTimelineView(RequireHouseholdMixin, TemplateView):
     drink_record_model = None  # Set by subclass
     beverage_fk_name = None  # "wine" or "whisky"
     beverage_icon = None  # e.g. "wine-glass" or "whiskey-glass"
+    max_timeline_events = 200
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         household = get_active_household(self.request.user)
+        user_settings = get_user_settings(self.request.user)
+        currency = settings.CURRENCY_SYMBOLS.get(
+            getattr(user_settings, "currency", "EUR"), "€"
+        )
 
         storage_items = list(
             self.storage_item_model.objects.filter(household=household, deleted=False)
             .select_related(self.beverage_fk_name)
+            .only(
+                "created",
+                "price",
+                "household_id",
+                f"{self.beverage_fk_name}__name",
+                f"{self.beverage_fk_name}__price",
+                f"{self.beverage_fk_name}__id",
+            )
             .order_by("created", "pk")
         )
         drink_records = list(
             self.drink_record_model.objects.filter(household=household)
             .select_related(self.beverage_fk_name)
+            .only(
+                "date_consumed",
+                "rating",
+                "tasting_notes",
+                "household_id",
+                f"{self.beverage_fk_name}__name",
+                f"{self.beverage_fk_name}__id",
+            )
             .order_by("date_consumed", "pk")
         )
 
@@ -131,6 +152,7 @@ class BaseJourneyTimelineView(RequireHouseholdMixin, TemplateView):
                 }
             )
 
+        # Milestone: 100th bottle added (by creation order, including any later deleted)
         if len(storage_items) >= 100:
             hundredth_item = storage_items[99]
             timeline_events.append(
@@ -159,7 +181,7 @@ class BaseJourneyTimelineView(RequireHouseholdMixin, TemplateView):
             timeline_events,
             key=lambda event: event["date"],
             reverse=True,
-        )
+        )[: self.max_timeline_events]
 
         monthly_consumption = (
             self.drink_record_model.objects.filter(household=household)
@@ -191,6 +213,7 @@ class BaseJourneyTimelineView(RequireHouseholdMixin, TemplateView):
                 "monthly_consumption": monthly_consumption,
                 "yearly_consumption": yearly_consumption,
                 "price_trends": price_trends,
+                "currency": currency,
                 "beverage_icon": self.beverage_icon or "wine-glass",
             }
         )

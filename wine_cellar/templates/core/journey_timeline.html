@@ -53,7 +53,7 @@
                                 <li>
                                     {{ trend.month|date:"M Y" }}:
                                     <strong>{{ trend.purchases }}</strong> {% translate "purchases" %}
-                                    {% if trend.avg_price %}({{ trend.avg_price|floatformat:2 }}){% endif %}
+                                    {% if trend.avg_price %}({{ currency }}{{ trend.avg_price|floatformat:2 }}){% endif %}
                                 </li>
                             {% endfor %}
                         </ul>
@@ -87,12 +87,12 @@
                 <ul class="journey-timeline">
                     {% for event in timeline_events %}
                         <li class="journey-timeline__item">
-                            <div class="journey-timeline__date">{{ event.date }}</div>
+                            <div class="journey-timeline__date">{{ event.date|date:"SHORT_DATE_FORMAT" }}</div>
                             {% if event.event_type == "added" %}
                                 <div class="journey-timeline__title">
                                     {% blocktranslate with item_name=APP_ITEM_NAME %}Added {{ item_name }}{% endblocktranslate %}: <a href="{% bev_url 'detail' event.beverage.pk %}">{{ event.beverage.name }}</a>
                                 </div>
-                                {% if event.price %}<div>{% translate "Price" %}: {{ event.price|floatformat:2 }}</div>{% endif %}
+                                {% if event.price %}<div>{% translate "Price" %}: {{ currency }}{{ event.price|floatformat:2 }}</div>{% endif %}
                             {% elif event.event_type == "consumed" %}
                                 <div class="journey-timeline__title">
                                     {% blocktranslate with item_name=APP_ITEM_NAME %}Consumed {{ item_name }}{% endblocktranslate %}: <a href="{% bev_url 'detail' event.beverage.pk %}">{{ event.beverage.name }}</a>

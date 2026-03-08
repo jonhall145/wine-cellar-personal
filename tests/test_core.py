@@ -261,8 +261,11 @@ def test_journey_timeline_view(client, user, wine_factory, storage_item_factory)
 
     r = client.get(reverse("journey-timeline"))
     assert r.status_code == HTTPStatus.OK
-    assert len(r.context["timeline_events"]) >= 3
-    assert r.context["timeline_events"][0]["date"] >= r.context["timeline_events"][-1]["date"]
+    assert len(r.context["timeline_events"]) == 3
+    assert (
+        r.context["timeline_events"][0]["date"]
+        >= r.context["timeline_events"][-1]["date"]
+    )
     milestone_types = [
         event.get("milestone_type")
         for event in r.context["timeline_events"]
