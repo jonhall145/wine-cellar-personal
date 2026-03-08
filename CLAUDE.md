@@ -176,6 +176,11 @@ Always use `make` targets rather than calling scripts directly. Run `make help` 
 7. **Avoid full rebuilds for tests** - Tests should not require a full frontend rebuild as this is slow and causes timeout issues. Use `make pytest` directly for backend tests.
 8. **Never change user passwords permanently** - If you need to reset a password for testing, always revert it back to the original before finishing. Do not leave changed passwords.
 
+## Testing Policy
+
+- **Zero tolerance for test failures.** Never accept pre-existing test errors or failures. If `make pytest` or `make lint` reports errors, fix them before moving on — even if they appear unrelated to your changes.
+- E2e tests auto-skip when Playwright browsers aren't installed (e.g. inside Docker). Skipped tests are acceptable; errors are not.
+
 ## Lessons Learned
 
 These patterns are derived from previous development sessions to improve accuracy and efficiency.

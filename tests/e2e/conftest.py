@@ -4,6 +4,23 @@ import os
 
 import pytest
 
+# Skip all e2e tests if Playwright browsers are not installed
+try:
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        if not os.path.exists(p.chromium.executable_path):
+            raise FileNotFoundError(p.chromium.executable_path)
+    _playwright_available = True
+except Exception:
+    _playwright_available = False
+
+if not _playwright_available:
+    pytest.skip(
+        "Playwright browsers not installed (run: playwright install chromium)",
+        allow_module_level=True,
+    )
+
 # Playwright runs in an async context; allow Django ORM calls in test fixtures
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
