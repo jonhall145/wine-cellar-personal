@@ -3,6 +3,20 @@ name: Build and Push RPi4 Docker Image
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'wine_cellar/**'
+      - 'fixtures/**'
+      - 'requirements/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'webpack.common.js'
+      - 'webpack.prod.js'
+      - 'tsconfig.json'
+      - 'manage.py'
+      - 'pyproject.toml'
+      - 'Dockerfile.rpi4'
+      - 'docker-entrypoint.sh'
+  workflow_dispatch:
 
 permissions:
   contents: read
