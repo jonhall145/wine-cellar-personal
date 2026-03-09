@@ -59,3 +59,30 @@ class TestWineList:
         # All 15 wines should fit on one page with per_page=25
         cards = page.locator(".wine-card")
         assert cards.count() >= 15
+
+    def test_per_page_selector_preserves_path(self, authenticated_page, live_server):
+        """Changing per_page must stay on /wines/, not redirect to site root.
+
+        Regression: JS used new URL(value, window.location.origin) which
+        resolved ?per_page=50 against the origin, losing the /wines/ path.
+        """
+        page = authenticated_page
+        page.goto(f"{live_server.url}/wines/?stock=1")
+        page.wait_for_load_state("networkidle")
+
+        select = page.locator("#per-page")
+        # Pick "25" from the dropdown
+        select.select_option(label="25")
+        page.wait_for_load_state("networkidle")
+
+        # Must still be on /wines/, not /
+        assert (
+            "/wines/" in page.url
+        ), f"Per-page selector navigated away from /wines/: {page.url}"
+        # Filter params must be preserved
+        assert (
+            "stock=1" in page.url
+        ), f"Per-page selector lost stock=1 filter: {page.url}"
+        assert (
+            "per_page=25" in page.url
+        ), f"Per-page selector did not set per_page=25: {page.url}"

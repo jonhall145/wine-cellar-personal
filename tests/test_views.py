@@ -707,6 +707,69 @@ def test_wine_scanned_non_existing(
 
 
 @pytest.mark.django_db
+def test_per_page_option_values_are_relative_querystrings(
+    client, user, wine_factory, storage_item_factory
+):
+    """Per-page option values must be relative querystrings that preserve the path.
+
+    Regression test: the per-page JS used new URL(value, window.location.origin)
+    which dropped the /wines/ path, redirecting to /?per_page=50 instead of
+    /wines/?per_page=50. Ensure option values start with '?' (relative) and
+    include existing filter params like stock=1.
+    """
+    import re
+
+    storage = user.storage_set.first()
+    wine = wine_factory(user=user)
+    storage_item_factory(storage=storage, wine=wine)
+    client.force_login(user)
+
+    # Request with an active filter so we can verify it's preserved
+    r = client.get(reverse("wine-list") + "?stock=1")
+    assert r.status_code == HTTPStatus.OK
+
+    content = r.content.decode()
+    # Extract all option values from the per-page select
+    option_values = re.findall(
+        r'<select id="per-page"[^>]*>.*?</select>', content, re.DOTALL
+    )
+    assert option_values, "Per-page select not found in response"
+    values = re.findall(r'<option value="([^"]*)"', option_values[0])
+    assert len(values) >= 2, f"Expected multiple per-page options, got {values}"
+
+    for val in values:
+        # Must be a relative querystring, not an absolute URL
+        assert val.startswith("?"), f"Option value should start with '?', got: {val}"
+        # Must preserve existing filter params
+        assert "stock=1" in val, f"Option value should preserve stock=1 filter: {val}"
+        assert "per_page=" in val, f"Option value should contain per_page param: {val}"
+        assert "page=1" in val, f"Option value should reset to page=1: {val}"
+
+
+@pytest.mark.django_db
+def test_per_page_option_values_include_js_using_location_href(
+    client, user, wine_factory
+):
+    """The per-page JS must use window.location.href (not .origin) as URL base.
+
+    Regression test: using window.location.origin loses the current path,
+    so ?per_page=50 resolves to the site root instead of the current page.
+    """
+    wine_factory(user=user)
+    client.force_login(user)
+
+    r = client.get(reverse("wine-list"))
+    assert r.status_code == HTTPStatus.OK
+
+    content = r.content.decode()
+    assert "new URL(value, window.location.href)" in content, (
+        "Per-page JS must use window.location.href as base URL, "
+        "not window.location.origin (which drops the path)"
+    )
+    assert "new URL(value, window.location.origin)" not in content
+
+
+@pytest.mark.django_db
 def test_wine_filter_in_stock(client, user, wine_factory, storage_item_factory):
     storage = user.storage_set.first()
     wine_in_stock = wine_factory(user=user, vintage=2020)
