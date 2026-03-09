@@ -214,6 +214,7 @@ class WineCreateView(BaseBeverageCreateView):
             country=country,
             user=user,
             household=household,
+            deleted=False,
             defaults={
                 "category": category,
                 "subregion": subregion,

@@ -19,10 +19,16 @@ class WineBarcodeInline(admin.TabularInline):
 
 @admin.register(Wine)
 class WineAdmin(admin.ModelAdmin):
-    list_display = ["name", "user", "household"]
-    list_filter = ["household", "user"]
-    fields = ["name", "user", "household"]
+    list_display = ["name", "user", "household", "deleted"]
+    list_filter = ["household", "user", "deleted"]
+    fields = ["name", "user", "household", "deleted"]
     inlines = [WineBarcodeInline]
+    actions = ["restore_deleted"]
+
+    @admin.action(description="Restore selected soft-deleted wines")
+    def restore_deleted(self, request, queryset):
+        count = queryset.filter(deleted=True).update(deleted=False)
+        self.message_user(request, f"Restored {count} wine(s).")
 
 
 @admin.register(WineBarcode)

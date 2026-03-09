@@ -88,6 +88,7 @@ def get_related_model_choices_cached(
             related_model.objects.filter(
                 **{
                     f"{beverage_fk_path}__household": household,
+                    f"{beverage_fk_path}__deleted": False,
                     f"{beverage_fk_path}__{storage_item_reverse}__isnull": False,
                     f"{beverage_fk_path}__{storage_item_reverse}__deleted": False,
                 }
@@ -170,6 +171,7 @@ def get_country_choices_cached(
         countries_in_stock = set(
             beverage_model.objects.filter(
                 household=household,
+                deleted=False,
                 **{si_null: False, si_del: False},
             )
             .values_list("country", flat=True)
@@ -180,6 +182,7 @@ def get_country_choices_cached(
             most_frequent = (
                 beverage_model.objects.filter(
                     household=household,
+                    deleted=False,
                     **{si_null: False, si_del: False},
                 )
                 .values("country")

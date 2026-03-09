@@ -553,8 +553,8 @@ class Wine(UserContentModel):
                     "vintage",
                     "country",
                     "user",
-                    "deleted",
                 ],
+                condition=models.Q(deleted=False),
                 name="unique wine",
             )
         ]

@@ -464,8 +464,8 @@ class Whisky(UserContentModel):
                     "vintage_year",
                     "bottled_year",
                     "user",
-                    "deleted",
                 ],
+                condition=models.Q(deleted=False),
                 name="unique_whisky_natural_key",
             ),
         ]

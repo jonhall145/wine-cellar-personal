@@ -69,4 +69,5 @@ class TestWineCrud:
         page.locator("main button[type='submit'][name='save']").click()
         page.wait_for_load_state("networkidle")
 
-        assert not Wine.objects.filter(pk=wine.pk).exists()
+        assert Wine.objects.filter(pk=wine.pk, deleted=True).exists()
+        assert not Wine.objects.filter(pk=wine.pk, deleted=False).exists()

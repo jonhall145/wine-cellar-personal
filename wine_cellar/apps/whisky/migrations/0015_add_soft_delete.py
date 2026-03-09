@@ -5,25 +5,36 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('household', '0002_populate_existing_users'),
-        ('whisky', '0014_collection'),
+        ("household", "0002_populate_existing_users"),
+        ("whisky", "0014_collection"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.RemoveConstraint(
-            model_name='whisky',
-            name='unique_whisky_natural_key',
+            model_name="whisky",
+            name="unique_whisky_natural_key",
         ),
         migrations.AddField(
-            model_name='whisky',
-            name='deleted',
+            model_name="whisky",
+            name="deleted",
             field=models.BooleanField(db_index=True, default=False),
         ),
         migrations.AddConstraint(
-            model_name='whisky',
-            constraint=models.UniqueConstraint(fields=('name', 'whisky_type', 'abv', 'size', 'vintage_year', 'bottled_year', 'user', 'deleted'), name='unique_whisky_natural_key'),
+            model_name="whisky",
+            constraint=models.UniqueConstraint(
+                fields=(
+                    "name",
+                    "whisky_type",
+                    "abv",
+                    "size",
+                    "vintage_year",
+                    "bottled_year",
+                    "user",
+                ),
+                condition=models.Q(deleted=False),
+                name="unique_whisky_natural_key",
+            ),
         ),
     ]

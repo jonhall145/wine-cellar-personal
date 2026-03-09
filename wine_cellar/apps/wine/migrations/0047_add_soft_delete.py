@@ -5,25 +5,36 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('household', '0002_populate_existing_users'),
-        ('wine', '0046_alter_collection_options'),
+        ("household", "0002_populate_existing_users"),
+        ("wine", "0046_alter_collection_options"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.RemoveConstraint(
-            model_name='wine',
-            name='unique wine',
+            model_name="wine",
+            name="unique wine",
         ),
         migrations.AddField(
-            model_name='wine',
-            name='deleted',
+            model_name="wine",
+            name="deleted",
             field=models.BooleanField(db_index=True, default=False),
         ),
         migrations.AddConstraint(
-            model_name='wine',
-            constraint=models.UniqueConstraint(fields=('name', 'wine_type', 'abv', 'size', 'vintage', 'country', 'user', 'deleted'), name='unique wine'),
+            model_name="wine",
+            constraint=models.UniqueConstraint(
+                fields=(
+                    "name",
+                    "wine_type",
+                    "abv",
+                    "size",
+                    "vintage",
+                    "country",
+                    "user",
+                ),
+                condition=models.Q(deleted=False),
+                name="unique wine",
+            ),
         ),
     ]

@@ -248,6 +248,7 @@ class WhiskyCreateView(BaseBeverageCreateView):
             bottled_year=bottled_year,
             user=user,
             household=household,
+            deleted=False,
             defaults={
                 "distillery": distillery,
                 "region": region,
@@ -694,8 +695,7 @@ def extract_whisky_vision_ajax(request):
         request,
         barcode_scanner_factory=WhiskyBarcodeScanner,
         vision_extractor_path=(
-            "wine_cellar.apps.whisky.services.vision_extraction"
-            ".WhiskyVisionExtractor"
+            "wine_cellar.apps.whisky.services.vision_extraction.WhiskyVisionExtractor"
         ),
         beverage_label="whisky",
         resolve_extracted_fks=resolve_fks,

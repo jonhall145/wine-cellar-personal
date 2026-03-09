@@ -40,10 +40,24 @@ class BottlerAdmin(admin.ModelAdmin):
 
 @admin.register(Whisky)
 class WhiskyAdmin(admin.ModelAdmin):
-    list_display = ["name", "whisky_type", "distillery", "age_statement", "abv", "user"]
-    list_filter = ["whisky_type", "peated_level", "region"]
+    list_display = [
+        "name",
+        "whisky_type",
+        "distillery",
+        "age_statement",
+        "abv",
+        "user",
+        "deleted",
+    ]
+    list_filter = ["whisky_type", "peated_level", "region", "deleted"]
     search_fields = ["name", "distillery__name"]
     inlines = [CaskHistoryInline]
+    actions = ["restore_deleted"]
+
+    @admin.action(description="Restore selected soft-deleted whiskies")
+    def restore_deleted(self, request, queryset):
+        count = queryset.filter(deleted=True).update(deleted=False)
+        self.message_user(request, f"Restored {count} whisky/whiskies.")
 
 
 @admin.register(WhiskyImage)
