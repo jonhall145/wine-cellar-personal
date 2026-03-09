@@ -70,10 +70,9 @@ class TestWineList:
         page.goto(f"{live_server.url}/wines/")
         page.wait_for_load_state("networkidle")
 
-        select = page.locator("#per-page")
-        # Pick "25" from the dropdown
-        select.select_option(label="25")
-        page.wait_for_load_state("networkidle")
+        # Selecting a per_page option triggers a full page navigation via JS
+        with page.expect_navigation():
+            page.locator("#per-page").select_option(label="25")
 
         # Must still be on /wines/, not /
         assert (
