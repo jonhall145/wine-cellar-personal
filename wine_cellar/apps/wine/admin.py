@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db import IntegrityError
 
 from wine_cellar.apps.wine.models import (
     Attribute,
@@ -27,8 +28,19 @@ class WineAdmin(admin.ModelAdmin):
 
     @admin.action(description="Restore selected soft-deleted wines")
     def restore_deleted(self, request, queryset):
-        count = queryset.filter(deleted=True).update(deleted=False)
-        self.message_user(request, f"Restored {count} wine(s).")
+        restored = 0
+        skipped = 0
+        for wine in queryset.filter(deleted=True):
+            try:
+                wine.deleted = False
+                wine.save(update_fields=["deleted"])
+                restored += 1
+            except IntegrityError:
+                skipped += 1
+        msg = f"Restored {restored} wine(s)."
+        if skipped:
+            msg += f" Skipped {skipped} (active duplicate exists)."
+        self.message_user(request, msg)
 
 
 @admin.register(WineBarcode)
