@@ -86,6 +86,7 @@ class DrinkingWindowAlertsView(RequireHouseholdMixin, TemplateView):
         upcoming_wines = (
             Wine.objects.filter(
                 household=household,
+                deleted=False,
                 drink_to__isnull=False,
                 drink_to__gt=0,
                 drink_to__gte=current_year,
@@ -98,6 +99,7 @@ class DrinkingWindowAlertsView(RequireHouseholdMixin, TemplateView):
         overdue_wines = (
             Wine.objects.filter(
                 household=household,
+                deleted=False,
                 drink_to__isnull=False,
                 drink_to__gt=0,
                 drink_to__lt=current_year,

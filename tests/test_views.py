@@ -636,6 +636,40 @@ def test_wine_update_valid_fields(
 
 
 @pytest.mark.django_db
+def test_wine_soft_delete(client, user, wine_factory):
+    """Test that deleting a wine soft-deletes it instead of removing from DB."""
+    wine = wine_factory(user=user, name="SoftDeleteMe")
+    wine_pk = wine.pk
+    client.force_login(user)
+
+    # GET shows confirmation page
+    r = client.get(reverse("wine-delete", kwargs={"pk": wine_pk}))
+    assert r.status_code == HTTPStatus.OK
+    assertTemplateUsed(response=r, template_name="core/confirm_delete.html")
+
+    # POST soft-deletes the wine
+    r = client.post(reverse("wine-delete", kwargs={"pk": wine_pk}), follow=True)
+    assert r.status_code == HTTPStatus.OK
+    assertRedirects(response=r, expected_url=reverse("wine-list"))
+    # Soft delete: record still exists in DB but is marked deleted
+    assert Wine.objects.filter(pk=wine_pk, deleted=True).exists()
+    assert not Wine.objects.filter(pk=wine_pk, deleted=False).exists()
+
+
+@pytest.mark.django_db
+def test_soft_deleted_wine_hidden_from_list(client, user, wine_factory):
+    """Test that soft-deleted wines don't appear in the wine list."""
+    wine = wine_factory(user=user, name="HiddenWine")
+    wine.deleted = True
+    wine.save(update_fields=["deleted"])
+    client.force_login(user)
+
+    r = client.get(reverse("wine-list"))
+    assert r.status_code == HTTPStatus.OK
+    assert wine not in r.context["object_list"]
+
+
+@pytest.mark.django_db
 def test_wine_scanned_existing(
     client,
     user,

@@ -13,6 +13,7 @@ class WineMapView(RequireHouseholdMixin, TemplateView):
         household = get_active_household(self.request.user)
         wines = Wine.objects.filter(
             household=household,
+            deleted=False,
             storageitem__isnull=False,
             storageitem__deleted=False,
         ).distinct()

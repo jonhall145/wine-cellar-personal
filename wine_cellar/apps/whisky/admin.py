@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db import IntegrityError
 
 from wine_cellar.apps.whisky.models import (
     Bottler,
@@ -40,10 +41,35 @@ class BottlerAdmin(admin.ModelAdmin):
 
 @admin.register(Whisky)
 class WhiskyAdmin(admin.ModelAdmin):
-    list_display = ["name", "whisky_type", "distillery", "age_statement", "abv", "user"]
-    list_filter = ["whisky_type", "peated_level", "region"]
+    list_display = [
+        "name",
+        "whisky_type",
+        "distillery",
+        "age_statement",
+        "abv",
+        "user",
+        "deleted",
+    ]
+    list_filter = ["whisky_type", "peated_level", "region", "deleted"]
     search_fields = ["name", "distillery__name"]
     inlines = [CaskHistoryInline]
+    actions = ["restore_deleted"]
+
+    @admin.action(description="Restore selected soft-deleted whiskies")
+    def restore_deleted(self, request, queryset):
+        restored = 0
+        skipped = 0
+        for whisky in queryset.filter(deleted=True):
+            try:
+                whisky.deleted = False
+                whisky.save(update_fields=["deleted"])
+                restored += 1
+            except IntegrityError:
+                skipped += 1
+        msg = f"Restored {restored} whisky/whiskies."
+        if skipped:
+            msg += f" Skipped {skipped} (active duplicate exists)."
+        self.message_user(request, msg)
 
 
 @admin.register(WhiskyImage)

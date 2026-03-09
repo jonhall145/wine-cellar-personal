@@ -292,6 +292,10 @@ class Collection(UserContentModel):
 class WineQuerySet(HouseholdQuerySet):
     """Custom queryset for Wine with prefetch optimization."""
 
+    def active(self):
+        """Return only non-deleted wines."""
+        return self.filter(deleted=False)
+
     def with_related(self):
         return self.select_related("size", "appellation").prefetch_related(
             "grapes",
@@ -399,6 +403,7 @@ class Wine(UserContentModel):
         verbose_name=_("Price URL"),
         help_text=_("Product page URL for automatic price tracking"),
     )
+    deleted = models.BooleanField(default=False, db_index=True)
 
     def __str__(self):
         if self.vintage:
@@ -549,6 +554,7 @@ class Wine(UserContentModel):
                     "country",
                     "user",
                 ],
+                condition=models.Q(deleted=False),
                 name="unique wine",
             )
         ]

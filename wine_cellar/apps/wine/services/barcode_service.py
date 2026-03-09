@@ -189,7 +189,7 @@ class BarcodeScanner:
 
             if wine_pks:
                 return (
-                    Wine.objects.filter(pk__in=wine_pks)
+                    Wine.objects.filter(pk__in=wine_pks, deleted=False)
                     .select_related("size")
                     .prefetch_related("wineimage_set")
                     .annotate(

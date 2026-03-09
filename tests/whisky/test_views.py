@@ -399,11 +399,13 @@ def test_whisky_delete(client, user, whisky_factory):
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="core/confirm_delete.html")
 
-    # POST deletes the whisky
+    # POST soft-deletes the whisky
     r = client.post(reverse("whisky-delete", kwargs={"pk": whisky_pk}), follow=True)
     assert r.status_code == HTTPStatus.OK
     assertRedirects(response=r, expected_url=reverse("whisky-list"))
-    assert not Whisky.objects.filter(pk=whisky_pk).exists()
+    # Soft delete: record still exists in DB but is marked deleted
+    assert Whisky.objects.filter(pk=whisky_pk, deleted=True).exists()
+    assert not Whisky.objects.filter(pk=whisky_pk, deleted=False).exists()
 
 
 @pytest.mark.django_db

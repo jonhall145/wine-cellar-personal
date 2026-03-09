@@ -552,11 +552,13 @@ class BaseBeverageDeleteView(RequireMemberMixin, DeleteView):
     def get_queryset(self):
         qs = super().get_queryset()
         household = get_active_household(self.request.user)
-        return qs.filter(household=household)
+        return qs.filter(household=household, deleted=False)
 
     def form_valid(self, form):
         log_delete(self.request.user, self.object)
-        return super().form_valid(form)
+        self.object.deleted = True
+        self.object.save(update_fields=["deleted"])
+        return redirect(self.get_success_url())
 
 
 # --- Images view ---
@@ -644,7 +646,7 @@ class BaseListView(RequireHouseholdMixin):
             ),
         )
         household = get_active_household(self.request.user)
-        return qs.filter(household=household).distinct()
+        return qs.filter(household=household, deleted=False).distinct()
 
 
 # --- Detail view ---
@@ -670,7 +672,7 @@ class BaseDetailView(RequireHouseholdMixin, DetailView):
                     distinct=True,
                 )
             )
-            .filter(household=household)
+            .filter(household=household, deleted=False)
         )
 
     def get_context_data(self, **kwargs):
@@ -679,7 +681,9 @@ class BaseDetailView(RequireHouseholdMixin, DetailView):
         context["beverage"] = beverage
         household = get_active_household(self.request.user)
         duplicates = (
-            self.model.objects.filter(household=household, name=beverage.name)
+            self.model.objects.filter(
+                household=household, name=beverage.name, deleted=False
+            )
             .exclude(pk=beverage.pk)
             .annotate(
                 stock_count=Count(
@@ -1338,7 +1342,9 @@ def check_beverage_duplicate_ajax(request, *, beverage_model, detail_url_name):
 
     # Fetch candidates (limited for performance) and score by similarity.
     all_candidates = list(
-        beverage_model.objects.filter(household=household).values("pk", "name")[:500]
+        beverage_model.objects.filter(household=household, deleted=False).values(
+            "pk", "name"
+        )[:500]
     )
 
     scored = []
@@ -1605,10 +1611,11 @@ class BaseHomePageView(RequireHouseholdMixin, TemplateView):
         household = get_active_household(user)
 
         # Total value
+        bev_not_deleted = Q(**{f"{self.beverage_fk_name}__deleted": False})
         total_value = self.storage_item_model.objects.aggregate(
             total=Sum(
                 Coalesce("price", self.beverage_price_path),
-                filter=Q(deleted=False, household=household),
+                filter=Q(deleted=False, household=household) & bev_not_deleted,
             )
         )["total"] or Decimal("0")
         total_value = total_value.quantize(Decimal("0"))
@@ -1620,7 +1627,9 @@ class BaseHomePageView(RequireHouseholdMixin, TemplateView):
 
         # Bottles in stock
         bottles_in_stock = self.storage_item_model.objects.filter(
-            household=household, deleted=False
+            household=household,
+            deleted=False,
+            **{f"{self.beverage_fk_name}__deleted": False},
         ).count()
 
         # Low stock reminders
@@ -1686,7 +1695,7 @@ class BaseHomePageView(RequireHouseholdMixin, TemplateView):
         if recent_session:
             recent_pks = [r["pk"] for r in recent_session]
             recent_qs = self.beverage_model.objects.filter(
-                pk__in=recent_pks, household=household
+                pk__in=recent_pks, household=household, deleted=False
             )
             recent_map = {b.pk: b for b in recent_qs}
             # Preserve session order
