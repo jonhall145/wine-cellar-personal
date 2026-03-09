@@ -47,6 +47,26 @@ register(StorageFactory)
 register(StorageItemFactory)
 
 
+@pytest.fixture(autouse=True)
+def _simple_static_storage(settings):
+    """Use simple static storage in tests — no collectstatic manifest required.
+
+    When running via `make pytest` (Docker), the env var DJANGO_SETTINGS_MODULE
+    points to docker_settings which uses GzipOnlyManifestStaticFilesStorage.
+    That requires a prior collectstatic + webpack build, causing all view tests
+    to fail with 'Missing staticfiles manifest'. This fixture ensures tests
+    always use the plain StaticFilesStorage backend.
+    """
+    settings.STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
+
 @pytest.fixture
 def clear_image_folder():
     yield
