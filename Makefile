@@ -114,7 +114,7 @@ ghcr-deploy:
 .PHONY: wine-deploy
 wine-deploy:
 	$(PROD_COMPOSE) build wine-web
-	$(PROD_COMPOSE) up -d wine-web
+	$(PROD_COMPOSE) up -d --force-recreate wine-web
 	$(PROD_COMPOSE) restart nginx
 
 .PHONY: wine-prod-start
@@ -162,7 +162,7 @@ whisky-pytest:
 .PHONY: whisky-deploy
 whisky-deploy:
 	$(PROD_COMPOSE) build wine-web
-	$(PROD_COMPOSE) up -d whisky-web
+	$(PROD_COMPOSE) up -d --force-recreate whisky-web
 	$(PROD_COMPOSE) restart nginx
 
 .PHONY: whisky-prod-start

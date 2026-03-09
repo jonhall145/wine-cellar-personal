@@ -48,6 +48,13 @@ if [ "$1" = "python" ] || [ "$1" = "gunicorn" ]; then
     echo "Running migrations..."
     python manage.py migrate --no-input
 
+    # Verify no unapplied migrations remain (catches DB restore/mismatch)
+    PENDING=$(python manage.py showmigrations --plan 2>/dev/null | grep '\[ \]' | wc -l)
+    if [ "$PENDING" -gt 0 ]; then
+        echo "WARNING: $PENDING unapplied migrations after migrate. Retrying..."
+        python manage.py migrate --no-input
+    fi
+
     # One-time cleanup: drop legacy django_celery_beat tables if they exist
     if [ "$DATABASE" = "postgres" ]; then
         python manage.py shell -c "
