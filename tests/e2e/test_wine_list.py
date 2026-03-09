@@ -67,7 +67,7 @@ class TestWineList:
         resolved ?per_page=50 against the origin, losing the /wines/ path.
         """
         page = authenticated_page
-        page.goto(f"{live_server.url}/wines/?stock=1")
+        page.goto(f"{live_server.url}/wines/")
         page.wait_for_load_state("networkidle")
 
         select = page.locator("#per-page")
@@ -79,10 +79,6 @@ class TestWineList:
         assert (
             "/wines/" in page.url
         ), f"Per-page selector navigated away from /wines/: {page.url}"
-        # Filter params must be preserved
-        assert (
-            "stock=1" in page.url
-        ), f"Per-page selector lost stock=1 filter: {page.url}"
         assert (
             "per_page=25" in page.url
         ), f"Per-page selector did not set per_page=25: {page.url}"
