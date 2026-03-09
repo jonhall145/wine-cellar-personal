@@ -109,7 +109,7 @@
                     if (target && typeof target.value === 'string') {
                         var value = target.value || '';
                         try {
-                            var parsedUrl = new URL(value, window.location.origin);
+                            var parsedUrl = new URL(value, window.location.href);
                             var isSameOrigin = parsedUrl.origin === window.location.origin;
                             var isHttp = parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
                             if (isSameOrigin && isHttp) {
