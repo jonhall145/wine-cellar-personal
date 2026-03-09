@@ -23,11 +23,11 @@ def bulk_action_view(request):
         messages.warning(request, "No wines selected.")
         return redirect("wine-list")
 
-    wines = Wine.objects.filter(household=household, pk__in=wine_ids)
+    wines = Wine.objects.filter(household=household, pk__in=wine_ids, deleted=False)
     count = wines.count()
 
     if action == "delete":
-        wines.delete()
+        wines.update(deleted=True)
         messages.success(request, f"Deleted {count} wine(s).")
     elif action == "update_drink_to":
         drink_to = request.POST.get("drink_to_year")

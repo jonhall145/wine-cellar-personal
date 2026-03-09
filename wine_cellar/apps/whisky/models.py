@@ -260,6 +260,10 @@ class WhiskyAttribute(UserContentModel):
 class WhiskyQuerySet(HouseholdQuerySet):
     """Custom queryset for Whisky with prefetch optimization."""
 
+    def active(self):
+        """Return only non-deleted whiskies."""
+        return self.filter(deleted=False)
+
     def with_related(self):
         return self.select_related(
             "distillery",
@@ -438,6 +442,7 @@ class Whisky(UserContentModel):
         default="",
         verbose_name=_("Owner"),
     )
+    deleted = models.BooleanField(default=False, db_index=True)
 
     # Relations
     attributes = models.ManyToManyField(
@@ -459,6 +464,7 @@ class Whisky(UserContentModel):
                     "vintage_year",
                     "bottled_year",
                     "user",
+                    "deleted",
                 ],
                 name="unique_whisky_natural_key",
             ),

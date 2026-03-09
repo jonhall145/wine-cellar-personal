@@ -44,6 +44,7 @@ def drink_by_reminder() -> int:
         max_drink_to = current_year + years_before
         wines = Wine.objects.filter(
             household=household,
+            deleted=False,
             drink_to__lte=max_drink_to,
             drink_to__gte=current_year,
             storageitem__isnull=False,

@@ -556,7 +556,9 @@ class BaseBeverageDeleteView(RequireMemberMixin, DeleteView):
 
     def form_valid(self, form):
         log_delete(self.request.user, self.object)
-        return super().form_valid(form)
+        self.object.deleted = True
+        self.object.save(update_fields=["deleted"])
+        return redirect(self.get_success_url())
 
 
 # --- Images view ---
@@ -644,7 +646,7 @@ class BaseListView(RequireHouseholdMixin):
             ),
         )
         household = get_active_household(self.request.user)
-        return qs.filter(household=household).distinct()
+        return qs.filter(household=household, deleted=False).distinct()
 
 
 # --- Detail view ---
@@ -670,7 +672,7 @@ class BaseDetailView(RequireHouseholdMixin, DetailView):
                     distinct=True,
                 )
             )
-            .filter(household=household)
+            .filter(household=household, deleted=False)
         )
 
     def get_context_data(self, **kwargs):
@@ -679,7 +681,9 @@ class BaseDetailView(RequireHouseholdMixin, DetailView):
         context["beverage"] = beverage
         household = get_active_household(self.request.user)
         duplicates = (
-            self.model.objects.filter(household=household, name=beverage.name)
+            self.model.objects.filter(
+                household=household, name=beverage.name, deleted=False
+            )
             .exclude(pk=beverage.pk)
             .annotate(
                 stock_count=Count(
@@ -1338,7 +1342,8 @@ def check_beverage_duplicate_ajax(request, *, beverage_model, detail_url_name):
 
     # Fetch candidates (limited for performance) and score by similarity.
     all_candidates = list(
-        beverage_model.objects.filter(household=household).values("pk", "name")[:500]
+        beverage_model.objects.filter(household=household, deleted=False)
+        .values("pk", "name")[:500]
     )
 
     scored = []
@@ -1686,7 +1691,7 @@ class BaseHomePageView(RequireHouseholdMixin, TemplateView):
         if recent_session:
             recent_pks = [r["pk"] for r in recent_session]
             recent_qs = self.beverage_model.objects.filter(
-                pk__in=recent_pks, household=household
+                pk__in=recent_pks, household=household, deleted=False
             )
             recent_map = {b.pk: b for b in recent_qs}
             # Preserve session order

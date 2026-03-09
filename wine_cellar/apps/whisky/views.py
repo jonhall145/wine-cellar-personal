@@ -116,8 +116,10 @@ class HomePageView(BaseHomePageView):
     def get_app_specific_context(self, household, user):
         import datetime
 
-        whiskies = Whisky.objects.filter(household=household).count()
-        whisky_stats = Whisky.objects.filter(household=household).aggregate(
+        whiskies = Whisky.objects.filter(household=household, deleted=False).count()
+        whisky_stats = Whisky.objects.filter(
+            household=household, deleted=False
+        ).aggregate(
             whiskies_in_stock=Count(
                 "id", filter=Q(whiskystorageitem__deleted=False), distinct=True
             ),
@@ -134,7 +136,7 @@ class HomePageView(BaseHomePageView):
 
         oldest_age = (
             Whisky.objects.filter(
-                household=household, age_statement__isnull=False
+                household=household, deleted=False, age_statement__isnull=False
             ).aggregate(Max("age_statement"))["age_statement__max"]
             or 0
         )
@@ -571,7 +573,9 @@ class WhiskyScannedView(RequireHouseholdMixin, TemplateView):
         code = self.kwargs["code"]
         # Placeholder barcode lookup
         household = get_active_household(request.user)
-        whiskies = Whisky.objects.filter(barcodes__barcode=code, household=household)
+        whiskies = Whisky.objects.filter(
+            barcodes__barcode=code, household=household, deleted=False
+        )
 
         if whiskies.exists():
             if whiskies.count() == 1:
@@ -606,6 +610,7 @@ class WhiskyMapView(RequireHouseholdMixin, TemplateView):
         distilleries_with_stock = (
             Distillery.objects.filter(
                 whisky__household=household,
+                whisky__deleted=False,
                 whisky__whiskystorageitem__isnull=False,
                 whisky__whiskystorageitem__deleted=False,
             )

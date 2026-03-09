@@ -13,7 +13,7 @@ from wine_cellar.apps.wine.models import Wine
 def _get_wine_queryset(household):
     """Get wines with all related data prefetched."""
     return (
-        Wine.objects.filter(household=household)
+        Wine.objects.filter(household=household, deleted=False)
         .with_related()
         .with_stock_count()
         .order_by("name")

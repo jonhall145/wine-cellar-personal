@@ -57,8 +57,8 @@ class HomePageView(BaseHomePageView):
         if cached is not None:
             return cached
 
-        wines = Wine.objects.filter(household=household).count()
-        wine_stats = Wine.objects.filter(household=household).aggregate(
+        wines = Wine.objects.filter(household=household, deleted=False).count()
+        wine_stats = Wine.objects.filter(household=household, deleted=False).aggregate(
             wines_in_stock=Count(
                 "id", filter=Q(storageitem__deleted=False), distinct=True
             ),

@@ -65,7 +65,7 @@ class WhiskyBarcodeScanner(BarcodeScanner):
 
             if whisky_pks:
                 return (
-                    Whisky.objects.filter(pk__in=whisky_pks)
+                    Whisky.objects.filter(pk__in=whisky_pks, deleted=False)
                     .select_related("distillery", "region", "bottler")
                     .prefetch_related("images")
                     .annotate(

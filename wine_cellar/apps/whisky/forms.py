@@ -138,7 +138,7 @@ class WhiskyBaseForm(
 
         # Whisky-specific: owner choices from existing values
         existing_owners = (
-            Whisky.objects.filter(household=self.household)
+            Whisky.objects.filter(household=self.household, deleted=False)
             .exclude(owner="")
             .values_list("owner", flat=True)
             .distinct()
@@ -710,7 +710,7 @@ class WhiskyStockAddForm(TomSelectMixin, forms.Form):
 
         # Also include owners from Whisky model
         whisky_owners = (
-            Whisky.objects.filter(household=household)
+            Whisky.objects.filter(household=household, deleted=False)
             .exclude(owner="")
             .values_list("owner", flat=True)
             .distinct()
