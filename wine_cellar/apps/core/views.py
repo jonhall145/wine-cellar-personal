@@ -1144,6 +1144,7 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
         if extraction_result:
             result_data = extraction_result.get("extracted_data", {})
             if result_data:
+                result_data = dict(result_data)
                 self.resolve_extracted_data(result_data, initial)
                 initial.update(result_data)
 
