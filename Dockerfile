@@ -44,6 +44,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libwebp7 \
     curl \
     git \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
@@ -68,10 +69,9 @@ RUN chmod +x /docker-entrypoint.sh
 # Create media and static directories
 RUN mkdir -p /app/media /app/staticfiles
 
-# Non-root user
+# Non-root user (entrypoint runs as root to fix volume permissions, then drops to django)
 RUN addgroup --system django && adduser --system --ingroup django django
 RUN chown -R django:django /app
-USER django
 
 EXPOSE 8000
 

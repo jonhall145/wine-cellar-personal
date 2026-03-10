@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# Fix media volume ownership (volumes may be created as root)
+if [ "$(id -u)" = "0" ] && [ -d /app/media ]; then
+    chown -R django:django /app/media
+fi
+
 # Wait for PostgreSQL to be ready
 if [ "$DATABASE" = "postgres" ]; then
     echo "Waiting for PostgreSQL at ${SQL_HOST}:${SQL_PORT}..."
@@ -100,6 +105,11 @@ PYEOF
         echo "Collecting static files..."
         python manage.py collectstatic --noinput
     fi
+fi
+
+# Drop from root to django user for the main process
+if [ "$(id -u)" = "0" ]; then
+    exec gosu django "$@"
 fi
 
 exec "$@"
