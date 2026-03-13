@@ -82,29 +82,17 @@ fi
 
 # ─── Media backup ────────────────────────────────────────────────────
 
-if [ "$MODE" = "docker" ]; then
-    # Extract media from Docker volume
-    echo "  Backing up media files from Docker volume..."
-    CONTAINER=$(docker compose -f "${PROJECT_DIR}/${COMPOSE_FILE}" ps -q wine-web 2>/dev/null | head -1)
-    if [ -n "$CONTAINER" ]; then
-        docker cp "${CONTAINER}:/app/media" "${TMP_DIR}/media" 2>/dev/null || true
-        if [ -d "${TMP_DIR}/media" ] && [ "$(ls -A "${TMP_DIR}/media" 2>/dev/null)" ]; then
-            tar czf "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" -C "$TMP_DIR" media
-        fi
-    fi
+WINE_MEDIA="/mnt/usb/media/wine"
+WHISKY_MEDIA="/mnt/usb/media/whisky"
 
-    # Whisky media backup
-    echo "  Backing up whisky media files from Docker volume..."
-    WHISKY_CONTAINER=$(docker compose -f "${PROJECT_DIR}/${COMPOSE_FILE}" ps -q whisky-web 2>/dev/null | head -1)
-    if [ -n "$WHISKY_CONTAINER" ]; then
-        docker cp "${WHISKY_CONTAINER}:/app/media" "${TMP_DIR}/whisky_media" 2>/dev/null || true
-        if [ -d "${TMP_DIR}/whisky_media" ] && [ "$(ls -A "${TMP_DIR}/whisky_media" 2>/dev/null)" ]; then
-            tar czf "${TMP_DIR}/whisky_media_${TIMESTAMP}.tar.gz" -C "$TMP_DIR" whisky_media
-        fi
-    fi
-elif [ -d "$MEDIA_PATH" ]; then
-    echo "  Backing up media files..."
-    tar czf "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" -C "$(dirname "$MEDIA_PATH")" "$(basename "$MEDIA_PATH")"
+if [ -d "$WINE_MEDIA" ] && [ "$(ls -A "$WINE_MEDIA" 2>/dev/null)" ]; then
+    echo "  Backing up wine media files..."
+    tar czf "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" -C "$WINE_MEDIA" .
+fi
+
+if [ -d "$WHISKY_MEDIA" ] && [ "$(ls -A "$WHISKY_MEDIA" 2>/dev/null)" ]; then
+    echo "  Backing up whisky media files..."
+    tar czf "${TMP_DIR}/whisky_media_${TIMESTAMP}.tar.gz" -C "$WHISKY_MEDIA" .
 fi
 
 # ─── Upload to R2 ────────────────────────────────────────────────────
