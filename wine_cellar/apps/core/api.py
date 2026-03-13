@@ -264,10 +264,15 @@ def _get_git_sha() -> str:
             capture_output=True,
             text=True,
             timeout=5,
+            cwd=settings.ROOT_DIR,
         )
         return result.stdout.strip() if result.returncode == 0 else ""
     except Exception:
         return ""
+
+
+# Resolve git SHA once at import time to avoid subprocess calls per request.
+_GIT_SHA = _get_git_sha()
 
 
 @login_not_required
@@ -279,6 +284,6 @@ def api_version(request):
         {
             "version": getattr(settings, "VERSION", "0.0.0"),
             "app_type": getattr(settings, "CELLAR_APP_TYPE", "wine"),
-            "git_sha": _get_git_sha(),
+            "git_sha": _GIT_SHA,
         }
     )

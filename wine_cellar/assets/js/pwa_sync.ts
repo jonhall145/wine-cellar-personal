@@ -39,15 +39,33 @@ function createUpdateBanner(): HTMLElement {
   banner.className = 'update-banner';
   banner.setAttribute('role', 'alert');
   banner.setAttribute('aria-live', 'assertive');
-  banner.innerHTML =
-    `<span>${gettext('🆕 A new version is available')}</span>` +
-    `<button class="update-banner__btn" type="button">${gettext('Update now')}</button>` +
-    `<button class="update-banner__dismiss" type="button" aria-label="${gettext('Dismiss')}">&times;</button>`;
+
+  const msg = document.createElement('span');
+  msg.textContent = gettext('🆕 A new version is available');
+  banner.appendChild(msg);
+
+  const updateBtn = document.createElement('button');
+  updateBtn.className = 'update-banner__btn';
+  updateBtn.type = 'button';
+  updateBtn.textContent = gettext('Update now');
+  banner.appendChild(updateBtn);
+
+  const dismissBtn = document.createElement('button');
+  dismissBtn.className = 'update-banner__dismiss';
+  dismissBtn.type = 'button';
+  dismissBtn.setAttribute('aria-label', gettext('Dismiss'));
+  dismissBtn.textContent = '\u00d7';
+  banner.appendChild(dismissBtn);
+
   document.body.appendChild(banner);
   return banner;
 }
 
 function showUpdateBanner(waitingSW: ServiceWorker): void {
+  // Guard against multiple banners
+  const existing = document.getElementById('update-banner');
+  if (existing) existing.remove();
+
   const banner = createUpdateBanner();
 
   banner.querySelector('.update-banner__btn')!.addEventListener('click', () => {
@@ -82,7 +100,6 @@ export function registerServiceWorker(): void {
     // If a SW is already waiting when the page loads, prompt immediately
     if (reg.waiting) {
       showUpdateBanner(reg.waiting);
-      return;
     }
 
     // Detect when a new SW finishes installing and enters waiting

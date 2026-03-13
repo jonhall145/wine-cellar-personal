@@ -2,14 +2,14 @@
 """Bump the project version (semver) across all version files.
 
 Updates wine_cellar/__init__.py and pyproject.toml, then optionally
-creates a git tag.
+commits and creates a git tag.
 
 Usage:
     python scripts/bump_version.py patch          # 0.3.0 → 0.3.1
     python scripts/bump_version.py minor          # 0.3.0 → 0.4.0
     python scripts/bump_version.py major          # 0.3.0 → 1.0.0
     python scripts/bump_version.py current        # prints current version
-    python scripts/bump_version.py patch --tag    # bump + create git tag
+    python scripts/bump_version.py patch --tag    # bump, commit, and tag
 """
 
 import re
@@ -39,23 +39,39 @@ def write_version(major: int, minor: int, patch: int) -> str:
 
     # Update __init__.py
     init_text = INIT_FILE.read_text()
+    if not INIT_RE.search(init_text):
+        print(f"ERROR: version pattern not found in {INIT_FILE}", file=sys.stderr)
+        sys.exit(1)
     INIT_FILE.write_text(INIT_RE.sub(f'__version__ = "{new_version}"', init_text))
 
     # Update pyproject.toml
     toml_text = TOML_FILE.read_text()
+    if not TOML_RE.search(toml_text):
+        print(f"ERROR: version pattern not found in {TOML_FILE}", file=sys.stderr)
+        sys.exit(1)
     TOML_FILE.write_text(TOML_RE.sub(f'version = "{new_version}"', toml_text))
 
     return new_version
 
 
-def create_tag(version: str) -> None:
-    tag = version
+def commit_and_tag(version: str) -> None:
+    """Commit the version bump files, then create an annotated tag."""
     subprocess.run(
-        ["git", "tag", "-a", tag, "-m", f"Release {version}"],
+        ["git", "add", str(INIT_FILE), str(TOML_FILE)],
         check=True,
         cwd=ROOT,
     )
-    print(f"Created git tag: {tag}")
+    subprocess.run(
+        ["git", "commit", "-m", f"chore: bump version to {version}"],
+        check=True,
+        cwd=ROOT,
+    )
+    subprocess.run(
+        ["git", "tag", "-a", version, "-m", f"Release {version}"],
+        check=True,
+        cwd=ROOT,
+    )
+    print(f"Committed and tagged: {version}")
 
 
 def main() -> None:
@@ -89,7 +105,7 @@ def main() -> None:
     print(f"{old} → {new}")
 
     if do_tag:
-        create_tag(new)
+        commit_and_tag(new)
 
 
 if __name__ == "__main__":
