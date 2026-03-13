@@ -35,7 +35,8 @@ function createSyncBadge(): HTMLElement {
 async function updateSyncBadge(badge: HTMLElement): Promise<void> {
   const count = await getPendingCount();
   if (count > 0) {
-    badge.textContent = gettext('⏳ %(count)s pending change%(plural)s').replace('%(count)s', String(count)).replace('%(plural)s', count > 1 ? 's' : '');
+    const ngettext = (window as any).django?.ngettext || ((s: string, p: string, n: number) => n === 1 ? s : p);
+    badge.textContent = '⏳ ' + ngettext('%(count)s pending change', '%(count)s pending changes', count).replace('%(count)s', String(count));
     badge.classList.add('sync-badge--visible');
   } else {
     badge.classList.remove('sync-badge--visible');

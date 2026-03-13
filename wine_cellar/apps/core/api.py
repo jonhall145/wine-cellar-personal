@@ -128,7 +128,10 @@ def api_cellar_sync(request):
     if since_raw:
         since = parse_datetime(since_raw)
         if since is None:
-            return JsonResponse({"error": "Invalid 'since' datetime format"}, status=400)
+            return JsonResponse(
+                {"error": "Invalid 'since' datetime format. Expected ISO 8601 (e.g. 2024-03-13T10:30:00Z)."},
+                status=400,
+            )
         if not is_aware(since):
             since = make_aware(since)
 
