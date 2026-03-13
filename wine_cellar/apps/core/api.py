@@ -5,11 +5,12 @@ cellar data when offline. All endpoints require authentication and
 scope data to the user's active household.
 """
 
+import json
 import logging
 
 from django.conf import settings
 from django.http import JsonResponse
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 
@@ -179,3 +180,56 @@ def api_cellar_sync(request):
             "is_incremental": bool(since),
         }
     )
+
+
+@require_POST
+def api_push_subscribe(request):
+    """Save a Web Push subscription for the current user."""
+    from wine_cellar.apps.user.models import PushSubscription
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    endpoint = data.get("endpoint")
+    keys = data.get("keys", {})
+    p256dh = keys.get("p256dh")
+    auth = keys.get("auth")
+
+    if not all([endpoint, p256dh, auth]):
+        return JsonResponse({"error": "Missing subscription data"}, status=400)
+
+    PushSubscription.objects.update_or_create(
+        user=request.user,
+        endpoint=endpoint,
+        defaults={"p256dh": p256dh, "auth": auth},
+    )
+
+    return JsonResponse({"ok": True})
+
+
+@require_POST
+def api_push_unsubscribe(request):
+    """Remove a Web Push subscription for the current user."""
+    from wine_cellar.apps.user.models import PushSubscription
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    endpoint = data.get("endpoint")
+    if not endpoint:
+        return JsonResponse({"error": "Missing endpoint"}, status=400)
+
+    PushSubscription.objects.filter(user=request.user, endpoint=endpoint).delete()
+
+    return JsonResponse({"ok": True})
+
+
+@require_GET
+def api_vapid_public_key(request):
+    """Return the VAPID public key for push subscription."""
+    key = getattr(settings, "VAPID_PUBLIC_KEY", "")
+    return JsonResponse({"public_key": key})

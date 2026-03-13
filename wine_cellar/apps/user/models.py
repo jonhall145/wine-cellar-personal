@@ -55,3 +55,36 @@ class UserSettings(models.Model):
 
     def __str__(self):
         return f"Settings for {self.user}"
+
+
+class PushSubscription(models.Model):
+    """Web Push API subscription for a user's browser."""
+
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.CASCADE,
+        related_name="push_subscriptions",
+        verbose_name=_("User"),
+    )
+    endpoint = models.URLField(max_length=500, verbose_name=_("Endpoint"))
+    p256dh = models.CharField(max_length=200, verbose_name=_("p256dh Key"))
+    auth = models.CharField(max_length=200, verbose_name=_("Auth Key"))
+    created = models.DateTimeField(auto_now_add=True, verbose_name=_("Created"))
+
+    class Meta:
+        verbose_name = _("Push Subscription")
+        verbose_name_plural = _("Push Subscriptions")
+        unique_together = ("user", "endpoint")
+
+    def __str__(self):
+        return f"Push subscription for {self.user} ({self.endpoint[:50]}...)"
+
+    def to_webpush_dict(self):
+        """Return dict in the format pywebpush expects."""
+        return {
+            "endpoint": self.endpoint,
+            "keys": {
+                "p256dh": self.p256dh,
+                "auth": self.auth,
+            },
+        }

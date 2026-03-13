@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
+from wine_cellar.apps.core.push import send_push_to_user
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.emails import send_drink_by_reminder
 from wine_cellar.apps.wine.models import Wine
@@ -14,18 +15,15 @@ logger = logging.getLogger(__name__)
 def drink_by_reminder() -> int:
     """Send reminders for wines approaching their drink-by year.
 
-    Respects per-user preferences:
+    Sends both email and push notifications. Respects per-user preferences:
     - reminder_enabled: whether to send reminders at all
     - reminder_years_before: how many years before drink_to to start reminding
     """
     from wine_cellar.apps.user.models import UserSettings
 
     User = get_user_model()
-    users = (
-        User.objects.exclude(email__isnull=True)
-        .exclude(email__exact="")
-        .exclude(user_settings__notifications=False)
-        .exclude(user_settings__reminder_enabled=False)
+    users = User.objects.exclude(user_settings__notifications=False).exclude(
+        user_settings__reminder_enabled=False
     )
     current_year = timezone.now().year
     sent = 0
@@ -52,11 +50,22 @@ def drink_by_reminder() -> int:
         ).distinct()
         wine_count = wines.count()
         if wine_count > 0:
-            send_drink_by_reminder(user, wines)
+            # Send email if user has an email address
+            if user.email:
+                send_drink_by_reminder(user, wines)
+
+            # Send push notification
+            send_push_to_user(
+                user,
+                title="🍷 Drink Window Reminder",
+                body=f"{wine_count} wine(s) are in their drinking window",
+                url="/alerts/",
+            )
+
             sent += 1
             logger.info(
                 "Sent drink-by reminder to %s (%d wines)",
-                user.email,
+                user.email or user.username,
                 wine_count,
             )
     return sent

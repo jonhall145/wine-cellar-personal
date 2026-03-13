@@ -171,6 +171,36 @@ self.addEventListener('fetch', (event) => {{
   );
 }});
 
+// Push notifications
+self.addEventListener('push', (event) => {{
+  const data = event.data ? event.data.json() : {{}};
+  const title = data.title || 'Wine Cellar';
+  const options = {{
+    body: data.body || '',
+    icon: data.icon || STATIC_URL + 'images/pwa-icon-192.png',
+    badge: STATIC_URL + 'images/pwa-icon-192.png',
+    data: {{ url: data.url || '/' }},
+  }};
+  event.waitUntil(self.registration.showNotification(title, options));
+}});
+
+// Handle notification click
+self.addEventListener('notificationclick', (event) => {{
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(
+    clients.matchAll({{ type: 'window', includeUncontrolled: true }})
+      .then((windowClients) => {{
+        for (const client of windowClients) {{
+          if (client.url.includes(url) && 'focus' in client) {{
+            return client.focus();
+          }}
+        }}
+        return clients.openWindow(url);
+      }})
+  );
+}});
+
 // Background Sync: replay queued mutations when connectivity returns
 self.addEventListener('sync', (event) => {{
   if (event.tag === 'cellar-sync') {{

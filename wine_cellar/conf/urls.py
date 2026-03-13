@@ -22,7 +22,12 @@ from django.views.generic import TemplateView
 from django.views.i18n import JavaScriptCatalog
 from django.views.static import serve
 
-from wine_cellar.apps.core.api import api_cellar_sync
+from wine_cellar.apps.core.api import (
+    api_cellar_sync,
+    api_push_subscribe,
+    api_push_unsubscribe,
+    api_vapid_public_key,
+)
 from wine_cellar.apps.core.pwa import manifest_json, service_worker_js
 from wine_cellar.apps.user.views import UserSettingsView
 
@@ -134,6 +139,17 @@ urlpatterns = [
     ),
     # API
     path("api/cellar/sync/", api_cellar_sync, name="api-cellar-sync"),
+    path("api/push/subscribe/", api_push_subscribe, name="api-push-subscribe"),
+    path(
+        "api/push/unsubscribe/",
+        api_push_unsubscribe,
+        name="api-push-unsubscribe",
+    ),
+    path(
+        "api/push/vapid-key/",
+        api_vapid_public_key,
+        name="api-vapid-public-key",
+    ),
 ]
 
 # Include app-specific URLs

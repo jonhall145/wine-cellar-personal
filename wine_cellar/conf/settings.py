@@ -237,6 +237,15 @@ MAP_BASEURL = "https://tiles.openfreemap.org/styles/positron"
 
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 SITE_URL = os.environ.get("SITE_URL", "http://127.0.0.1:8000")
+
+# Web Push (VAPID) — generate keys with:
+#   python -c "from py_vapid import Vapid; v=Vapid(); v.generate_keys(); \
+#   print(v.private_pem()); print(v.public_key)"
+# Or set via environment variables in production.
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
+VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
+VAPID_CLAIMS_EMAIL = os.environ.get("VAPID_CLAIMS_EMAIL", "admin@example.com")
+
 ACCOUNT_ADAPTER = (
     "wine_cellar.apps.user.signup_adapter.ConfigurableSignupAccountAdapter"
 )
