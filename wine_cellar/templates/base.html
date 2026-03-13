@@ -126,13 +126,5 @@
             </p>
         </footer>
         <script src="{% static 'base.js' %}?v={% get_setting 'VERSION' %}" defer></script>
-        <script>
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register("{% url 'pwa-service-worker' %}")
-                        .catch((err) => console.warn('SW registration failed:', err));
-                });
-            }
-        </script>
     </body>
 </html>

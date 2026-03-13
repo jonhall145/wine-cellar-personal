@@ -47,6 +47,14 @@ help:
 	@echo "    make lint-html [FILES]    Lint Django templates"
 	@echo "    make lint-html-fix [FILES] Auto-fix template lint errors"
 	@echo ""
+	@echo "  Versioning"
+	@echo "    make version              Print current version"
+	@echo "    make bump-patch           Bump patch version (0.3.0 → 0.3.1)"
+	@echo "    make bump-minor           Bump minor version (0.3.0 → 0.4.0)"
+	@echo "    make bump-major           Bump major version (0.3.0 → 1.0.0)"
+	@echo "    make changelog            Regenerate CHANGELOG.md from git history"
+	@echo "    make release PART=minor   Bump version, tag, and update changelog"
+	@echo ""
 	@echo "  Deploy (Docker)"
 	@echo "    make deploy               Rebuild and redeploy full production stack"
 	@echo "    make wine-deploy          Build/deploy wine app and restart nginx"
@@ -258,3 +266,30 @@ lint-py:
 	$(VENV_BIN)/isort $${ARGS} --check-only || EXIT_STATUS=$$?; \
 	$(VENV_BIN)/flake8 $${ARGS} --exclude migrations,settings || EXIT_STATUS=$$?; \
 	exit $${EXIT_STATUS}
+
+.PHONY: bump-patch
+bump-patch:
+	@$(PYTHON) scripts/bump_version.py patch
+
+.PHONY: bump-minor
+bump-minor:
+	@$(PYTHON) scripts/bump_version.py minor
+
+.PHONY: bump-major
+bump-major:
+	@$(PYTHON) scripts/bump_version.py major
+
+.PHONY: version
+version:
+	@$(PYTHON) scripts/bump_version.py current
+
+.PHONY: changelog
+changelog:
+	$(VENV_BIN)/cz changelog
+
+.PHONY: release
+release:
+	@if [ -z "$(PART)" ]; then echo "Usage: make release PART=patch|minor|major"; exit 1; fi
+	$(PYTHON) scripts/bump_version.py $(PART) --tag
+	$(VENV_BIN)/cz changelog
+	@echo "Version bumped and changelog updated. Review, commit, and push with tags."

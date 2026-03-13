@@ -22,9 +22,12 @@ def manifest_json(request):
     """Serve the PWA web app manifest, dynamic per app type."""
     name, short_name = _get_app_branding()
 
+    version = getattr(settings, "VERSION", "0.0.0")
+
     manifest = {
         "name": name,
         "short_name": short_name,
+        "version": version,
         "description": f"Track and manage your {short_name.lower()} collection",
         "start_url": "/",
         "scope": "/",
@@ -88,13 +91,20 @@ const PRECACHE_URLS = [
   '/offline/',
 ];
 
-// Install: precache core assets
+// Install: precache core assets, then wait for activation signal
 self.addEventListener('install', (event) => {{
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {{
       return cache.addAll(PRECACHE_URLS);
-    }}).then(() => self.skipWaiting())
+    }})
   );
+}});
+
+// Listen for SKIP_WAITING message from the client to activate the new SW
+self.addEventListener('message', (event) => {{
+  if (event.data && event.data.type === 'SKIP_WAITING') {{
+    self.skipWaiting();
+  }}
 }});
 
 // Activate: clean up old caches

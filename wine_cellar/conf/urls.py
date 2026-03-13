@@ -27,6 +27,7 @@ from wine_cellar.apps.core.api import (
     api_push_subscribe,
     api_push_unsubscribe,
     api_vapid_public_key,
+    api_version,
 )
 from wine_cellar.apps.core.pwa import manifest_json, service_worker_js
 from wine_cellar.apps.user.views import UserSettingsView
@@ -150,6 +151,7 @@ urlpatterns = [
         api_vapid_public_key,
         name="api-vapid-public-key",
     ),
+    path("api/version/", api_version, name="api-version"),
 ]
 
 # Include app-specific URLs
