@@ -43,7 +43,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libpng16-16 \
     libwebp7 \
     curl \
-    git \
     gosu \
     && rm -rf /var/lib/apt/lists/*
 
@@ -55,9 +54,10 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r ${REQUIREMENTS_FILE}
 
 # Copy application code
-COPY manage.py pyproject.toml ./
+COPY manage.py ./
 COPY wine_cellar/ wine_cellar/
-COPY fixtures/ fixtures/
+RUN mkdir -p fixtures
+COPY fixtures/grapes.json fixtures/whisky_regions.json fixtures/distilleries.json fixtures/bottlers.json fixtures/
 
 # Copy built frontend assets from Node stage
 COPY --from=frontend-builder /app/wine_cellar/static/ wine_cellar/static/

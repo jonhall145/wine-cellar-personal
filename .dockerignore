@@ -46,6 +46,9 @@ docs/site/
 .claude/
 CLAUDE.md
 
+# Test files inside app directories (factories, etc.)
+wine_cellar/apps/*/tests/
+
 # Archive
 archive/
 
