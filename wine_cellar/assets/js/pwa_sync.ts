@@ -9,26 +9,15 @@
 import { syncCellarData } from './offline_store';
 import { getPendingCount, replayMutations } from './sync_queue';
 
+const gettext = (window as any).django?.gettext || ((s: string) => s);
+
 function createOfflineBanner(): HTMLElement {
   const banner = document.createElement('div');
   banner.id = 'offline-banner';
+  banner.className = 'offline-banner';
   banner.setAttribute('role', 'status');
   banner.setAttribute('aria-live', 'polite');
-  banner.style.cssText = [
-    'position: fixed',
-    'bottom: 60px',  // above the mobile bottom nav
-    'left: 0',
-    'right: 0',
-    'background: #f59e0b',
-    'color: #000',
-    'text-align: center',
-    'padding: 8px 16px',
-    'font-size: 14px',
-    'z-index: 9999',
-    'display: none',
-    'font-weight: 500',
-  ].join(';');
-  banner.textContent = '📡 You are offline — showing cached data';
+  banner.textContent = gettext('📡 You are offline — showing cached data');
   document.body.appendChild(banner);
   return banner;
 }
@@ -36,21 +25,9 @@ function createOfflineBanner(): HTMLElement {
 function createSyncBadge(): HTMLElement {
   const badge = document.createElement('div');
   badge.id = 'sync-badge';
+  badge.className = 'sync-badge';
   badge.setAttribute('role', 'status');
   badge.setAttribute('aria-live', 'polite');
-  badge.style.cssText = [
-    'position: fixed',
-    'bottom: 60px',
-    'right: 12px',
-    'background: #3b82f6',
-    'color: #fff',
-    'padding: 6px 12px',
-    'border-radius: 16px',
-    'font-size: 13px',
-    'z-index: 10000',
-    'display: none',
-    'box-shadow: 0 2px 8px rgba(0,0,0,0.15)',
-  ].join(';');
   document.body.appendChild(badge);
   return badge;
 }
@@ -58,15 +35,20 @@ function createSyncBadge(): HTMLElement {
 async function updateSyncBadge(badge: HTMLElement): Promise<void> {
   const count = await getPendingCount();
   if (count > 0) {
-    badge.textContent = `⏳ ${count} pending change${count > 1 ? 's' : ''}`;
-    badge.style.display = 'block';
+    const ngettext = (window as any).django?.ngettext || ((s: string, p: string, n: number) => n === 1 ? s : p);
+    badge.textContent = '⏳ ' + ngettext('%(count)s pending change', '%(count)s pending changes', count).replace('%(count)s', String(count));
+    badge.classList.add('sync-badge--visible');
   } else {
-    badge.style.display = 'none';
+    badge.classList.remove('sync-badge--visible');
   }
 }
 
 function updateOnlineStatus(banner: HTMLElement): void {
-  banner.style.display = navigator.onLine ? 'none' : 'block';
+  if (navigator.onLine) {
+    banner.classList.remove('offline-banner--visible');
+  } else {
+    banner.classList.add('offline-banner--visible');
+  }
 }
 
 function init(): void {

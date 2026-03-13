@@ -116,10 +116,24 @@ def api_cellar_sync(request):
     only records modified after that timestamp (for incremental sync).
     Returns beverages, storage items, and storages in a single payload.
     """
+    from django.utils.dateparse import parse_datetime
+    from django.utils.timezone import is_aware, make_aware
+
     household = get_active_household(request.user)
     app_type = getattr(settings, "CELLAR_APP_TYPE", "wine")
     user_settings = get_user_settings(request.user)
-    since = request.GET.get("since")
+    since_raw = request.GET.get("since")
+    since = None
+
+    if since_raw:
+        since = parse_datetime(since_raw)
+        if since is None:
+            return JsonResponse(
+                {"error": "Invalid 'since' datetime format. Expected ISO 8601 (e.g. 2024-03-13T10:30:00Z)."},
+                status=400,
+            )
+        if not is_aware(since):
+            since = make_aware(since)
 
     if app_type == "whisky":
         from wine_cellar.apps.whisky.models import Whisky, WhiskyStorageItem
@@ -177,7 +191,7 @@ def api_cellar_sync(request):
             "beverages": beverages,
             "stock_items": stock_items,
             "storages": storages,
-            "is_incremental": bool(since),
+            "is_incremental": bool(since_raw),
         }
     )
 
