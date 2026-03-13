@@ -1,15 +1,19 @@
-"""REST API endpoints for PWA offline data access.
+"""REST API endpoints for PWA offline data access and app metadata.
 
 Provides JSON endpoints for the service worker to cache and serve
-cellar data when offline. All endpoints require authentication and
-scope data to the user's active household.
+cellar data when offline, plus a public version endpoint.
+All data endpoints require authentication and scope data to the
+user's active household.
 """
 
 import json
 import logging
+import subprocess
 
 from django.conf import settings
+from django.contrib.auth.decorators import login_not_required
 from django.http import JsonResponse
+from django.views.decorators.cache import cache_page
 from django.views.decorators.http import require_GET, require_POST
 
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
@@ -250,3 +254,31 @@ def api_vapid_public_key(request):
     """Return the VAPID public key for push subscription."""
     key = getattr(settings, "VAPID_PUBLIC_KEY", "")
     return JsonResponse({"public_key": key})
+
+
+def _get_git_sha() -> str:
+    """Return the short git SHA of the current commit, or empty string."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return result.stdout.strip() if result.returncode == 0 else ""
+    except Exception:
+        return ""
+
+
+@login_not_required
+@require_GET
+@cache_page(300)
+def api_version(request):
+    """Return application version and metadata (public, no auth required)."""
+    return JsonResponse(
+        {
+            "version": getattr(settings, "VERSION", "0.0.0"),
+            "app_type": getattr(settings, "CELLAR_APP_TYPE", "wine"),
+            "git_sha": _get_git_sha(),
+        }
+    )

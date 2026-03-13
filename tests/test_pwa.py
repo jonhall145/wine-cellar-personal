@@ -31,6 +31,15 @@ class TestManifest:
         r = client.get(reverse("pwa-manifest"))
         assert "application/json" in r["Content-Type"]
 
+    def test_manifest_includes_version(self, client):
+        r = client.get(reverse("pwa-manifest"))
+        data = json.loads(r.content)
+        assert "version" in data
+        # Must be a semver-style string
+        parts = data["version"].split(".")
+        assert len(parts) == 3
+        assert all(p.isdigit() for p in parts)
+
 
 @pytest.mark.django_db
 class TestServiceWorker:
@@ -52,6 +61,18 @@ class TestServiceWorker:
         assert "CACHE_NAME" in content
         assert "caches.open" in content
         assert "self.addEventListener" in content
+
+    def test_sw_waits_for_skip_waiting_message(self, client):
+        """SW should not auto-skipWaiting; it listens for a SKIP_WAITING message."""
+        r = client.get(reverse("pwa-service-worker"))
+        content = r.content.decode()
+        assert "SKIP_WAITING" in content
+        assert "self.skipWaiting()" in content
+        # skipWaiting should only appear in the message handler, not in install
+        install_block = content.split("addEventListener('install'")[1].split(
+            "addEventListener("
+        )[0]
+        assert "skipWaiting" not in install_block
 
 
 @pytest.mark.django_db
@@ -262,3 +283,29 @@ class TestVapidPublicKey:
         assert r.status_code == HTTPStatus.OK
         data = json.loads(r.content)
         assert "public_key" in data
+
+
+@pytest.mark.django_db
+class TestVersionAPI:
+    def test_version_unauthenticated(self, client):
+        """Version endpoint is publicly accessible."""
+        r = client.get(reverse("api-version"))
+        assert r.status_code == HTTPStatus.OK
+
+    def test_version_response_structure(self, client):
+        r = client.get(reverse("api-version"))
+        data = json.loads(r.content)
+        assert "version" in data
+        assert "app_type" in data
+        assert "git_sha" in data
+
+    def test_version_is_semver(self, client):
+        r = client.get(reverse("api-version"))
+        data = json.loads(r.content)
+        parts = data["version"].split(".")
+        assert len(parts) == 3
+        assert all(p.isdigit() for p in parts)
+
+    def test_version_content_type(self, client):
+        r = client.get(reverse("api-version"))
+        assert "application/json" in r["Content-Type"]

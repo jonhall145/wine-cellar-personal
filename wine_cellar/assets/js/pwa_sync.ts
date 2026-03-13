@@ -4,6 +4,7 @@
  * Runs on every page load to:
  * 1. Sync cellar data to IndexedDB when online
  * 2. Show/hide an offline indicator banner
+ * 3. Detect service worker updates and prompt the user
  */
 
 import { syncCellarData } from './offline_store';
@@ -32,6 +33,72 @@ function createSyncBadge(): HTMLElement {
   return badge;
 }
 
+function createUpdateBanner(): HTMLElement {
+  const banner = document.createElement('div');
+  banner.id = 'update-banner';
+  banner.className = 'update-banner';
+  banner.setAttribute('role', 'alert');
+  banner.setAttribute('aria-live', 'assertive');
+  banner.innerHTML =
+    `<span>${gettext('🆕 A new version is available')}</span>` +
+    `<button class="update-banner__btn" type="button">${gettext('Update now')}</button>` +
+    `<button class="update-banner__dismiss" type="button" aria-label="${gettext('Dismiss')}">&times;</button>`;
+  document.body.appendChild(banner);
+  return banner;
+}
+
+function showUpdateBanner(waitingSW: ServiceWorker): void {
+  const banner = createUpdateBanner();
+
+  banner.querySelector('.update-banner__btn')!.addEventListener('click', () => {
+    waitingSW.postMessage({ type: 'SKIP_WAITING' });
+    banner.remove();
+  });
+
+  banner.querySelector('.update-banner__dismiss')!.addEventListener('click', () => {
+    banner.remove();
+  });
+
+  requestAnimationFrame(() => banner.classList.add('update-banner--visible'));
+}
+
+/**
+ * Register the service worker and set up update detection.
+ * Replaces the inline <script> in base.html.
+ */
+export function registerServiceWorker(): void {
+  if (!('serviceWorker' in navigator)) return;
+
+  // Reload when a new SW takes over (user clicked "Update now")
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
+  });
+
+  navigator.serviceWorker.register('/sw.js').then((reg) => {
+    // If a SW is already waiting when the page loads, prompt immediately
+    if (reg.waiting) {
+      showUpdateBanner(reg.waiting);
+      return;
+    }
+
+    // Detect when a new SW finishes installing and enters waiting
+    reg.addEventListener('updatefound', () => {
+      const newSW = reg.installing;
+      if (!newSW) return;
+
+      newSW.addEventListener('statechange', () => {
+        if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+          showUpdateBanner(newSW);
+        }
+      });
+    });
+  }).catch((err) => console.warn('SW registration failed:', err));
+}
+
 async function updateSyncBadge(badge: HTMLElement): Promise<void> {
   const count = await getPendingCount();
   if (count > 0) {
@@ -56,6 +123,7 @@ function init(): void {
   const badge = createSyncBadge();
   updateOnlineStatus(banner);
   updateSyncBadge(badge);
+  registerServiceWorker();
 
   window.addEventListener('online', async () => {
     updateOnlineStatus(banner);
