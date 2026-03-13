@@ -18,9 +18,11 @@ from django.urls import include, path, re_path
 from django.utils._os import safe_join
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import require_http_methods
+from django.views.generic import TemplateView
 from django.views.i18n import JavaScriptCatalog
 from django.views.static import serve
 
+from wine_cellar.apps.core.pwa import manifest_json, service_worker_js
 from wine_cellar.apps.user.views import UserSettingsView
 
 logger = logging.getLogger("wine_cellar.health_check")
@@ -119,6 +121,16 @@ urlpatterns = [
     # Shared utilities
     path("health/", health_check, name="health_check"),
     path("jsi18n/", JavaScriptCatalog.as_view(), name="javascript-catalog"),
+    # PWA
+    path("manifest.json", manifest_json, name="pwa-manifest"),
+    path("sw.js", service_worker_js, name="pwa-service-worker"),
+    path(
+        "offline/",
+        login_not_required(
+            cache_page(3600)(TemplateView.as_view(template_name="offline.html"))
+        ),
+        name="pwa-offline",
+    ),
 ]
 
 # Include app-specific URLs
