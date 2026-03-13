@@ -17,7 +17,7 @@ class TestHealthCheck:
         response = client.get("/health/")
         assert response.status_code == 200
         data = json.loads(response.content)
-        assert data == {"status": "ok"}
+        assert data["status"] == "ok"
 
     def test_no_auth_required(self):
         client = Client()

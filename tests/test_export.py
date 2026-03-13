@@ -65,13 +65,6 @@ class TestExportWinesJson:
 @pytest.mark.django_db
 class TestWineToDict:
     def test_all_export_fields_present(self, user, wine_factory, household):
-        wine = (
-            wine_factory._meta.model.objects.filter(household=household)
-            .with_related()
-            .with_stock_count()
-            .none()
-        )
-        # Create a wine and query it properly
         w = wine_factory(user=user, household=household)
         wine = (
             wine_factory._meta.model.objects.filter(pk=w.pk)
