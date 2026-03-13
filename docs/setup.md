@@ -4,8 +4,8 @@
 
 Ensure your system has:
 
-- [Python 3.x](https://www.python.org/downloads/)
-- [Node.js](https://nodejs.org/) (v14.x or higher recommended)
+- [Python 3.10+](https://www.python.org/downloads/)
+- [Node.js](https://nodejs.org/) (v20.x or higher recommended)
 - [npm](https://www.npmjs.com/get-npm) (comes with Node.js)
 
 ## Getting Started
@@ -13,8 +13,8 @@ Ensure your system has:
 ### 1. Clone the Repository
 
 ```sh
-git clone https://github.com/the-broke-sommeliers/wine-cellar.git
-cd wine-cellar
+git clone https://github.com/jonhall145/wine-cellar-personal.git
+cd wine-cellar-personal
 ```
 
 ### 2. Install Dependencies

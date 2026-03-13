@@ -240,7 +240,7 @@ cd /opt/winecellar
 
 If you encounter issues:
 
-1. Check [GitHub Issues](https://github.com/the-broke-sommeliers/wine-cellar/issues)
+1. Check [GitHub Issues](https://github.com/jonhall145/wine-cellar-personal/issues)
 2. Review error logs
 3. Open a new issue with:
    - Version upgrading from/to

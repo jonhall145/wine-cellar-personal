@@ -1,6 +1,5 @@
 # Wine Cellar
 
-[![Coverage Status](https://coveralls.io/repos/github/the-broke-sommeliers/wine-cellar/badge.svg?branch=main)](https://coveralls.io/github/the-broke-sommeliers/wine-cellar?branch=main)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Django 5.2](https://img.shields.io/badge/django-5.2-green.svg)](https://www.djangoproject.com/)
@@ -31,8 +30,8 @@ barcode.
 
 ```bash
 # Clone the repository
-git clone https://github.com/the-broke-sommeliers/wine-cellar.git
-cd wine-cellar
+git clone https://github.com/jonhall145/wine-cellar-personal.git
+cd wine-cellar-personal
 
 # Install dependencies and set up database
 make install
@@ -49,7 +48,7 @@ For production deployment, see the [deployment guide](docs/deployment.md).
 
 ## Documentation
 
-Find the full documentation in the [docs/](docs/) directory or online at [the-broke-sommeliers.github.io/wine-cellar](https://the-broke-sommeliers.github.io/wine-cellar/)
+Find the full documentation in the [docs/](docs/) directory.
 
 **Quick Links:**
 - [Setup Guide](docs/setup.md) - Installation and getting started

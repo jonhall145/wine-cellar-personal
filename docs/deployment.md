@@ -19,8 +19,8 @@ This guide covers all deployment options for Wine Cellar, from local development
 
 ```bash
 # Clone and install
-git clone https://github.com/the-broke-sommeliers/wine-cellar.git
-cd wine-cellar
+git clone https://github.com/jonhall145/wine-cellar-personal.git
+cd wine-cellar-personal
 make install
 
 # Start server
