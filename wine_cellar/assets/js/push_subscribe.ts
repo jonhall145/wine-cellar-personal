@@ -60,7 +60,7 @@ async function unsubscribePush(): Promise<boolean> {
   const reg = await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.getSubscription();
   if (sub) {
-    await fetch('/api/push/unsubscribe/', {
+    const resp = await fetch('/api/push/unsubscribe/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -68,6 +68,9 @@ async function unsubscribePush(): Promise<boolean> {
       },
       body: JSON.stringify({ endpoint: sub.endpoint }),
     });
+    if (!resp.ok) {
+      return false;
+    }
     await sub.unsubscribe();
   }
   return true;
@@ -122,8 +125,13 @@ async function init(): Promise<void> {
     btn.disabled = true;
     try {
       if (isSubscribed) {
-        await unsubscribePush();
-        isSubscribed = false;
+        const ok = await unsubscribePush();
+        if (ok) {
+          isSubscribed = false;
+        } else {
+          status.textContent = gettext('Failed to disable notifications. Please try again.');
+          return;
+        }
       } else {
         const vapidKey = await getVapidKey();
         if (!vapidKey) {

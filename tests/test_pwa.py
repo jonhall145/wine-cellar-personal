@@ -139,6 +139,13 @@ class TestCellarSyncAPI:
         r = client.post(reverse("api-cellar-sync"))
         assert r.status_code == HTTPStatus.METHOD_NOT_ALLOWED
 
+    def test_invalid_since_returns_400(self, client, user):
+        client.force_login(user)
+        r = client.get(reverse("api-cellar-sync") + "?since=not-a-date")
+        assert r.status_code == HTTPStatus.BAD_REQUEST
+        data = json.loads(r.content)
+        assert "error" in data
+
 
 @pytest.mark.django_db
 class TestPushSubscribe:

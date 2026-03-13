@@ -78,14 +78,14 @@ const CACHE_VERSION = '{version}';
 const CACHE_NAME = 'wine-cellar-v' + CACHE_VERSION;
 const STATIC_URL = '{static_url}';
 
-// Static assets to precache
+// Static assets to precache (versioned to match template-rendered URLs)
 const PRECACHE_URLS = [
-  '/',
-  STATIC_URL + 'base.css',
-  STATIC_URL + 'base.js',
-  STATIC_URL + 'fontawesome-vendors.css',
+  STATIC_URL + 'base.css?v={version}',
+  STATIC_URL + 'base.js?v={version}',
+  STATIC_URL + 'fontawesome-vendors.css?v={version}',
   STATIC_URL + 'images/favicon.svg',
   STATIC_URL + 'images/pwa-icon-192.png',
+  '/offline/',
 ];
 
 // Install: precache core assets
@@ -117,9 +117,10 @@ self.addEventListener('fetch', (event) => {{
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
 
-  // Skip admin, accounts, and API requests
+  // Skip admin, accounts, and API requests — these must not be cached
   if (url.pathname.startsWith('/admin/')) return;
   if (url.pathname.startsWith('/accounts/')) return;
+  if (url.pathname.startsWith('/api/')) return;
 
   // Navigation requests: network-first with offline fallback
   if (event.request.mode === 'navigate') {{
@@ -157,18 +158,8 @@ self.addEventListener('fetch', (event) => {{
     return;
   }}
 
-  // Other requests: network-first
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {{
-        if (response.ok) {{
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        }}
-        return response;
-      }})
-      .catch(() => caches.match(event.request))
-  );
+  // Other requests: network-first, no caching of authenticated responses
+  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
 }});
 
 // Push notifications
@@ -236,8 +227,12 @@ async function replayQueuedMutations() {{
         credentials: 'same-origin',
       }});
       if (resp.ok || resp.status === 302 || resp.status === 403) {{
-        const delTx = db.transaction('sync_queue', 'readwrite');
-        delTx.objectStore('sync_queue').delete(m.id);
+        await new Promise((resolve, reject) => {{
+          const delTx = db.transaction('sync_queue', 'readwrite');
+          delTx.oncomplete = resolve;
+          delTx.onerror = () => reject(delTx.error);
+          delTx.objectStore('sync_queue').delete(m.id);
+        }});
       }}
     }} catch (e) {{
       break;  // Network still down, stop replaying
