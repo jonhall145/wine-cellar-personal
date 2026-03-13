@@ -24,8 +24,8 @@ def _wine_to_dict(wine) -> dict:
     """Convert a wine instance to a flat export dictionary."""
     return {
         "name": wine.name,
-        "type": wine.get_type if wine.wine_type else "",
-        "category": wine.get_category or "",
+        "type": str(wine.get_type) if wine.wine_type else "",
+        "category": str(wine.get_category) if wine.get_category else "",
         "country": wine.country,
         "subregion": wine.subregion or "",
         "appellation": str(wine.appellation) if wine.appellation else "",

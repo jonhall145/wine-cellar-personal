@@ -102,6 +102,65 @@ def test_get_average_respects_user_currency(user, wine_factory, storage_item_fac
 
 
 @pytest.mark.django_db
+def test_get_vineyards(user, wine_factory, vineyard_factory):
+    v1 = vineyard_factory(name="Vineyard A")
+    v2 = vineyard_factory(name="Vineyard B")
+    wine = wine_factory(user=user)
+    wine.vineyard.set([v1, v2])
+    vineyards = wine.get_vineyards
+    assert "Vineyard A" in vineyards
+    assert "Vineyard B" in vineyards
+
+
+@pytest.mark.django_db
+def test_get_grapes_multiple(user, wine_factory, grape_factory):
+    g1 = grape_factory(name="Merlot")
+    g2 = grape_factory(name="Cabernet")
+    wine = wine_factory(user=user, grapes=[g1, g2])
+    grapes = wine.get_grapes
+    assert "Merlot" in grapes
+    assert "Cabernet" in grapes
+
+
+@pytest.mark.django_db
+def test_get_sources(user, wine_factory, source_factory):
+    s1 = source_factory(name="Shop A")
+    s2 = source_factory(name="Shop B")
+    wine = wine_factory(user=user)
+    wine.source.set([s1, s2])
+    sources = wine.get_sources
+    assert "Shop A" in sources
+    assert "Shop B" in sources
+
+
+@pytest.mark.django_db
+def test_country_icon(user, wine_factory):
+    wine = wine_factory(user=user, country="DE")
+    assert wine.country_icon == "🇩🇪"
+
+
+@pytest.mark.django_db
+def test_total_stock(user, wine_factory, storage_item_factory):
+    wine = wine_factory(user=user)
+    storage_item_factory(wine=wine, deleted=False)
+    storage_item_factory(wine=wine, deleted=False)
+    storage_item_factory(wine=wine, deleted=True)
+    assert wine.total_stock == 2
+
+
+@pytest.mark.django_db
+def test_str_with_vintage(user, wine_factory):
+    wine = wine_factory(user=user, name="Riesling", vintage=2020)
+    assert str(wine) == "Riesling (2020)"
+
+
+@pytest.mark.django_db
+def test_str_without_vintage(user, wine_factory):
+    wine = wine_factory(user=user, name="Riesling", vintage=None)
+    assert str(wine) == "Riesling"
+
+
+@pytest.mark.django_db
 def test_image_properties_use_prefetch_cache(
     user, wine_factory, wine_image_factory, clear_image_folder
 ):
