@@ -8,7 +8,7 @@
  */
 
 const DB_NAME = 'cellar-offline';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 interface CellarSyncResponse {
   app_type: string;
@@ -40,6 +40,10 @@ function openDB(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains('meta')) {
         db.createObjectStore('meta', { keyPath: 'key' });
+      }
+      if (!db.objectStoreNames.contains('sync_queue')) {
+        const queueStore = db.createObjectStore('sync_queue', { keyPath: 'id' });
+        queueStore.createIndex('timestamp', 'timestamp', { unique: false });
       }
     };
 

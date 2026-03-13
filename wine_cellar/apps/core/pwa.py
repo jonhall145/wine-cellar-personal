@@ -170,6 +170,51 @@ self.addEventListener('fetch', (event) => {{
       .catch(() => caches.match(event.request))
   );
 }});
+
+// Background Sync: replay queued mutations when connectivity returns
+self.addEventListener('sync', (event) => {{
+  if (event.tag === 'cellar-sync') {{
+    event.waitUntil(replayQueuedMutations());
+  }}
+}});
+
+async function replayQueuedMutations() {{
+  const db = await new Promise((resolve, reject) => {{
+    const req = indexedDB.open('cellar-offline', 2);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  }});
+
+  const mutations = await new Promise((resolve, reject) => {{
+    const tx = db.transaction('sync_queue', 'readonly');
+    const idx = tx.objectStore('sync_queue').index('timestamp');
+    const req = idx.getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  }});
+
+  for (const m of mutations) {{
+    try {{
+      const resp = await fetch(m.url, {{
+        method: m.method,
+        headers: {{
+          'Content-Type': m.contentType,
+          'X-CSRFToken': m.csrfToken,
+          'X-Requested-With': 'XMLHttpRequest',
+        }},
+        body: m.body,
+        credentials: 'same-origin',
+      }});
+      if (resp.ok || resp.status === 302 || resp.status === 403) {{
+        const delTx = db.transaction('sync_queue', 'readwrite');
+        delTx.objectStore('sync_queue').delete(m.id);
+      }}
+    }} catch (e) {{
+      break;  // Network still down, stop replaying
+    }}
+  }}
+  db.close();
+}}
 """
     from django.http import HttpResponse
 
