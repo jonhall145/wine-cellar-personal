@@ -3,6 +3,7 @@
 {% block extra_js %}
     {{ block.super }}
     <script src="{% static 'tom_select.js' %}" type="module" defer></script>
+    <script src="{% static 'push_subscribe.js' %}" type="module" defer></script>
 {% endblock extra_js %}
 {% block title %}
     {% translate "Settings" %}
@@ -34,6 +35,15 @@
                         </div>
                     </div>
                 </form>
+                <div id="push-notification-section" class="push-section">
+                    <h2>{% translate "Push Notifications" %}</h2>
+                    <p id="push-status" class="push-status push-status--inactive">{% translate "Checking…" %}</p>
+                    <button id="push-toggle-btn"
+                            type="button"
+                            class="pure-button button__primary push-toggle-btn--hidden">
+                        {% translate "Enable Push Notifications" %}
+                    </button>
+                </div>
             </div>
         </div>
     </div>

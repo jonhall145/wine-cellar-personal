@@ -24,10 +24,14 @@ module.exports = {
         './wine_cellar/assets/js/dropdown_toggle.ts',
         './wine_cellar/assets/js/storage_view_toggle.ts',
         './wine_cellar/assets/js/wine_carousel.ts',
+      './wine_cellar/assets/js/pwa_sync.ts',
       ],
     },
     tom_select: {
       import: ['./wine_cellar/assets/js/init_tom_select.ts'],
+    },
+    push_subscribe: {
+      import: ['./wine_cellar/assets/js/push_subscribe.ts'],
     },
     stock_add: {
       import: ['./wine_cellar/assets/js/stock_add.ts'],

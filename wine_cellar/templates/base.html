@@ -4,6 +4,11 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="theme-color" content="#019603">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <link rel="manifest" href="{% url 'pwa-manifest' %}">
+        <link rel="apple-touch-icon" href="{% static 'images/apple-touch-icon.png' %}">
         <link rel="stylesheet"
               href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css"
               integrity="sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls"
@@ -121,5 +126,13 @@
             </p>
         </footer>
         <script src="{% static 'base.js' %}?v={% get_setting 'VERSION' %}" defer></script>
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register("{% url 'pwa-service-worker' %}")
+                        .catch((err) => console.warn('SW registration failed:', err));
+                });
+            }
+        </script>
     </body>
 </html>
