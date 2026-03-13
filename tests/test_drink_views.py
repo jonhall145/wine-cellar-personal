@@ -46,8 +46,6 @@ class TestDrinkingWindowAlertsView:
         assert alert.pk not in alert_ids
 
     def test_upcoming_wines(self, client, user, wine_factory, storage_item_factory):
-        from datetime import date
-
         current_year = date.today().year
         wine = wine_factory(user=user, drink_to=current_year)
         storage = user.storage_set.first()

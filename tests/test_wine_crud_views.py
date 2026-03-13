@@ -93,7 +93,5 @@ class TestWineMerge:
             follow=True,
         )
         assert r.status_code == 200
-        # wine2 should be soft-deleted (deleted=True)
-        wine2_after = Wine.objects.filter(pk=wine2_pk).first()
-        if wine2_after:
-            assert wine2_after.deleted is True
+        # wine2 should be hard-deleted by the merge
+        assert not Wine.objects.filter(pk=wine2_pk).exists()

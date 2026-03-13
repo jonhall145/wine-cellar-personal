@@ -425,9 +425,9 @@ class TestStorageItemAddView:
         assert r.context["wine"].pk == wine.pk
         assert "free_cells_by_storage" in r.context
 
-    def test_post_creates_item(self, client, user, wine_factory):
+    def test_post_creates_item(self, client, user, wine_factory, storage_factory):
         wine = wine_factory(user=user)
-        storage = user.storage_set.first()
+        storage = storage_factory(user=user, rows=3, columns=3)
         client.force_login(user)
         r = client.post(
             reverse("stock-add", kwargs={"pk": wine.pk}),
@@ -439,18 +439,13 @@ class TestStorageItemAddView:
             follow=True,
         )
         assert r.status_code == 200
-        # If form valid, item is created; if not, page renders with errors
-        if StorageItem.objects.filter(wine=wine, storage=storage).exists():
-            assert True
-        else:
-            # Form re-rendered — might need additional fields
-            assert "form" in r.context
+        assert StorageItem.objects.filter(wine=wine, storage=storage).exists()
 
-    def test_post_with_price(self, client, user, wine_factory):
+    def test_post_with_price(self, client, user, wine_factory, storage_factory):
         wine = wine_factory(user=user)
-        storage = user.storage_set.first()
+        storage = storage_factory(user=user, rows=3, columns=3)
         client.force_login(user)
-        client.post(
+        r = client.post(
             reverse("stock-add", kwargs={"pk": wine.pk}),
             {
                 "storage": storage.pk,
@@ -460,6 +455,10 @@ class TestStorageItemAddView:
             },
             follow=True,
         )
+        assert r.status_code == 200
+        item = StorageItem.objects.filter(wine=wine, storage=storage).first()
+        assert item is not None
+        assert str(item.price) == "29.99"
 
     def test_scoped_to_household(self, client, user_factory, wine_factory):
         owner = user_factory()
