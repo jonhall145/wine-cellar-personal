@@ -24,6 +24,7 @@ module.exports = {
         './wine_cellar/assets/js/dropdown_toggle.ts',
         './wine_cellar/assets/js/storage_view_toggle.ts',
         './wine_cellar/assets/js/wine_carousel.ts',
+      './wine_cellar/assets/js/pwa_sync.ts',
       ],
     },
     tom_select: {

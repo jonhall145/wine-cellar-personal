@@ -22,6 +22,7 @@ from django.views.generic import TemplateView
 from django.views.i18n import JavaScriptCatalog
 from django.views.static import serve
 
+from wine_cellar.apps.core.api import api_cellar_sync
 from wine_cellar.apps.core.pwa import manifest_json, service_worker_js
 from wine_cellar.apps.user.views import UserSettingsView
 
@@ -131,6 +132,8 @@ urlpatterns = [
         ),
         name="pwa-offline",
     ),
+    # API
+    path("api/cellar/sync/", api_cellar_sync, name="api-cellar-sync"),
 ]
 
 # Include app-specific URLs
