@@ -15,10 +15,12 @@ class BeverageFilterMixin:
     Subclasses must set:
         storage_item_reverse: str  — e.g. "storageitem" or "whiskystorageitem"
         nullable_order_fields: tuple — e.g. ("vintage", "effective_price")
+        search_fields: tuple — ORM field paths to search with icontains
     """
 
     storage_item_reverse = None
     nullable_order_fields = ()
+    search_fields = ()
 
     def filter_rating(self, queryset, name, value):
         if value == "0":
@@ -38,6 +40,15 @@ class BeverageFilterMixin:
                 return queryset.order_by(field.desc(nulls_last=True))
             return queryset.order_by(field.asc(nulls_last=True))
         return queryset.order_by(ordering)
+
+    def filter_search(self, queryset, name, value):
+        """Full-text search across multiple text fields defined in search_fields."""
+        if not value:
+            return queryset
+        query = Q()
+        for field in self.search_fields:
+            query |= Q(**{f"{field}__icontains": value})
+        return queryset.filter(query).distinct()
 
     def filter_has_stock(self, queryset, name, value):
         if value == "1":

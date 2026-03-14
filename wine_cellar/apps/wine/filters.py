@@ -44,8 +44,17 @@ def get_appellation_choices(user=None):
 class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
     storage_item_reverse = "storageitem"
     nullable_order_fields = ("vintage", "effective_price", "drink_to")
+    search_fields = (
+        "name",
+        "comment",
+        "subregion",
+        "drinkrecord__tasting_notes",
+        "storageitem__notes__note",
+    )
 
-    name = django_filters.CharFilter(field_name="name", lookup_expr="icontains")
+    search = django_filters.CharFilter(
+        method="filter_search", label=_("Search")
+    )
     stock = ChoiceFilter(
         method="filter_has_stock",
         label=_("Show only in stock"),
@@ -181,7 +190,7 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
         form = WineFilterForm
         model = Wine
         fields = [
-            "name",
+            "search",
             "wine_type",
             "rating",
             "ready_to_drink",
