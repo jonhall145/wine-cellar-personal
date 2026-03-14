@@ -45,7 +45,7 @@ class HouseholdInvitationAdmin(admin.ModelAdmin):
 
 @admin.register(HouseholdSettings)
 class HouseholdSettingsAdmin(admin.ModelAdmin):
-    list_display = ["household", "language", "currency", "notifications"]
-    list_filter = ["language", "currency"]
+    list_display = ["household", "currency", "notifications"]
+    list_filter = ["currency"]
     search_fields = ["household__name"]
     raw_id_fields = ["household"]

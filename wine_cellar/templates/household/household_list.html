@@ -1,14 +1,13 @@
 {% extends 'base.html' %}
-{% load i18n %}
 {% block title %}
-    {% translate "My Households" %}
+    My Households
 {% endblock title %}
 {% block header %}
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
         <div class="pure-u-1">
-            <h1>{% translate "My Households" %}</h1>
+            <h1>My Households</h1>
         </div>
     </div>
 
@@ -16,23 +15,23 @@
         <div class="pure-g">
             <div class="pure-u-1">
                 <div class="card alert alert--info">
-                    <h2>{% translate "Pending Invitations" %}</h2>
+                    <h2>Pending Invitations</h2>
                     <ul class="list-unstyled">
                         {% for invitation in pending_invitations %}
                             <li class="invitation-item">
                                 <strong>{{ invitation.household.name }}</strong>
                                 <span class="text-muted">
-                                    {% translate "Invited by" %} {{ invitation.invited_by.username }}
-                                    {% translate "as" %} {{ invitation.get_role_display }}
+                                    Invited by {{ invitation.invited_by.username }}
+                                    as {{ invitation.get_role_display }}
                                 </span>
                                 <div class="invitation-actions">
                                     <form method="post" action="{% url 'invitation-accept' invitation.token %}" class="d-inline">
                                         {% csrf_token %}
-                                        <button type="submit" class="pure-button button__primary button--small">{% translate "Accept" %}</button>
+                                        <button type="submit" class="pure-button button__primary button--small">Accept</button>
                                     </form>
                                     <form method="post" action="{% url 'invitation-decline' invitation.token %}" class="d-inline">
                                         {% csrf_token %}
-                                        <button type="submit" class="pure-button button--small">{% translate "Decline" %}</button>
+                                        <button type="submit" class="pure-button button--small">Decline</button>
                                     </form>
                                 </div>
                             </li>
@@ -45,7 +44,7 @@
 
     <div class="pure-g">
         <div class="pure-u-1">
-            <a href="{% url 'household-create' %}" class="pure-button button__primary">{% translate "Create Household" %}</a>
+            <a href="{% url 'household-create' %}" class="pure-button button__primary">Create Household</a>
         </div>
     </div>
 
@@ -56,26 +55,26 @@
                     <div class="card__header">
                         <h2 class="card__title">{{ membership.household.name }}</h2>
                         {% if request.user.user_settings.active_household_id == membership.household.pk %}
-                            <span class="badge badge--primary">{% translate "Active" %}</span>
+                            <span class="badge badge--primary">Active</span>
                         {% endif %}
                     </div>
                     <div class="card__body">
                         <p>
-                            <strong>{% translate "Role" %}:</strong> {{ membership.get_role_display }}
+                            <strong>Role:</strong> {{ membership.get_role_display }}
                         </p>
                         <p>
-                            <strong>{% translate "Members" %}:</strong> {{ membership.household.get_member_count }}
+                            <strong>Members:</strong> {{ membership.household.get_member_count }}
                         </p>
                         <p>
-                            <strong>{% translate "Joined" %}:</strong> {{ membership.joined|date:"SHORT_DATE_FORMAT" }}
+                            <strong>Joined:</strong> {{ membership.joined|date:"SHORT_DATE_FORMAT" }}
                         </p>
                     </div>
                     <div class="card__actions">
-                        <a href="{% url 'household-detail' membership.household.pk %}" class="pure-button">{% translate "View" %}</a>
+                        <a href="{% url 'household-detail' membership.household.pk %}" class="pure-button">View</a>
                         {% if request.user.user_settings.active_household_id != membership.household.pk %}
                             <form method="post" action="{% url 'household-switch' membership.household.pk %}" class="d-inline">
                                 {% csrf_token %}
-                                <button type="submit" class="pure-button button__primary">{% translate "Switch" %}</button>
+                                <button type="submit" class="pure-button button__primary">Switch</button>
                             </form>
                         {% endif %}
                     </div>
@@ -83,7 +82,7 @@
             </div>
         {% empty %}
             <div class="pure-u-1">
-                <p class="text-muted">{% translate "You don't belong to any households yet. Create one to get started!" %}</p>
+                <p class="text-muted">You don't belong to any households yet. Create one to get started!</p>
             </div>
         {% endfor %}
     </div>

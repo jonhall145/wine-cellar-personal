@@ -10,15 +10,13 @@
 import { syncCellarData } from './offline_store';
 import { getPendingCount, replayMutations } from './sync_queue';
 
-const gettext = (window as any).django?.gettext || ((s: string) => s);
-
 function createOfflineBanner(): HTMLElement {
   const banner = document.createElement('div');
   banner.id = 'offline-banner';
   banner.className = 'offline-banner';
   banner.setAttribute('role', 'status');
   banner.setAttribute('aria-live', 'polite');
-  banner.textContent = gettext('📡 You are offline — showing cached data');
+  banner.textContent = '📡 You are offline — showing cached data';
   document.body.appendChild(banner);
   return banner;
 }
@@ -41,19 +39,19 @@ function createUpdateBanner(): HTMLElement {
   banner.setAttribute('aria-live', 'assertive');
 
   const msg = document.createElement('span');
-  msg.textContent = gettext('🆕 A new version is available');
+  msg.textContent = '🆕 A new version is available';
   banner.appendChild(msg);
 
   const updateBtn = document.createElement('button');
   updateBtn.className = 'update-banner__btn';
   updateBtn.type = 'button';
-  updateBtn.textContent = gettext('Update now');
+  updateBtn.textContent = 'Update now';
   banner.appendChild(updateBtn);
 
   const dismissBtn = document.createElement('button');
   dismissBtn.className = 'update-banner__dismiss';
   dismissBtn.type = 'button';
-  dismissBtn.setAttribute('aria-label', gettext('Dismiss'));
+  dismissBtn.setAttribute('aria-label', 'Dismiss');
   dismissBtn.textContent = '\u00d7';
   banner.appendChild(dismissBtn);
 
@@ -119,8 +117,7 @@ export function registerServiceWorker(): void {
 async function updateSyncBadge(badge: HTMLElement): Promise<void> {
   const count = await getPendingCount();
   if (count > 0) {
-    const ngettext = (window as any).django?.ngettext || ((s: string, p: string, n: number) => n === 1 ? s : p);
-    badge.textContent = '⏳ ' + ngettext('%(count)s pending change', '%(count)s pending changes', count).replace('%(count)s', String(count));
+    badge.textContent = '⏳ ' + (count === 1 ? '%(count)s pending change' : '%(count)s pending changes').replace('%(count)s', String(count));
     badge.classList.add('sync-badge--visible');
   } else {
     badge.classList.remove('sync-badge--visible');

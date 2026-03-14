@@ -1,23 +1,23 @@
 {% extends 'base.html' %}
-{% load static i18n core_tags %}
+{% load static core_tags %}
 {% block title %}
-    {% translate "Reorder Reminders" %}
+    Reorder Reminders
 {% endblock title %}
 {% block header %}
-    <h1 class="header__title">{% translate "Reorder Reminders" %}</h1>
+    <h1 class="header__title">Reorder Reminders</h1>
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
         <div class="pure-u-1">
             {% if needs_reorder %}
                 <div class="alert alert--warning mb-12">
-                    <h2>{% blocktranslate with item_name=APP_ITEM_NAME_PLURAL|title %}{{ item_name }} Needing Reorder{% endblocktranslate %}</h2>
+                    <h2>{{ APP_ITEM_NAME_PLURAL }} Needing Reorder</h2>
                     <table class="pure-table pure-table-horizontal pure-table-striped">
                         <thead>
                             <tr>
                                 <th>{{ APP_ITEM_NAME|title }}</th>
-                                <th>{% translate "Current Stock" %}</th>
-                                <th>{% translate "Minimum" %}</th>
+                                <th>Current Stock</th>
+                                <th>Minimum</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -29,7 +29,7 @@
                                     <td>{{ item.current_stock }}</td>
                                     <td>{{ item.min_stock }}</td>
                                     <td>
-                                        <a href="{% url 'wishlist-add' %}" class="pure-button button__neutral">{% translate "Add to Wishlist" %}</a>
+                                        <a href="{% url 'wishlist-add' %}" class="pure-button button__neutral">Add to Wishlist</a>
                                     </td>
                                 </tr>
                                 {% endwith %}
@@ -39,15 +39,15 @@
                 </div>
             {% endif %}
 
-            <h2>{% translate "All Reminders" %}</h2>
+            <h2>All Reminders</h2>
             {% if reminders %}
                 <table class="pure-table pure-table-horizontal pure-table-striped">
                     <thead>
                         <tr>
                             <th>{{ APP_ITEM_NAME|title }}</th>
-                            <th>{% translate "Current Stock" %}</th>
-                            <th>{% translate "Minimum Stock" %}</th>
-                            <th>{% translate "Status" %}</th>
+                            <th>Current Stock</th>
+                            <th>Minimum Stock</th>
+                            <th>Status</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -60,9 +60,9 @@
                                 <td>{{ reminder.min_stock }}</td>
                                 <td>
                                     {% if bev.total_stock <= reminder.min_stock %}
-                                        <span class="text--danger">{% translate "Low Stock" %}</span>
+                                        <span class="text--danger">Low Stock</span>
                                     {% else %}
-                                        <span class="text--success">{% translate "OK" %}</span>
+                                        <span class="text--success">OK</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -76,10 +76,10 @@
             {% else %}
                 <div class="empty-state">
                     <div class="empty-state__icon"><i class="fa-solid fa-clipboard-list"></i></div>
-                    <h3 class="empty-state__title">{% translate "No Reminders Yet" %}</h3>
-                    <p class="empty-state__message">{% blocktranslate with item_name=APP_ITEM_NAME_PLURAL %}Set up reorder reminders to be notified when your favourite {{ item_name }} run low.{% endblocktranslate %}</p>
+                    <h3 class="empty-state__title">No Reminders Yet</h3>
+                    <p class="empty-state__message">Set up reorder reminders to be notified when your favourite {{ APP_ITEM_NAME_PLURAL }} run low.</p>
                     <a href="{% bev_url 'list' %}" class="pure-button button__primary empty-state__action">
-                        <i class="fa-solid fa-{{ beverage_icon }}"></i> {% blocktranslate with item_name=APP_ITEM_NAME_PLURAL|title %}Browse {{ item_name }}{% endblocktranslate %}
+                        <i class="fa-solid fa-{{ beverage_icon }}"></i> Browse {{ APP_ITEM_NAME_PLURAL }}
                     </a>
                 </div>
             {% endif %}

@@ -1,22 +1,22 @@
 {% extends 'base.html' %}
-{% load static i18n %}
+{% load static %}
 {% block title %}
-    {% translate "Alerts" %}
+    Alerts
 {% endblock title %}
 {% block header %}
-    <h1 class="header__title">{% translate "Alerts" %}</h1>
+    <h1 class="header__title">Alerts</h1>
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
         <div class="pure-u-1">
             {% if dreg_expired %}
-                <h2 class="text--danger">{% translate "Dreg Over 1 Year" %}</h2>
+                <h2 class="text--danger">Dreg Over 1 Year</h2>
                 <table class="pure-table pure-table-horizontal pure-table-striped mb-12">
                     <thead>
                         <tr>
-                            <th>{% translate "Whisky" %}</th>
-                            <th>{% translate "Location" %}</th>
-                            <th>{% translate "Dreg Since" %}</th>
+                            <th>Whisky</th>
+                            <th>Location</th>
+                            <th>Dreg Since</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -32,13 +32,13 @@
             {% endif %}
 
             {% if dreg_warning %}
-                <h2 class="text--warning">{% translate "Dreg Approaching 1 Year" %}</h2>
+                <h2 class="text--warning">Dreg Approaching 1 Year</h2>
                 <table class="pure-table pure-table-horizontal pure-table-striped mb-12">
                     <thead>
                         <tr>
-                            <th>{% translate "Whisky" %}</th>
-                            <th>{% translate "Location" %}</th>
-                            <th>{% translate "Dreg Since" %}</th>
+                            <th>Whisky</th>
+                            <th>Location</th>
+                            <th>Dreg Since</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -54,13 +54,13 @@
             {% endif %}
 
             {% if needs_reorder %}
-                <h2>{% translate "Low Stock" %}</h2>
+                <h2>Low Stock</h2>
                 <table class="pure-table pure-table-horizontal pure-table-striped mb-12">
                     <thead>
                         <tr>
-                            <th>{% translate "Whisky" %}</th>
-                            <th>{% translate "Current Stock" %}</th>
-                            <th>{% translate "Minimum" %}</th>
+                            <th>Whisky</th>
+                            <th>Current Stock</th>
+                            <th>Minimum</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -78,10 +78,10 @@
             {% if not dreg_expired and not dreg_warning and not needs_reorder %}
                 <div class="empty-state">
                     <div class="empty-state__icon"><i class="fa-solid fa-circle-check"></i></div>
-                    <h3 class="empty-state__title">{% translate "All Clear!" %}</h3>
-                    <p class="empty-state__message">{% translate "No alerts. Your collection is in great shape." %}</p>
+                    <h3 class="empty-state__title">All Clear!</h3>
+                    <p class="empty-state__message">No alerts. Your collection is in great shape.</p>
                     <a href="{% url 'whisky-list' %}" class="pure-button button__primary empty-state__action">
-                        <i class="fa-solid fa-whiskey-glass"></i> {% translate "Browse Whiskies" %}
+                        <i class="fa-solid fa-whiskey-glass"></i> Browse Whiskies
                     </a>
                 </div>
             {% endif %}

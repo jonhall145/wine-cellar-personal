@@ -1,10 +1,9 @@
-{% load i18n %}
 <li class="stats__card">
     <a class="stats__link" href="{% url 'whisky-list' %}?stock=1">
         <i class="fa-solid fa-whiskey-glass stats__icon"></i>
         <p class="stats__number">{{ bottles_in_stock }}</p>
         <h2 class="stats__label">
-            {% blocktranslate count counter=bottles_in_stock %}Bottle in Stock{% plural %}Bottles in Stock{% endblocktranslate %}
+            {% if bottles_in_stock == 1 %}Bottle in Stock{% else %}Bottles in Stock{% endif %}
         </h2>
     </a>
 </li>
@@ -12,7 +11,7 @@
     <a class="stats__link" href="{% url 'cellar-value' %}">
         <i class="fa-solid fa-coins stats__icon"></i>
         <p class="stats__number">{{ total_value }}</p>
-        <h2 class="stats__label">{% translate "Total Value in Stock" %}</h2>
+        <h2 class="stats__label">Total Value in Stock</h2>
     </a>
 </li>
 <li class="stats__card">
@@ -20,7 +19,7 @@
         <i class="fa-solid fa-list stats__icon"></i>
         <p class="stats__number">{{ whiskies }}</p>
         <h2 class="stats__label">
-            {% blocktranslate count counter=whiskies %}Recorded Whisky{% plural %}Recorded Whiskies{% endblocktranslate %}
+            {% if whiskies == 1 %}Recorded Whisky{% else %}Recorded Whiskies{% endif %}
         </h2>
     </a>
 </li>
@@ -29,7 +28,7 @@
         <i class="fa-solid fa-industry stats__icon"></i>
         <p class="stats__number">{{ distilleries_count }}</p>
         <h2 class="stats__label">
-            {% blocktranslate count counter=distilleries_count %}Distillery{% plural %}Distilleries{% endblocktranslate %}
+            {% if distilleries_count == 1 %}Distillery{% else %}Distilleries{% endif %}
         </h2>
     </a>
 </li>
@@ -38,7 +37,7 @@
         <i class="fa-solid fa-bottle-droplet stats__icon"></i>
         <p class="stats__number">{{ open_bottles }}</p>
         <h2 class="stats__label">
-            {% blocktranslate count counter=open_bottles %}Open Bottle{% plural %}Open Bottles{% endblocktranslate %}
+            {% if open_bottles == 1 %}Open Bottle{% else %}Open Bottles{% endif %}
         </h2>
     </a>
 </li>
@@ -46,6 +45,6 @@
     <a class="stats__link" href="{% url 'whisky-list' %}?order=-age_statement">
         <i class="fa-solid fa-hourglass-end stats__icon"></i>
         <p class="stats__number">{{ oldest_age }}</p>
-        <h2 class="stats__label">{% translate "Oldest Age Statement" %}</h2>
+        <h2 class="stats__label">Oldest Age Statement</h2>
     </a>
 </li>

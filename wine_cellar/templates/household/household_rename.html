@@ -1,23 +1,22 @@
 {% extends 'base.html' %}
-{% load i18n %}
 {% block title %}
-    {% translate "Rename Household" %}
+    Rename Household
 {% endblock title %}
 {% block header %}
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
         <div class="pure-u-1 pure-u-md-2-3 pure-u-lg-1-2 m-auto">
-            <a href="{% url 'household-detail' object.pk %}" class="back-link">← {% translate "Back to household" %}</a>
-            <h1>{% translate "Rename Household" %}</h1>
+            <a href="{% url 'household-detail' object.pk %}" class="back-link">← Back to household</a>
+            <h1>Rename Household</h1>
             <form method="post" class="pure-form pure-form-stacked wine-form" novalidate>
                 {% csrf_token %}
                 {% include 'forms/form_field.html' with field=form.name %}
                 <div class="pure-controls">
                     <div class="pure-g">
                         <div class="pure-u-1 pure-u-sm-1-2">
-                            <button type="submit" class="pure-button button__primary">{% translate "Save" %}</button>
-                            <a href="{% url 'household-detail' object.pk %}" class="pure-button">{% translate "Cancel" %}</a>
+                            <button type="submit" class="pure-button button__primary">Save</button>
+                            <a href="{% url 'household-detail' object.pk %}" class="pure-button">Cancel</a>
                         </div>
                     </div>
                 </div>

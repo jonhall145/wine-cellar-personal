@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import django from 'django';
 import { CameraError, CameraErrorType } from './components/CameraError';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -9,14 +8,14 @@ const MAX_DIMENSION = 2048; // Max width or height in pixels
 const JPEG_QUALITY = 0.85; // 85% quality
 
 const translated = {
-    captureButton: django.gettext('Capture Photo'),
-    retakeButton: django.gettext('Retake'),
-    usePhotoButton: django.gettext('Use This Photo'),
-    nextPhotoButton: django.gettext('Next Photo'),
-    submitAllButton: django.gettext('Process All Images'),
-    instructionsBarcode: django.gettext('1/3: Position the barcode in the frame and tap to capture'),
-    instructionsBack: django.gettext('2/3: Position the back label in the frame and tap to capture'),
-    instructionsFront: django.gettext('3/3: Position the front label in the frame and tap to capture'),
+    captureButton: 'Capture Photo',
+    retakeButton: 'Retake',
+    usePhotoButton: 'Use This Photo',
+    nextPhotoButton: 'Next Photo',
+    submitAllButton: 'Process All Images',
+    instructionsBarcode: '1/3: Position the barcode in the frame and tap to capture',
+    instructionsBack: '2/3: Position the back label in the frame and tap to capture',
+    instructionsFront: '3/3: Position the front label in the frame and tap to capture',
 };
 
 const LabelScanner: React.FC = () => {

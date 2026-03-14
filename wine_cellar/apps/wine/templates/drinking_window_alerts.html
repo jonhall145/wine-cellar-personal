@@ -1,23 +1,23 @@
 {% extends 'base.html' %}
-{% load static i18n %}
+{% load static %}
 {% block title %}
-    {% translate "Drinking Window Alerts" %}
+    Drinking Window Alerts
 {% endblock title %}
 {% block header %}
-    <h1 class="header__title">{% translate "Drinking Window Alerts" %}</h1>
+    <h1 class="header__title">Drinking Window Alerts</h1>
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
         <div class="pure-u-1">
             {% if overdue_wines %}
-                <h2 class="text--danger">{% translate "Past Drinking Window" %}</h2>
+                <h2 class="text--danger">Past Drinking Window</h2>
                 <table class="pure-table pure-table-horizontal pure-table-striped mb-12">
                     <thead>
                         <tr>
-                            <th>{% translate "Wine" %}</th>
-                            <th>{% translate "Vintage" %}</th>
-                            <th>{% translate "Drink Until" %}</th>
-                            <th>{% translate "Bottles" %}</th>
+                            <th>Wine</th>
+                            <th>Vintage</th>
+                            <th>Drink Until</th>
+                            <th>Bottles</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -34,14 +34,14 @@
             {% endif %}
 
             {% if upcoming_wines %}
-                <h2>{% translate "Approaching End of Drinking Window" %}</h2>
+                <h2>Approaching End of Drinking Window</h2>
                 <table class="pure-table pure-table-horizontal pure-table-striped mb-12">
                     <thead>
                         <tr>
-                            <th>{% translate "Wine" %}</th>
-                            <th>{% translate "Vintage" %}</th>
-                            <th>{% translate "Drink Until" %}</th>
-                            <th>{% translate "Bottles" %}</th>
+                            <th>Wine</th>
+                            <th>Vintage</th>
+                            <th>Drink Until</th>
+                            <th>Bottles</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -60,10 +60,10 @@
             {% if not overdue_wines and not upcoming_wines %}
                 <div class="empty-state">
                     <div class="empty-state__icon"><i class="fa-solid fa-circle-check"></i></div>
-                    <h3 class="empty-state__title">{% translate "All Clear!" %}</h3>
-                    <p class="empty-state__message">{% translate "No wines approaching their drink-by date. Your cellar is in great shape." %}</p>
+                    <h3 class="empty-state__title">All Clear!</h3>
+                    <p class="empty-state__message">No wines approaching their drink-by date. Your cellar is in great shape.</p>
                     <a href="{% url 'wine-list' %}" class="pure-button button__primary empty-state__action">
-                        <i class="fa-solid fa-wine-bottle"></i> {% translate "Browse Wines" %}
+                        <i class="fa-solid fa-wine-bottle"></i> Browse Wines
                     </a>
                 </div>
             {% endif %}

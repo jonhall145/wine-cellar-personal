@@ -18,13 +18,6 @@ class TestUserSettings:
         settings = user.user_settings
         assert str(settings) == f"Settings for {user}"
 
-    def test_default_language(self, user):
-        settings = user.user_settings
-        # Default should match settings.LANGUAGE_CODE
-        from django.conf import settings as django_settings
-
-        assert settings.language == django_settings.LANGUAGE_CODE
-
     def test_default_currency(self, user):
         settings = user.user_settings
         assert settings.currency == "EUR"

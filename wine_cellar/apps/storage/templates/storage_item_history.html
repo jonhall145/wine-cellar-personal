@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% load static i18n %}
+{% load static %}
 {% block header %}
-    <h1 class="header__title">{% translate "Stock History" %}</h1>
+    <h1 class="header__title">Stock History</h1>
 {% endblock header %}
 {% block content %}
     <div class="storage-list__container">
@@ -10,11 +10,11 @@
                 {% if storage_items %}
                     <table class="storage-list__table">
                         <tr>
-                            <th>{% if CELLAR_APP_TYPE == "whisky" %}{% translate "Whisky" %}{% else %}{% translate "Wine" %}{% endif %}</th>
-                            <th>{% translate "Location" %}</th>
-                            <th>{% translate "Row" %}</th>
-                            <th>{% translate "Cell" %}</th>
-                            <th>{% translate "Removed" %}</th>
+                            <th>{% if CELLAR_APP_TYPE == "whisky" %}Whisky{% else %}Wine{% endif %}</th>
+                            <th>Location</th>
+                            <th>Row</th>
+                            <th>Cell</th>
+                            <th>Removed</th>
                             <th></th>
                         </tr>
                         {% for item in storage_items %}
@@ -35,7 +35,7 @@
                     </table>
                     {% include "includes/pagination.html" %}
                 {% else %}
-                    <p>{% if CELLAR_APP_TYPE == "whisky" %}{% translate "No whiskies here yet." %}{% else %}{% translate "No wines here yet." %}{% endif %}</p>
+                    <p>{% if CELLAR_APP_TYPE == "whisky" %}No whiskies here yet.{% else %}No wines here yet.{% endif %}</p>
                 {% endif %}
             </div>
         </div>

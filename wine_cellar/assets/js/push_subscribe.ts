@@ -3,8 +3,6 @@
  * Manages browser push permission and sends subscription to the server.
  */
 
-const gettext = (window as any).django?.gettext || ((s: string) => s);
-
 function getCookie(name: string): string {
   const match = document.cookie.match(new RegExp('(^|;\\s*)' + name + '=([^;]*)'));
   return match ? decodeURIComponent(match[2]) : '';
@@ -82,16 +80,16 @@ function updateUI(
   subscribed: boolean,
 ): void {
   if (subscribed) {
-    btn.textContent = gettext('Disable Push Notifications');
+    btn.textContent = 'Disable Push Notifications';
     btn.classList.remove('button__primary');
     btn.classList.add('button__danger');
-    status.textContent = gettext('Push notifications are enabled.');
+    status.textContent = 'Push notifications are enabled.';
     status.className = 'push-status push-status--active';
   } else {
-    btn.textContent = gettext('Enable Push Notifications');
+    btn.textContent = 'Enable Push Notifications';
     btn.classList.remove('button__danger');
     btn.classList.add('button__primary');
-    status.textContent = gettext('Push notifications are disabled.');
+    status.textContent = 'Push notifications are disabled.';
     status.className = 'push-status push-status--inactive';
   }
 }
@@ -106,9 +104,7 @@ async function init(): Promise<void> {
 
   // Check browser support
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    status.textContent = gettext(
-      'Push notifications are not supported in this browser.',
-    );
+    status.textContent = 'Push notifications are not supported in this browser.';
     status.className = 'push-status push-status--unsupported';
     btn.classList.add('push-toggle-btn--hidden');
     return;
@@ -129,15 +125,13 @@ async function init(): Promise<void> {
         if (ok) {
           isSubscribed = false;
         } else {
-          status.textContent = gettext('Failed to disable notifications. Please try again.');
+          status.textContent = 'Failed to disable notifications. Please try again.';
           return;
         }
       } else {
         const vapidKey = await getVapidKey();
         if (!vapidKey) {
-          status.textContent = gettext(
-            'Push not configured on the server.',
-          );
+          status.textContent = 'Push not configured on the server.';
           return;
         }
         const ok = await subscribePush(vapidKey);
@@ -146,13 +140,11 @@ async function init(): Promise<void> {
       updateUI(btn, status, isSubscribed);
     } catch (err: any) {
       if (Notification.permission === 'denied') {
-        status.textContent = gettext(
-          'Notifications blocked. Please allow in browser settings.',
-        );
+        status.textContent = 'Notifications blocked. Please allow in browser settings.';
         status.className = 'push-status push-status--denied';
         btn.classList.add('push-toggle-btn--hidden');
       } else {
-        status.textContent = gettext('Something went wrong. Please try again.');
+        status.textContent = 'Something went wrong. Please try again.';
       }
     } finally {
       btn.disabled = false;

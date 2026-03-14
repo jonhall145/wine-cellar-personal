@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static i18n core_tags %}
+{% load static core_tags %}
 {% block styles %}
     {{ block.super }}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
@@ -355,10 +355,10 @@
                 if (!primaryBtn) return;
                 if (isPrimary) {
                     primaryBtn.classList.add('wine-images__btn--active');
-                    primaryBtn.innerHTML = '<i class="fa-solid fa-star"></i> {% translate "Primary" %}';
+                    primaryBtn.innerHTML = '<i class="fa-solid fa-star"></i> Primary';
                 } else {
                     primaryBtn.classList.remove('wine-images__btn--active');
-                    primaryBtn.innerHTML = '<i class="fa-regular fa-star"></i> {% translate "Set as Primary" %}';
+                    primaryBtn.innerHTML = '<i class="fa-regular fa-star"></i> Set as Primary';
                 }
             }
 
@@ -396,7 +396,7 @@
                                     if (wrapper) {
                                         const badge = document.createElement('span');
                                         badge.className = 'wine-images__primary-badge';
-                                        badge.textContent = '{% translate "Primary" %}';
+                                        badge.textContent = 'Primary';
                                         wrapper.appendChild(badge);
                                     }
                                 }
@@ -490,11 +490,11 @@
                         }
                         closeCropModal();
                     } else {
-                        alert('{% translate "Error cropping image" %}: ' + (data.error || 'Unknown error'));
+                        alert('Error cropping image: ' + (data.error || 'Unknown error'));
                     }
                 })
                 .catch(function(err) {
-                    alert('{% translate "Error cropping image" %}: ' + err.message);
+                    alert('Error cropping image: ' + err.message);
                 });
             }
 
@@ -517,16 +517,16 @@
     </script>
 {% endblock extra_js %}
 {% block title %}
-    {% translate "Edit Images" %} - {{ beverage.name }}
+    Edit Images - {{ beverage.name }}
 {% endblock title %}
 {% block header %}
-    <h1 class="header__title">{% translate "Edit Images" %}</h1>
+    <h1 class="header__title">Edit Images</h1>
 {% endblock header %}
 {% block content %}
     {% csrf_token %}
     <div class="wine-images">
         <a href="{% bev_url 'detail' beverage.pk %}" class="wine-images__back">
-            <i class="fa-solid fa-arrow-left"></i> {% translate "Back to" %} {{ beverage.name }}
+            <i class="fa-solid fa-arrow-left"></i> Back to {{ beverage.name }}
         </a>
 
         {% if images %}
@@ -534,7 +534,7 @@
             <div class="wine-images__preview">
                 <img id="preview-image"
                      src="{{ images.0.image.url }}"
-                     alt="{% translate 'Selected image' %}"
+                     alt="Selected image"
                      width="300"
                      height="300">
             </div>
@@ -552,7 +552,7 @@
                              width="80"
                              height="80">
                         {% if img.is_primary %}
-                            <span class="wine-images__primary-badge">{% translate "Primary" %}</span>
+                            <span class="wine-images__primary-badge">Primary</span>
                         {% endif %}
                     </div>
                 {% endfor %}
@@ -562,13 +562,13 @@
             <div class="wine-images__actions">
                 <button type="button" id="primary-btn" class="wine-images__btn {% if images.0.is_primary %}wine-images__btn--active{% endif %}">
                     {% if images.0.is_primary %}
-                        <i class="fa-solid fa-star"></i> {% translate "Primary" %}
+                        <i class="fa-solid fa-star"></i> Primary
                     {% else %}
-                        <i class="fa-regular fa-star"></i> {% translate "Set as Primary" %}
+                        <i class="fa-regular fa-star"></i> Set as Primary
                     {% endif %}
                 </button>
                 <button type="button" id="crop-btn" class="wine-images__btn wine-images__btn--primary">
-                    <i class="fa-solid fa-crop"></i> {% translate "Crop" %}
+                    <i class="fa-solid fa-crop"></i> Crop
                 </button>
             </div>
         {% else %}
@@ -576,9 +576,9 @@
                 <div class="wine-images__empty-icon">
                     <i class="fa-regular fa-image"></i>
                 </div>
-                <p>{% blocktranslate with item_name=APP_ITEM_NAME %}No images for this {{ item_name }}.{% endblocktranslate %}</p>
+                <p>No images for this {{ APP_ITEM_NAME }}.</p>
                 <a href="{% bev_url 'edit' beverage.pk %}" class="pure-button button__primary">
-                    {% translate "Add Images" %}
+                    Add Images
                 </a>
             </div>
         {% endif %}
@@ -587,17 +587,17 @@
     <!-- Crop Modal -->
     <div id="crop-modal" class="crop-modal">
         <div class="crop-modal__header">
-            <span class="crop-modal__title">{% translate "Crop Image" %}</span>
-            <button type="button" class="crop-modal__close" aria-label="{% translate 'Close' %}">
+            <span class="crop-modal__title">Crop Image</span>
+            <button type="button" class="crop-modal__close" aria-label="Close">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
         <div class="crop-modal__body">
-            <img id="crop-image" src="" alt="{% translate 'Crop preview' %}" width="100%" height="auto">
+            <img id="crop-image" src="" alt="Crop preview" width="100%" height="auto">
         </div>
         <div class="crop-modal__footer">
-            <button type="button" class="crop-modal__btn crop-modal__btn--cancel">{% translate "Cancel" %}</button>
-            <button type="button" class="crop-modal__btn crop-modal__btn--save">{% translate "Save Crop" %}</button>
+            <button type="button" class="crop-modal__btn crop-modal__btn--cancel">Cancel</button>
+            <button type="button" class="crop-modal__btn crop-modal__btn--save">Save Crop</button>
         </div>
     </div>
 {% endblock content %}

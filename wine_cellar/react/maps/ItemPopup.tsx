@@ -1,11 +1,10 @@
 import React from 'react'
-import django from 'django'
 import { MapPopup } from './MapPopup'
 
 const translations = {
-  country: django.pgettext('Singular', 'Country'),
-  image_alt: django.gettext('Picture of a wine bottle.'),
-  vintage: django.gettext('Vintage'),
+  country: 'Country',
+  image_alt: 'Picture of a wine bottle.',
+  vintage: 'Vintage',
 }
 
 /**

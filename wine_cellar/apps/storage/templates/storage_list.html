@@ -1,40 +1,40 @@
 {% extends 'base.html' %}
-{% load static i18n %}
+{% load static %}
 {% block header %}
-    <h1 class="header__title">{% translate "Storages" %}</h1>
+    <h1 class="header__title">Storages</h1>
 {% endblock header %}
 {% block content %}
     <div class="storage-list__container">
         <div class="pure-g">
             <div class="storage-list__menu pure-u-1 pure-u-md-1 text-align-center">
-                <a href="{% url 'storage-add' %}" class="pure-button button__neutral"><i class="fa-regular fa-plus"></i> <span>{% translate "Add Storage" %}</span></a>
-                <a href="{% url 'stock-history' %}" class="pure-button button__neutral"><i class="fa-solid fa-clock-rotate-left"></i> <span>{% translate "Show Stock History" %}</span></a>
+                <a href="{% url 'storage-add' %}" class="pure-button button__neutral"><i class="fa-regular fa-plus"></i> <span>Add Storage</span></a>
+                <a href="{% url 'stock-history' %}" class="pure-button button__neutral"><i class="fa-solid fa-clock-rotate-left"></i> <span>Show Stock History</span></a>
             </div>
             <div class="pure-u-1 pure-u-md-1 text-align-center">
                 {% if storages %}
                     <div class="storage-list__table-wrapper">
                     <table class="storage-list__table">
                         <tr>
-                            <th>{% translate "Name" %}</th>
-                            <th>{% translate "Location" %}</th>
-                            <th>{% translate "Used Slots" %}</th>
-                            <th>{% translate "Total Slots" %}</th>
-                            <th>{% translate "Order" %}</th>
+                            <th>Name</th>
+                            <th>Location</th>
+                            <th>Used Slots</th>
+                            <th>Total Slots</th>
+                            <th>Order</th>
                             <th></th>
                         </tr>
                         {% for item in storages %}
                             <tr>
                                 <td>
                                     <a href="{% url 'storage-detail' item.pk %}">{{ item.name }}</a>
-                                    {% if item.is_cold %}<i class="fa-solid fa-snowflake" title="{% translate 'Cold Storage' %}"></i>{% endif %}
-                                    {% if item.is_default %}<i class="fa-solid fa-star" title="{% translate 'Default Storage' %}"></i>{% endif %}
+                                    {% if item.is_cold %}<i class="fa-solid fa-snowflake" title="Cold Storage"></i>{% endif %}
+                                    {% if item.is_default %}<i class="fa-solid fa-star" title="Default Storage"></i>{% endif %}
                                 </td>
                                 <td>{{ item.location|default_if_none:"" }}</td>
                                 <td>{{ item.used_slots|default_if_none:"" }}</td>
                                 <td>{{ item.total_slots|default_if_none:"" }}</td>
                                 <td>
-                                    <a class="pure-button" href="{% url 'storage-move-up' item.pk %}" title="{% translate 'Move Up' %}"><i class="fa-solid fa-arrow-up"></i></a>
-                                    <a class="pure-button" href="{% url 'storage-move-down' item.pk %}" title="{% translate 'Move Down' %}"><i class="fa-solid fa-arrow-down"></i></a>
+                                    <a class="pure-button" href="{% url 'storage-move-up' item.pk %}" title="Move Up"><i class="fa-solid fa-arrow-up"></i></a>
+                                    <a class="pure-button" href="{% url 'storage-move-down' item.pk %}" title="Move Down"><i class="fa-solid fa-arrow-down"></i></a>
                                 </td>
                                 <td>
                                     <a class="pure-button" href="{% url 'storage-delete' item.pk %}"><i class="fa-regular fa-trash-can"></i></a>
@@ -47,10 +47,10 @@
                 {% else %}
                     <div class="empty-state">
                         <div class="empty-state__icon"><i class="fa-solid fa-warehouse"></i></div>
-                        <h3 class="empty-state__title">{% translate "No storage locations yet" %}</h3>
-                        <p class="empty-state__message">{% translate "Create a storage location to organize your wine collection. You can define shelves, racks, or any storage setup." %}</p>
+                        <h3 class="empty-state__title">No storage locations yet</h3>
+                        <p class="empty-state__message">Create a storage location to organize your wine collection. You can define shelves, racks, or any storage setup.</p>
                         <a href="{% url 'storage-add' %}" class="pure-button button__primary empty-state__action">
-                            <i class="fa-solid fa-plus"></i> {% translate "Add Storage" %}
+                            <i class="fa-solid fa-plus"></i> Add Storage
                         </a>
                     </div>
                 {% endif %}

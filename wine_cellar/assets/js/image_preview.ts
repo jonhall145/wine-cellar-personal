@@ -159,8 +159,8 @@ function initImagePreview() {
 
     if (clearCheckbox && preview) {
       const setClearControlLabels = (checked: boolean) => {
-        const clearTitle = gettext('Clear Image')
-        const restoreTitle = gettext('Restore image')
+        const clearTitle = 'Clear Image'
+        const restoreTitle = 'Restore image'
         const title = checked ? restoreTitle : clearTitle
         clearCheckbox.title = title
         clearCheckbox.setAttribute('aria-label', title)

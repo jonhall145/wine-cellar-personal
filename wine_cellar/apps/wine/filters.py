@@ -2,7 +2,6 @@ from datetime import date
 
 import django_filters
 from django.db.models import Q
-from django.utils.translation import gettext_lazy as _
 from django_filters import ChoiceFilter, OrderingFilter
 
 from wine_cellar.apps.core.filters import (
@@ -37,7 +36,7 @@ def get_appellation_choices(user=None):
         storage_item_reverse="storageitem",
         order_by=("country", "name"),
         format_choice=lambda app: f"{app.name} ({app.country})",
-        extra_choices=[("missing", _("Missing"))],
+        extra_choices=[("missing", "Missing")],
     )
 
 
@@ -52,75 +51,75 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
         "storageitem__notes__note",
     )
 
-    search = django_filters.CharFilter(method="filter_search", label=_("Search"))
+    search = django_filters.CharFilter(method="filter_search", label="Search")
     stock = ChoiceFilter(
         method="filter_has_stock",
-        label=_("Show only in stock"),
-        choices=((0, _("No")), (1, _("Yes"))),
+        label="Show only in stock",
+        choices=((0, "No"), (1, "Yes")),
         empty_label=None,
         null_label=None,
     )
     country = ChoiceFilter(
         choices=[],
-        label=_("Country"),
+        label="Country",
     )
     appellation = ChoiceFilter(
         choices=[],
-        label=_("Appellation"),
+        label="Appellation",
         method="filter_appellation",
     )
     rating = ChoiceFilter(
         method="filter_rating",
-        label=_("Rating"),
+        label="Rating",
         choices=(
-            ("", _("Any")),
-            (0, _("0 Stars")),
-            (1, _("1 Star")),
-            (2, _("2 Stars")),
-            (3, _("3 Stars")),
+            ("", "Any"),
+            (0, "0 Stars"),
+            (1, "1 Star"),
+            (2, "2 Stars"),
+            (3, "3 Stars"),
         ),
     )
     ready_to_drink = ChoiceFilter(
         method="filter_ready_to_drink",
-        label=_("Ready to Drink"),
+        label="Ready to Drink",
         choices=(
-            ("", _("Any")),
-            (0, _("No")),
-            (1, _("Yes")),
+            ("", "Any"),
+            (0, "No"),
+            (1, "Yes"),
         ),
     )
     has_window = ChoiceFilter(
         method="filter_has_window",
-        label=_("Has Drink Window"),
+        label="Has Drink Window",
         choices=(
-            ("", _("Any")),
-            (0, _("No")),
-            (1, _("Yes")),
+            ("", "Any"),
+            (0, "No"),
+            (1, "Yes"),
         ),
     )
     is_cold = ChoiceFilter(
         method="filter_is_cold",
-        label=_("Cold Storage"),
-        choices=(("", _("Any")), (0, _("No")), (1, _("Yes"))),
+        label="Cold Storage",
+        choices=(("", "Any"), (0, "No"), (1, "Yes")),
     )
     collection = ChoiceFilter(
         choices=[],
-        label=_("Collection"),
+        label="Collection",
         method="filter_collection",
     )
     order = OrderingFilter(
         choices=(
-            ("-created", _("Recently Added")),
-            ("created", _("Least Recently Added")),
-            ("-name", _("Name Descending")),
-            ("name", _("Name Ascending")),
-            ("-vintage", _("Youngest First")),
-            ("vintage", _("Oldest First")),
-            ("drink_to", _("Drink Until")),
-            ("-effective_price", _("Highest Price (Avg)")),
-            ("effective_price", _("Lowest Price (Avg)")),
+            ("-created", "Recently Added"),
+            ("created", "Least Recently Added"),
+            ("-name", "Name Descending"),
+            ("name", "Name Ascending"),
+            ("-vintage", "Youngest First"),
+            ("vintage", "Oldest First"),
+            ("drink_to", "Drink Until"),
+            ("-effective_price", "Highest Price (Avg)"),
+            ("effective_price", "Lowest Price (Avg)"),
         ),
-        label=_("Sorting"),
+        label="Sorting",
         empty_label=None,
         null_label=None,
         method="filter_order",

@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
-{% load static i18n whisky_tags %}
+{% load static whisky_tags %}
 {% block extra_js %}
     {{ block.super }}
     <script src="{% static 'tom_select.js' %}" type="module" defer></script>
 {% endblock extra_js %}
 {% block header %}
-    <h1 class="header__title">{% translate 'All Bottles' %}</h1>
+    <h1 class="header__title">All Bottles</h1>
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
@@ -14,14 +14,14 @@
             <div class="filter-form__sm-container">
                 <details>
                     <summary>
-                        <h2 class="filter-form__header">{% translate "Filter & Sorting" %}</h2>
+                        <h2 class="filter-form__header">Filter & Sorting</h2>
                     </summary>
                     <div>
                         <form action="."
                               method="get"
                               class="filter-form pure-form pure-form-stacked">
                             <fieldset>
-                                <legend class="filter-legend">{% translate 'Filter Bottles' %}</legend>
+                                <legend class="filter-legend">Filter Bottles</legend>
                                 {% for field in filter.form %}
                                     {% include "whisky/whisky_filter_field.html" %}
                                 {% endfor %}
@@ -29,10 +29,10 @@
                             <a href="?"
                                role="button"
                                class="pure-button button__secondary"
-                               aria-label='{% translate "Clear all filters and reset the form" %}'>
-                                {% translate "Clear" %}
+                               aria-label='Clear all filters and reset the form'>
+                                Clear
                             </a>
-                            <button type="submit" class="pure-button button__primary">{% translate "Filter" %}</button>
+                            <button type="submit" class="pure-button button__primary">Filter</button>
                         </form>
                     </div>
                 </details>
@@ -44,7 +44,7 @@
                 <fieldset>
                     <div class="filter-legend">
                         <legend>
-                            <h3 class="text-align-left">{% translate "Filter & Sorting" %}</h3>
+                            <h3 class="text-align-left">Filter & Sorting</h3>
                         </legend>
                     </div>
                     {% for field in filter.form %}
@@ -54,8 +54,8 @@
                 <a href="?"
                    role="button"
                    class="pure-button button__secondary"
-                   aria-label='{% translate "Clear all filters and reset the form" %}'>{% translate "Clear" %}</a>
-                <button type="submit" class="pure-button button__primary">{% translate "Filter" %}</button>
+                   aria-label='Clear all filters and reset the form'>Clear</a>
+                <button type="submit" class="pure-button button__primary">Filter</button>
             </form>
         </div>
         <div class="pure-u-1 pure-u-sm-15-24 pure-u-md-17-24">
@@ -64,14 +64,14 @@
                     <table class="pure-table pure-table-horizontal pure-table-striped">
                         <thead>
                             <tr>
-                                <th>{% translate "Whisky" %}</th>
-                                <th>{% translate "Storage" %}</th>
-                                <th>{% translate "Position" %}</th>
-                                <th>{% translate "Fill Level" %}</th>
-                                <th>{% translate "Rating" %}</th>
-                                <th>{% translate "Gift" %}</th>
-                                <th>{% translate "Occasion" %}</th>
-                                <th>{% translate "Actions" %}</th>
+                                <th>Whisky</th>
+                                <th>Storage</th>
+                                <th>Position</th>
+                                <th>Fill Level</th>
+                                <th>Rating</th>
+                                <th>Gift</th>
+                                <th>Occasion</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -101,7 +101,7 @@
                                         {% if bottle.rating is not None %}
                                             {% rating_stars bottle.rating %}
                                         {% elif bottle.whisky.rating is not None %}
-                                            {% rating_stars bottle.whisky.rating %} <span class="text--gray" title="{% translate 'Inherited from whisky' %}">({% translate "whisky" %})</span>
+                                            {% rating_stars bottle.whisky.rating %} <span class="text--gray" title="Inherited from whisky">(whisky)</span>
                                         {% else %}
                                             -
                                         {% endif %}
@@ -116,12 +116,12 @@
                                     <td>
                                         <a class="pure-button"
                                            href="{% url 'bottle-edit' bottle.pk %}?next=list"
-                                           title="{% translate 'Edit bottle' %}">
+                                           title="Edit bottle">
                                             <i class="fa-regular fa-pen-to-square"></i>
                                         </a>
                                         <a class="pure-button"
                                            href="{% url 'stock-delete' bottle.pk %}"
-                                           title="{% translate 'Remove bottle' %}">
+                                           title="Remove bottle">
                                             <i class="fa-regular fa-trash-can"></i>
                                         </a>
                                     </td>
@@ -134,10 +134,10 @@
             {% else %}
                 <div class="empty-state">
                     <div class="empty-state__icon"><i class="fa-solid fa-whiskey-glass"></i></div>
-                    <h3 class="empty-state__title">{% translate "No bottles found" %}</h3>
-                    <p class="empty-state__message">{% translate "Add whiskies to your collection and stock bottles to see them here." %}</p>
+                    <h3 class="empty-state__title">No bottles found</h3>
+                    <p class="empty-state__message">Add whiskies to your collection and stock bottles to see them here.</p>
                     <a href="{% url 'whisky-add' %}" class="pure-button button__primary empty-state__action">
-                        <i class="fa-solid fa-plus"></i> {% translate "Add Whisky" %}
+                        <i class="fa-solid fa-plus"></i> Add Whisky
                     </a>
                 </div>
             {% endif %}

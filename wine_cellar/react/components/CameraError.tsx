@@ -1,24 +1,14 @@
 import React from 'react'
-import django from 'django'
-
 const translated = {
-  cameraError: django.gettext('Camera access denied'),
-  cameraErrorHint: django.gettext(
-    'Please allow camera access in your browser settings, or ensure you are using HTTPS.'
-  ),
-  httpsRequired: django.gettext('HTTPS required'),
-  httpsRequiredHint: django.gettext(
-    'Camera access requires a secure connection (HTTPS). Please access this page via HTTPS.'
-  ),
-  noCameraFound: django.gettext('No camera found'),
-  noCameraFoundHint: django.gettext(
-    'No camera was detected on this device. Please ensure a camera is connected.'
-  ),
-  unknownError: django.gettext('Scanner error'),
-  unknownErrorHint: django.gettext(
-    'An error occurred while accessing the camera. Please try again.'
-  ),
-  retryButton: django.gettext('Try Again'),
+  cameraError: 'Camera access denied',
+  cameraErrorHint: 'Please allow camera access in your browser settings, or ensure you are using HTTPS.',
+  httpsRequired: 'HTTPS required',
+  httpsRequiredHint: 'Camera access requires a secure connection (HTTPS). Please access this page via HTTPS.',
+  noCameraFound: 'No camera found',
+  noCameraFoundHint: 'No camera was detected on this device. Please ensure a camera is connected.',
+  unknownError: 'Scanner error',
+  unknownErrorHint: 'An error occurred while accessing the camera. Please try again.',
+  retryButton: 'Try Again',
 }
 
 export type CameraErrorType = 'permission' | 'https' | 'notfound' | 'unknown' | null

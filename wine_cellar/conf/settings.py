@@ -13,8 +13,6 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 
-from django.utils.translation import gettext_lazy as _
-
 from wine_cellar import __version__
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -171,20 +169,12 @@ LANGUAGE_CODE = "en-gb"
 
 TIME_ZONE = "Europe/Berlin"
 
-USE_I18N = False
-
 USE_TZ = True
 
-LOCALE_PATHS = []
-
-LANGUAGES = [
-    ("en-gb", _("British English")),
-]
-
 CURRENCIES = [
-    ("EUR", _("Euro")),
-    ("USD", _("Dollar")),
-    ("GBP", _("Pound Sterling")),
+    ("EUR", "Euro"),
+    ("USD", "Dollar"),
+    ("GBP", "Pound Sterling"),
 ]
 
 CURRENCY_SYMBOLS = {"EUR": "€", "USD": "$", "GBP": "£"}

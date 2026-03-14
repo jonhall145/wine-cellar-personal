@@ -1,65 +1,64 @@
-{% load i18n %}
 {# Navigation menu items - included in both small and large screen menus #}
 {% if user.is_authenticated %}
     {% if CELLAR_APP_TYPE == 'whisky' %}
         <li class="pure-menu-item">
-            <a href="{% url 'whisky-list' %}" class="pure-menu-link">{% translate "Whiskies" %}</a>
+            <a href="{% url 'whisky-list' %}" class="pure-menu-link">Whiskies</a>
         </li>
         <li class="pure-menu-item">
-            <a href="{% url 'whisky-add' %}" class="pure-menu-link">{% translate "Add Whisky" %}</a>
+            <a href="{% url 'whisky-add' %}" class="pure-menu-link">Add Whisky</a>
         </li>
         <li class="pure-menu-item">
-            <a href="{% url 'whisky-scan' %}" class="pure-menu-link">{% translate "Scan" %}</a>
+            <a href="{% url 'whisky-scan' %}" class="pure-menu-link">Scan</a>
         </li>
         <li class="pure-menu-item">
-            <a href="{% url 'whisky-map' %}" class="pure-menu-link">{% translate "Map" %}</a>
+            <a href="{% url 'whisky-map' %}" class="pure-menu-link">Map</a>
         </li>
     {% else %}
         <li class="pure-menu-item">
-            <a href="{% url 'wine-list' %}" class="pure-menu-link">{% translate "Wines" %}</a>
+            <a href="{% url 'wine-list' %}" class="pure-menu-link">Wines</a>
         </li>
         <li class="pure-menu-item">
-            <a href="{% url 'wine-add' %}" class="pure-menu-link">{% translate "Add Wine" %}</a>
+            <a href="{% url 'wine-add' %}" class="pure-menu-link">Add Wine</a>
         </li>
         <li class="pure-menu-item">
-            <a href="{% url 'wine-scan' %}" class="pure-menu-link">{% translate "Scan Wine" %}</a>
+            <a href="{% url 'wine-scan' %}" class="pure-menu-link">Scan Wine</a>
         </li>
         <li class="pure-menu-item">
-            <a href="{% url 'wine-map' %}" class="pure-menu-link">{% translate "Map" %}</a>
+            <a href="{% url 'wine-map' %}" class="pure-menu-link">Map</a>
         </li>
     {% endif %}
     <li class="pure-menu-item">
-        <a href="{% url 'storage-list' %}" class="pure-menu-link">{% translate "Storage" %}</a>
+        <a href="{% url 'storage-list' %}" class="pure-menu-link">Storage</a>
     </li>
     <li class="pure-menu-item">
-        <a href="{% url 'bottle-list' %}" class="pure-menu-link">{% translate "Bottles" %}{% if nav_bottle_count %} <span class="nav-badge">{{ nav_bottle_count }}</span>{% endif %}</a>
+        <a href="{% url 'bottle-list' %}" class="pure-menu-link">Bottles{% if nav_bottle_count %} <span class="nav-badge">{{ nav_bottle_count }}</span>{% endif %}</a>
     </li>
     <li class="pure-menu-item pure-menu-has-children pure-menu-allow-hover">
-        <a href="#" class="pure-menu-link">{% translate "More" %}{% if show_dropdown_indicator %} ▾{% endif %}</a>
+        <a href="#" class="pure-menu-link">More{% if show_dropdown_indicator %} ▾{% endif %}</a>
         <ul class="pure-menu-children">
             <li class="pure-menu-item">
-                <a href="{% url 'wishlist-list' %}" class="pure-menu-link">{% translate "Wishlist" %}</a>
+                <a href="{% url 'wishlist-list' %}" class="pure-menu-link">Wishlist</a>
             </li>
             <li class="pure-menu-item">
-                <a href="{% url 'drink-history' %}" class="pure-menu-link">{% translate "Drink History" %}</a>
+                <a href="{% url 'drink-history' %}" class="pure-menu-link">Drink History</a>
             </li>
             <li class="pure-menu-item">
-                <a href="{% url 'journey-timeline' %}" class="pure-menu-link">{% translate "Journey Timeline" %}</a>
+                <a href="{% url 'journey-timeline' %}" class="pure-menu-link">Journey Timeline</a>
             </li>
             <li class="pure-menu-item">
-                <a href="{% url 'stats-dashboard' %}" class="pure-menu-link">{% translate "Dashboard" %}</a>
+                <a href="{% url 'stats-dashboard' %}" class="pure-menu-link">Dashboard</a>
             </li>
             <li class="pure-menu-item">
-                <a href="{% url 'consumption-stats' %}" class="pure-menu-link">{% translate "Statistics" %}</a>
+                <a href="{% url 'consumption-stats' %}" class="pure-menu-link">Statistics</a>
             </li>
             <li class="pure-menu-item">
-                <a href="{% url 'cellar-value' %}" class="pure-menu-link">{% translate "Cellar Value" %}</a>
+                <a href="{% url 'cellar-value' %}" class="pure-menu-link">Cellar Value</a>
             </li>
             <li class="pure-menu-item">
-                <a href="{% url 'drinking-alerts' %}" class="pure-menu-link">{% translate "Alerts" %}</a>
+                <a href="{% url 'drinking-alerts' %}" class="pure-menu-link">Alerts</a>
             </li>
             <li class="pure-menu-item">
-                <a href="{% url 'reorder-reminders' %}" class="pure-menu-link">{% translate "Reorder" %}</a>
+                <a href="{% url 'reorder-reminders' %}" class="pure-menu-link">Reorder</a>
             </li>
         </ul>
     </li>
@@ -82,7 +81,7 @@
                     {% endif %}
                 {% endfor %}
                 <li class="pure-menu-item">
-                    <a href="{% url 'household-list' %}" class="pure-menu-link">{% translate "Manage Households" %}</a>
+                    <a href="{% url 'household-list' %}" class="pure-menu-link">Manage Households</a>
                 </li>
             </ul>
         </li>
@@ -99,22 +98,22 @@
         </li>
     {% endif %}
     <li class="pure-menu-item">
-        <a href="{% url 'user-settings' %}" class="pure-menu-link">{% translate "Settings" %}</a>
+        <a href="{% url 'user-settings' %}" class="pure-menu-link">Settings</a>
     </li>
     <li class="pure-menu-item">
         <form action="{% url 'account_logout' %}" method="post">
             {% csrf_token %}
-            <button class="pure-menu-link button" type="submit">{% translate "Logout" %}</button>
+            <button class="pure-menu-link button" type="submit">Logout</button>
         </form>
     </li>
     <li class="pure-menu-item">
-        <button class="theme-toggle" type="button" aria-label="{% translate 'Toggle dark mode' %}">
+        <button class="theme-toggle" type="button" aria-label="Toggle dark mode">
             <i class="fa-solid fa-moon theme-toggle__icon--light"></i>
             <i class="fa-solid fa-sun theme-toggle__icon--dark"></i>
         </button>
     </li>
 {% else %}
     <li class="pure-menu-item">
-        <a href="{% url 'account_login' %}" class="pure-menu-link">{% translate "Login" %}</a>
+        <a href="{% url 'account_login' %}" class="pure-menu-link">Login</a>
     </li>
 {% endif %}

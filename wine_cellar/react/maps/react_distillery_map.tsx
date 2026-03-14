@@ -4,16 +4,15 @@ import BaseMap from './Map'
 import GeoJsonMarker from './GeoJsonMarker'
 import MarkerClusterLayer from './MarkerClusterLayer'
 import { MapPopup } from './MapPopup'
-import django from 'django'
 import ErrorBoundary from '../components/ErrorBoundary'
 
 const translated = {
-    region: django.gettext('Region'),
-    status: django.gettext('Status'),
-    founded: django.gettext('Founded'),
-    bottles: django.gettext('Bottles'),
-    loading: django.gettext('Loading map data...'),
-    allRegions: django.gettext('All Regions'),
+    region: 'Region',
+    status: 'Status',
+    founded: 'Founded',
+    bottles: 'Bottles',
+    loading: 'Loading map data...',
+    allRegions: 'All Regions',
 }
 
 interface DistilleryData {

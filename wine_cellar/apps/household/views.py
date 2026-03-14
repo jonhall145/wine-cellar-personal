@@ -6,7 +6,6 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.utils.translation import gettext_lazy as _
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -94,7 +93,7 @@ class HouseholdCreateView(LoginRequiredMixin, CreateView):
 
             messages.success(
                 self.request,
-                _("Household '%(name)s' created successfully.")
+                "Household '%(name)s' created successfully."
                 % {"name": self.object.name},
             )
         return response
@@ -148,7 +147,7 @@ class HouseholdSettingsView(RequireAdminMixin, UpdateView):
         return reverse("household-detail", kwargs={"pk": self.kwargs["pk"]})
 
     def form_valid(self, form):
-        messages.success(self.request, _("Household settings updated."))
+        messages.success(self.request, "Household settings updated.")
         return super().form_valid(form)
 
 
@@ -173,7 +172,7 @@ class HouseholdRenameView(RequireAdminMixin, UpdateView):
     def form_valid(self, form):
         messages.success(
             self.request,
-            _("Household renamed to '%(name)s'.") % {"name": form.cleaned_data["name"]},
+            "Household renamed to '%(name)s'." % {"name": form.cleaned_data["name"]},
         )
         return super().form_valid(form)
 
@@ -203,7 +202,7 @@ class HouseholdDeleteView(RequireOwnerMixin, DeleteView):
         )
         messages.success(
             self.request,
-            _("Household '%(name)s' has been deleted.") % {"name": household_name},
+            "Household '%(name)s' has been deleted." % {"name": household_name},
         )
         return super().form_valid(form)
 
@@ -226,11 +225,11 @@ class HouseholdSwitchView(LoginRequiredMixin, View):
             user_settings.save()
             messages.success(
                 request,
-                _("Switched to household '%(name)s'.")
+                "Switched to household '%(name)s'."
                 % {"name": membership.household.name},
             )
         else:
-            messages.error(request, _("Unable to switch household."))
+            messages.error(request, "Unable to switch household.")
 
         # Redirect to referring page or household list as a safe default
         safe_default_url = reverse("household-list")
@@ -281,7 +280,7 @@ class MemberInviteView(RequireAdminMixin, CreateView):
             ).exists():
                 messages.warning(
                     self.request,
-                    _("This user is already a member of the household."),
+                    "This user is already a member of the household.",
                 )
                 return redirect("household-detail", pk=self.kwargs["pk"])
 
@@ -294,14 +293,14 @@ class MemberInviteView(RequireAdminMixin, CreateView):
         if existing_invitation:
             messages.warning(
                 self.request,
-                _("An invitation has already been sent to this email."),
+                "An invitation has already been sent to this email.",
             )
             return redirect("household-detail", pk=self.kwargs["pk"])
 
         response = super().form_valid(form)
         messages.success(
             self.request,
-            _("Invitation sent to %(email)s.") % {"email": email},
+            "Invitation sent to %(email)s." % {"email": email},
         )
         # TODO: Send invitation email
         return response
@@ -332,7 +331,7 @@ class InvitationAcceptView(LoginRequiredMixin, TemplateView):
         # Check if invitation is valid
         if not invitation.is_valid():
             messages.error(
-                request, _("This invitation has expired or is no longer valid.")
+                request, "This invitation has expired or is no longer valid."
             )
             return redirect("household-list")
 
@@ -340,7 +339,7 @@ class InvitationAcceptView(LoginRequiredMixin, TemplateView):
         if invitation.email.lower() != request.user.email.lower():
             messages.error(
                 request,
-                _("This invitation was sent to a different email address."),
+                "This invitation was sent to a different email address.",
             )
             return redirect("household-list")
 
@@ -351,14 +350,14 @@ class InvitationAcceptView(LoginRequiredMixin, TemplateView):
 
         if not invitation.is_valid():
             messages.error(
-                request, _("This invitation has expired or is no longer valid.")
+                request, "This invitation has expired or is no longer valid."
             )
             return redirect("household-list")
 
         if invitation.email.lower() != request.user.email.lower():
             messages.error(
                 request,
-                _("This invitation was sent to a different email address."),
+                "This invitation was sent to a different email address.",
             )
             return redirect("household-list")
 
@@ -367,7 +366,7 @@ class InvitationAcceptView(LoginRequiredMixin, TemplateView):
         if membership:
             messages.success(
                 request,
-                _("You have joined '%(name)s'.") % {"name": invitation.household.name},
+                "You have joined '%(name)s'." % {"name": invitation.household.name},
             )
             # Set as active household if user doesn't have one
             user_settings = getattr(request.user, "user_settings", None)
@@ -375,7 +374,7 @@ class InvitationAcceptView(LoginRequiredMixin, TemplateView):
                 user_settings.active_household = invitation.household
                 user_settings.save()
         else:
-            messages.error(request, _("Unable to accept invitation."))
+            messages.error(request, "Unable to accept invitation.")
 
         return redirect("household-list")
 
@@ -393,8 +392,7 @@ class InvitationDeclineView(LoginRequiredMixin, View):
         invitation.decline()
         messages.info(
             request,
-            _("Invitation to '%(name)s' declined.")
-            % {"name": invitation.household.name},
+            "Invitation to '%(name)s' declined." % {"name": invitation.household.name},
         )
         return redirect("household-list")
 
@@ -420,7 +418,7 @@ class InvitationCancelView(RequireAdminMixin, View):
         )
         invitation.status = InvitationStatus.EXPIRED
         invitation.save()
-        messages.info(request, _("Invitation cancelled."))
+        messages.info(request, "Invitation cancelled.")
         return redirect("household-detail", pk=pk)
 
 
@@ -448,7 +446,7 @@ class MemberUpdateRoleView(RequireAdminMixin, UpdateView):
         obj = super().get_object(queryset)
         # Can't change owner's role
         if obj.role == HouseholdRole.OWNER:
-            raise Http404(_("Cannot change owner's role."))
+            raise Http404("Cannot change owner's role.")
         return obj
 
     def get_context_data(self, **kwargs):
@@ -463,7 +461,7 @@ class MemberUpdateRoleView(RequireAdminMixin, UpdateView):
     def form_valid(self, form):
         messages.success(
             self.request,
-            _("Role updated for %(user)s.") % {"user": self.object.user.username},
+            "Role updated for %(user)s." % {"user": self.object.user.username},
         )
         return super().form_valid(form)
 
@@ -491,7 +489,7 @@ class MemberRemoveView(RequireAdminMixin, DeleteView):
         obj = super().get_object(queryset)
         # Can't remove owner
         if obj.role == HouseholdRole.OWNER:
-            raise Http404(_("Cannot remove the owner."))
+            raise Http404("Cannot remove the owner.")
         return obj
 
     def get_context_data(self, **kwargs):
@@ -515,7 +513,7 @@ class MemberRemoveView(RequireAdminMixin, DeleteView):
 
         messages.success(
             self.request,
-            _("%(user)s has been removed from the household.") % {"user": username},
+            "%(user)s has been removed from the household." % {"user": username},
         )
         return super().form_valid(form)
 
@@ -533,10 +531,8 @@ class MemberLeaveView(LoginRequiredMixin, View):
         if membership.role == HouseholdRole.OWNER:
             messages.error(
                 request,
-                _(
-                    "Owners cannot leave the household. "
-                    "Transfer ownership first or delete the household."
-                ),
+                "Owners cannot leave the household. "
+                "Transfer ownership first or delete the household.",
             )
             return redirect("household-detail", pk=pk)
 
@@ -551,7 +547,7 @@ class MemberLeaveView(LoginRequiredMixin, View):
         membership.delete()
         messages.success(
             request,
-            _("You have left '%(name)s'.") % {"name": household_name},
+            "You have left '%(name)s'." % {"name": household_name},
         )
         return redirect("household-list")
 
@@ -601,7 +597,7 @@ class TransferOwnershipView(RequireOwnerMixin, FormView):
 
         messages.success(
             self.request,
-            _("Ownership transferred to %(user)s.")
+            "Ownership transferred to %(user)s."
             % {"user": new_owner_membership.user.username},
         )
         return redirect("household-detail", pk=household.pk)

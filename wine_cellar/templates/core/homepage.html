@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static i18n core_tags %}
+{% load static core_tags %}
 {% block header %}
     <h1 class="header__title">{{ homepage_title }}</h1>
 {% endblock header %}
@@ -12,7 +12,7 @@
             {% if bottles_in_stock %}
                 <div class="t-center mt-12">
                     <a href="{% url 'random-bottle' %}" class="button button--primary">
-                        <i class="fa-solid fa-dice"></i> {% translate "What should I drink?" %}
+                        <i class="fa-solid fa-dice"></i> What should I drink?
                     </a>
                 </div>
             {% endif %}
@@ -23,7 +23,7 @@
     <!-- Recently Viewed -->
     <div class="pure-g j-center mt-12">
         <div class="pure-u-1 pure-u-md-2-3">
-            <h3 class="widget-card__title"><i class="fa-solid fa-clock-rotate-left"></i> {% translate "Recently Viewed" %}</h3>
+            <h3 class="widget-card__title"><i class="fa-solid fa-clock-rotate-left"></i> Recently Viewed</h3>
             <div class="recent-views">
                 {% for bev in recent_views %}
                     <a href="{% bev_url 'detail' bev.pk %}" class="recent-views__item">
@@ -49,12 +49,12 @@
                 <div class="pure-u-1 pure-u-md-1-2 dashboard-widget">
                     <div class="widget-card">
                         <h3 class="widget-card__title">
-                            <i class="fa-solid fa-bell"></i> {% translate "Alerts" %}
+                            <i class="fa-solid fa-bell"></i> Alerts
                         </h3>
                         <div class="widget-card__content">
                             {% include alerts_template %}
                         </div>
-                        <a href="{% url 'drinking-alerts' %}" class="widget-card__link">{% translate "View all alerts" %} →</a>
+                        <a href="{% url 'drinking-alerts' %}" class="widget-card__link">View all alerts →</a>
                     </div>
                 </div>
 
@@ -62,7 +62,7 @@
                 <div class="pure-u-1 pure-u-md-1-2 dashboard-widget">
                     <div class="widget-card">
                         <h3 class="widget-card__title">
-                            <i class="fa-solid fa-{{ beverage_icon }}"></i> {% translate "Recent Drinks" %}
+                            <i class="fa-solid fa-{{ beverage_icon }}"></i> Recent Drinks
                         </h3>
                         <div class="widget-card__content">
                             {% if recent_drinks %}
@@ -77,10 +77,10 @@
                                     {% endfor %}
                                 </ul>
                             {% else %}
-                                <div class="widget-empty"><i class="fa-regular fa-{{ beverage_icon }}"></i><span>{% translate "No drinks recorded yet" %}</span></div>
+                                <div class="widget-empty"><i class="fa-regular fa-{{ beverage_icon }}"></i><span>No drinks recorded yet</span></div>
                             {% endif %}
                         </div>
-                        <a href="{% url 'drink-history' %}" class="widget-card__link">{% translate "View drink history" %} →</a>
+                        <a href="{% url 'drink-history' %}" class="widget-card__link">View drink history →</a>
                     </div>
                 </div>
 
@@ -88,7 +88,7 @@
                 <div class="pure-u-1 pure-u-md-1-2 dashboard-widget">
                     <div class="widget-card">
                         <h3 class="widget-card__title">
-                            <i class="fa-solid fa-heart"></i> {% translate "Wishlist" %}
+                            <i class="fa-solid fa-heart"></i> Wishlist
                         </h3>
                         <div class="widget-card__content">
                             {% if wishlist_items %}
@@ -101,10 +101,10 @@
                                     {% endfor %}
                                 </ul>
                             {% else %}
-                                <div class="widget-empty"><i class="fa-regular fa-heart"></i><span>{% translate "Wishlist is empty" %}</span></div>
+                                <div class="widget-empty"><i class="fa-regular fa-heart"></i><span>Wishlist is empty</span></div>
                             {% endif %}
                         </div>
-                        <a href="{% url 'wishlist-list' %}" class="widget-card__link">{% translate "View wishlist" %} →</a>
+                        <a href="{% url 'wishlist-list' %}" class="widget-card__link">View wishlist →</a>
                     </div>
                 </div>
 
@@ -112,27 +112,27 @@
                 <div class="pure-u-1 pure-u-md-1-2 dashboard-widget">
                     <div class="widget-card">
                         <h3 class="widget-card__title">
-                            <i class="fa-solid fa-chart-bar"></i> {% translate "Quick Stats" %}
+                            <i class="fa-solid fa-chart-bar"></i> Quick Stats
                         </h3>
                         <div class="widget-card__content">
                             <ul class="widget-list">
                                 <li>
-                                    {% translate "Total consumed" %}:
+                                    Total consumed:
                                     <strong>{{ total_consumed }}</strong>
                                 </li>
                                 <li>
-                                    {% translate "Total bottles" %}:
+                                    Total bottles:
                                     <strong>{{ total_bottles }}</strong>
                                 </li>
                                 {% if avg_rating %}
                                     <li>
-                                        {% translate "Avg rating" %}:
+                                        Avg rating:
                                         <strong>{{ avg_rating }}/3</strong>
                                     </li>
                                 {% endif %}
                             </ul>
                         </div>
-                        <a href="{% url 'stats-dashboard' %}" class="widget-card__link">{% translate "View dashboard" %} →</a>
+                        <a href="{% url 'stats-dashboard' %}" class="widget-card__link">View dashboard →</a>
                     </div>
                 </div>
             </div>

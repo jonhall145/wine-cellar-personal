@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static i18n storage_tags %}
+{% load static storage_tags %}
 {% block extra_js %}
     {{ block.super }}
     <script src="{% static 'tom_select.js' %}" type="module" defer></script>
@@ -15,10 +15,10 @@
     </script>
 {% endblock extra_js %}
 {% block title %}
-    {% translate "Edit Bottle" %}
+    Edit Bottle
 {% endblock title %}
 {% block header %}
-    <h1 class="header__title">{% translate "Edit Bottle" %}</h1>
+    <h1 class="header__title">Edit Bottle</h1>
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
@@ -44,7 +44,7 @@
                         aria-live="assertive"
                         aria-atomic="true">
                         <li>
-                            <span>{% translate "This row of the shelf is full. Please choose another one." %}</span>
+                            <span>This row of the shelf is full. Please choose another one.</span>
                         </li>
                     </ul>
                     {% include 'forms/form_field.html' with field=form.column %}
@@ -60,11 +60,11 @@
                             <div class="pure-u-1 pure-u-sm-1-2">
                                 <button type="submit"
                                         name="save"
-                                        class="pure-button button__primary">{% translate "Save" %}</button>
+                                        class="pure-button button__primary">Save</button>
                             </div>
                             <div class="pure-u-1 pure-u-sm-1-2">
                                 <a href="{{ cancel_url }}"
-                                   class="pure-button button__secondary">{% translate "Cancel" %}</a>
+                                   class="pure-button button__secondary">Cancel</a>
                             </div>
                         </div>
                     </div>

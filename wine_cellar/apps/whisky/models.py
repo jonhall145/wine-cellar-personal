@@ -8,7 +8,6 @@ from django.db import models
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.formats import number_format
-from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.core.models import (
     HouseholdQuerySet,
@@ -60,21 +59,21 @@ def get_country_icon(code):
 
 
 class WhiskyType(models.TextChoices):
-    SINGLE_MALT = "SM", _("Single Malt")
-    BLENDED_MALT = "BM", _("Blended Malt")
-    BLENDED = "BL", _("Blended")
-    SINGLE_GRAIN = "SG", _("Single Grain")
+    SINGLE_MALT = "SM", "Single Malt"
+    BLENDED_MALT = "BM", "Blended Malt"
+    BLENDED = "BL", "Blended"
+    SINGLE_GRAIN = "SG", "Single Grain"
 
 
 class PeatedLevel(models.TextChoices):
-    UNPEATED = "UP", _("Unpeated")
-    PEATED = "PE", _("Peated")
+    UNPEATED = "UP", "Unpeated"
+    PEATED = "PE", "Peated"
 
 
 class FillLevel(models.TextChoices):
-    UNOPENED = "UN", _("Unopened")
-    OPENED = "OP", _("Opened")
-    DREG = "DR", _("Dreg")
+    UNOPENED = "UN", "Unopened"
+    OPENED = "OP", "Opened"
+    DREG = "DR", "Dreg"
 
 
 COMMON_CASK_TYPES = [
@@ -101,46 +100,46 @@ COMMON_CASK_TYPES = [
 
 
 class WoodType(models.TextChoices):
-    AMERICAN_OAK = "AO", _("American Oak")
-    EUROPEAN_OAK = "EO", _("European Oak")
-    JAPANESE_MIZUNARA = "JM", _("Japanese Mizunara")
-    FRENCH_OAK = "FO", _("French Oak")
-    OTHER = "OT", _("Other")
+    AMERICAN_OAK = "AO", "American Oak"
+    EUROPEAN_OAK = "EO", "European Oak"
+    JAPANESE_MIZUNARA = "JM", "Japanese Mizunara"
+    FRENCH_OAK = "FO", "French Oak"
+    OTHER = "OT", "Other"
 
 
 class PreviousContents(models.TextChoices):
-    BOURBON = "BO", _("Bourbon")
-    SHERRY_OLOROSO = "SO", _("Sherry (Oloroso)")
-    SHERRY_PX = "SP", _("Sherry (Pedro Ximénez)")
-    SHERRY_FINO = "SF", _("Sherry (Fino)")
-    PORT = "PO", _("Port")
-    RUM = "RU", _("Rum")
-    WINE_RED = "WR", _("Wine (Red)")
-    WINE_WHITE = "WW", _("Wine (White)")
-    MADEIRA = "MA", _("Madeira")
-    MARSALA = "MS", _("Marsala")
-    VIRGIN_OAK = "VO", _("Virgin Oak")
-    BEER = "BE", _("Beer / Ale")
-    OTHER = "OT", _("Other")
+    BOURBON = "BO", "Bourbon"
+    SHERRY_OLOROSO = "SO", "Sherry (Oloroso)"
+    SHERRY_PX = "SP", "Sherry (Pedro Ximénez)"
+    SHERRY_FINO = "SF", "Sherry (Fino)"
+    PORT = "PO", "Port"
+    RUM = "RU", "Rum"
+    WINE_RED = "WR", "Wine (Red)"
+    WINE_WHITE = "WW", "Wine (White)"
+    MADEIRA = "MA", "Madeira"
+    MARSALA = "MS", "Marsala"
+    VIRGIN_OAK = "VO", "Virgin Oak"
+    BEER = "BE", "Beer / Ale"
+    OTHER = "OT", "Other"
 
 
 class DistilleryStatus(models.TextChoices):
-    ACTIVE = "AC", _("Active")
-    SILENT = "SI", _("Silent")
-    CLOSED = "CL", _("Closed")
-    DEMOLISHED = "DE", _("Demolished")
+    ACTIVE = "AC", "Active"
+    SILENT = "SI", "Silent"
+    CLOSED = "CL", "Closed"
+    DEMOLISHED = "DE", "Demolished"
 
 
 class BottleSize(models.TextChoices):
-    MINIATURE = "0.05", _("Miniature (50ml)")
-    SAMPLE = "0.10", _("Sample (100ml)")
-    SMALL = "0.20", _("Small (200ml)")
-    HALF = "0.35", _("Half Bottle (350ml)")
-    HALF_LITRE = "0.50", _("Half Litre (500ml)")
-    STANDARD = "0.70", _("Standard (700ml)")
-    LITRE = "1.00", _("Litre (1000ml)")
-    MAGNUM = "1.50", _("Magnum (1500ml)")
-    OTHER = "0.00", _("Other")
+    MINIATURE = "0.05", "Miniature (50ml)"
+    SAMPLE = "0.10", "Sample (100ml)"
+    SMALL = "0.20", "Small (200ml)"
+    HALF = "0.35", "Half Bottle (350ml)"
+    HALF_LITRE = "0.50", "Half Litre (500ml)"
+    STANDARD = "0.70", "Standard (700ml)"
+    LITRE = "1.00", "Litre (1000ml)"
+    MAGNUM = "1.50", "Magnum (1500ml)"
+    OTHER = "0.00", "Other"
 
 
 # ---------------------------------------------------------------------------
@@ -237,7 +236,7 @@ class Bottler(models.Model):
 
 
 class WhiskyAttribute(UserContentModel):
-    name = models.CharField(max_length=100, verbose_name=_("Attribute"))
+    name = models.CharField(max_length=100, verbose_name="Attribute")
 
     class Meta:
         ordering = ["name"]
@@ -285,83 +284,83 @@ class WhiskyQuerySet(HouseholdQuerySet):
 class Whisky(UserContentModel):
     objects = WhiskyQuerySet.as_manager()
 
-    name = models.CharField(max_length=200, verbose_name=_("Name"))
+    name = models.CharField(max_length=200, verbose_name="Name")
     whisky_type = models.CharField(
         max_length=2,
         choices=WhiskyType.choices,
         default=WhiskyType.SINGLE_MALT,
-        verbose_name=_("Type"),
+        verbose_name="Type",
     )
     distillery = models.ForeignKey(
         Distillery,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        verbose_name=_("Distillery"),
+        verbose_name="Distillery",
     )
     region = models.ForeignKey(
         WhiskyRegion,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        verbose_name=_("Region"),
+        verbose_name="Region",
     )
-    country = models.CharField(max_length=2, default="XS", verbose_name=_("Country"))
+    country = models.CharField(max_length=2, default="XS", verbose_name="Country")
 
     # Age & dates
     age_statement = models.PositiveIntegerField(
         null=True,
         blank=True,
-        verbose_name=_("Age Statement"),
-        help_text=_("Leave blank for NAS (No Age Statement)."),
+        verbose_name="Age Statement",
+        help_text="Leave blank for NAS (No Age Statement).",
     )
     vintage_year = models.PositiveIntegerField(
         null=True,
         blank=True,
-        verbose_name=_("Distilled Year"),
+        verbose_name="Distilled Year",
     )
     bottled_year = models.PositiveIntegerField(
         null=True,
         blank=True,
-        verbose_name=_("Bottled Year"),
+        verbose_name="Bottled Year",
     )
 
     # Character
     abv = models.FloatField(
         null=True,
         blank=True,
-        verbose_name=_("ABV %"),
+        verbose_name="ABV %",
         validators=[MinValueValidator(0), MaxValueValidator(100)],
     )
     size = models.CharField(
         max_length=4,
         choices=BottleSize.choices,
         default=BottleSize.STANDARD,
-        verbose_name=_("Bottle Size"),
+        verbose_name="Bottle Size",
     )
     peated_level = models.CharField(
         max_length=2,
         choices=PeatedLevel.choices,
         null=True,
         blank=True,
-        verbose_name=_("Peated"),
+        verbose_name="Peated",
     )
     cask_type = models.CharField(
         max_length=100,
         blank=True,
         default="",
-        verbose_name=_("Cask Type"),
-        help_text=_("e.g. Bourbon, Sherry (Oloroso), Virgin Oak"),
+        verbose_name="Cask Type",
+        help_text="e.g. Bourbon, Sherry (Oloroso), Virgin Oak",
     )
     cask_strength = models.BooleanField(
         default=False,
-        verbose_name=_("Cask Strength"),
+        verbose_name="Cask Strength",
     )
     color = models.CharField(
         max_length=100,
         blank=True,
         default="",
-        verbose_name=_("Color"),
+        verbose_name="Color",
     )
 
     # Bottling details
@@ -370,50 +369,50 @@ class Whisky(UserContentModel):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        verbose_name=_("Bottler"),
-        help_text=_("Leave blank for Official Bottling (OB)."),
+        verbose_name="Bottler",
+        help_text="Leave blank for Official Bottling (OB).",
     )
     source = models.ForeignKey(
         "whisky.WhiskySource",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        verbose_name=_("Source"),
-        help_text=_("Where this whisky was purchased."),
+        verbose_name="Source",
+        help_text="Where this whisky was purchased.",
     )
     bottler_series = models.CharField(
         max_length=200,
         blank=True,
         default="",
-        verbose_name=_("Bottler Series"),
+        verbose_name="Bottler Series",
     )
     cask_number = models.CharField(
         max_length=100,
         blank=True,
         default="",
-        verbose_name=_("Cask Number"),
+        verbose_name="Cask Number",
     )
     batch_number = models.CharField(
         max_length=100,
         blank=True,
         default="",
-        verbose_name=_("Batch Number"),
+        verbose_name="Batch Number",
     )
     bottle_number = models.CharField(
         max_length=100,
         blank=True,
         default="",
-        verbose_name=_("Bottle Number"),
-        help_text=_("e.g. 123/500"),
+        verbose_name="Bottle Number",
+        help_text="e.g. 123/500",
     )
     limited_edition = models.BooleanField(
         default=False,
-        verbose_name=_("Limited Edition"),
+        verbose_name="Limited Edition",
     )
     release_year = models.PositiveIntegerField(
         null=True,
         blank=True,
-        verbose_name=_("Release Year"),
+        verbose_name="Release Year",
     )
 
     # Tracking
@@ -421,26 +420,26 @@ class Whisky(UserContentModel):
         null=True,
         blank=True,
         validators=[MinValueValidator(0), MaxValueValidator(3)],
-        verbose_name=_("Rating"),
+        verbose_name="Rating",
     )
     price = models.DecimalField(
         max_digits=8,
         decimal_places=2,
         null=True,
         blank=True,
-        verbose_name=_("Price"),
+        verbose_name="Price",
         validators=[MinValueValidator(0)],
     )
     comment = models.TextField(
         blank=True,
         default="",
-        verbose_name=_("Comment"),
+        verbose_name="Comment",
     )
     owner = models.CharField(
         max_length=100,
         blank=True,
         default="",
-        verbose_name=_("Owner"),
+        verbose_name="Owner",
     )
     deleted = models.BooleanField(default=False, db_index=True)
 
@@ -448,7 +447,7 @@ class Whisky(UserContentModel):
     attributes = models.ManyToManyField(
         WhiskyAttribute,
         blank=True,
-        verbose_name=_("Attributes"),
+        verbose_name="Attributes",
     )
 
     class Meta:
@@ -598,49 +597,47 @@ class CaskHistory(models.Model):
         related_name="cask_history",
     )
     order = models.PositiveIntegerField(
-        verbose_name=_("Maturation Order"),
-        help_text=_("1 = primary cask, 2+ = subsequent casks/finishes"),
+        verbose_name="Maturation Order",
+        help_text="1 = primary cask, 2+ = subsequent casks/finishes",
     )
     cask_type = models.CharField(
         max_length=100,
         blank=True,
         default="",
-        verbose_name=_("Cask Type"),
+        verbose_name="Cask Type",
     )
     wood_type = models.CharField(
         max_length=2,
         choices=WoodType.choices,
         blank=True,
         default="",
-        verbose_name=_("Wood Type"),
+        verbose_name="Wood Type",
     )
     previous_contents = models.CharField(
         max_length=2,
         choices=PreviousContents.choices,
-        verbose_name=_("Previous Contents"),
+        verbose_name="Previous Contents",
     )
     duration_years = models.PositiveIntegerField(
         null=True,
         blank=True,
-        verbose_name=_("Duration (years)"),
+        verbose_name="Duration (years)",
     )
     is_finish = models.BooleanField(
         default=False,
-        verbose_name=_("Finish"),
-        help_text=_(
-            "Check if this is a finishing cask rather than primary maturation."
-        ),
+        verbose_name="Finish",
+        help_text="Check if this is a finishing cask rather than primary maturation.",
     )
     cask_number = models.CharField(
         max_length=100,
         blank=True,
         default="",
-        verbose_name=_("Cask Number"),
+        verbose_name="Cask Number",
     )
     description = models.TextField(
         blank=True,
         default="",
-        verbose_name=_("Notes"),
+        verbose_name="Notes",
     )
 
     class Meta:
@@ -669,30 +666,30 @@ class CaskHistory(models.Model):
 
 class WhiskyImage(models.Model):
     class ImageType(models.TextChoices):
-        LABEL_FRONT = "LF", _("Front Label")
-        LABEL_BACK = "LB", _("Back Label")
+        LABEL_FRONT = "LF", "Front Label"
+        LABEL_BACK = "LB", "Back Label"
 
     whisky = models.ForeignKey(
         Whisky,
         on_delete=models.CASCADE,
         related_name="images",
     )
-    image = models.ImageField(upload_to=user_directory_path, verbose_name=_("Image"))
+    image = models.ImageField(upload_to=user_directory_path, verbose_name="Image")
     thumbnail = models.ImageField(
         upload_to=user_directory_path,
         null=True,
         blank=True,
-        verbose_name=_("Thumbnail"),
+        verbose_name="Thumbnail",
     )
     image_type = models.CharField(
         max_length=2,
         choices=ImageType.choices,
         default=ImageType.LABEL_FRONT,
-        verbose_name=_("Image Type"),
+        verbose_name="Image Type",
     )
-    is_primary = models.BooleanField(default=False, verbose_name=_("Primary Image"))
+    is_primary = models.BooleanField(default=False, verbose_name="Primary Image")
     user = models.ForeignKey(
-        get_user_model(), on_delete=models.CASCADE, null=True, verbose_name=_("User")
+        get_user_model(), on_delete=models.CASCADE, null=True, verbose_name="User"
     )
     created = models.DateTimeField(auto_now_add=True)
 
@@ -711,7 +708,7 @@ class WhiskyBarcode(models.Model):
     )
     barcode = models.CharField(max_length=100, db_index=True)
     user = models.ForeignKey(
-        get_user_model(), on_delete=models.CASCADE, null=True, verbose_name=_("User")
+        get_user_model(), on_delete=models.CASCADE, null=True, verbose_name="User"
     )
     household = models.ForeignKey(
         "household.Household",
@@ -764,45 +761,45 @@ class WhiskyStorageItem(UserContentModel):
         blank=True,
         validators=[MinValueValidator(0)],
     )
-    is_gift = models.BooleanField(default=False, verbose_name=_("Is Gift"))
+    is_gift = models.BooleanField(default=False, verbose_name="Is Gift")
     gift_from = models.CharField(
-        max_length=100, null=True, blank=True, verbose_name=_("Gift From")
+        max_length=100, null=True, blank=True, verbose_name="Gift From"
     )
     occasion = models.CharField(
-        max_length=100, null=True, blank=True, verbose_name=_("Occasion")
+        max_length=100, null=True, blank=True, verbose_name="Occasion"
     )
     rating = models.PositiveIntegerField(
         null=True,
         blank=True,
         validators=[MinValueValidator(0), MaxValueValidator(3)],
-        verbose_name=_("Rating"),
+        verbose_name="Rating",
     )
     fill_level = models.CharField(
         max_length=2,
         choices=FillLevel.choices,
         default=FillLevel.UNOPENED,
-        verbose_name=_("Fill Level"),
+        verbose_name="Fill Level",
     )
     opened_date = models.DateField(
         null=True,
         blank=True,
-        verbose_name=_("Date Opened"),
+        verbose_name="Date Opened",
     )
     dreg_date = models.DateField(
         null=True,
         blank=True,
-        verbose_name=_("Date Entered Dreg"),
+        verbose_name="Date Entered Dreg",
     )
     owner = models.CharField(
         max_length=100,
         blank=True,
         default="",
-        verbose_name=_("Owner"),
+        verbose_name="Owner",
     )
 
     class Meta:
-        verbose_name = _("Whisky Bottle")
-        verbose_name_plural = _("Whisky Bottles")
+        verbose_name = "Whisky Bottle"
+        verbose_name_plural = "Whisky Bottles"
         indexes = [
             models.Index(fields=["user", "deleted"], name="wsi_user_del_idx"),
             models.Index(fields=["storage", "row", "column"], name="wsi_position_idx"),
@@ -849,21 +846,21 @@ class WhiskyDrinkRecord(UserContentModel):
         null=True,
         blank=True,
     )
-    date_consumed = models.DateField(verbose_name=_("Date"))
+    date_consumed = models.DateField(verbose_name="Date")
     tasting_notes = models.TextField(
-        blank=True, default="", verbose_name=_("Tasting Notes")
+        blank=True, default="", verbose_name="Tasting Notes"
     )
     rating = models.PositiveIntegerField(
         null=True,
         blank=True,
         validators=[MinValueValidator(0), MaxValueValidator(3)],
-        verbose_name=_("Rating"),
+        verbose_name="Rating",
     )
     shared_with = models.CharField(
-        max_length=200, blank=True, default="", verbose_name=_("Shared With")
+        max_length=200, blank=True, default="", verbose_name="Shared With"
     )
     occasion = models.CharField(
-        max_length=200, blank=True, default="", verbose_name=_("Occasion")
+        max_length=200, blank=True, default="", verbose_name="Occasion"
     )
 
     class Meta:
@@ -877,48 +874,48 @@ class WhiskyDrinkRecord(UserContentModel):
 
 
 class WhiskyWishlist(UserContentModel):
-    name = models.CharField(max_length=200, verbose_name=_("Name"))
+    name = models.CharField(max_length=200, verbose_name="Name")
     whisky_type = models.CharField(
         max_length=2,
         choices=WhiskyType.choices,
         null=True,
         blank=True,
-        verbose_name=_("Type"),
+        verbose_name="Type",
     )
     distillery = models.ForeignKey(
         Distillery,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        verbose_name=_("Distillery"),
+        verbose_name="Distillery",
     )
     region = models.ForeignKey(
         WhiskyRegion,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        verbose_name=_("Region"),
+        verbose_name="Region",
     )
     country = models.CharField(
-        max_length=2, blank=True, default="", verbose_name=_("Country")
+        max_length=2, blank=True, default="", verbose_name="Country"
     )
     age_statement = models.PositiveIntegerField(
-        null=True, blank=True, verbose_name=_("Age")
+        null=True, blank=True, verbose_name="Age"
     )
     price_limit = models.DecimalField(
         max_digits=8,
         decimal_places=2,
         null=True,
         blank=True,
-        verbose_name=_("Max Price"),
+        verbose_name="Max Price",
     )
-    notes = models.TextField(blank=True, default="", verbose_name=_("Notes"))
+    notes = models.TextField(blank=True, default="", verbose_name="Notes")
     priority = models.PositiveIntegerField(
         default=0,
         validators=[MinValueValidator(0), MaxValueValidator(5)],
-        verbose_name=_("Priority"),
+        verbose_name="Priority",
     )
-    purchased = models.BooleanField(default=False, verbose_name=_("Purchased"))
+    purchased = models.BooleanField(default=False, verbose_name="Purchased")
 
     class Meta:
         ordering = ["-priority", "name"]
@@ -933,8 +930,8 @@ class WhiskyBottleNote(UserContentModel):
         on_delete=models.CASCADE,
         related_name="notes",
     )
-    note_date = models.DateField(verbose_name=_("Date"))
-    note = models.TextField(verbose_name=_("Note"))
+    note_date = models.DateField(verbose_name="Date")
+    note = models.TextField(verbose_name="Note")
 
     class Meta:
         ordering = ["-note_date"]
@@ -945,8 +942,8 @@ class WhiskyBottleNote(UserContentModel):
 
 class WhiskyDrinkingWindowAlert(UserContentModel):
     whisky = models.ForeignKey(Whisky, on_delete=models.CASCADE)
-    alert_date = models.DateField(verbose_name=_("Alert Date"))
-    message = models.CharField(max_length=200, verbose_name=_("Message"))
+    alert_date = models.DateField(verbose_name="Alert Date")
+    message = models.CharField(max_length=200, verbose_name="Message")
     is_read = models.BooleanField(default=False)
 
     class Meta:
@@ -958,7 +955,7 @@ class WhiskyDrinkingWindowAlert(UserContentModel):
 
 class WhiskyReorderReminder(UserContentModel):
     whisky = models.ForeignKey(Whisky, on_delete=models.CASCADE)
-    min_stock = models.PositiveIntegerField(default=1, verbose_name=_("Minimum Stock"))
+    min_stock = models.PositiveIntegerField(default=1, verbose_name="Minimum Stock")
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -1009,8 +1006,8 @@ class WhiskyVisionExtractionLog(UserContentModel):
 
 
 class WhiskySource(UserContentModel):
-    name = models.CharField(max_length=200, verbose_name=_("Source"))
-    url = models.URLField(blank=True, default="", verbose_name=_("URL"))
+    name = models.CharField(max_length=200, verbose_name="Source")
+    url = models.URLField(blank=True, default="", verbose_name="URL")
 
     class Meta:
         ordering = ["name"]
@@ -1031,7 +1028,7 @@ class Collection(UserContentModel):
         on_delete=models.CASCADE,
         null=True,
         related_name="whisky_collections",
-        verbose_name=_("User"),
+        verbose_name="User",
     )
     household = models.ForeignKey(
         "household.Household",
@@ -1039,38 +1036,38 @@ class Collection(UserContentModel):
         null=True,
         blank=True,
         related_name="whisky_collection_items",
-        verbose_name=_("Household"),
+        verbose_name="Household",
     )
-    name = models.CharField(max_length=100, verbose_name=_("Name"))
+    name = models.CharField(max_length=100, verbose_name="Name")
     description = models.CharField(
         max_length=250,
         blank=True,
         default="",
-        verbose_name=_("Description"),
+        verbose_name="Description",
     )
     color = models.CharField(
         max_length=20,
         blank=True,
         default="",
-        verbose_name=_("Color"),
+        verbose_name="Color",
     )
     icon = models.CharField(
         max_length=50,
         blank=True,
         default="",
-        verbose_name=_("Icon"),
+        verbose_name="Icon",
     )
     whiskies = models.ManyToManyField(
         "whisky.Whisky",
         blank=True,
         related_name="collections",
-        verbose_name=_("Whiskies"),
+        verbose_name="Whiskies",
     )
 
     class Meta:
         ordering = ["name"]
-        verbose_name = _("Collection")
-        verbose_name_plural = _("Collections")
+        verbose_name = "Collection"
+        verbose_name_plural = "Collections"
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "household"],

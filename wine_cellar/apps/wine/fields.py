@@ -1,6 +1,5 @@
 from django.core.exceptions import ValidationError
 from django.forms import ModelMultipleChoiceField
-from django.utils.translation import gettext_lazy as _
 
 
 class OpenMultipleChoiceField(ModelMultipleChoiceField):
@@ -18,7 +17,7 @@ class OpenMultipleChoiceField(ModelMultipleChoiceField):
         super().__init__(queryset, **kwargs)
         self.default_error_messages.update(
             {
-                "invalid_new_value": _("“%(pk)s” is not a valid value."),
+                "invalid_new_value": "“%(pk)s” is not a valid value.",
             }
         )
 

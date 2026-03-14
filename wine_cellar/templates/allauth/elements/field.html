@@ -1,4 +1,4 @@
-{% load i18n allauth %}
+{% load allauth %}
 <div class="form-container">
     {% if attrs.errors %}
         <ul class="form-errorlist" aria-live="assertive" aria-atomic="true">
@@ -11,7 +11,7 @@
             {% if attrs.type != "checkbox" and attrs.type != "radio" %}
                 <p class="d-inline"
                    role="presentation"
-                   title="{% translate "This field is optional" %}">{% translate "(Optional)" %}</p>
+                   title="This field is optional">(Optional)</p>
             {% endif %}
         {% endif %}
     </label>

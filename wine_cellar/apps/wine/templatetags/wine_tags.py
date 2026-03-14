@@ -2,7 +2,6 @@ from datetime import date
 
 from django import template
 from django.utils.safestring import mark_safe
-from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.core.templatetags.core_tags import _badge_impl, _rating_stars_impl
 
@@ -20,13 +19,13 @@ WINE_TYPE_CLASSES = {
 }
 
 WINE_TYPE_LABELS = {
-    "WH": _("White"),
-    "RE": _("Red"),
-    "RO": _("Rosé"),
-    "SP": _("Sparkling"),
-    "DE": _("Dessert"),
-    "FO": _("Fortified"),
-    "OR": _("Orange"),
+    "WH": "White",
+    "RE": "Red",
+    "RO": "Rosé",
+    "SP": "Sparkling",
+    "DE": "Dessert",
+    "FO": "Fortified",
+    "OR": "Orange",
 }
 
 

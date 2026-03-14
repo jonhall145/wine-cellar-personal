@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
-{% load static i18n core_tags %}
+{% load static core_tags %}
 {% block extra_js %}
     {{ block.super }}
     <script src="{% static 'tom_select.js' %}" type="module" defer></script>
 {% endblock extra_js %}
 {% block header %}
-    <h1 class="header__title">{% blocktranslate with item_name=APP_ITEM_NAME %}{{ item_name }} List{% endblocktranslate %}</h1>
+    <h1 class="header__title">{{ APP_ITEM_NAME }} List</h1>
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
@@ -14,14 +14,14 @@
             <div class="filter-form__sm-container">
                 <details>
                     <summary>
-                        <h2 class="filter-form__header">{% translate "Filter & Sorting" %}</h2>
+                        <h2 class="filter-form__header">Filter & Sorting</h2>
                     </summary>
                     <div>
                         <form action="."
                               method="get"
                               class="filter-form pure-form pure-form-stacked">
                             <fieldset>
-                                <legend class="filter-legend">{% translate 'Narrow Your Selection' %}</legend>
+                                <legend class="filter-legend">Narrow Your Selection</legend>
                                 {% for field in filter.form %}
                                     {% include filter_field_template %}
                                 {% endfor %}
@@ -30,10 +30,10 @@
                                 <a href="?"
                                    role="button"
                                    class="pure-button button__secondary"
-                                   aria-label='{% translate "Clear all filters and reset the form" %}'>
-                                    {% translate "Clear" %}
+                                   aria-label='Clear all filters and reset the form'>
+                                    Clear
                                 </a>
-                                <button type="submit" class="pure-button button__primary">{% translate "Filter" %}</button>
+                                <button type="submit" class="pure-button button__primary">Filter</button>
                             </div>
                         </form>
                     </div>
@@ -46,7 +46,7 @@
                 <fieldset>
                     <div class="filter-legend">
                         <legend>
-                            <h3 class="text-align-left">{% translate "Filter & Sorting" %}</h3>
+                            <h3 class="text-align-left">Filter & Sorting</h3>
                         </legend>
                     </div>
                     {% for field in filter.form %}
@@ -57,15 +57,15 @@
                     <a href="?"
                        role="button"
                        class="pure-button button__secondary"
-                       aria-label='{% translate "Clear all filters and reset the form" %}'>{% translate "Clear" %}</a>
-                    <button type="submit" class="pure-button button__primary">{% translate "Filter" %}</button>
+                       aria-label='Clear all filters and reset the form'>Clear</a>
+                    <button type="submit" class="pure-button button__primary">Filter</button>
                 </div>
             </form>
         </div>
         <div class="pure-u-1 pure-u-sm-15-24 pure-u-md-17-24">
             {% if beverages %}
             <div class="per-page-selector">
-                <label for="per-page" class="per-page-selector__label">{% translate "Per page:" %}</label>
+                <label for="per-page" class="per-page-selector__label">Per page:</label>
                 <select id="per-page" class="per-page-selector__select">
                     {% for option in per_page_options %}
                         <option value="{% querystring per_page=option page=1 %}" {% if option == current_per_page %}selected{% endif %}>{{ option }}</option>
@@ -73,10 +73,10 @@
                 </select>
                 {% if export_csv_url %}
                 <span class="export-links">
-                    <a href="{{ export_csv_url }}" class="pure-button button__secondary button--sm" title="{% translate 'Export CSV' %}">
+                    <a href="{{ export_csv_url }}" class="pure-button button__secondary button--sm" title="Export CSV">
                         <i class="fa-solid fa-file-csv"></i> CSV
                     </a>
-                    <a href="{{ export_json_url }}" class="pure-button button__secondary button--sm" title="{% translate 'Export JSON' %}">
+                    <a href="{{ export_json_url }}" class="pure-button button__secondary button--sm" title="Export JSON">
                         <i class="fa-solid fa-file-code"></i> JSON
                     </a>
                 </span>
@@ -89,10 +89,10 @@
                 {% empty %}
                     <li class="empty-state">
                         <div class="empty-state__icon"><i class="fa-solid fa-{{ beverage_icon }}"></i></div>
-                        <h3 class="empty-state__title">{% blocktranslate with item_name=APP_ITEM_NAME_PLURAL %}No {{ item_name }} yet{% endblocktranslate %}</h3>
-                        <p class="empty-state__message">{% blocktranslate with item_name=APP_ITEM_NAME %}Start building your collection by adding your first {{ item_name }}.{% endblocktranslate %}</p>
+                        <h3 class="empty-state__title">No {{ APP_ITEM_NAME_PLURAL }} yet</h3>
+                        <p class="empty-state__message">Start building your collection by adding your first {{ APP_ITEM_NAME }}.</p>
                         <a href="{% bev_url 'add' %}" class="pure-button button__primary empty-state__action">
-                            <i class="fa-solid fa-plus"></i> {% blocktranslate with item_name=APP_ITEM_NAME %}Add {{ item_name }}{% endblocktranslate %}
+                            <i class="fa-solid fa-plus"></i> Add {{ APP_ITEM_NAME }}
                         </a>
                     </li>
                 {% endfor %}

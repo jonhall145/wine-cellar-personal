@@ -1,11 +1,11 @@
-{% load i18n widget_tweaks %}
+{% load widget_tweaks %}
 <div class="form-container">
     <label for="{{ field.id_for_label }}">
         {{ field.label }}
         {% if not field.field.required and field.field.widget.input_type != "checkbox" and field.field.widget.input_type != "hidden" %}
             <p class="d-inline"
                role="presentation"
-               title="{% translate "This field is optional" %}">{% translate "(Optional)" %}</p>
+               title="This field is optional">(Optional)</p>
         {% endif %}
     </label>
     {% if field.help_text %}<p class="form-hint">{{ field.help_text }}</p>{% endif %}

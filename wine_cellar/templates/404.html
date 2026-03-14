@@ -1,28 +1,26 @@
 {% extends "base.html" %}
-{% load i18n %}
-
-{% block title %}{% translate "Page Not Found" %} - {{ APP_NAME }}{% endblock title %}
+{% block title %}Page Not Found - {{ APP_NAME }}{% endblock title %}
 
 {% block content %}
 <div class="error-page">
     <div class="error-page__content">
         <h1 class="error-page__code">404</h1>
-        <h2 class="error-page__title">{% translate "Page Not Found" %}</h2>
+        <h2 class="error-page__title">Page Not Found</h2>
         <p class="error-page__message">
-            {% translate "The page you're looking for doesn't exist or has been moved." %}
+            The page you're looking for doesn't exist or has been moved.
         </p>
         <div class="error-page__actions">
             <a href="{% url 'homepage' %}" class="button button--primary">
-                {% translate "Return to Homepage" %}
+                Return to Homepage
             </a>
             {% if user.is_authenticated %}
                 {% if CELLAR_APP_TYPE == 'whisky' %}
                 <a href="{% url 'whisky-list' %}" class="button button--secondary">
-                    {% translate "Browse Whiskies" %}
+                    Browse Whiskies
                 </a>
                 {% else %}
                 <a href="{% url 'wine-list' %}" class="button button--secondary">
-                    {% translate "Browse Wines" %}
+                    Browse Wines
                 </a>
                 {% endif %}
             {% endif %}

@@ -4,14 +4,13 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
 
 
 class HouseholdRole(models.TextChoices):
-    VIEWER = "VI", _("Viewer")  # Read-only
-    MEMBER = "ME", _("Member")  # CRUD data
-    ADMIN = "AD", _("Admin")  # + manage members
-    OWNER = "OW", _("Owner")  # + delete household
+    VIEWER = "VI", "Viewer"  # Read-only
+    MEMBER = "ME", "Member"  # CRUD data
+    ADMIN = "AD", "Admin"  # + manage members
+    OWNER = "OW", "Owner"  # + delete household
 
 
 # Role hierarchy for permission checks
@@ -24,20 +23,20 @@ ROLE_HIERARCHY = {
 
 
 class InvitationStatus(models.TextChoices):
-    PENDING = "PE", _("Pending")
-    ACCEPTED = "AC", _("Accepted")
-    DECLINED = "DE", _("Declined")
-    EXPIRED = "EX", _("Expired")
+    PENDING = "PE", "Pending"
+    ACCEPTED = "AC", "Accepted"
+    DECLINED = "DE", "Declined"
+    EXPIRED = "EX", "Expired"
 
 
 class Household(models.Model):
-    name = models.CharField(max_length=100, verbose_name=_("Household Name"))
-    created = models.DateTimeField(auto_now_add=True, verbose_name=_("Created"))
-    modified = models.DateTimeField(auto_now=True, verbose_name=_("Modified"))
+    name = models.CharField(max_length=100, verbose_name="Household Name")
+    created = models.DateTimeField(auto_now_add=True, verbose_name="Created")
+    modified = models.DateTimeField(auto_now=True, verbose_name="Modified")
 
     class Meta:
-        verbose_name = _("Household")
-        verbose_name_plural = _("Households")
+        verbose_name = "Household"
+        verbose_name_plural = "Households"
 
     def __str__(self):
         return self.name
@@ -65,33 +64,33 @@ class HouseholdMembership(models.Model):
         get_user_model(),
         on_delete=models.CASCADE,
         related_name="household_memberships",
-        verbose_name=_("User"),
+        verbose_name="User",
     )
     household = models.ForeignKey(
         Household,
         on_delete=models.CASCADE,
         related_name="memberships",
-        verbose_name=_("Household"),
+        verbose_name="Household",
     )
     role = models.CharField(
         max_length=2,
         choices=HouseholdRole.choices,
         default=HouseholdRole.MEMBER,
-        verbose_name=_("Role"),
+        verbose_name="Role",
     )
-    joined = models.DateTimeField(auto_now_add=True, verbose_name=_("Joined"))
+    joined = models.DateTimeField(auto_now_add=True, verbose_name="Joined")
     invited_by = models.ForeignKey(
         get_user_model(),
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
         related_name="invitations_sent",
-        verbose_name=_("Invited By"),
+        verbose_name="Invited By",
     )
 
     class Meta:
-        verbose_name = _("Household Membership")
-        verbose_name_plural = _("Household Memberships")
+        verbose_name = "Household Membership"
+        verbose_name_plural = "Household Memberships"
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "household"],
@@ -135,43 +134,43 @@ class HouseholdInvitation(models.Model):
         Household,
         on_delete=models.CASCADE,
         related_name="invitations",
-        verbose_name=_("Household"),
+        verbose_name="Household",
     )
-    email = models.EmailField(verbose_name=_("Email"))
+    email = models.EmailField(verbose_name="Email")
     role = models.CharField(
         max_length=2,
         choices=HouseholdRole.choices,
         default=HouseholdRole.MEMBER,
-        verbose_name=_("Role"),
+        verbose_name="Role",
     )
     token = models.CharField(
         max_length=64,
         unique=True,
         default=generate_invitation_token,
-        verbose_name=_("Token"),
+        verbose_name="Token",
     )
     invited_by = models.ForeignKey(
         get_user_model(),
         null=True,
         on_delete=models.SET_NULL,
         related_name="household_invitations_created",
-        verbose_name=_("Invited By"),
+        verbose_name="Invited By",
     )
     status = models.CharField(
         max_length=2,
         choices=InvitationStatus.choices,
         default=InvitationStatus.PENDING,
-        verbose_name=_("Status"),
+        verbose_name="Status",
     )
-    created = models.DateTimeField(auto_now_add=True, verbose_name=_("Created"))
+    created = models.DateTimeField(auto_now_add=True, verbose_name="Created")
     expires = models.DateTimeField(
         default=get_invitation_expiry,
-        verbose_name=_("Expires"),
+        verbose_name="Expires",
     )
 
     class Meta:
-        verbose_name = _("Household Invitation")
-        verbose_name_plural = _("Household Invitations")
+        verbose_name = "Household Invitation"
+        verbose_name_plural = "Household Invitations"
         indexes = [
             models.Index(fields=["token"], name="invitation_token_idx"),
             models.Index(
@@ -216,28 +215,22 @@ class HouseholdSettings(models.Model):
         Household,
         on_delete=models.CASCADE,
         related_name="settings",
-        verbose_name=_("Household"),
-    )
-    language = models.CharField(
-        max_length=7,
-        choices=settings.LANGUAGES,
-        default=settings.LANGUAGE_CODE,
-        verbose_name=_("Language"),
+        verbose_name="Household",
     )
     currency = models.CharField(
         max_length=3,
         choices=settings.CURRENCIES,
         default="EUR",
-        verbose_name=_("Currency"),
+        verbose_name="Currency",
     )
     notifications = models.BooleanField(
         default=True,
-        verbose_name=_("Notifications"),
+        verbose_name="Notifications",
     )
 
     class Meta:
-        verbose_name = _("Household Settings")
-        verbose_name_plural = _("Household Settings")
+        verbose_name = "Household Settings"
+        verbose_name_plural = "Household Settings"
 
     def __str__(self):
         return f"Settings for {self.household.name}"
