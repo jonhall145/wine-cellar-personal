@@ -42,7 +42,8 @@ class BeverageFilterMixin:
         return queryset.order_by(ordering)
 
     def filter_search(self, queryset, name, value):
-        """Keyword search (icontains) across multiple text fields defined in search_fields."""
+        """Keyword search (icontains) across multiple text fields
+        defined in search_fields."""
         if not value:
             return queryset
         query = Q()
