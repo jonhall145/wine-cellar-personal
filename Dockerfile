@@ -20,9 +20,9 @@ RUN --mount=type=cache,target=/app/node_modules/.cache \
 
 
 # ============================================================
-# Stage 2: Python application
+# Stage 2: Python application (shared base)
 # ============================================================
-FROM python:3.12-slim
+FROM python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -43,11 +43,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libpng16-16 \
     libwebp7 \
     curl \
-    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-# Using cache mount for pip to speed up repeated installs
 COPY requirements/ requirements/
 ARG REQUIREMENTS_FILE=requirements/prod.txt
 RUN --mount=type=cache,target=/root/.cache/pip \
@@ -69,7 +67,7 @@ RUN chmod +x /docker-entrypoint.sh
 # Create media and static directories
 RUN mkdir -p /app/media /app/staticfiles
 
-# Non-root user (entrypoint runs as root to fix volume permissions, then drops to django)
+# Non-root user
 RUN addgroup --system django && adduser --system --ingroup django django
 RUN chown -R django:django /app
 
@@ -79,3 +77,23 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8000/health/ || exit 1
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
+
+
+# ============================================================
+# Stage 3a: Local / docker-compose (default target)
+#   Starts as root so the entrypoint can fix volume ownership,
+#   then drops to django via gosu.
+# ============================================================
+FROM base AS local
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends gosu \
+    && rm -rf /var/lib/apt/lists/*
+
+
+# ============================================================
+# Stage 3b: Cloud / GHCR (RPi4, CI, etc.)
+#   Runs as django user directly — no gosu needed.
+# ============================================================
+FROM base AS cloud
+USER django

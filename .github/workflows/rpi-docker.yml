@@ -14,7 +14,7 @@ on:
       - 'tsconfig.json'
       - 'manage.py'
       - 'pyproject.toml'
-      - 'Dockerfile.rpi4'
+      - 'Dockerfile'
       - 'docker-entrypoint.sh'
   workflow_dispatch:
 
@@ -57,7 +57,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile.rpi4
+          file: Dockerfile
+          target: cloud
           platforms: linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

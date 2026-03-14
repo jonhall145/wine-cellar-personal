@@ -2,6 +2,7 @@ services:
   wine-web:
     build:
       context: .
+      target: local
       args:
         REQUIREMENTS_FILE: requirements/prod.txt
     image: wine-cellar:prod

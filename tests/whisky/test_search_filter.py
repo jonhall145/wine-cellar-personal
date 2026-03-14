@@ -48,9 +48,7 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
             assert filt.qs.count() == 1
 
         def test_search_by_bottler_series(self, user, whisky_factory):
-            whisky = whisky_factory(
-                user=user, bottler_series="Connoisseurs Choice"
-            )
+            whisky = whisky_factory(user=user, bottler_series="Connoisseurs Choice")
             whisky_factory(user=user, bottler_series="")
 
             filt = self._filter(user, search="Connoisseurs")

@@ -362,11 +362,12 @@ Files to modify:
 
 Estimated effort: 2-3 hours including testing
 
-### P3: Delete Dockerfile.rpi4 (Low effort, reduces maintenance)
+### ~~P3: Delete Dockerfile.rpi4 (Low effort, reduces maintenance)~~ ✅ DONE
 
-- Delete `Dockerfile.rpi4`
-- Update `.github/workflows/rpi-docker.yml` to reference `Dockerfile`
-- Estimated effort: 15 minutes
+Consolidated into a single `Dockerfile` with multi-stage targets (`local` and `cloud`).
+- `local` target: installs gosu, runs as root (entrypoint drops to django)
+- `cloud` target: `USER django` directive, no gosu
+- GHCR workflow uses `target: cloud`; docker-compose uses `target: local`
 
 ### P4: Web Container Consolidation (Medium impact, high effort) — DEFER
 

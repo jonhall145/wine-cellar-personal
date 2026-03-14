@@ -2,6 +2,7 @@ services:
   web:
     build:
       context: .
+      target: local
       args:
         REQUIREMENTS_FILE: requirements/docker.txt
     image: wine-cellar:dev
