@@ -2,7 +2,6 @@ import os
 
 from django.contrib.auth import get_user_model
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 
 
 def user_directory_path(instance, filename: str) -> str:
@@ -36,7 +35,7 @@ class UserContentModel(models.Model):
         get_user_model(),
         on_delete=models.CASCADE,
         null=True,
-        verbose_name=_("User"),
+        verbose_name="User",
     )
     household = models.ForeignKey(
         "household.Household",
@@ -44,16 +43,16 @@ class UserContentModel(models.Model):
         null=True,
         blank=True,
         related_name="%(class)s_items",
-        verbose_name=_("Household"),
+        verbose_name="Household",
     )
     created = models.DateTimeField(
         auto_now_add=True,
         db_index=True,
-        verbose_name=_("Created"),
+        verbose_name="Created",
     )
     modified = models.DateTimeField(
         auto_now=True,
-        verbose_name=_("Modified"),
+        verbose_name="Modified",
     )
 
     class Meta:

@@ -1,15 +1,15 @@
 {% extends 'base.html' %}
-{% load static i18n %}
+{% load static %}
 {% block extra_js %}
     {{ block.super }}
     <script src="{% static 'tom_select.js' %}" type="module" defer></script>
     <script src="{% static 'mask_editor.js' %}" defer></script>
 {% endblock extra_js %}
 {% block title %}
-    {% translate "Add Storage" %}
+    Add Storage
 {% endblock title %}
 {% block header %}
-    <h1 class="header__title">{% translate "Add Storage" %}</h1>
+    <h1 class="header__title">Add Storage</h1>
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
@@ -34,7 +34,7 @@
                 <div class="pure-controls">
                     <div class="pure-g">
                         <div id="save_button_container" class="pure-u-1 pure-u-sm-1-1">
-                            <button type="submit" name="save" class="pure-button button__secondary">{% translate "Save" %}</button>
+                            <button type="submit" name="save" class="pure-button button__secondary">Save</button>
                         </div>
                     </div>
                 </div>

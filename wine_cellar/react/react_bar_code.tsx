@@ -2,22 +2,18 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { createRoot } from 'react-dom/client'
 import ErrorBoundary from './components/ErrorBoundary'
 import { BarcodeScanner, DetectedBarcode } from 'react-barcode-scanner'
-import django from 'django'
-
 import { BarcodeDetector, prepareZXingModule } from 'barcode-detector/ponyfill'
 import { CameraError, CameraErrorType } from './components/CameraError'
 import { CameraLoader } from './components/CameraLoader'
 
 const translated = {
-  advanced: django.gettext('Advanced'),
-  helptext: django.gettext(
-    "Choose the type of barcode you want to scan, sometimes this can help if scanning doesn't work."
-  ),
-  captureButton: django.gettext('Force Scan'),
-  analyzing: django.gettext('Analyzing...'),
-  noBarcodeFound: django.gettext('No barcode found in image'),
-  labelScan: django.gettext('Capture Label Photos'),
-  scannerTip: django.gettext('Hold steady and fill frame with barcode'),
+  advanced: 'Advanced',
+  helptext: "Choose the type of barcode you want to scan, sometimes this can help if scanning doesn't work.",
+  captureButton: 'Force Scan',
+  analyzing: 'Analyzing...',
+  noBarcodeFound: 'No barcode found in image',
+  labelScan: 'Capture Label Photos',
+  scannerTip: 'Hold steady and fill frame with barcode',
 }
 
 /**
@@ -289,7 +285,7 @@ const Scanner = () => {
             onChange={(e) => setSelectedFormat(e.target.value)}
             aria-label="Barcode format"
           >
-            <option value="">{django.gettext('All')}</option>
+            <option value="">{'All'}</option>
             <option value="code_39">Code 39</option>
             <option value="code_93">Code 93</option>
             <option value="code_128">Code 128</option>

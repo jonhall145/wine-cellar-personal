@@ -35,7 +35,7 @@
     <div class="wine-card__stock">
         {% firstof wine.stock_count wine.total_stock as stock %}
         {% if stock == 0 %}
-            <span class="stock-badge stock-badge--out"><i class="fa-solid fa-xmark"></i> {% translate "Out" %}</span>
+            <span class="stock-badge stock-badge--out"><i class="fa-solid fa-xmark"></i> Out</span>
         {% elif stock <= 2 %}
             <span class="stock-badge stock-badge--low"><i class="fa-solid fa-arrow-down"></i> {{ stock }}</span>
         {% else %}
@@ -43,10 +43,10 @@
         {% endif %}
     </div>
     <div class="wine-card__actions">
-        <a href="{% url 'stock-add' wine.pk %}" class="wine-card__action" title="{% translate 'Add bottle' %}">
+        <a href="{% url 'stock-add' wine.pk %}" class="wine-card__action" title="Add bottle">
             <i class="fa-solid fa-plus"></i>
         </a>
-        <a href="{% url 'drink-record-add' wine.pk %}" class="wine-card__action" title="{% translate 'Record drink' %}">
+        <a href="{% url 'drink-record-add' wine.pk %}" class="wine-card__action" title="Record drink">
             <i class="fa-solid fa-wine-glass"></i>
         </a>
     </div>

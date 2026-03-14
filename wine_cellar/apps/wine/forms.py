@@ -7,7 +7,6 @@ from django.core import validators
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db.models import Q
 from django.forms import ImageField
-from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.core.forms import (
     BaseDrinkRecordForm,
@@ -131,7 +130,7 @@ class WineBaseForm(
 
         # Wine-specific: drink window year choices
         current_year = datetime.now().year
-        year_choices = [("", "---------"), (0, _("Now"))]
+        year_choices = [("", "---------"), (0, "Now")]
         year_choices += [
             (y, str(y)) for y in range(current_year - 5, current_year + 51)
         ]
@@ -153,43 +152,39 @@ class WineBaseForm(
 
     name = forms.CharField(
         max_length=100,
-        help_text=_("Enter the name of the wine as indicated on the label."),
+        help_text="Enter the name of the wine as indicated on the label.",
     )
     wine_type = forms.CharField(
         max_length=2,
         widget=forms.Select(choices=WineType),
-        help_text=_("Select the type of wine from the dropdown."),
+        help_text="Select the type of wine from the dropdown.",
     )
     category = forms.CharField(
         label="Sweetness",
         required=False,
         max_length=2,
         widget=forms.Select(choices=[("", "---------")] + list(Category.choices)),
-        help_text=_("Select the sweetness level of the wine."),
+        help_text="Select the sweetness level of the wine.",
     )
     country = forms.CharField(
         max_length=250,
         widget=forms.Select(
             choices={country.alpha_2: country.name for country in pycountry.countries},
         ),
-        help_text=_(
-            "Select the country the wine was produced in as indicated on the label."
-        ),
+        help_text="Select the country the wine was produced in "
+        "as indicated on the label.",
     )
     subregion = forms.CharField(
         max_length=100,
         required=False,
-        help_text=_(
-            "Enter the subregion or appellation of the wine, e.g. Douro Valley, Dao."
-        ),
+        help_text="Enter the subregion or appellation of the wine, "
+        "e.g. Douro Valley, Dao.",
     )
     appellation = forms.ModelChoiceField(
         queryset=Appellation.objects.all().order_by("country", "name"),
         required=False,
-        help_text=_(
-            "Select a known wine region for map display. "
-            "If your region is not listed, use subregion field above."
-        ),
+        help_text="Select a known wine region for map display. "
+        "If your region is not listed, use subregion field above.",
     )
     size = forms.CharField(
         max_length=2,
@@ -197,7 +192,7 @@ class WineBaseForm(
         initial=SizeChoices.STANDARD,
         widget=forms.Select(choices=SizeChoices.choices),
         label="Size",
-        help_text=_("Select the bottle size."),
+        help_text="Select the bottle size.",
     )
     abv = forms.FloatField(
         required=False,
@@ -205,11 +200,9 @@ class WineBaseForm(
             validators.MinValueValidator(0.0),
             validators.MaxValueValidator(100.0),
         ],
-        help_text=_(
-            "Please enter the percentage of alcohol in the"
-            " wine. This information is typically found on the label and indicates the"
-            " strength of the wine."
-        ),
+        help_text="Please enter the percentage of alcohol in the"
+        " wine. This information is typically found on the label and indicates the"
+        " strength of the wine.",
         localize=True,
     )
     vintage = forms.IntegerField(
@@ -218,64 +211,57 @@ class WineBaseForm(
             validators.MinValueValidator(1900),
             validators.MaxValueValidator(datetime.now().year),
         ],
-        help_text=_(
-            "Enter the year the grapes were harvested to produce the wine. Typically,"
-            " vintage years are prominently displayed on wine labels."
-        ),
+        help_text="Enter the year the grapes were harvested to produce "
+        "the wine. Typically, vintage years are prominently "
+        "displayed on wine labels.",
     )
     grapes = OpenMultipleChoiceField(
         required=False,
         queryset=Grape.objects.none(),
         field_name="name",
-        help_text=_(
-            "Select or add the grape varieties used to produce the wine. You can "
-            "select multiple options if applicable."
-        ),
+        help_text="Select or add the grape varieties used to produce the wine. You can "
+        "select multiple options if applicable.",
     )
     attributes = OpenMultipleChoiceField(
         required=False,
         queryset=Attribute.objects.none(),
         field_name="name",
-        help_text=_(
-            "Add any attributes that apply to this wine, such as"
-            " natural, retsina or organic."
-        ),
+        help_text="Add any attributes that apply to this wine, such as"
+        " natural, retsina or organic.",
     )
     drink_from = forms.TypedChoiceField(
         required=False,
         coerce=lambda x: int(x) if x else None,
         empty_value=None,
-        label=_("Drink From"),
-        help_text=_("When this wine is ready to drink."),
+        label="Drink From",
+        help_text="When this wine is ready to drink.",
     )
     drink_to = forms.TypedChoiceField(
         required=False,
         coerce=lambda x: int(x) if x else None,
         empty_value=None,
-        label=_("Drink Until"),
-        help_text=_("When this wine should be drunk by."),
+        label="Drink Until",
+        help_text="When this wine should be drunk by.",
     )
     food_pairings = OpenMultipleChoiceField(
         required=False,
         queryset=FoodPairing.objects.none(),
         field_name="name",
-        help_text=_(
-            "Enter dishes, cuisines, or ingredients that complement the "
-            "flavors of this wine."
-        ),
+        help_text="Enter dishes, cuisines, or ingredients that complement the "
+        "flavors of this wine.",
     )
     vineyard = OpenMultipleChoiceField(
         label="Vineyard",
         required=False,
         queryset=Vineyard.objects.none(),
         field_name="name",
-        help_text=_("Enter the names of the vineyards which produced the wine."),
+        help_text="Enter the names of the vineyards which produced the wine.",
     )
     source = OpenMultipleChoiceField(
         required=False,
         queryset=Source.objects.none(),
         field_name="name",
-        help_text=_("Where did you get the wine from?"),
+        help_text="Where did you get the wine from?",
     )
     price = forms.DecimalField(
         required=False,
@@ -288,94 +274,88 @@ class WineBaseForm(
         required=False,
         max_length=500,
         assume_scheme="https",
-        help_text=_("Product page URL for automatic price tracking."),
+        help_text="Product page URL for automatic price tracking.",
     )
     barcode = forms.CharField(
         max_length=100,
         required=False,
-        help_text=_("Enter the barcode number of the wine as indicated on the label."),
+        help_text="Enter the barcode number of the wine as indicated on the label.",
     )
     barcode_2 = forms.CharField(
         max_length=100,
         required=False,
-        label=_("Additional Barcode"),
-        help_text=_(
-            "Enter an additional barcode (e.g. from a different region/format)."
-        ),  # noqa: E501
+        label="Additional Barcode",
+        help_text="Enter an additional barcode (e.g. from a different region/format).",  # noqa: E501
     )
     comment = forms.CharField(
         max_length=250,
         required=False,
         widget=forms.Textarea,
-        help_text=_(
-            "Share your thoughts, tasting experiences, or any anecdotes"
-            " related to this wine."
-        ),
+        help_text="Share your thoughts, tasting experiences, or any anecdotes"
+        " related to this wine.",
     )
     rating = forms.TypedChoiceField(
         required=False,
         coerce=lambda x: int(x) if x else None,
         empty_value=None,
         choices=[("", "-")] + [(i, f"{i} ★" if i else "0") for i in range(4)],
-        help_text=_("Rate this wine from 0 to 3 stars."),
+        help_text="Rate this wine from 0 to 3 stars.",
     )
     image_front_label = ImageField(
         widget=NoFilenameClearableFileInput,
         required=False,
-        help_text=_("Upload a photo of the front of the bottle label."),
+        help_text="Upload a photo of the front of the bottle label.",
     )
     image_back_label = ImageField(
         widget=NoFilenameClearableFileInput,
         required=False,
-        help_text=_("Upload a photo of the back of the bottle label."),
+        help_text="Upload a photo of the back of the bottle label.",
     )
     # Storage fields for adding bottle to cellar
     storage = forms.ModelChoiceField(
         queryset=Storage.objects.none(),
         required=False,
-        help_text=_("Select where to store this bottle (optional)."),
+        help_text="Select where to store this bottle (optional).",
     )
     row = forms.IntegerField(
         required=False,
         min_value=1,
-        label=_("Row"),
-        help_text=_("Select the row in the storage."),
+        label="Row",
+        help_text="Select the row in the storage.",
         widget=forms.Select(),
     )
     column = forms.IntegerField(
         required=False,
         min_value=1,
-        label=_("Column"),
-        help_text=_("Select the column in the storage."),
+        label="Column",
+        help_text="Select the column in the storage.",
         widget=forms.Select(),
     )
     bottle_price = forms.DecimalField(
         required=False,
         max_digits=6,
         decimal_places=2,
-        label=_("Bottle Price"),
-        help_text=_(
-            "Price paid for this specific bottle (if different from wine price)."
-        ),
+        label="Bottle Price",
+        help_text="Price paid for this specific bottle (if different from wine price).",
         localize=True,
         widget=forms.TextInput(attrs={"inputmode": "decimal"}),
     )
     is_gift = forms.BooleanField(
         required=False,
-        label=_("Is Gift"),
-        help_text=_("Check if this bottle was received as a gift."),
+        label="Is Gift",
+        help_text="Check if this bottle was received as a gift.",
     )
     gift_from = forms.CharField(
         max_length=100,
         required=False,
-        label=_("Gift From"),
-        help_text=_("Enter who gave you this bottle."),
+        label="Gift From",
+        help_text="Enter who gave you this bottle.",
     )
     occasion = forms.CharField(
         max_length=100,
         required=False,
-        label=_("Occasion"),
-        help_text=_("Enter a special occasion this bottle is reserved for."),
+        label="Occasion",
+        help_text="Enter a special occasion this bottle is reserved for.",
     )
     form_step = forms.IntegerField(
         widget=forms.HiddenInput(),
@@ -402,7 +382,7 @@ class WineForm(WineBaseForm):
             max_items=1,
             max_options=-1,
             search=True,
-            placeholder=str(_("Search appellations...")),
+            placeholder="Search appellations...",
         )
 
         # Include initial country value in TomSelect config to preserve it
@@ -552,13 +532,13 @@ class DrinkRecordForm(BaseDrinkRecordForm):
 class WishlistForm(forms.Form):
     name = forms.CharField(
         max_length=100,
-        help_text=_("Name of the wine you want to buy."),
+        help_text="Name of the wine you want to buy.",
     )
     wine_type = forms.CharField(
         max_length=2,
         required=False,
         widget=forms.Select(choices=[("", "---------")] + list(WineType.choices)),
-        help_text=_("Type of wine."),
+        help_text="Type of wine.",
     )
     country = forms.CharField(
         max_length=250,
@@ -567,32 +547,32 @@ class WishlistForm(forms.Form):
             choices=[("", "---------")]
             + [(c.alpha_2, c.name) for c in pycountry.countries],
         ),
-        help_text=_("Country of origin."),
+        help_text="Country of origin.",
     )
     subregion = forms.CharField(
         max_length=100,
         required=False,
-        help_text=_("Subregion or appellation."),
+        help_text="Subregion or appellation.",
     )
     vintage = forms.IntegerField(
         required=False,
-        help_text=_("Desired vintage year."),
+        help_text="Desired vintage year.",
     )
     price_limit = forms.DecimalField(
         required=False,
         max_digits=6,
         decimal_places=2,
-        help_text=_("Maximum price you want to pay."),
+        help_text="Maximum price you want to pay.",
     )
     notes = forms.CharField(
         required=False,
         widget=forms.Textarea,
-        help_text=_("Any notes about why you want this wine."),
+        help_text="Any notes about why you want this wine.",
     )
     priority = forms.IntegerField(
         initial=1,
         validators=[MinValueValidator(1), MaxValueValidator(5)],
-        help_text=_("Priority from 1 (low) to 5 (high)."),
+        help_text="Priority from 1 (low) to 5 (high).",
     )
 
 
@@ -601,16 +581,16 @@ class LabelScanForm(forms.Form):
 
     barcode_image = forms.ImageField(
         required=False,
-        label=_("Barcode Image"),
-        help_text=_("Optional: Upload barcode image"),
+        label="Barcode Image",
+        help_text="Optional: Upload barcode image",
     )
     front_image = forms.ImageField(
         required=True,
-        label=_("Front Label Image"),
-        help_text=_("Required: Upload front label image"),
+        label="Front Label Image",
+        help_text="Required: Upload front label image",
     )
     back_image = forms.ImageField(
         required=False,
-        label=_("Back Label Image"),
-        help_text=_("Optional: Upload back label image"),
+        label="Back Label Image",
+        help_text="Optional: Upload back label image",
     )

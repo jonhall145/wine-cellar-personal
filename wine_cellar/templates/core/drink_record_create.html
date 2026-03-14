@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
-{% load static i18n %}
+{% load static %}
 {% block title %}
-    {% translate "Record Drink" %}
+    Record Drink
 {% endblock title %}
 {% block header %}
-    <h1 class="header__title">{% translate "Record Drink" %}: {{ beverage.name }}</h1>
+    <h1 class="header__title">Record Drink: {{ beverage.name }}</h1>
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
@@ -18,7 +18,7 @@
                 {% endfor %}
                 <div class="pure-controls">
                     <button type="submit"
-                            class="pure-button button__secondary">{% translate "Save" %}</button>
+                            class="pure-button button__secondary">Save</button>
                 </div>
             </form>
         </div>

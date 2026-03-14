@@ -62,10 +62,10 @@
     {% endif %}
 {% endblock extra_js %}
 {% block title %}
-    {% blocktranslate with item_name=APP_ITEM_NAME %}Edit {{ item_name }}{% endblocktranslate %}
+    Edit {{ APP_ITEM_NAME }}
 {% endblock title %}
 {% block header %}
-    <h1 class="header__title">{% blocktranslate with item_name=APP_ITEM_NAME %}Edit {{ item_name }}{% endblocktranslate %}</h1>
+    <h1 class="header__title">Edit {{ APP_ITEM_NAME }}</h1>
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
@@ -82,7 +82,7 @@
                         {% endfor %}
                     </div>
                     <a href="{% bev_url 'images' beverage.pk %}" class="pure-button button__neutral">
-                        <i class="fa-solid fa-crop"></i> {% translate "Edit Images" %}
+                        <i class="fa-solid fa-crop"></i> Edit Images
                     </a>
                 </div>
             {% endif %}
@@ -90,7 +90,7 @@
                 {% with barcodes=beverage.barcodes.all %}
                     {% if barcodes %}
                         <div class="mb-12">
-                            <h4>{% translate "Barcodes" %}</h4>
+                            <h4>Barcodes</h4>
                             <ul class="barcode-list">
                                 {% for b in barcodes %}
                                     <li id="barcode-row-{{ b.pk }}" class="barcode-list__item">
@@ -117,7 +117,7 @@
                         {% include 'forms/form_field.html' %}
                     {% endfor %}
                     <div class="pure-controls">
-                        <button type="submit" class="pure-button button__primary">{% translate "Save" %}</button>
+                        <button type="submit" class="pure-button button__primary">Save</button>
                     </div>
                 </fieldset>
             </form>

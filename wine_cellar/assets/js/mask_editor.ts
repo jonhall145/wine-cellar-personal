@@ -93,7 +93,7 @@ function initMaskEditor(): void {
 
     const label = document.createElement('span');
     label.className = 'mask-editor__label';
-    label.textContent = gettext('Cell Layout');
+    label.textContent = 'Cell Layout';
     header.appendChild(label);
 
     const btnGroup = document.createElement('div');
@@ -102,7 +102,7 @@ function initMaskEditor(): void {
     const selectAllBtn = document.createElement('button');
     selectAllBtn.type = 'button';
     selectAllBtn.className = 'mask-editor__btn';
-    selectAllBtn.textContent = gettext('Select All');
+    selectAllBtn.textContent = 'Select All';
     selectAllBtn.addEventListener('click', () => {
       initAllActive(state);
       serializeMask();
@@ -112,7 +112,7 @@ function initMaskEditor(): void {
     const clearAllBtn = document.createElement('button');
     clearAllBtn.type = 'button';
     clearAllBtn.className = 'mask-editor__btn';
-    clearAllBtn.textContent = gettext('Clear All');
+    clearAllBtn.textContent = 'Clear All';
     clearAllBtn.addEventListener('click', () => {
       state.activeCells.clear();
       serializeMask();
@@ -139,7 +139,7 @@ function initMaskEditor(): void {
         cell.className = `mask-editor__cell${active ? ' mask-editor__cell--active' : ''}`;
         cell.dataset.row = String(r);
         cell.dataset.col = String(c);
-        const titleTemplate = gettext('Row %s, Col %s');
+        const titleTemplate = 'Row %s, Col %s';
         cell.title = titleTemplate.replace('%s', String(r)).replace('%s', String(c));
 
         cell.addEventListener('click', () => {
@@ -162,7 +162,7 @@ function initMaskEditor(): void {
 
     const hint = document.createElement('div');
     hint.className = 'mask-editor__hint';
-    hint.textContent = gettext('Click cells to toggle active/inactive. Inactive cells cannot hold bottles.');
+    hint.textContent = 'Click cells to toggle active/inactive. Inactive cells cannot hold bottles.';
     wrapper.appendChild(hint);
 
     container!.appendChild(wrapper);

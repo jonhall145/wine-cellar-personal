@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
-{% load static i18n %}
+{% load static %}
 {% block title %}
-    {% blocktranslate with item_name=APP_ITEM_NAME %}Scan {{ item_name }}{% endblocktranslate %}
+    Scan {{ APP_ITEM_NAME }}
 {% endblock title %}
 {% block header %}
-    <h1 class="header__title">{% blocktranslate with item_name=APP_ITEM_NAME %}Scan {{ item_name }}{% endblocktranslate %}</h1>
+    <h1 class="header__title">Scan {{ APP_ITEM_NAME }}</h1>
 {% endblock header %}
 {% block extra_css %}
     <style>
@@ -29,36 +29,36 @@
 
             <!-- OR Divider -->
             <div class="label-scan__divider">
-                <span class="label-scan__divider-text">{% translate "OR" %}</span>
+                <span class="label-scan__divider-text">OR</span>
             </div>
 
             <!-- File Upload Form -->
             <div class="card">
-                <h2 class="card__title">{% translate "Upload Images" %}</h2>
+                <h2 class="card__title">Upload Images</h2>
                 <form method="post" enctype="multipart/form-data" class="pure-form pure-form-stacked">
                     {% csrf_token %}
 
                     <div class="pure-control-group">
-                        <label for="id_barcode_image">{% translate "Barcode Image" %}</label>
+                        <label for="id_barcode_image">Barcode Image</label>
                         <input type="file" name="barcode_image" id="id_barcode_image" accept="image/*">
-                        <span class="form-hint">{% translate "Optional: Upload barcode image" %}</span>
+                        <span class="form-hint">Optional: Upload barcode image</span>
                     </div>
 
                     <div class="pure-control-group">
-                        <label for="id_front_image">{% translate "Front Label Image" %} *</label>
+                        <label for="id_front_image">Front Label Image *</label>
                         <input type="file" name="front_image" id="id_front_image" accept="image/*" required>
-                        <span class="form-hint">{% translate "Required: Upload front label image" %}</span>
+                        <span class="form-hint">Required: Upload front label image</span>
                     </div>
 
                     <div class="pure-control-group">
-                        <label for="id_back_image">{% translate "Back Label Image" %}</label>
+                        <label for="id_back_image">Back Label Image</label>
                         <input type="file" name="back_image" id="id_back_image" accept="image/*">
-                        <span class="form-hint">{% translate "Optional: Upload back label image" %}</span>
+                        <span class="form-hint">Optional: Upload back label image</span>
                     </div>
 
                     <div class="pure-controls label-scan__controls">
                         <button type="submit" class="pure-button button__primary">
-                            {% translate "Process Images" %}
+                            Process Images
                         </button>
                     </div>
                 </form>

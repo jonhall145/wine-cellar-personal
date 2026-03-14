@@ -1,5 +1,4 @@
 from django import forms
-from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.household.models import (
     Household,
@@ -26,9 +25,8 @@ class HouseholdSettingsForm(forms.ModelForm):
 
     class Meta:
         model = HouseholdSettings
-        fields = ["language", "currency", "notifications"]
+        fields = ["currency", "notifications"]
         widgets = {
-            "language": forms.Select(attrs={"class": "form-select"}),
             "currency": forms.Select(attrs={"class": "form-select"}),
             "notifications": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
@@ -40,9 +38,9 @@ class HouseholdInvitationForm(forms.ModelForm):
     # Limit role choices - can't invite someone as owner
     role = forms.ChoiceField(
         choices=[
-            (HouseholdRole.VIEWER, _("Viewer - Read-only access")),
-            (HouseholdRole.MEMBER, _("Member - Can add and edit wines")),
-            (HouseholdRole.ADMIN, _("Admin - Can also manage members")),
+            (HouseholdRole.VIEWER, "Viewer - Read-only access"),
+            (HouseholdRole.MEMBER, "Member - Can add and edit wines"),
+            (HouseholdRole.ADMIN, "Admin - Can also manage members"),
         ],
         initial=HouseholdRole.MEMBER,
         widget=forms.Select(attrs={"class": "form-select"}),
@@ -62,9 +60,9 @@ class MembershipRoleForm(forms.ModelForm):
     # Limit role choices - can't change someone to owner
     role = forms.ChoiceField(
         choices=[
-            (HouseholdRole.VIEWER, _("Viewer")),
-            (HouseholdRole.MEMBER, _("Member")),
-            (HouseholdRole.ADMIN, _("Admin")),
+            (HouseholdRole.VIEWER, "Viewer"),
+            (HouseholdRole.MEMBER, "Member"),
+            (HouseholdRole.ADMIN, "Admin"),
         ],
         widget=forms.Select(attrs={"class": "form-select"}),
     )
@@ -80,7 +78,7 @@ class TransferOwnershipForm(forms.Form):
     new_owner = forms.ModelChoiceField(
         queryset=HouseholdMembership.objects.none(),
         widget=forms.Select(attrs={"class": "form-select"}),
-        label=_("New Owner"),
+        label="New Owner",
     )
 
     def __init__(self, household, current_user, *args, **kwargs):

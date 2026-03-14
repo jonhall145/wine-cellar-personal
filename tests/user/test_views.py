@@ -15,7 +15,6 @@ def test_user_settings_page(client, user):
     assertTemplateUsed(response=r, template_name="settings.html")
 
     data = {
-        "language": "en-gb",
         "currency": "EUR",
         "notifications": True,
         "reminder_enabled": True,
@@ -25,12 +24,10 @@ def test_user_settings_page(client, user):
     assert r.status_code == HTTPStatus.OK
     assertRedirects(response=r, expected_url=reverse("user-settings"))
     user_settings = user.user_settings
-    assert user_settings.language == "en-gb"
     assert user_settings.currency == "EUR"
     assert user_settings.notifications
 
     data = {
-        "language": "en-gb",
         "currency": "EUR",
         "notifications": False,
         "reminder_enabled": True,
@@ -39,7 +36,6 @@ def test_user_settings_page(client, user):
     r = client.post(reverse("user-settings"), data, follow=True)
     assert r.status_code == HTTPStatus.OK
     user_settings.refresh_from_db()
-    assert user_settings.language == "en-gb"
     assert user_settings.currency == "EUR"
     assert not user_settings.notifications
 

@@ -2,7 +2,6 @@ import json
 
 from django import forms
 from django.conf import settings
-from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
@@ -63,9 +62,10 @@ class BeverageBaseFormMixin:
 
         # Currency-specific price help text
         user_settings = get_user_settings(user)
-        self.fields["price"].help_text = _(
+        self.fields["price"].help_text = (
             "Enter the price of the bottle in %(currency)s."
-        ) % {"currency": settings.CURRENCY_SYMBOLS[user_settings.currency]}
+            % {"currency": settings.CURRENCY_SYMBOLS[user_settings.currency]}
+        )
 
         # Storage field queryset
         if "storage" in self.fields:
@@ -123,34 +123,34 @@ class BaseDrinkRecordForm(forms.Form):
     storage_item = forms.ModelChoiceField(
         queryset=StorageItem.objects.none(),
         required=False,
-        label=_("Bottle"),
-        help_text=_("Select which bottle you consumed (optional)."),
+        label="Bottle",
+        help_text="Select which bottle you consumed (optional).",
     )
     date_consumed = forms.DateField(
         widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
-        help_text=_("When did you drink this?"),
+        help_text="When did you drink this?",
     )
     tasting_notes = forms.CharField(
         required=False,
         widget=forms.Textarea,
-        help_text=_("Your tasting notes."),
+        help_text="Your tasting notes.",
     )
     rating = forms.TypedChoiceField(
         required=False,
         coerce=lambda x: int(x) if x else None,
         empty_value=None,
         choices=[("", "-")] + [(i, f"{i} ★" if i else "0") for i in range(4)],
-        help_text=_("Rate from 0 to 3 stars."),
+        help_text="Rate from 0 to 3 stars.",
     )
     shared_with = forms.CharField(
         max_length=250,
         required=False,
-        help_text=_("Who did you share this with?"),
+        help_text="Who did you share this with?",
     )
     occasion = forms.CharField(
         max_length=100,
         required=False,
-        help_text=_("What was the occasion?"),
+        help_text="What was the occasion?",
     )
 
     def __init__(self, *args, **kwargs):
@@ -175,35 +175,37 @@ class BaseDrinkRecordForm(forms.Form):
 
             count = available_bottles.count()
             if count == 0:
-                self.fields["storage_item"].help_text = _(
-                    "No bottles available in storage for this " "%(label)s."
-                ) % {"label": self.beverage_label}
+                self.fields["storage_item"].help_text = (
+                    "No bottles available in storage for this "
+                    "%(label)s." % {"label": self.beverage_label}
+                )
             else:
-                self.fields["storage_item"].help_text = _(
-                    "Select which bottle you consumed " "(%(count)d available)."
-                ) % {"count": count}
+                self.fields["storage_item"].help_text = (
+                    "Select which bottle you consumed "
+                    "(%(count)d available)." % {"count": count}
+                )
 
     def clean_storage_item(self):
         bottle = self.cleaned_data.get("storage_item")
         if bottle and bottle.deleted:
-            raise forms.ValidationError(_("This bottle has already been consumed."))
+            raise forms.ValidationError("This bottle has already been consumed.")
         if (
             bottle
             and self._beverage
             and getattr(bottle, self.beverage_fk_name) != self._beverage
         ):
-            raise forms.ValidationError(_("Invalid bottle selection."))
+            raise forms.ValidationError("Invalid bottle selection.")
         return bottle
 
 
 class BottleNoteForm(forms.Form):
     note_date = forms.DateField(
         widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
-        help_text=_("Date of this note."),
+        help_text="Date of this note.",
     )
     note = forms.CharField(
         widget=forms.Textarea,
-        help_text=_("Your note about this bottle."),
+        help_text="Your note about this bottle.",
     )
 
 
@@ -211,5 +213,5 @@ class ReorderReminderForm(forms.Form):
     min_stock = forms.IntegerField(
         min_value=1,
         initial=1,
-        help_text=_("Alert when stock drops to or below this number."),
+        help_text="Alert when stock drops to or below this number.",
     )

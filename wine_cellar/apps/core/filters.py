@@ -1,7 +1,6 @@
 import pycountry
 from django.core.cache import cache
 from django.db.models import Count, F, Q
-from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.user.views import get_active_household
 
@@ -91,7 +90,7 @@ def get_related_model_choices_cached(
     if cached is not None:
         return cached
 
-    choices = [("", _("Any"))]
+    choices = [("", "Any")]
     if extra_choices:
         choices.extend(extra_choices)
 
@@ -130,7 +129,7 @@ def get_collection_choices(user, *, collection_model):
     if cached is not None:
         return cached
 
-    choices = [("", _("Any"))]
+    choices = [("", "Any")]
     if household:
         qs = (
             collection_model.objects.filter(household=household)
@@ -220,7 +219,7 @@ def get_country_choices_cached(
         if code not in favourites and code in countries_in_stock:
             other_choices.append((code, name))
 
-    choices = [("", _("Any"))]
+    choices = [("", "Any")]
     if favourite_choices and other_choices:
         choices += favourite_choices + [("---", "─" * 20)] + other_choices
     else:

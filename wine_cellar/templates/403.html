@@ -1,22 +1,20 @@
 {% extends "base.html" %}
-{% load i18n %}
-
-{% block title %}{% translate "Access Denied" %} - Wine Cellar{% endblock title %}
+{% block title %}Access Denied - Wine Cellar{% endblock title %}
 
 {% block content %}
 <div class="error-page">
     <div class="error-page__content">
         <h1 class="error-page__code">403</h1>
-        <h2 class="error-page__title">{% translate "Access Denied" %}</h2>
+        <h2 class="error-page__title">Access Denied</h2>
         <p class="error-page__message">
-            {% translate "You don't have permission to access this page. Please log in with an authorized account." %}
+            You don't have permission to access this page. Please log in with an authorized account.
         </p>
         <div class="error-page__actions">
             <a href="{% url 'homepage' %}" class="button button--primary">
-                {% translate "Return to Homepage" %}
+                Return to Homepage
             </a>
             <a href="{% url 'account_login' %}" class="button button--secondary">
-                {% translate "Log In" %}
+                Log In
             </a>
         </div>
     </div>

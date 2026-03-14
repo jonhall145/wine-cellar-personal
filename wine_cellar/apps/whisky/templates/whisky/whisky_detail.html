@@ -17,7 +17,7 @@
                 {% url 'whisky-delete' whisky.pk as delete_url %}
                 {% include "includes/edit_delete_buttons.html" with edit_url=edit_url delete_url=delete_url %}
                 <div class="wine__edit-delete-buttons j-center">
-                    <a class="pure-button button__neutral" href="{% url 'whisky-qr' whisky.pk %}" target="_blank" title="{% translate 'QR Code' %}"><i class="fa-solid fa-qrcode"></i> <span>{% translate "QR Code" %}</span></a>
+                    <a class="pure-button button__neutral" href="{% url 'whisky-qr' whisky.pk %}" target="_blank" title="QR Code"><i class="fa-solid fa-qrcode"></i> <span>QR Code</span></a>
                 </div>
             </div>
             <div class="pure-u-1 pure-u-md-1-2">
@@ -30,169 +30,169 @@
                                  loading="lazy"
                                  height="225"
                                  width="auto"
-                                 alt="{% translate 'Picture of a whisky bottle' %}">
+                                 alt="Picture of a whisky bottle">
                         </div>
                         {% if whisky.image_thumbnails|length > 1 %}
                             <div class="image-controls"
                                  role="group"
-                                 aria-label="{% translate "Image carousel controls" %}">
+                                 aria-label="Image carousel controls">
                                 <button type="button"
                                         class="wine-prev"
-                                        aria-label="{% translate "Previous image" %}"
-                                        title="{% translate "Previous image" %}">«</button>
+                                        aria-label="Previous image"
+                                        title="Previous image">«</button>
                                 <button type="button"
                                         class="wine-next"
-                                        aria-label="{% translate "Next image" %}"
-                                        title="{% translate "Next image" %}">»</button>
+                                        aria-label="Next image"
+                                        title="Next image">»</button>
                             </div>
                         {% endif %}
                     </div>
                     <div class="wine-detail__image-actions">
                         <a href="{% url 'whisky-images' whisky.pk %}" class="pure-button button__neutral">
-                            <i class="fa-solid fa-crop"></i> {% translate "Edit Images" %}
+                            <i class="fa-solid fa-crop"></i> Edit Images
                         </a>
                     </div>
                 {% else %}
-                    <div>{% translate "No image" %}</div>
+                    <div>No image</div>
                 {% endif %}
             </div>
             <div class="pure-u-1 pure-u-md-1-2">
                 <table class="wine-detail__table">
                     {% if whisky.distillery %}
                         <tr>
-                            <th>{% translate "Distillery" %}</th>
+                            <th>Distillery</th>
                             <td>{{ whisky.distillery }}</td>
                         </tr>
                     {% endif %}
                     {% if whisky.region %}
                         <tr>
-                            <th>{% translate "Region" %}</th>
+                            <th>Region</th>
                             <td>{{ whisky.region }}</td>
                         </tr>
                     {% endif %}
                     <tr>
-                        <th>{% translate "Country" context "Singular" %}</th>
+                        <th>Country</th>
                         <td>{{ whisky.country_icon }} {{ whisky.country_name }}</td>
                     </tr>
                     <tr>
-                        <th>{% translate "Type" %}</th>
+                        <th>Type</th>
                         <td>{% whisky_type_badge whisky.whisky_type %}</td>
                     </tr>
                     {% if whisky.age_statement %}
                         <tr>
-                            <th>{% translate "Age Statement" %}</th>
-                            <td>{{ whisky.age_statement }} {% translate "years" %}</td>
+                            <th>Age Statement</th>
+                            <td>{{ whisky.age_statement }} years</td>
                         </tr>
                     {% endif %}
                     <tr>
-                        <th>{% translate "ABV" %}</th>
-                        <td>{{ whisky.abv | localize }}%</td>
+                        <th>ABV</th>
+                        <td>{{ whisky.abv  }}%</td>
                     </tr>
                     <tr>
-                        <th>{% translate "Size" %}</th>
+                        <th>Size</th>
                         <td>{{ whisky.size }}</td>
                     </tr>
                     {% if whisky.peated_level %}
                         <tr>
-                            <th>{% translate "Peated" %}</th>
+                            <th>Peated</th>
                             <td>{% peated_badge whisky.peated_level %}</td>
                         </tr>
                     {% endif %}
                     {% if whisky.cask_type %}
                         <tr>
-                            <th>{% translate "Cask Type" %}</th>
+                            <th>Cask Type</th>
                             <td>{{ whisky.cask_type }}</td>
                         </tr>
                     {% endif %}
                     {% if whisky.cask_strength %}
                         <tr>
-                            <th>{% translate "Cask Strength" %}</th>
-                            <td>{% translate "Yes" %}</td>
+                            <th>Cask Strength</th>
+                            <td>Yes</td>
                         </tr>
                     {% endif %}
                     {% if whisky.vintage_year %}
                         <tr>
-                            <th>{% translate "Vintage Year" %}</th>
+                            <th>Vintage Year</th>
                             <td>{{ whisky.vintage_year }}</td>
                         </tr>
                     {% endif %}
                     {% if whisky.bottled_year %}
                         <tr>
-                            <th>{% translate "Bottled Year" %}</th>
+                            <th>Bottled Year</th>
                             <td>{{ whisky.bottled_year }}</td>
                         </tr>
                     {% endif %}
                     <tr>
-                        <th>{% translate "Bottler" %}</th>
+                        <th>Bottler</th>
                         <td>
                             {% if whisky.bottler %}
-                                {{ whisky.bottler }} <span class="badge badge-info">{% translate "IB" %}</span>
+                                {{ whisky.bottler }} <span class="badge badge-info">IB</span>
                             {% else %}
-                                {% translate "OB" %}
+                                OB
                             {% endif %}
                         </td>
                     </tr>
                     {% if whisky.cask_number %}
                         <tr>
-                            <th>{% translate "Cask Number" %}</th>
+                            <th>Cask Number</th>
                             <td>{{ whisky.cask_number }}</td>
                         </tr>
                     {% endif %}
                     {% if whisky.batch_number %}
                         <tr>
-                            <th>{% translate "Batch Number" %}</th>
+                            <th>Batch Number</th>
                             <td>{{ whisky.batch_number }}</td>
                         </tr>
                     {% endif %}
                     {% if whisky.bottle_number %}
                         <tr>
-                            <th>{% translate "Bottle Number" %}</th>
+                            <th>Bottle Number</th>
                             <td>{{ whisky.bottle_number }}</td>
                         </tr>
                     {% endif %}
                     {% if whisky.series %}
                         <tr>
-                            <th>{% translate "Series" %}</th>
+                            <th>Series</th>
                             <td>{{ whisky.series }}</td>
                         </tr>
                     {% endif %}
                     {% if whisky.price is not None or whisky.get_average_price_with_currency %}
                         <tr>
-                            <th>{% translate "Price" %}</th>
-                            <td>{{ whisky.get_price_with_currency }}{% if whisky.get_average_price_with_currency %} ({% translate "Average" %}: {{ whisky.get_average_price_with_currency }}){% endif %}</td>
+                            <th>Price</th>
+                            <td>{{ whisky.get_price_with_currency }}{% if whisky.get_average_price_with_currency %} (Average: {{ whisky.get_average_price_with_currency }}){% endif %}</td>
                         </tr>
                     {% endif %}
                     <tr>
-                        <th>{% translate "Rating" %}</th>
+                        <th>Rating</th>
                         <td>
                             {% if whisky.rating %}
                                 {% rating_stars whisky.rating %}
                             {% else %}
-                                {% translate "No rating yet" %}
+                                No rating yet
                             {% endif %}
                         </td>
                     </tr>
                     {% if whisky.owner %}
                         <tr>
-                            <th>{% translate "Owner" %}</th>
+                            <th>Owner</th>
                             <td>{{ whisky.owner }}</td>
                         </tr>
                     {% endif %}
                     {% if whisky.source %}
                         <tr>
-                            <th>{% translate "Source" %}</th>
+                            <th>Source</th>
                             <td>{{ whisky.source }}</td>
                         </tr>
                     {% endif %}
                     {% if whisky.comment %}
                         <tr>
-                            <th>{% translate "Comment" %}</th>
+                            <th>Comment</th>
                             <td>{{ whisky.comment }}</td>
                         </tr>
                     {% endif %}
                 </table>
                 <div class="mt-12">
-                    <h3>{% translate "Collections" %}</h3>
+                    <h3>Collections</h3>
                     <div class="mb-12">
                         {% for collection in whisky.collections.all %}
                             <form action="{% url 'whisky-collection-remove' whisky.pk collection.pk %}"
@@ -204,34 +204,34 @@
                                 </button>
                             </form>
                         {% empty %}
-                            <span class="text--gray">{% translate "Not in any collection yet." %}</span>
+                            <span class="text--gray">Not in any collection yet.</span>
                         {% endfor %}
                     </div>
                     <form action="{% url 'whisky-collection-add' whisky.pk %}" method="post" class="pure-form">
                         {% csrf_token %}
                         <select name="collection_id">
-                            <option value="">{% translate "Select collection" %}</option>
+                            <option value="">Select collection</option>
                             {% for collection in all_collections %}
                                 <option value="{{ collection.pk }}">{{ collection.name }}</option>
                             {% endfor %}
                         </select>
                         <input type="text"
                                name="new_collection_name"
-                               placeholder="{% translate 'Or create new collection' %}">
+                               placeholder="Or create new collection">
                         <button type="submit" class="pure-button button__neutral">
-                            {% translate "Add" %}
+                            Add
                         </button>
                     </form>
                 </div>
                 {% if extraction_log %}
                     <div class="extraction-origin">
                         <i class="fa-solid fa-wand-magic-sparkles"></i>
-                        {% translate "Added via label scan" %}
+                        Added via label scan
                         <span class="text--gray text--small">
                             ({{ extraction_log.created|date:"SHORT_DATE_FORMAT" }} ·
-                            {{ extraction_log.confidence }} {% translate "confidence" %} ·
-                            {{ extraction_log.extracted_fields|length }} {% translate "fields" %}{% if extraction_log.user_corrections %} ·
-                            {{ extraction_log.user_corrections|length }} {% translate "corrected" %}{% endif %})
+                            {{ extraction_log.confidence }} confidence ·
+                            {{ extraction_log.extracted_fields|length }} fields{% if extraction_log.user_corrections %} ·
+                            {{ extraction_log.user_corrections|length }} corrected{% endif %})
                         </span>
                     </div>
                 {% endif %}
@@ -240,19 +240,19 @@
             <!-- Cask History Section -->
             {% if whisky.cask_histories.all %}
             <div class="pure-u-1 pure-u-md-1 text-align-center">
-                <h2 class="header__title">{% translate "Cask History" %}</h2>
+                <h2 class="header__title">Cask History</h2>
             </div>
             <div class="pure-u-1 pure-u-md-3-8 m-auto">
                 <div class="table-responsive">
                     <table class="pure-table pure-table-horizontal pure-table-striped">
                         <thead>
                             <tr>
-                                <th>{% translate "Order" %}</th>
-                                <th>{% translate "Cask Type" %}</th>
-                                <th>{% translate "Wood" %}</th>
-                                <th>{% translate "Previous Contents" %}</th>
-                                <th>{% translate "Duration" %}</th>
-                                <th>{% translate "Finish" %}</th>
+                                <th>Order</th>
+                                <th>Cask Type</th>
+                                <th>Wood</th>
+                                <th>Previous Contents</th>
+                                <th>Duration</th>
+                                <th>Finish</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -265,7 +265,7 @@
                                     <td>{{ cask.duration|default_if_none:"" }}</td>
                                     <td>
                                         {% if cask.is_finish %}
-                                            <span class="badge badge-info">{% translate "Finish" %}</span>
+                                            <span class="badge badge-info">Finish</span>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -278,26 +278,22 @@
 
             <!-- Stock Section -->
             <div class="pure-u-1 pure-u-md-1 text-align-center">
-                <h2 class="header__title">{% translate "Stock" %}</h2>
+                <h2 class="header__title">Stock</h2>
             </div>
             <div class="pure-u-1 pure-u-md-3-8 m-auto">
                 <div class="d-flex j-between mb-12">
                     <p class="stock__count">
                         {% with stock=whisky.stock_count|default:whisky.total_stock|default:0 %}
-                        {% blocktranslate count counter=stock %}
-                    {{ counter }} bottle
-                    {% plural %}
-                    {{ counter }} bottles
-                    {% endblocktranslate %}
+                        {% if stock == 1 %}{{ stock }} bottle{% else %}{{ stock }} bottles{% endif %}
                         {% endwith %}
                     </p>
                     <div>
                         <a href="{% url 'stock-add' whisky.pk %}"
-                           class="pure-button button__neutral"><i class="fa-regular fa-plus"></i> <span>{% translate "Add bottle" %}</span></a>
+                           class="pure-button button__neutral"><i class="fa-regular fa-plus"></i> <span>Add bottle</span></a>
                         <a href="{% url 'drink-record-add' whisky.pk %}"
-                           class="pure-button button__neutral"><i class="fa-solid fa-whiskey-glass"></i> <span>{% translate "Record Drink" %}</span></a>
+                           class="pure-button button__neutral"><i class="fa-solid fa-whiskey-glass"></i> <span>Record Drink</span></a>
                         <a href="{% url 'reorder-reminder-add' whisky.pk %}"
-                           class="pure-button button__neutral"><i class="fa-solid fa-bell"></i> <span>{% translate "Reorder Alert" %}</span></a>
+                           class="pure-button button__neutral"><i class="fa-solid fa-bell"></i> <span>Reorder Alert</span></a>
                     </div>
                 </div>
                 <div class="pure-u-1 pure-u-md-1">
@@ -306,14 +302,14 @@
                         <table class="pure-table pure-table-horizontal pure-table-striped wine-detail__stock-table">
                             <thead>
                                 <tr>
-                                    <th>{% translate "Location" %}</th>
-                                    <th>{% translate "Row" %}</th>
-                                    <th>{% translate "Cell" %}</th>
-                                    <th>{% translate "Fill Level" %}</th>
-                                    <th>{% translate "Opened" %}</th>
-                                    <th>{% translate "Owner" %}</th>
-                                    <th>{% translate "Gift" %}</th>
-                                    <th>{% translate "Occasion" %}</th>
+                                    <th>Location</th>
+                                    <th>Row</th>
+                                    <th>Cell</th>
+                                    <th>Fill Level</th>
+                                    <th>Opened</th>
+                                    <th>Owner</th>
+                                    <th>Gift</th>
+                                    <th>Occasion</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -325,9 +321,9 @@
                                     <td>
                                         {% fill_level_display item.fill_level %}
                                         {% if item.dreg_expired %}
-                                            <span class="badge badge-danger" title="{% translate 'Dreg for over 1 year' %}"><i class="fa-solid fa-exclamation-triangle"></i></span>
+                                            <span class="badge badge-danger" title="Dreg for over 1 year"><i class="fa-solid fa-exclamation-triangle"></i></span>
                                         {% elif item.dreg_warning %}
-                                            <span class="badge badge-warning" title="{% translate 'Dreg approaching 1 year' %}"><i class="fa-solid fa-clock"></i></span>
+                                            <span class="badge badge-warning" title="Dreg approaching 1 year"><i class="fa-solid fa-clock"></i></span>
                                         {% endif %}
                                     </td>
                                     <td>{{ item.opened_date|default_if_none:"" }}</td>
@@ -335,15 +331,15 @@
                                     <td>{% if item.is_gift %}<i class="fa-solid fa-gift" title="{{ item.gift_from|default:'' }}"></i>{% if item.gift_from %} {{ item.gift_from }}{% endif %}{% endif %}</td>
                                     <td>{{ item.occasion|default_if_none:"" }}</td>
                                     <td>
-                                        <a class="pure-button" href="{% url 'bottle-note-add' item.pk %}" title="{% translate 'Add note' %}"><i class="fa-regular fa-note-sticky"></i></a>
-                                        <a class="pure-button" href="{% url 'bottle-edit' item.pk %}" title="{% translate 'Edit bottle' %}"><i class="fa-regular fa-pen-to-square"></i></a>
-                                        <a class="pure-button" href="{% url 'stock-delete' item.pk %}" title="{% translate 'Remove bottle' %}"><i class="fa-regular fa-trash-can"></i></a>
+                                        <a class="pure-button" href="{% url 'bottle-note-add' item.pk %}" title="Add note"><i class="fa-regular fa-note-sticky"></i></a>
+                                        <a class="pure-button" href="{% url 'bottle-edit' item.pk %}" title="Edit bottle"><i class="fa-regular fa-pen-to-square"></i></a>
+                                        <a class="pure-button" href="{% url 'stock-delete' item.pk %}" title="Remove bottle"><i class="fa-regular fa-trash-can"></i></a>
                                     </td>
                                 </tr>
                                 {% if item.notes.all %}
                                     <tr>
                                         <td colspan="9" class="bottle-notes">
-                                            <strong>{% translate "Notes" %}:</strong>
+                                            <strong>Notes:</strong>
                                             <ul>
                                                 {% for note in item.notes.all %}
                                                     <li><em>{{ note.note_date }}</em>: {{ note.note }}</li>
@@ -358,10 +354,10 @@
                     {% else %}
                         <div class="empty-state">
                             <div class="empty-state__icon"><i class="fa-solid fa-box-open"></i></div>
-                            <h3 class="empty-state__title">{% translate "No bottles in stock" %}</h3>
-                            <p class="empty-state__message">{% translate "Add bottles to track your inventory." %}</p>
+                            <h3 class="empty-state__title">No bottles in stock</h3>
+                            <p class="empty-state__message">Add bottles to track your inventory.</p>
                             <a href="{% url 'stock-add' whisky.pk %}" class="pure-button button__primary empty-state__action">
-                                <i class="fa-solid fa-plus"></i> {% translate "Add bottle" %}
+                                <i class="fa-solid fa-plus"></i> Add bottle
                             </a>
                         </div>
                     {% endif %}
@@ -371,16 +367,16 @@
             <!-- Potential Duplicates Section -->
             {% if duplicates %}
             <div class="pure-u-1 pure-u-md-1 text-align-center">
-                <h2 class="header__title">{% translate "Potential Duplicates" %}</h2>
+                <h2 class="header__title">Potential Duplicates</h2>
             </div>
             <div class="pure-u-1 pure-u-md-3-8 m-auto">
                 <div class="table-responsive">
                 <table class="pure-table pure-table-horizontal pure-table-striped">
                     <thead>
                         <tr>
-                            <th>{% translate "Name" %}</th>
-                            <th>{% translate "Age" %}</th>
-                            <th>{% translate "Bottles" %}</th>
+                            <th>Name</th>
+                            <th>Age</th>
+                            <th>Bottles</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -392,7 +388,7 @@
                             <td>{{ dup.stock_count }}</td>
                             <td>
                                 <a href="{% url 'whisky-merge-confirm' dup.pk whisky.pk %}" class="pure-button button__neutral">
-                                    <i class="fa-solid fa-code-merge"></i> {% translate "Merge" %}
+                                    <i class="fa-solid fa-code-merge"></i> Merge
                                 </a>
                             </td>
                         </tr>

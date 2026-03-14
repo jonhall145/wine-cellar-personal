@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 {% load static i18n core_tags %}
 {% block title %}
-    {% translate "Drink History" %}
+    Drink History
 {% endblock title %}
 {% block header %}
-    <h1 class="header__title">{% translate "Drink History" %}</h1>
+    <h1 class="header__title">Drink History</h1>
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
@@ -14,13 +14,13 @@
                     <table class="pure-table pure-table-horizontal pure-table-striped">
                         <thead>
                             <tr>
-                                <th>{% translate "Date" %}</th>
+                                <th>Date</th>
                                 <th>{{ APP_ITEM_NAME|title }}</th>
-                                <th>{% translate "Rating" %}</th>
-                                <th>{% translate "Shared With" %}</th>
-                                <th>{% translate "Occasion" %}</th>
-                                <th>{% translate "Notes" %}</th>
-                                <th>{% translate "Actions" %}</th>
+                                <th>Rating</th>
+                                <th>Shared With</th>
+                                <th>Occasion</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -34,10 +34,10 @@
                                     <td>{{ record.occasion|default_if_none:"-" }}</td>
                                     <td>{{ record.tasting_notes|default_if_none:"-"|truncatewords:20 }}</td>
                                     <td>
-                                        <a href="{% url 'drink-record-edit' record.pk %}" class="pure-button pure-button-small" title="{% translate 'Edit' %}">
+                                        <a href="{% url 'drink-record-edit' record.pk %}" class="pure-button pure-button-small" title="Edit">
                                             <i class="fa-solid fa-pen"></i>
                                         </a>
-                                        <a href="{% url 'drink-record-delete' record.pk %}" class="pure-button pure-button-small button__danger" title="{% translate 'Delete' %}">
+                                        <a href="{% url 'drink-record-delete' record.pk %}" class="pure-button pure-button-small button__danger" title="Delete">
                                             <i class="fa-solid fa-trash"></i>
                                         </a>
                                     </td>
@@ -50,10 +50,10 @@
             {% else %}
                 <div class="empty-state">
                     <div class="empty-state__icon"><i class="fa-solid fa-{{ beverage_icon }}"></i></div>
-                    <h3 class="empty-state__title">{% translate "No drink records yet" %}</h3>
-                    <p class="empty-state__message">{% blocktranslate with item_name=APP_ITEM_NAME %}Record your {{ item_name }} experiences to build your tasting history.{% endblocktranslate %}</p>
+                    <h3 class="empty-state__title">No drink records yet</h3>
+                    <p class="empty-state__message">Record your {{ APP_ITEM_NAME }} experiences to build your tasting history.</p>
                     <a href="{% bev_url 'list' %}" class="pure-button button__primary empty-state__action">
-                        <i class="fa-solid fa-{{ beverage_icon }}"></i> {% blocktranslate with item_name=APP_ITEM_NAME_PLURAL|title %}Browse {{ item_name }}{% endblocktranslate %}
+                        <i class="fa-solid fa-{{ beverage_icon }}"></i> Browse {{ APP_ITEM_NAME_PLURAL }}
                     </a>
                 </div>
             {% endif %}

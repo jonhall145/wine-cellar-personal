@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load i18n %}
 {% block title %}
     {{ household.name }}
 {% endblock title %}
@@ -8,7 +7,7 @@
 {% block content %}
     <div class="pure-g">
         <div class="pure-u-1">
-            <a href="{% url 'household-list' %}" class="back-link">← {% translate "Back to households" %}</a>
+            <a href="{% url 'household-list' %}" class="back-link">← Back to households</a>
             <h1>{{ household.name }}</h1>
         </div>
     </div>
@@ -17,25 +16,25 @@
         <div class="pure-u-1 pure-u-md-1-2">
             <div class="card">
                 <div class="card__header">
-                    <h2 class="card__title">{% translate "Household Info" %}</h2>
+                    <h2 class="card__title">Household Info</h2>
                 </div>
                 <div class="card__body">
-                    <p><strong>{% translate "Created" %}:</strong> {{ household.created|date:"SHORT_DATE_FORMAT" }}</p>
-                    <p><strong>{% translate "Your Role" %}:</strong> {{ membership.get_role_display }}</p>
-                    <p><strong>{% translate "Members" %}:</strong> {{ household.get_member_count }}</p>
+                    <p><strong>Created:</strong> {{ household.created|date:"SHORT_DATE_FORMAT" }}</p>
+                    <p><strong>Your Role:</strong> {{ membership.get_role_display }}</p>
+                    <p><strong>Members:</strong> {{ household.get_member_count }}</p>
                 </div>
                 <div class="card__actions">
                     {% if membership.can_manage_members %}
-                        <a href="{% url 'household-settings' household.pk %}" class="pure-button">{% translate "Settings" %}</a>
-                        <a href="{% url 'household-rename' household.pk %}" class="pure-button">{% translate "Rename" %}</a>
+                        <a href="{% url 'household-settings' household.pk %}" class="pure-button">Settings</a>
+                        <a href="{% url 'household-rename' household.pk %}" class="pure-button">Rename</a>
                     {% endif %}
                     {% if membership.can_delete_household %}
-                        <a href="{% url 'household-transfer' household.pk %}" class="pure-button">{% translate "Transfer" %}</a>
-                        <a href="{% url 'household-delete' household.pk %}" class="pure-button button__danger">{% translate "Delete" %}</a>
+                        <a href="{% url 'household-transfer' household.pk %}" class="pure-button">Transfer</a>
+                        <a href="{% url 'household-delete' household.pk %}" class="pure-button button__danger">Delete</a>
                     {% elif membership.role != 'OW' %}
                         <form method="post" action="{% url 'household-leave' household.pk %}" class="d-inline">
                             {% csrf_token %}
-                            <button type="submit" class="pure-button button__danger" onclick="return confirm('{% translate "Are you sure you want to leave this household?" %}')">{% translate "Leave" %}</button>
+                            <button type="submit" class="pure-button button__danger" onclick="return confirm('Are you sure you want to leave this household?')">Leave</button>
                         </form>
                     {% endif %}
                 </div>
@@ -45,9 +44,9 @@
 
     <div class="pure-g">
         <div class="pure-u-1">
-            <h2>{% translate "Members" %}</h2>
+            <h2>Members</h2>
             {% if membership.can_manage_members %}
-                <a href="{% url 'member-invite' household.pk %}" class="pure-button button__primary">{% translate "Invite Member" %}</a>
+                <a href="{% url 'member-invite' household.pk %}" class="pure-button button__primary">Invite Member</a>
             {% endif %}
         </div>
     </div>
@@ -57,11 +56,11 @@
             <table class="pure-table pure-table-striped">
                 <thead>
                     <tr>
-                        <th>{% translate "User" %}</th>
-                        <th>{% translate "Role" %}</th>
-                        <th>{% translate "Joined" %}</th>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Joined</th>
                         {% if membership.can_manage_members %}
-                            <th>{% translate "Actions" %}</th>
+                            <th>Actions</th>
                         {% endif %}
                     </tr>
                 </thead>
@@ -71,7 +70,7 @@
                             <td>
                                 {{ member.user.username }}
                                 {% if member.user == request.user %}
-                                    <span class="badge">{% translate "You" %}</span>
+                                    <span class="badge">You</span>
                                 {% endif %}
                             </td>
                             <td>{{ member.get_role_display }}</td>
@@ -79,8 +78,8 @@
                             {% if membership.can_manage_members %}
                                 <td>
                                     {% if member.role != 'OW' and member.user != request.user %}
-                                        <a href="{% url 'member-update-role' household.pk member.pk %}" class="pure-button button--small">{% translate "Edit Role" %}</a>
-                                        <a href="{% url 'member-remove' household.pk member.pk %}" class="pure-button button--small button__danger">{% translate "Remove" %}</a>
+                                        <a href="{% url 'member-update-role' household.pk member.pk %}" class="pure-button button--small">Edit Role</a>
+                                        <a href="{% url 'member-remove' household.pk member.pk %}" class="pure-button button--small button__danger">Remove</a>
                                     {% endif %}
                                 </td>
                             {% endif %}
@@ -94,16 +93,16 @@
     {% if pending_invitations %}
         <div class="pure-g">
             <div class="pure-u-1">
-                <h2>{% translate "Pending Invitations" %}</h2>
+                <h2>Pending Invitations</h2>
                 <table class="pure-table pure-table-striped">
                     <thead>
                         <tr>
-                            <th>{% translate "Email" %}</th>
-                            <th>{% translate "Role" %}</th>
-                            <th>{% translate "Invited By" %}</th>
-                            <th>{% translate "Expires" %}</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Invited By</th>
+                            <th>Expires</th>
                             {% if membership.can_manage_members %}
-                                <th>{% translate "Actions" %}</th>
+                                <th>Actions</th>
                             {% endif %}
                         </tr>
                     </thead>
@@ -118,7 +117,7 @@
                                     <td>
                                         <form method="post" action="{% url 'invitation-cancel' household.pk invitation.pk %}" class="d-inline">
                                             {% csrf_token %}
-                                            <button type="submit" class="pure-button button--small button__danger">{% translate "Cancel" %}</button>
+                                            <button type="submit" class="pure-button button--small button__danger">Cancel</button>
                                         </form>
                                     </td>
                                 {% endif %}

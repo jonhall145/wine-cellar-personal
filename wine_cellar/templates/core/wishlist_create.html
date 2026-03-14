@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
-{% load static i18n %}
+{% load static %}
 {% block title %}
-    {% translate "Add to Wishlist" %}
+    Add to Wishlist
 {% endblock title %}
 {% block header %}
-    <h1 class="header__title">{% translate "Add to Wishlist" %}</h1>
+    <h1 class="header__title">Add to Wishlist</h1>
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
@@ -18,7 +18,7 @@
                 {% endfor %}
                 <div class="pure-controls">
                     <button type="submit"
-                            class="pure-button button__secondary">{% translate "Save" %}</button>
+                            class="pure-button button__secondary">Save</button>
                 </div>
             </form>
         </div>

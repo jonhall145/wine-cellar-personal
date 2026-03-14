@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
-{% load static i18n %}
+{% load static %}
 {% block extra_js %}
     {{ block.super }}
     <script src="{% static 'tom_select.js' %}" type="module" defer></script>
     <script src="{% static 'push_subscribe.js' %}" type="module" defer></script>
 {% endblock extra_js %}
 {% block title %}
-    {% translate "Settings" %}
+    Settings
 {% endblock title %}
 {% block header %}
 {% endblock header %}
@@ -15,33 +15,32 @@
         {% include "includes/settings_sidebar.html" %}
         <div class="pure-u-1 pure-u-lg-3-4">
             <div class="pure-u-1 pure-u-lg-2-3 m-auto">
-                <h1>{% translate "General" %}</h1>
+                <h1>General</h1>
                 <form method="post"
                       enctype="multipart/form-data"
                       class="pure-form pure-form-stacked wine-form"
                       novalidate>
                     {% csrf_token %}
-                    {% include 'forms/form_field.html' with field=form.language %}
                     {% include 'forms/form_field.html' with field=form.currency %}
                     {% include 'forms/form_field.html' with field=form.notifications %}
-                    <h2>{% translate "Drink Reminders" %}</h2>
+                    <h2>Drink Reminders</h2>
                     {% include 'forms/form_field.html' with field=form.reminder_enabled %}
                     {% include 'forms/form_field.html' with field=form.reminder_years_before %}
                     <div class="pure-controls">
                         <div class="pure-g">
                             <div class="pure-u-1 pure-u-sm-1-2">
-                                <button type="submit" name="continue" class="pure-button button__primary">{% translate "Save" %}</button>
+                                <button type="submit" name="continue" class="pure-button button__primary">Save</button>
                             </div>
                         </div>
                     </div>
                 </form>
                 <div id="push-notification-section" class="push-section">
-                    <h2>{% translate "Push Notifications" %}</h2>
-                    <p id="push-status" class="push-status push-status--inactive">{% translate "Checking…" %}</p>
+                    <h2>Push Notifications</h2>
+                    <p id="push-status" class="push-status push-status--inactive">Checking…</p>
                     <button id="push-toggle-btn"
                             type="button"
                             class="pure-button button__primary push-toggle-btn--hidden">
-                        {% translate "Enable Push Notifications" %}
+                        Enable Push Notifications
                     </button>
                 </div>
             </div>

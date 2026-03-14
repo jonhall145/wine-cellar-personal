@@ -4,7 +4,6 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.http.response import HttpResponseRedirectBase
 from django.shortcuts import redirect
-from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.household.models import (
     ROLE_HIERARCHY,
@@ -29,13 +28,13 @@ def require_member(view_func):
             )
         except HouseholdMembership.DoesNotExist:
             raise PermissionDenied(
-                _("You need Member role or higher to perform this action.")
+                "You need Member role or higher to perform this action."
             )
         if ROLE_HIERARCHY.get(membership.role, 0) < ROLE_HIERARCHY.get(
             HouseholdRole.MEMBER, 0
         ):
             raise PermissionDenied(
-                _("You need Member role or higher to perform this action.")
+                "You need Member role or higher to perform this action."
             )
         return view_func(request, *args, **kwargs)
 
@@ -126,7 +125,7 @@ class RequireHouseholdMixin(HouseholdContextMixin):
         if not self.get_household():
             messages.warning(
                 request,
-                _("Please select or create a household to continue."),
+                "Please select or create a household to continue.",
             )
             return redirect("household-list")
         return super().dispatch(request, *args, **kwargs)
@@ -147,10 +146,10 @@ class RequireMemberMixin(RequireHouseholdMixin):
         if not self.can_edit():
             messages.error(
                 request,
-                _("You don't have permission to modify content in this household."),
+                "You don't have permission to modify content in this household.",
             )
             raise PermissionDenied(
-                _("You need Member role or higher to perform this action.")
+                "You need Member role or higher to perform this action."
             )
         return response
 
@@ -170,10 +169,10 @@ class RequireAdminMixin(RequireHouseholdMixin):
         if not self.can_manage_members():
             messages.error(
                 request,
-                _("You don't have permission to manage members in this household."),
+                "You don't have permission to manage members in this household.",
             )
             raise PermissionDenied(
-                _("You need Admin role or higher to perform this action.")
+                "You need Admin role or higher to perform this action."
             )
         return response
 
@@ -193,9 +192,9 @@ class RequireOwnerMixin(RequireHouseholdMixin):
         if not self.is_owner():
             messages.error(
                 request,
-                _("Only the household owner can perform this action."),
+                "Only the household owner can perform this action.",
             )
             raise PermissionDenied(
-                _("You need to be the household owner to perform this action.")
+                "You need to be the household owner to perform this action."
             )
         return response

@@ -8,7 +8,6 @@ from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
-from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 from django.views.generic import DeleteView, DetailView, FormView, ListView
 from django.views.generic.list import MultipleObjectMixin
@@ -186,10 +185,8 @@ class StorageDeleteView(DeleteView):
         if storages <= 1:
             form.add_error(
                 None,
-                _(
-                    "You must have at least one storage."
-                    + " Cannot delete the last storage."
-                ),
+                "You must have at least one storage."
+                " Cannot delete the last storage.",
             )
             return self.form_invalid(form)
         return super().form_valid(form)

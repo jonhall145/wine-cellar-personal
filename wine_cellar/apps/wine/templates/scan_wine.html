@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
-{% load static i18n %}
+{% load static %}
 {% block header %}
-    <h1 class="header__title">{% translate "Scan Barcode" %}</h1>
+    <h1 class="header__title">Scan Barcode</h1>
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
         <div class="pure-u-1-1 pure-u-sm-1-3 m-auto">
             <p class="form-hint">
-                {% blocktranslate %}Scan the barcode of a bottle to quickly add or remove a wine from your cellar.{% endblocktranslate %}
+                Scan the barcode of a bottle to quickly add or remove a wine from your cellar.
             </p>
             <div id="scanner" data-zxing-wasm-url="{% static 'zxing_reader.wasm' %}" data-scan-url="/wine/scan/__CODE__/" data-scan-barcode-url="{% url 'wine-scan-barcode' %}" data-label-scan-url="{% url 'label-scan' %}"></div>
         </div>

@@ -5,7 +5,6 @@ from django import forms
 from django.core import validators
 from django.forms import ImageField
 from django.utils.text import slugify
-from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.core.forms import (
     BaseDrinkRecordForm,
@@ -149,22 +148,22 @@ class WhiskyBaseForm(
 
     name = forms.CharField(
         max_length=200,
-        help_text=_("Enter the name of the whisky."),
+        help_text="Enter the name of the whisky.",
     )
     whisky_type = forms.ChoiceField(
         choices=WhiskyType.choices,
         initial=WhiskyType.SINGLE_MALT,
-        help_text=_("Select the type of whisky."),
+        help_text="Select the type of whisky.",
     )
     distillery = CreatableModelChoiceField(
         queryset=Distillery.objects.all().order_by("name"),
         required=False,
-        help_text=_("Select the distillery."),
+        help_text="Select the distillery.",
     )
     region = CreatableModelChoiceField(
         queryset=WhiskyRegion.objects.all().order_by("order", "name"),
         required=False,
-        help_text=_("Select the whisky region."),
+        help_text="Select the whisky region.",
     )
     country = forms.ChoiceField(
         choices=(
@@ -185,7 +184,7 @@ class WhiskyBaseForm(
             ]
         )(),
         initial="XS",
-        help_text=_("Select the country of origin."),
+        help_text="Select the country of origin.",
     )
     age_statement = forms.IntegerField(
         required=False,
@@ -193,7 +192,7 @@ class WhiskyBaseForm(
             validators.MinValueValidator(0),
             validators.MaxValueValidator(100),
         ],
-        help_text=_("Age in years (leave blank for NAS)."),
+        help_text="Age in years (leave blank for NAS).",
     )
     vintage_year = forms.IntegerField(
         required=False,
@@ -201,7 +200,7 @@ class WhiskyBaseForm(
             validators.MinValueValidator(1800),
             validators.MaxValueValidator(datetime.now().year),
         ],
-        help_text=_("Year the whisky was distilled."),
+        help_text="Year the whisky was distilled.",
     )
     bottled_year = forms.IntegerField(
         required=False,
@@ -209,7 +208,7 @@ class WhiskyBaseForm(
             validators.MinValueValidator(1800),
             validators.MaxValueValidator(datetime.now().year + 1),
         ],
-        help_text=_("Year the whisky was bottled."),
+        help_text="Year the whisky was bottled.",
     )
     abv = forms.FloatField(
         required=False,
@@ -217,76 +216,76 @@ class WhiskyBaseForm(
             validators.MinValueValidator(0.0),
             validators.MaxValueValidator(100.0),
         ],
-        help_text=_("Alcohol by volume percentage."),
+        help_text="Alcohol by volume percentage.",
         localize=True,
     )
     size = forms.ChoiceField(
         choices=BottleSize.choices,
         initial=BottleSize.STANDARD,
-        help_text=_("Select the bottle size."),
+        help_text="Select the bottle size.",
     )
     peated_level = forms.ChoiceField(
         choices=[("", "---------")] + list(PeatedLevel.choices),
         required=False,
-        label=_("Peated"),
-        help_text=_("Is this whisky peated?"),
+        label="Peated",
+        help_text="Is this whisky peated?",
     )
     cask_type = CreatableMultipleChoiceField(
         choices=[(c, c) for c in COMMON_CASK_TYPES],
         required=False,
         widget=forms.SelectMultiple(),
-        help_text=_("e.g. Bourbon, Sherry (Oloroso). Type to add custom."),
+        help_text="e.g. Bourbon, Sherry (Oloroso). Type to add custom.",
     )
     cask_strength = forms.BooleanField(
         required=False,
-        label=_("Cask Strength"),
+        label="Cask Strength",
     )
     color = forms.CharField(
         max_length=100,
         required=False,
-        help_text=_("Color description."),
+        help_text="Color description.",
     )
     bottler = CreatableModelChoiceField(
         queryset=Bottler.objects.all().order_by("name"),
         required=False,
-        help_text=_("Leave blank for Official Bottling (OB)."),
+        help_text="Leave blank for Official Bottling (OB).",
     )
     source = CreatableModelChoiceField(
         queryset=WhiskySource.objects.none(),
         required=False,
-        label=_("Source"),
-        help_text=_("Where was this whisky purchased?"),
+        label="Source",
+        help_text="Where was this whisky purchased?",
     )
     owner = forms.CharField(
         max_length=100,
         required=False,
-        label=_("Owner"),
-        help_text=_("Who owns this bottle?"),
+        label="Owner",
+        help_text="Who owns this bottle?",
         widget=forms.Select(),
     )
     bottler_series = forms.CharField(
         max_length=200,
         required=False,
-        help_text=_("Bottler series or range name."),
+        help_text="Bottler series or range name.",
     )
     cask_number = forms.CharField(
         max_length=100,
         required=False,
-        help_text=_("Cask number if single cask."),
+        help_text="Cask number if single cask.",
     )
     batch_number = forms.CharField(
         max_length=100,
         required=False,
-        help_text=_("Batch or edition number."),
+        help_text="Batch or edition number.",
     )
     bottle_number = forms.CharField(
         max_length=100,
         required=False,
-        help_text=_("Bottle number (e.g. 123/500)."),
+        help_text="Bottle number (e.g. 123/500).",
     )
     limited_edition = forms.BooleanField(
         required=False,
-        help_text=_("Check if this is a limited edition."),
+        help_text="Check if this is a limited edition.",
     )
     release_year = forms.IntegerField(
         required=False,
@@ -294,14 +293,14 @@ class WhiskyBaseForm(
             validators.MinValueValidator(1800),
             validators.MaxValueValidator(datetime.now().year + 1),
         ],
-        help_text=_("Year of release."),
+        help_text="Year of release.",
     )
     rating = forms.TypedChoiceField(
         required=False,
         coerce=lambda x: int(x) if x else None,
         empty_value=None,
         choices=[("", "-")] + [(i, f"{i} ★" if i else "0") for i in range(4)],
-        help_text=_("Rate this whisky from 0 to 3 stars."),
+        help_text="Rate this whisky from 0 to 3 stars.",
     )
     price = forms.DecimalField(
         required=False,
@@ -313,78 +312,77 @@ class WhiskyBaseForm(
     barcode = forms.CharField(
         max_length=100,
         required=False,
-        help_text=_("Enter the barcode number."),
+        help_text="Enter the barcode number.",
     )
     comment = forms.CharField(
         max_length=1000,
         required=False,
         widget=forms.Textarea,
-        help_text=_("Your thoughts and tasting notes."),
+        help_text="Your thoughts and tasting notes.",
     )
     image_front_label = ImageField(
         widget=NoFilenameClearableFileInput,
         required=False,
-        help_text=_("Upload a photo of the front label."),
+        help_text="Upload a photo of the front label.",
     )
     image_back_label = ImageField(
         widget=NoFilenameClearableFileInput,
         required=False,
-        help_text=_("Upload a photo of the back label."),
+        help_text="Upload a photo of the back label.",
     )
     # Storage fields
     storage = forms.ModelChoiceField(
         queryset=Storage.objects.none(),
         required=False,
-        help_text=_("Select where to store this bottle (optional)."),
+        help_text="Select where to store this bottle (optional).",
     )
     row = forms.IntegerField(
         required=False,
         min_value=1,
-        label=_("Row"),
-        help_text=_("Select the row in the storage."),
+        label="Row",
+        help_text="Select the row in the storage.",
         widget=forms.Select(),
     )
     column = forms.IntegerField(
         required=False,
         min_value=1,
-        label=_("Column"),
-        help_text=_("Select the column in the storage."),
+        label="Column",
+        help_text="Select the column in the storage.",
         widget=forms.Select(),
     )
     bottle_price = forms.DecimalField(
         required=False,
         max_digits=8,
         decimal_places=2,
-        label=_("Bottle Price"),
-        help_text=_(
-            "Price paid for this specific bottle (if different from whisky price)."
-        ),
+        label="Bottle Price",
+        help_text="Price paid for this specific bottle "
+        "(if different from whisky price).",
         localize=True,
         widget=forms.TextInput(attrs={"inputmode": "decimal"}),
     )
     is_gift = forms.BooleanField(
         required=False,
-        label=_("Is Gift"),
-        help_text=_("Check if this bottle was received as a gift."),
+        label="Is Gift",
+        help_text="Check if this bottle was received as a gift.",
     )
     gift_from = forms.CharField(
         max_length=100,
         required=False,
-        label=_("Gift From"),
-        help_text=_("Enter who gave you this bottle."),
+        label="Gift From",
+        help_text="Enter who gave you this bottle.",
     )
     occasion = forms.CharField(
         max_length=100,
         required=False,
-        label=_("Occasion"),
-        help_text=_("Enter a special occasion this bottle is reserved for."),
+        label="Occasion",
+        help_text="Enter a special occasion this bottle is reserved for.",
     )
     fill_level = forms.ChoiceField(
         choices=FillLevel.choices,
         initial=FillLevel.UNOPENED,
         required=False,
-        label=_("Fill Level"),
-        help_text=_("Current fill level of the bottle."),
+        label="Fill Level",
+        help_text="Current fill level of the bottle.",
     )
 
     def clean_cask_type(self):
@@ -501,7 +499,7 @@ class WhiskyForm(WhiskyBaseForm):
             search=True,
             create=True,
             clear=not distillery,
-            placeholder=str(_("Search or add distillery...")),
+            placeholder="Search or add distillery...",
         )
         region = initial.get("region")
         region_items = [region] if region else []
@@ -513,7 +511,7 @@ class WhiskyForm(WhiskyBaseForm):
             search=True,
             create=True,
             clear=not region,
-            placeholder=str(_("Search or add region...")),
+            placeholder="Search or add region...",
         )
         bottler = initial.get("bottler")
         bottler_items = [bottler] if bottler else []
@@ -525,7 +523,7 @@ class WhiskyForm(WhiskyBaseForm):
             search=True,
             create=True,
             clear=not bottler,
-            placeholder=str(_("Search or add bottler...")),
+            placeholder="Search or add bottler...",
         )
         country = initial.get("country")
         self.set_tom_config(
@@ -541,7 +539,7 @@ class WhiskyForm(WhiskyBaseForm):
             max_options=-1,
             search=True,
             create=True,
-            placeholder=str(_("Search or add cask type...")),
+            placeholder="Search or add cask type...",
         )
         source = initial.get("source")
         source_items = [source] if source else []
@@ -553,7 +551,7 @@ class WhiskyForm(WhiskyBaseForm):
             search=True,
             create=True,
             clear=not source,
-            placeholder=str(_("Search or add source...")),
+            placeholder="Search or add source...",
         )
         owner = initial.get("owner", "")
         owner_items = [owner] if owner else []
@@ -565,7 +563,7 @@ class WhiskyForm(WhiskyBaseForm):
             search=True,
             create=True,
             clear=not owner,
-            placeholder=str(_("Search or add owner...")),
+            placeholder="Search or add owner...",
         )
 
 
@@ -658,7 +656,7 @@ class WhiskyEditForm(WhiskyBaseForm):
             search=True,
             create=True,
             clear=False,
-            placeholder=str(_("Search or add cask type...")),
+            placeholder="Search or add cask type...",
         )
         self.set_tom_config(
             name="source",
@@ -668,7 +666,7 @@ class WhiskyEditForm(WhiskyBaseForm):
             search=True,
             create=True,
             clear=False,
-            placeholder=str(_("Search or add source...")),
+            placeholder="Search or add source...",
         )
         self.set_tom_config(
             name="owner",
@@ -678,7 +676,7 @@ class WhiskyEditForm(WhiskyBaseForm):
             search=True,
             create=True,
             clear=bool(not owner),
-            placeholder=str(_("Search or add owner...")),
+            placeholder="Search or add owner...",
         )
 
 
@@ -726,64 +724,64 @@ class WhiskyStockAddForm(TomSelectMixin, forms.Form):
             create=True,
             items=owner_items,
             clear=bool(not owner_val),
-            placeholder=str(_("Search or add owner...")),
+            placeholder="Search or add owner...",
         )
 
     storage = forms.ModelChoiceField(
         queryset=Storage.objects.none(),
-        help_text=_("Select where to store this bottle."),
+        help_text="Select where to store this bottle.",
     )
     row = forms.IntegerField(
         required=False,
         min_value=1,
-        label=_("Row"),
+        label="Row",
         widget=forms.Select(),
     )
     column = forms.IntegerField(
         required=False,
         min_value=1,
-        label=_("Column"),
+        label="Column",
         widget=forms.Select(),
     )
     price = forms.DecimalField(
         required=False,
         max_digits=8,
         decimal_places=2,
-        label=_("Price"),
-        help_text=_("Price paid for this bottle."),
+        label="Price",
+        help_text="Price paid for this bottle.",
         localize=True,
     )
     is_gift = forms.BooleanField(
         required=False,
-        label=_("Is Gift"),
+        label="Is Gift",
     )
     gift_from = forms.CharField(
         max_length=100,
         required=False,
-        label=_("Gift From"),
+        label="Gift From",
     )
     occasion = forms.CharField(
         max_length=100,
         required=False,
-        label=_("Occasion"),
+        label="Occasion",
     )
     rating = forms.TypedChoiceField(
         required=False,
         coerce=lambda x: int(x) if x else None,
         empty_value=None,
         choices=[("", "-")] + [(i, f"{i} ★" if i else "0") for i in range(4)],
-        label=_("Rating"),
+        label="Rating",
     )
     fill_level = forms.ChoiceField(
         choices=FillLevel.choices,
         initial=FillLevel.UNOPENED,
-        label=_("Fill Level"),
-        help_text=_("Current fill level of the bottle."),
+        label="Fill Level",
+        help_text="Current fill level of the bottle.",
     )
     owner = forms.CharField(
         max_length=100,
         required=False,
-        label=_("Owner"),
+        label="Owner",
         widget=forms.Select(),
     )
 
@@ -808,18 +806,17 @@ class WhiskyDrinkRecordForm(BaseDrinkRecordForm):
     post_drink_status = forms.ChoiceField(
         required=False,
         initial=POST_DRINK_STATUS_CONSUMED,
-        label=_("Bottle status after drink"),
+        label="Bottle status after drink",
         choices=(
             (
                 POST_DRINK_STATUS_CONSUMED,
-                _("Consumed (remove from stock)"),
+                "Consumed (remove from stock)",
             ),
-            (FillLevel.OPENED, _("Opened (keep in stock)")),
-            (FillLevel.DREG, _("Dreg (keep in stock)")),
+            (FillLevel.OPENED, "Opened (keep in stock)"),
+            (FillLevel.DREG, "Dreg (keep in stock)"),
         ),
-        help_text=_(
-            "If you select a bottle, choose how that bottle " "should be updated."
-        ),
+        help_text="If you select a bottle, choose how that bottle "
+        "should be updated.",
     )
 
     def clean(self):
@@ -830,7 +827,7 @@ class WhiskyDrinkRecordForm(BaseDrinkRecordForm):
         if bottle and not post_drink_status:
             self.add_error(
                 "post_drink_status",
-                _("Choose how to update the selected bottle."),
+                "Choose how to update the selected bottle.",
             )
 
         return cleaned_data
@@ -839,40 +836,40 @@ class WhiskyDrinkRecordForm(BaseDrinkRecordForm):
 class WhiskyWishlistForm(forms.Form):
     name = forms.CharField(
         max_length=200,
-        help_text=_("Name of the whisky you want to buy."),
+        help_text="Name of the whisky you want to buy.",
     )
     whisky_type = forms.ChoiceField(
         choices=[("", "---------")] + list(WhiskyType.choices),
         required=False,
-        help_text=_("Type of whisky."),
+        help_text="Type of whisky.",
     )
     distillery = forms.ModelChoiceField(
         queryset=Distillery.objects.all().order_by("name"),
         required=False,
-        help_text=_("Distillery."),
+        help_text="Distillery.",
     )
     region = forms.ModelChoiceField(
         queryset=WhiskyRegion.objects.all().order_by("order", "name"),
         required=False,
-        help_text=_("Region."),
+        help_text="Region.",
     )
     age_statement = forms.IntegerField(
         required=False,
-        help_text=_("Desired age in years."),
+        help_text="Desired age in years.",
     )
     price_limit = forms.DecimalField(
         required=False,
         max_digits=8,
         decimal_places=2,
-        help_text=_("Maximum price you want to pay."),
+        help_text="Maximum price you want to pay.",
     )
     notes = forms.CharField(
         required=False,
         widget=forms.Textarea,
-        help_text=_("Any notes about why you want this whisky."),
+        help_text="Any notes about why you want this whisky.",
     )
     priority = forms.IntegerField(
         initial=1,
         validators=[validators.MinValueValidator(1), validators.MaxValueValidator(5)],
-        help_text=_("Priority from 1 (low) to 5 (high)."),
+        help_text="Priority from 1 (low) to 5 (high).",
     )

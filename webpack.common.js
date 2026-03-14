@@ -82,9 +82,6 @@ module.exports = {
     path: path.resolve('./wine_cellar/static/'),
     publicPath: '/static/',
   },
-  externals: {
-    django: 'django',
-  },
   cache: {
     type: 'filesystem',
     buildDependencies: {

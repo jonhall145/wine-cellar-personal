@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
-{% load static i18n %}
+{% load static %}
 {% block title %}
-    {% translate "Edit Drink Record" %}
+    Edit Drink Record
 {% endblock title %}
 {% block header %}
-    <h1 class="header__title">{% translate "Edit Drink Record" %}: {{ beverage.name }}</h1>
+    <h1 class="header__title">Edit Drink Record: {{ beverage.name }}</h1>
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
@@ -20,9 +20,9 @@
                 {% include 'forms/form_field.html' with field=form.occasion %}
                 <div class="pure-controls">
                     <button type="submit"
-                            class="pure-button button__secondary">{% translate "Save" %}</button>
+                            class="pure-button button__secondary">Save</button>
                     <a href="{% url 'drink-history' %}"
-                       class="pure-button">{% translate "Cancel" %}</a>
+                       class="pure-button">Cancel</a>
                 </div>
             </form>
         </div>

@@ -1,6 +1,5 @@
 import django_filters
 from django.db.models import Q
-from django.utils.translation import gettext_lazy as _
 from django_filters import ChoiceFilter, OrderingFilter
 
 from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
@@ -12,32 +11,32 @@ class StorageItemFilter(django_filters.FilterSet):
     wine_name = django_filters.CharFilter(
         field_name="wine__name",
         lookup_expr="icontains",
-        label=_("Wine Name"),
+        label="Wine Name",
     )
     storage = django_filters.ModelChoiceFilter(
         queryset=Storage.objects.none(),
-        label=_("Storage"),
+        label="Storage",
     )
     is_gift = ChoiceFilter(
-        choices=(("", _("All")), (True, _("Yes")), (False, _("No"))),
-        label=_("Is Gift"),
+        choices=(("", "All"), (True, "Yes"), (False, "No")),
+        label="Is Gift",
     )
     has_occasion = ChoiceFilter(
         method="filter_has_occasion",
-        choices=(("", _("All")), ("1", _("Yes")), ("0", _("No"))),
-        label=_("Has Occasion"),
+        choices=(("", "All"), ("1", "Yes"), ("0", "No")),
+        label="Has Occasion",
     )
     order = OrderingFilter(
         choices=(
-            ("-created", _("Recently Added")),
-            ("created", _("Oldest First")),
-            ("wine__name", _("Wine Name A-Z")),
-            ("-wine__name", _("Wine Name Z-A")),
-            ("storage__name", _("Storage A-Z")),
-            ("-price", _("Highest Price")),
-            ("price", _("Lowest Price")),
+            ("-created", "Recently Added"),
+            ("created", "Oldest First"),
+            ("wine__name", "Wine Name A-Z"),
+            ("-wine__name", "Wine Name Z-A"),
+            ("storage__name", "Storage A-Z"),
+            ("-price", "Highest Price"),
+            ("price", "Lowest Price"),
         ),
-        label=_("Sort By"),
+        label="Sort By",
         empty_label=None,
     )
 

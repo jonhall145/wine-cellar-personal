@@ -8,7 +8,6 @@ from django.db import models
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.formats import number_format
-from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.core.models import (
     HouseholdQuerySet,
@@ -20,37 +19,37 @@ from wine_cellar.apps.wine.utils import user_directory_path
 
 
 class WineType(models.TextChoices):
-    WHITE = "WH", _("White")
-    RED = "RE", _("Red")
-    ROSE = "RO", _("Rose")
-    SPARKLING = "SP", _("Sparkling")
-    DESSERT = "DE", _("Dessert")
-    FORTIFIED = "FO", _("Fortified")
-    ORANGE = "OR", _("Orange")
+    WHITE = "WH", "White"
+    RED = "RE", "Red"
+    ROSE = "RO", "Rose"
+    SPARKLING = "SP", "Sparkling"
+    DESSERT = "DE", "Dessert"
+    FORTIFIED = "FO", "Fortified"
+    ORANGE = "OR", "Orange"
 
 
 class Category(models.TextChoices):
-    DRY = "DR", _("Dry")
-    SEMI_DRY = "SD", _("Semi-Dry")
-    MEDIUM_SWEET = "MS", _("Medium Sweet")
-    SWEET = "SW", _("Sweet")
-    FEINHERB = "FH", _("Feinherb")
+    DRY = "DR", "Dry"
+    SEMI_DRY = "SD", "Semi-Dry"
+    MEDIUM_SWEET = "MS", "Medium Sweet"
+    SWEET = "SW", "Sweet"
+    FEINHERB = "FH", "Feinherb"
 
 
 class ImageType(models.TextChoices):
-    LABEL_FRONT = "LF", _("Label Front")
-    LABEL_BACK = "LB", _("Label Back")
+    LABEL_FRONT = "LF", "Label Front"
+    LABEL_BACK = "LB", "Label Back"
 
 
 class SizeChoices(models.TextChoices):
-    PICCOLO = "PI", _("Piccolo (187ml)")
-    DEMI = "DE", _("Demi (375ml)")
-    HALF = "HA", _("Half (500ml)")
-    STANDARD = "ST", _("Standard (750ml)")
-    LITER = "LI", _("Liter (1L)")
-    MAGNUM = "MA", _("Magnum (1.5L)")
-    JEROBOAM = "JE", _("Jeroboam (3L)")
-    REHOBOAM = "RE", _("Rehoboam (4.5L)")
+    PICCOLO = "PI", "Piccolo (187ml)"
+    DEMI = "DE", "Demi (375ml)"
+    HALF = "HA", "Half (500ml)"
+    STANDARD = "ST", "Standard (750ml)"
+    LITER = "LI", "Liter (1L)"
+    MAGNUM = "MA", "Magnum (1.5L)"
+    JEROBOAM = "JE", "Jeroboam (3L)"
+    REHOBOAM = "RE", "Rehoboam (4.5L)"
 
 
 # Mapping from numeric liters to size codes for migration
@@ -71,12 +70,12 @@ class Size(UserContentModel):
         max_length=2,
         choices=SizeChoices,
         default=SizeChoices.STANDARD,
-        verbose_name=_("Size"),
+        verbose_name="Size",
     )
 
     class Meta:
-        verbose_name = _("Size")
-        verbose_name_plural = _("Sizes")
+        verbose_name = "Size"
+        verbose_name_plural = "Sizes"
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "user"],
@@ -89,11 +88,11 @@ class Size(UserContentModel):
 
 
 class Grape(UserContentModel):
-    name = models.CharField(max_length=100, verbose_name=_("Grape"))
+    name = models.CharField(max_length=100, verbose_name="Grape")
 
     class Meta:
-        verbose_name = _("Grape")
-        verbose_name_plural = _("Grapes")
+        verbose_name = "Grape"
+        verbose_name_plural = "Grapes"
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "user"],
@@ -106,19 +105,19 @@ class Grape(UserContentModel):
 
 
 class Vineyard(UserContentModel):
-    name = models.CharField(max_length=100, verbose_name=_("Name"))
-    website = models.CharField(max_length=100, null=True, verbose_name=_("Website"))
-    region = models.CharField(max_length=250, null=True, verbose_name=_("Region"))
+    name = models.CharField(max_length=100, verbose_name="Name")
+    website = models.CharField(max_length=100, null=True, verbose_name="Website")
+    region = models.CharField(max_length=250, null=True, verbose_name="Region")
     country = models.CharField(
         max_length=3,
         null=True,
         choices={country.alpha_2: country.name for country in pycountry.countries},
-        verbose_name=_("Country"),
+        verbose_name="Country",
     )
 
     class Meta:
-        verbose_name = _("Vineyard")
-        verbose_name_plural = _("Vineyards")
+        verbose_name = "Vineyard"
+        verbose_name_plural = "Vineyards"
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "country", "region", "user"],
@@ -131,11 +130,11 @@ class Vineyard(UserContentModel):
 
 
 class FoodPairing(UserContentModel):
-    name = models.CharField(max_length=100, verbose_name=_("Food"))
+    name = models.CharField(max_length=100, verbose_name="Food")
 
     class Meta:
-        verbose_name = _("Food Pairing")
-        verbose_name_plural = _("Food Pairings")
+        verbose_name = "Food Pairing"
+        verbose_name_plural = "Food Pairings"
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "user"],
@@ -148,11 +147,11 @@ class FoodPairing(UserContentModel):
 
 
 class Attribute(UserContentModel):
-    name = models.CharField(max_length=100, verbose_name=_("Attribute"))
+    name = models.CharField(max_length=100, verbose_name="Attribute")
 
     class Meta:
-        verbose_name = _("Attribute")
-        verbose_name_plural = _("Attributes")
+        verbose_name = "Attribute"
+        verbose_name_plural = "Attributes"
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "user"],
@@ -167,26 +166,26 @@ class Attribute(UserContentModel):
 class Appellation(models.Model):
     """Wine appellation/region with geocoded coordinates."""
 
-    name = models.CharField(max_length=100, verbose_name=_("Name"))
+    name = models.CharField(max_length=100, verbose_name="Name")
     country = models.CharField(
         max_length=3,
         choices={country.alpha_2: country.name for country in pycountry.countries},
-        verbose_name=_("Country"),
+        verbose_name="Country",
     )
-    latitude = models.FloatField(verbose_name=_("Latitude"))
-    longitude = models.FloatField(verbose_name=_("Longitude"))
+    latitude = models.FloatField(verbose_name="Latitude")
+    longitude = models.FloatField(verbose_name="Longitude")
     parent_region = models.ForeignKey(
         "self",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
         related_name="subregions",
-        verbose_name=_("Parent Region"),
+        verbose_name="Parent Region",
     )
 
     class Meta:
-        verbose_name = _("Appellation")
-        verbose_name_plural = _("Appellations")
+        verbose_name = "Appellation"
+        verbose_name_plural = "Appellations"
         indexes = [
             models.Index(fields=["country"], name="appellation_country_idx"),
         ]
@@ -202,25 +201,25 @@ class Appellation(models.Model):
 
 
 class Source(UserContentModel):
-    name = models.CharField(max_length=250, verbose_name=_("Source"))
+    name = models.CharField(max_length=250, verbose_name="Source")
     url = models.URLField(
         max_length=500,
         blank=True,
         null=True,
-        verbose_name=_("URL"),
-        help_text=_("Website URL for this source"),
+        verbose_name="URL",
+        help_text="Website URL for this source",
     )
     price_selector = models.CharField(
         max_length=200,
         blank=True,
         null=True,
-        verbose_name=_("Price CSS Selector"),
-        help_text=_("CSS selector to extract price, e.g., '.product-price'"),
+        verbose_name="Price CSS Selector",
+        help_text="CSS selector to extract price, e.g., '.product-price'",
     )
 
     class Meta:
-        verbose_name = _("Source")
-        verbose_name_plural = _("Sources")
+        verbose_name = "Source"
+        verbose_name_plural = "Sources"
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "user"],
@@ -238,7 +237,7 @@ class Collection(UserContentModel):
         on_delete=models.CASCADE,
         null=True,
         related_name="wine_collections",
-        verbose_name=_("User"),
+        verbose_name="User",
     )
     household = models.ForeignKey(
         "household.Household",
@@ -246,38 +245,38 @@ class Collection(UserContentModel):
         null=True,
         blank=True,
         related_name="wine_collection_items",
-        verbose_name=_("Household"),
+        verbose_name="Household",
     )
-    name = models.CharField(max_length=100, verbose_name=_("Name"))
+    name = models.CharField(max_length=100, verbose_name="Name")
     description = models.CharField(
         max_length=250,
         blank=True,
         default="",
-        verbose_name=_("Description"),
+        verbose_name="Description",
     )
     color = models.CharField(
         max_length=20,
         blank=True,
         default="",
-        verbose_name=_("Color"),
+        verbose_name="Color",
     )
     icon = models.CharField(
         max_length=50,
         blank=True,
         default="",
-        verbose_name=_("Icon"),
+        verbose_name="Icon",
     )
     wines = models.ManyToManyField(
         "wine.Wine",
         blank=True,
         related_name="collections",
-        verbose_name=_("Wines"),
+        verbose_name="Wines",
     )
 
     class Meta:
         ordering = ["name"]
-        verbose_name = _("Collection")
-        verbose_name_plural = _("Collections")
+        verbose_name = "Collection"
+        verbose_name_plural = "Collections"
         constraints = [
             models.UniqueConstraint(
                 fields=["name", "household"],
@@ -319,89 +318,89 @@ class WineQuerySet(HouseholdQuerySet):
 class Wine(UserContentModel):
     objects = WineQuerySet.as_manager()
 
-    name = models.CharField(max_length=100, verbose_name=_("Name"))
-    wine_type = models.CharField(max_length=2, choices=WineType, verbose_name=_("Type"))
+    name = models.CharField(max_length=100, verbose_name="Name")
+    wine_type = models.CharField(max_length=2, choices=WineType, verbose_name="Type")
     category = models.CharField(
-        max_length=2, choices=Category, null=True, verbose_name=_("Category")
+        max_length=2, choices=Category, null=True, verbose_name="Category"
     )
-    grapes = models.ManyToManyField(Grape, verbose_name=_("Grapes"))
-    attributes = models.ManyToManyField(Attribute, verbose_name=_("Attributes"))
-    food_pairings = models.ManyToManyField(FoodPairing, verbose_name=_("Food Pairings"))
+    grapes = models.ManyToManyField(Grape, verbose_name="Grapes")
+    attributes = models.ManyToManyField(Attribute, verbose_name="Attributes")
+    food_pairings = models.ManyToManyField(FoodPairing, verbose_name="Food Pairings")
     abv = models.FloatField(
         null=True,
         blank=True,
-        verbose_name=_("ABV"),
+        verbose_name="ABV",
         validators=[MinValueValidator(0), MaxValueValidator(100)],
     )
     size = models.ForeignKey(
-        Size, on_delete=models.SET_NULL, null=True, verbose_name=_("Size")
+        Size, on_delete=models.SET_NULL, null=True, verbose_name="Size"
     )
     vintage = models.PositiveIntegerField(
         validators=[MinValueValidator(1900)],
         null=True,
         db_index=True,
-        verbose_name=_("Vintage"),
+        verbose_name="Vintage",
     )
     drink_by = models.DateField(
-        blank=True, null=True, db_index=True, verbose_name=_("Drink By")
+        blank=True, null=True, db_index=True, verbose_name="Drink By"
     )
     # New drinking window fields - 0 means "now", otherwise a year
     drink_from = models.PositiveIntegerField(
         blank=True,
         null=True,
-        verbose_name=_("Drink From"),
-        help_text=_("Year to start drinking, or 0 for 'now'"),
+        verbose_name="Drink From",
+        help_text="Year to start drinking, or 0 for 'now'",
     )
     drink_to = models.PositiveIntegerField(
         blank=True,
         null=True,
         db_index=True,
-        verbose_name=_("Drink Until"),
-        help_text=_("Year to drink by, or 0 for 'now'"),
+        verbose_name="Drink Until",
+        help_text="Year to drink by, or 0 for 'now'",
     )
-    comment = models.CharField(max_length=250, blank=True, verbose_name=_("Comment"))
+    comment = models.CharField(max_length=250, blank=True, verbose_name="Comment")
     rating = models.PositiveIntegerField(
         null=True,
         blank=True,
         validators=[MinValueValidator(0), MaxValueValidator(3)],
-        verbose_name=_("Default Rating"),
-        help_text=_("Default star rating (0-3) for bottles of this wine."),
+        verbose_name="Default Rating",
+        help_text="Default star rating (0-3) for bottles of this wine.",
     )
     country = models.CharField(
         max_length=3,
         choices={country.alpha_2: country.name for country in pycountry.countries},
         db_index=True,
-        verbose_name=_("Country"),
+        verbose_name="Country",
     )
     subregion = models.CharField(
         max_length=100,
         null=True,
         blank=True,
-        verbose_name=_("Subregion"),
+        verbose_name="Subregion",
     )
     appellation = models.ForeignKey(
         Appellation,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        verbose_name=_("Appellation"),
-        help_text=_("Wine region with geocoded coordinates for map display"),
+        verbose_name="Appellation",
+        help_text="Wine region with geocoded coordinates for map display",
     )
-    vineyard = models.ManyToManyField(Vineyard, verbose_name=_("Vineyard"))
-    source = models.ManyToManyField(Source, verbose_name=_("Source"))
+    vineyard = models.ManyToManyField(Vineyard, verbose_name="Vineyard")
+    source = models.ManyToManyField(Source, verbose_name="Source")
     price = models.DecimalField(
         max_digits=6,
         decimal_places=2,
         null=True,
-        verbose_name=_("Price"),
+        verbose_name="Price",
         validators=[MinValueValidator(0)],
     )
     price_url = models.URLField(
         max_length=500,
         blank=True,
         null=True,
-        verbose_name=_("Price URL"),
-        help_text=_("Product page URL for automatic price tracking"),
+        verbose_name="Price URL",
+        help_text="Product page URL for automatic price tracking",
     )
     deleted = models.BooleanField(default=False, db_index=True)
 
@@ -533,8 +532,8 @@ class Wine(UserContentModel):
         return pycountry.countries.get(alpha_2=self.country).flag
 
     class Meta:
-        verbose_name = _("Wine")
-        verbose_name_plural = _("Wines")
+        verbose_name = "Wine"
+        verbose_name_plural = "Wines"
         indexes = [
             models.Index(fields=["user", "wine_type"], name="wine_user_type_idx"),
             models.Index(fields=["name"], name="wine_name_idx"),
@@ -561,35 +560,35 @@ class Wine(UserContentModel):
 
 
 class WineImage(models.Model):
-    image = models.ImageField(upload_to=user_directory_path, verbose_name=_("Image"))
+    image = models.ImageField(upload_to=user_directory_path, verbose_name="Image")
     thumbnail = models.ImageField(
         upload_to=user_directory_path,
         blank=True,
         null=True,
-        verbose_name=_("Thumbnail"),
+        verbose_name="Thumbnail",
     )
-    wine = models.ForeignKey(Wine, on_delete=models.CASCADE, verbose_name=_("Wine"))
+    wine = models.ForeignKey(Wine, on_delete=models.CASCADE, verbose_name="Wine")
     user = models.ForeignKey(
         get_user_model(),
         on_delete=models.SET_NULL,
         null=True,
-        verbose_name=_("User"),
+        verbose_name="User",
     )
     image_type = models.CharField(
         max_length=3,
         choices=ImageType,
         default=ImageType.LABEL_FRONT,
-        verbose_name=_("Image Type"),
+        verbose_name="Image Type",
     )
     is_primary = models.BooleanField(
         default=False,
-        verbose_name=_("Primary Image"),
-        help_text=_("Use this image as the featured thumbnail for the wine."),
+        verbose_name="Primary Image",
+        help_text="Use this image as the featured thumbnail for the wine.",
     )
 
     class Meta:
-        verbose_name = _("Wine Image")
-        verbose_name_plural = _("Wine Images")
+        verbose_name = "Wine Image"
+        verbose_name_plural = "Wine Images"
 
     def save(self, *args, **kwargs):
         if self.is_primary:
@@ -604,24 +603,24 @@ class WineBarcode(models.Model):
     """A barcode associated with a wine. Supports multiple barcodes per wine."""
 
     wine = models.ForeignKey(
-        Wine, on_delete=models.CASCADE, related_name="barcodes", verbose_name=_("Wine")
+        Wine, on_delete=models.CASCADE, related_name="barcodes", verbose_name="Wine"
     )
-    barcode = models.CharField(max_length=100, verbose_name=_("Barcode"))
+    barcode = models.CharField(max_length=100, verbose_name="Barcode")
     user = models.ForeignKey(
-        get_user_model(), on_delete=models.CASCADE, null=True, verbose_name=_("User")
+        get_user_model(), on_delete=models.CASCADE, null=True, verbose_name="User"
     )
     household = models.ForeignKey(
         "household.Household",
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        verbose_name=_("Household"),
+        verbose_name="Household",
     )
-    created = models.DateTimeField(auto_now_add=True, verbose_name=_("Created"))
+    created = models.DateTimeField(auto_now_add=True, verbose_name="Created")
 
     class Meta:
-        verbose_name = _("Wine Barcode")
-        verbose_name_plural = _("Wine Barcodes")
+        verbose_name = "Wine Barcode"
+        verbose_name_plural = "Wine Barcodes"
         indexes = [
             models.Index(fields=["barcode"], name="winebarcode_barcode_idx"),
         ]
@@ -639,23 +638,23 @@ class WineBarcode(models.Model):
 class DrinkRecord(UserContentModel):
     """Record of drinking/consuming a bottle."""
 
-    wine = models.ForeignKey(Wine, on_delete=models.CASCADE, verbose_name=_("Wine"))
-    date_consumed = models.DateField(verbose_name=_("Date Consumed"))
+    wine = models.ForeignKey(Wine, on_delete=models.CASCADE, verbose_name="Wine")
+    date_consumed = models.DateField(verbose_name="Date Consumed")
     tasting_notes = models.TextField(
-        null=True, blank=True, verbose_name=_("Tasting Notes")
+        null=True, blank=True, verbose_name="Tasting Notes"
     )
     rating = models.PositiveIntegerField(
         null=True,
         blank=True,
         validators=[MinValueValidator(0), MaxValueValidator(3)],
-        verbose_name=_("Rating"),
-        help_text=_("Star rating (0-3) for this drinking experience."),
+        verbose_name="Rating",
+        help_text="Star rating (0-3) for this drinking experience.",
     )
     shared_with = models.CharField(
-        max_length=250, null=True, blank=True, verbose_name=_("Shared With")
+        max_length=250, null=True, blank=True, verbose_name="Shared With"
     )
     occasion = models.CharField(
-        max_length=100, null=True, blank=True, verbose_name=_("Occasion")
+        max_length=100, null=True, blank=True, verbose_name="Occasion"
     )
     storage_item = models.ForeignKey(
         "storage.StorageItem",
@@ -663,13 +662,13 @@ class DrinkRecord(UserContentModel):
         null=True,
         blank=True,
         related_name="drink_records",
-        verbose_name=_("Bottle"),
-        help_text=_("The specific bottle consumed (optional)."),
+        verbose_name="Bottle",
+        help_text="The specific bottle consumed (optional).",
     )
 
     class Meta:
-        verbose_name = _("Drink Record")
-        verbose_name_plural = _("Drink Records")
+        verbose_name = "Drink Record"
+        verbose_name_plural = "Drink Records"
         ordering = ["-date_consumed"]
         indexes = [
             models.Index(
@@ -681,41 +680,39 @@ class DrinkRecord(UserContentModel):
 class Wishlist(UserContentModel):
     """Wines the user wants to buy."""
 
-    name = models.CharField(max_length=100, verbose_name=_("Name"))
+    name = models.CharField(max_length=100, verbose_name="Name")
     wine_type = models.CharField(
-        max_length=2, choices=WineType, null=True, blank=True, verbose_name=_("Type")
+        max_length=2, choices=WineType, null=True, blank=True, verbose_name="Type"
     )
     country = models.CharField(
         max_length=3,
         null=True,
         blank=True,
         choices={country.alpha_2: country.name for country in pycountry.countries},
-        verbose_name=_("Country"),
+        verbose_name="Country",
     )
     subregion = models.CharField(
-        max_length=100, null=True, blank=True, verbose_name=_("Subregion")
+        max_length=100, null=True, blank=True, verbose_name="Subregion"
     )
-    vintage = models.PositiveIntegerField(
-        null=True, blank=True, verbose_name=_("Vintage")
-    )
+    vintage = models.PositiveIntegerField(null=True, blank=True, verbose_name="Vintage")
     price_limit = models.DecimalField(
         max_digits=6,
         decimal_places=2,
         null=True,
         blank=True,
-        verbose_name=_("Price Limit"),
+        verbose_name="Price Limit",
     )
-    notes = models.TextField(null=True, blank=True, verbose_name=_("Notes"))
+    notes = models.TextField(null=True, blank=True, verbose_name="Notes")
     priority = models.PositiveIntegerField(
         default=1,
         validators=[MinValueValidator(1), MaxValueValidator(5)],
-        verbose_name=_("Priority"),
+        verbose_name="Priority",
     )
-    purchased = models.BooleanField(default=False, verbose_name=_("Purchased"))
+    purchased = models.BooleanField(default=False, verbose_name="Purchased")
 
     class Meta:
-        verbose_name = _("Wishlist Item")
-        verbose_name_plural = _("Wishlist Items")
+        verbose_name = "Wishlist Item"
+        verbose_name_plural = "Wishlist Items"
         ordering = ["-priority", "name"]
 
 
@@ -726,43 +723,43 @@ class BottleNote(UserContentModel):
         "storage.StorageItem",
         on_delete=models.CASCADE,
         related_name="notes",
-        verbose_name=_("Bottle"),
+        verbose_name="Bottle",
     )
-    note_date = models.DateField(verbose_name=_("Date"))
-    note = models.TextField(verbose_name=_("Note"))
+    note_date = models.DateField(verbose_name="Date")
+    note = models.TextField(verbose_name="Note")
 
     class Meta:
-        verbose_name = _("Bottle Note")
-        verbose_name_plural = _("Bottle Notes")
+        verbose_name = "Bottle Note"
+        verbose_name_plural = "Bottle Notes"
         ordering = ["-note_date"]
 
 
 class DrinkingWindowAlert(UserContentModel):
     """Alerts for wines approaching drinking window."""
 
-    wine = models.ForeignKey(Wine, on_delete=models.CASCADE, verbose_name=_("Wine"))
-    alert_date = models.DateField(verbose_name=_("Alert Date"))
+    wine = models.ForeignKey(Wine, on_delete=models.CASCADE, verbose_name="Wine")
+    alert_date = models.DateField(verbose_name="Alert Date")
     message = models.CharField(
-        max_length=250, null=True, blank=True, verbose_name=_("Message")
+        max_length=250, null=True, blank=True, verbose_name="Message"
     )
-    is_read = models.BooleanField(default=False, verbose_name=_("Read"))
+    is_read = models.BooleanField(default=False, verbose_name="Read")
 
     class Meta:
-        verbose_name = _("Drinking Window Alert")
-        verbose_name_plural = _("Drinking Window Alerts")
+        verbose_name = "Drinking Window Alert"
+        verbose_name_plural = "Drinking Window Alerts"
         ordering = ["alert_date"]
 
 
 class ReorderReminder(UserContentModel):
     """Reminder to reorder a wine when stock drops below threshold."""
 
-    wine = models.ForeignKey(Wine, on_delete=models.CASCADE, verbose_name=_("Wine"))
-    min_stock = models.PositiveIntegerField(default=1, verbose_name=_("Minimum Stock"))
-    is_active = models.BooleanField(default=True, verbose_name=_("Active"))
+    wine = models.ForeignKey(Wine, on_delete=models.CASCADE, verbose_name="Wine")
+    min_stock = models.PositiveIntegerField(default=1, verbose_name="Minimum Stock")
+    is_active = models.BooleanField(default=True, verbose_name="Active")
 
     class Meta:
-        verbose_name = _("Reorder Reminder")
-        verbose_name_plural = _("Reorder Reminders")
+        verbose_name = "Reorder Reminder"
+        verbose_name_plural = "Reorder Reminders"
         constraints = [
             models.UniqueConstraint(
                 fields=["wine", "user"],
@@ -775,67 +772,67 @@ class VisionExtractionLog(UserContentModel):
     """Log of vision extraction attempts for analysis and improvement."""
 
     image_count = models.PositiveIntegerField(
-        verbose_name=_("Image Count"),
-        help_text=_("Number of images sent for extraction"),
+        verbose_name="Image Count",
+        help_text="Number of images sent for extraction",
     )
     raw_response = models.TextField(
-        verbose_name=_("Raw Response"),
-        help_text=_("Raw response from the vision API"),
+        verbose_name="Raw Response",
+        help_text="Raw response from the vision API",
     )
     extracted_data = models.JSONField(
-        verbose_name=_("Extracted Data"),
-        help_text=_("Parsed extraction result as JSON"),
+        verbose_name="Extracted Data",
+        help_text="Parsed extraction result as JSON",
     )
     confidence = models.CharField(
         max_length=10,
-        verbose_name=_("Confidence"),
-        help_text=_("Confidence level: high, medium, or low"),
+        verbose_name="Confidence",
+        help_text="Confidence level: high, medium, or low",
     )
     extracted_fields = models.JSONField(
-        verbose_name=_("Extracted Fields"),
-        help_text=_("List of fields that were successfully extracted"),
+        verbose_name="Extracted Fields",
+        help_text="List of fields that were successfully extracted",
     )
     wine = models.ForeignKey(
         Wine,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        verbose_name=_("Wine"),
-        help_text=_("Wine created from this extraction (if any)"),
+        verbose_name="Wine",
+        help_text="Wine created from this extraction (if any)",
     )
     user_corrections = models.JSONField(
         null=True,
         blank=True,
-        verbose_name=_("User Corrections"),
-        help_text=_("Fields that the user corrected after extraction"),
+        verbose_name="User Corrections",
+        help_text="Fields that the user corrected after extraction",
     )
     was_successful = models.BooleanField(
         default=False,
-        verbose_name=_("Successful"),
-        help_text=_("Whether the extraction led to a wine being created"),
+        verbose_name="Successful",
+        help_text="Whether the extraction led to a wine being created",
     )
     errors = models.JSONField(
         null=True,
         blank=True,
-        verbose_name=_("Errors"),
-        help_text=_("Any errors during extraction"),
+        verbose_name="Errors",
+        help_text="Any errors during extraction",
     )
     model_used = models.CharField(
         max_length=50,
         default="claude-haiku-4-5",
-        verbose_name=_("Model Used"),
-        help_text=_("AI model used for extraction"),
+        verbose_name="Model Used",
+        help_text="AI model used for extraction",
     )
     processing_time_ms = models.PositiveIntegerField(
         null=True,
         blank=True,
-        verbose_name=_("Processing Time (ms)"),
-        help_text=_("Time taken for the extraction in milliseconds"),
+        verbose_name="Processing Time (ms)",
+        help_text="Time taken for the extraction in milliseconds",
     )
 
     class Meta:
-        verbose_name = _("Vision Extraction Log")
-        verbose_name_plural = _("Vision Extraction Logs")
+        verbose_name = "Vision Extraction Log"
+        verbose_name_plural = "Vision Extraction Logs"
         ordering = ["-created"]
         indexes = [
             models.Index(fields=["user", "created"], name="visionlog_user_created_idx"),
@@ -854,7 +851,7 @@ class PriceHistory(UserContentModel):
         Wine,
         on_delete=models.CASCADE,
         related_name="price_history",
-        verbose_name=_("Wine"),
+        verbose_name="Wine",
     )
     source = models.ForeignKey(
         Source,
@@ -862,22 +859,22 @@ class PriceHistory(UserContentModel):
         null=True,
         blank=True,
         related_name="price_records",
-        verbose_name=_("Source"),
+        verbose_name="Source",
     )
     price = models.DecimalField(
         max_digits=6,
         decimal_places=2,
-        verbose_name=_("Price"),
+        verbose_name="Price",
     )
     recorded_at = models.DateTimeField(
         auto_now_add=True,
         db_index=True,
-        verbose_name=_("Recorded At"),
+        verbose_name="Recorded At",
     )
 
     class Meta:
-        verbose_name = _("Price History")
-        verbose_name_plural = _("Price History Records")
+        verbose_name = "Price History"
+        verbose_name_plural = "Price History Records"
         ordering = ["-recorded_at"]
         indexes = [
             models.Index(

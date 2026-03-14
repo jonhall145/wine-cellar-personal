@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
-{% load static i18n %}
+{% load static %}
 {% block title %}
-    {% translate "Delete Bottle" %}
+    Delete Bottle
 {% endblock title %}
 {% block header %}
-    <h1 class="header__title">{% translate "Delete Bottle" %}</h1>
+    <h1 class="header__title">Delete Bottle</h1>
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
@@ -15,9 +15,9 @@
                 {% csrf_token %}
                 <p>
                     {% if CELLAR_APP_TYPE == "whisky" %}
-                        {% blocktrans with name=storageitem.whisky.name storage=storageitem.storage.name %}Are you sure you want to take the bottle "{{ name }}" out of "{{ storage }}"? This will remove it from your cellar inventory.{% endblocktrans %}
+                        Are you sure you want to take the bottle "{{ storageitem.whisky.name }}" out of "{{ storageitem.storage.name }}"? This will remove it from your cellar inventory.
                     {% else %}
-                        {% blocktrans with name=storageitem.wine.name storage=storageitem.storage.name %}Are you sure you want to take the bottle "{{ name }}" out of "{{ storage }}"? This will remove it from your cellar inventory.{% endblocktrans %}
+                        Are you sure you want to take the bottle "{{ storageitem.wine.name }}" out of "{{ storageitem.storage.name }}"? This will remove it from your cellar inventory.
                     {% endif %}
                 </p>
                 <div class="pure-controls">
@@ -25,14 +25,14 @@
                         <div class="pure-u-1 pure-u-sm-1-2">
                             {% if CELLAR_APP_TYPE == "whisky" %}
                                 <a href="{% url 'whisky-detail' storageitem.whisky.pk %}"
-                                   class="pure-button button__primary">{% translate "Cancel" %}</a>
+                                   class="pure-button button__primary">Cancel</a>
                             {% else %}
                                 <a href="{% url 'wine-detail' storageitem.wine.pk %}"
-                                   class="pure-button button__primary">{% translate "Cancel" %}</a>
+                                   class="pure-button button__primary">Cancel</a>
                             {% endif %}
                         </div>
                         <div id="save_button_container" class="pure-u-1 pure-u-sm-1-2">
-                            <button type="submit" name="save" class="pure-button button__secondary">{% translate "Delete" %}</button>
+                            <button type="submit" name="save" class="pure-button button__secondary">Delete</button>
                         </div>
                     </div>
                 </div>

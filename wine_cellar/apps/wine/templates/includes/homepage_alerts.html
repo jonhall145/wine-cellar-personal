@@ -1,28 +1,27 @@
-{% load i18n %}
 {% if overdue_count > 0 %}
     <p class="widget-alert widget-alert--danger">
         <i class="fa-solid fa-exclamation-triangle"></i>
-        {% blocktranslate count counter=overdue_count %}{{ counter }} wine past drink-by date{% plural %}{{ counter }} wines past drink-by date{% endblocktranslate %}
+        {% if overdue_count == 1 %}{{ overdue_count }} wine past drink-by date{% else %}{{ overdue_count }} wines past drink-by date{% endif %}
     </p>
 {% endif %}
 {% if upcoming_count > 0 %}
     <p class="widget-alert widget-alert--warning">
         <i class="fa-solid fa-clock"></i>
-        {% blocktranslate count counter=upcoming_count %}{{ counter }} wine approaching drink-by{% plural %}{{ counter }} wines approaching drink-by{% endblocktranslate %}
+        {% if upcoming_count == 1 %}{{ upcoming_count }} wine approaching drink-by{% else %}{{ upcoming_count }} wines approaching drink-by{% endif %}
     </p>
 {% endif %}
 {% if low_stock_count > 0 %}
     <p class="widget-alert widget-alert--warning">
         <i class="fa-solid fa-arrow-down"></i>
-        {% blocktranslate count counter=low_stock_count %}{{ counter }} wine needs reorder{% plural %}{{ counter }} wines need reorder{% endblocktranslate %}
+        {% if low_stock_count == 1 %}{{ low_stock_count }} wine needs reorder{% else %}{{ low_stock_count }} wines need reorder{% endif %}
     </p>
 {% endif %}
 {% if pending_reviews_count > 0 %}
     <a href="{% url 'hardware:position-reviews' %}" class="widget-alert widget-alert--info">
         <i class="fa-solid fa-camera"></i>
-        {% blocktranslate count counter=pending_reviews_count %}{{ counter }} position review pending{% plural %}{{ counter }} position reviews pending{% endblocktranslate %}
+        {% if pending_reviews_count == 1 %}{{ pending_reviews_count }} position review pending{% else %}{{ pending_reviews_count }} position reviews pending{% endif %}
     </a>
 {% endif %}
 {% if overdue_count == 0 and upcoming_count == 0 and low_stock_count == 0 and pending_reviews_count == 0 %}
-    <div class="widget-empty"><i class="fa-solid fa-check"></i><span>{% translate "No alerts" %}</span></div>
+    <div class="widget-empty"><i class="fa-solid fa-check"></i><span>No alerts</span></div>
 {% endif %}

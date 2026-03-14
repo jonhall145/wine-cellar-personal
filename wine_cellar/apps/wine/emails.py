@@ -1,6 +1,5 @@
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
-from django.utils.translation import gettext_lazy as _
 
 
 def send_drink_by_reminder(user, wines):
@@ -10,6 +9,6 @@ def send_drink_by_reminder(user, wines):
     )
 
     msg = EmailMultiAlternatives(
-        _("Reminder to drink your wine(s)"), text_content, to=[user.email]
+        "Reminder to drink your wine(s)", text_content, to=[user.email]
     )
     msg.send()

@@ -1,8 +1,6 @@
 import React from 'react'
-import django from 'django'
-
 const translated = {
-  initializingCamera: django.gettext('Initializing camera...'),
+  initializingCamera: 'Initializing camera...',
 }
 
 interface CameraLoaderProps {

@@ -1,6 +1,5 @@
 import django_filters
 from django.db.models import Q
-from django.utils.translation import gettext_lazy as _
 from django_filters import ChoiceFilter, OrderingFilter
 
 from wine_cellar.apps.core.filters import (
@@ -75,97 +74,97 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
     search = django_filters.CharFilter(method="filter_search", label=_("Search"))
 
     whisky_type = ChoiceFilter(
-        choices=[("", _("Any"))] + list(WhiskyType.choices),
-        label=_("Type"),
+        choices=[("", "Any")] + list(WhiskyType.choices),
+        label="Type",
     )
 
     distillery = ChoiceFilter(
         choices=[],
-        label=_("Distillery"),
+        label="Distillery",
         method="filter_distillery",
     )
 
     region = ChoiceFilter(
         choices=[],
-        label=_("Region"),
+        label="Region",
         method="filter_region",
     )
 
     country = ChoiceFilter(
         choices=[],
-        label=_("Country"),
+        label="Country",
     )
     collection = ChoiceFilter(
         choices=[],
-        label=_("Collection"),
+        label="Collection",
         method="filter_collection",
     )
 
     peated_level = ChoiceFilter(
-        choices=[("", _("Any"))] + list(PeatedLevel.choices),
-        label=_("Peated"),
+        choices=[("", "Any")] + list(PeatedLevel.choices),
+        label="Peated",
     )
 
     has_stock = ChoiceFilter(
         method="filter_has_stock",
-        label=_("Show only in stock"),
-        choices=((0, _("No")), (1, _("Yes"))),
+        label="Show only in stock",
+        choices=((0, "No"), (1, "Yes")),
         empty_label=None,
         null_label=None,
     )
 
     abv_min = django_filters.NumberFilter(
-        field_name="abv", lookup_expr="gte", label=_("ABV Min")
+        field_name="abv", lookup_expr="gte", label="ABV Min"
     )
     abv_max = django_filters.NumberFilter(
-        field_name="abv", lookup_expr="lte", label=_("ABV Max")
+        field_name="abv", lookup_expr="lte", label="ABV Max"
     )
 
     age_min = django_filters.NumberFilter(
-        field_name="age_statement", lookup_expr="gte", label=_("Age Min")
+        field_name="age_statement", lookup_expr="gte", label="Age Min"
     )
     age_max = django_filters.NumberFilter(
-        field_name="age_statement", lookup_expr="lte", label=_("Age Max")
+        field_name="age_statement", lookup_expr="lte", label="Age Max"
     )
 
     is_nas = ChoiceFilter(
         method="filter_is_nas",
-        label=_("NAS (No Age Statement)"),
-        choices=(("", _("Any")), (0, _("No")), (1, _("Yes"))),
+        label="NAS (No Age Statement)",
+        choices=(("", "Any"), (0, "No"), (1, "Yes")),
     )
 
     is_ob = ChoiceFilter(
         method="filter_is_ob",
-        label=_("Official Bottling"),
-        choices=(("", _("Any")), (0, _("No (IB)")), (1, _("Yes (OB)"))),
+        label="Official Bottling",
+        choices=(("", "Any"), (0, "No (IB)"), (1, "Yes (OB)")),
     )
 
     rating = ChoiceFilter(
         method="filter_rating",
-        label=_("Rating"),
+        label="Rating",
         choices=(
-            ("", _("Any")),
-            (0, _("0 Stars")),
-            (1, _("1 Star")),
-            (2, _("2 Stars")),
-            (3, _("3 Stars")),
+            ("", "Any"),
+            (0, "0 Stars"),
+            (1, "1 Star"),
+            (2, "2 Stars"),
+            (3, "3 Stars"),
         ),
     )
 
     order = OrderingFilter(
         choices=(
-            ("-created", _("Recently Added")),
-            ("created", _("Least Recently Added")),
-            ("-name", _("Name Descending")),
-            ("name", _("Name Ascending")),
-            ("-age_statement", _("Oldest Age Statement")),
-            ("age_statement", _("Youngest Age Statement")),
-            ("-abv", _("Highest ABV")),
-            ("abv", _("Lowest ABV")),
-            ("-effective_price", _("Highest Price (Avg)")),
-            ("effective_price", _("Lowest Price (Avg)")),
+            ("-created", "Recently Added"),
+            ("created", "Least Recently Added"),
+            ("-name", "Name Descending"),
+            ("name", "Name Ascending"),
+            ("-age_statement", "Oldest Age Statement"),
+            ("age_statement", "Youngest Age Statement"),
+            ("-abv", "Highest ABV"),
+            ("abv", "Lowest ABV"),
+            ("-effective_price", "Highest Price (Avg)"),
+            ("effective_price", "Lowest Price (Avg)"),
         ),
-        label=_("Sorting"),
+        label="Sorting",
         empty_label=None,
         null_label=None,
         method="filter_order",
@@ -245,37 +244,37 @@ class WhiskyStorageItemFilter(django_filters.FilterSet):
     whisky_name = django_filters.CharFilter(
         field_name="whisky__name",
         lookup_expr="icontains",
-        label=_("Whisky Name"),
+        label="Whisky Name",
     )
     storage = django_filters.ModelChoiceFilter(
         queryset=Storage.objects.none(),
-        label=_("Storage"),
+        label="Storage",
     )
     fill_level = ChoiceFilter(
-        choices=[("", _("All"))] + list(FillLevel.choices),
-        label=_("Fill Level"),
+        choices=[("", "All")] + list(FillLevel.choices),
+        label="Fill Level",
     )
     is_gift = ChoiceFilter(
         method="filter_is_gift",
-        choices=(("", _("All")), ("1", _("Yes")), ("0", _("No"))),
-        label=_("Is Gift"),
+        choices=(("", "All"), ("1", "Yes"), ("0", "No")),
+        label="Is Gift",
     )
     has_occasion = ChoiceFilter(
         method="filter_has_occasion",
-        choices=(("", _("All")), ("1", _("Yes")), ("0", _("No"))),
-        label=_("Has Occasion"),
+        choices=(("", "All"), ("1", "Yes"), ("0", "No")),
+        label="Has Occasion",
     )
     order = OrderingFilter(
         choices=(
-            ("-created", _("Recently Added")),
-            ("created", _("Oldest First")),
-            ("whisky__name", _("Whisky Name A-Z")),
-            ("-whisky__name", _("Whisky Name Z-A")),
-            ("storage__name", _("Storage A-Z")),
-            ("-price", _("Highest Price")),
-            ("price", _("Lowest Price")),
+            ("-created", "Recently Added"),
+            ("created", "Oldest First"),
+            ("whisky__name", "Whisky Name A-Z"),
+            ("-whisky__name", "Whisky Name Z-A"),
+            ("storage__name", "Storage A-Z"),
+            ("-price", "Highest Price"),
+            ("price", "Lowest Price"),
         ),
-        label=_("Sort By"),
+        label="Sort By",
         empty_label=None,
     )
 

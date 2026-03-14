@@ -1,7 +1,6 @@
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.core.models import HouseholdQuerySet, UserContentModel
 
@@ -11,24 +10,22 @@ def get_app_type():
 
 
 class Storage(UserContentModel):
-    name = models.CharField(max_length=100, verbose_name=_("Storage Name"))
+    name = models.CharField(max_length=100, verbose_name="Storage Name")
     description = models.TextField(
-        verbose_name=_("Storage Description"), null=True, blank=True
+        verbose_name="Storage Description", null=True, blank=True
     )
-    location = models.CharField(max_length=100, verbose_name=_("Location"))
-    rows = models.PositiveIntegerField(default=0, verbose_name=_("Number of Rows"))
-    columns = models.PositiveIntegerField(
-        default=0, verbose_name=_("Number of Columns")
-    )
-    is_cold = models.BooleanField(default=False, verbose_name=_("Cold Storage"))
-    order = models.PositiveIntegerField(default=0, verbose_name=_("Display Order"))
-    is_default = models.BooleanField(default=False, verbose_name=_("Default Storage"))
+    location = models.CharField(max_length=100, verbose_name="Location")
+    rows = models.PositiveIntegerField(default=0, verbose_name="Number of Rows")
+    columns = models.PositiveIntegerField(default=0, verbose_name="Number of Columns")
+    is_cold = models.BooleanField(default=False, verbose_name="Cold Storage")
+    order = models.PositiveIntegerField(default=0, verbose_name="Display Order")
+    is_default = models.BooleanField(default=False, verbose_name="Default Storage")
     app_type = models.CharField(max_length=10, default="wine")
     cell_mask = models.JSONField(null=True, blank=True, default=None)
 
     class Meta:
-        verbose_name = _("Storage")
-        verbose_name_plural = _("Storages")
+        verbose_name = "Storage"
+        verbose_name_plural = "Storages"
 
     def save(self, *args, **kwargs):
         if self.is_default:
@@ -132,24 +129,24 @@ class StorageItem(UserContentModel):
     price = models.DecimalField(
         max_digits=6, decimal_places=2, null=True, validators=[MinValueValidator(0)]
     )
-    is_gift = models.BooleanField(default=False, verbose_name=_("Is Gift"))
+    is_gift = models.BooleanField(default=False, verbose_name="Is Gift")
     gift_from = models.CharField(
-        max_length=100, null=True, blank=True, verbose_name=_("Gift From")
+        max_length=100, null=True, blank=True, verbose_name="Gift From"
     )
     occasion = models.CharField(
-        max_length=100, null=True, blank=True, verbose_name=_("Occasion")
+        max_length=100, null=True, blank=True, verbose_name="Occasion"
     )
     rating = models.PositiveIntegerField(
         null=True,
         blank=True,
         validators=[MinValueValidator(0), MaxValueValidator(3)],
-        verbose_name=_("Rating"),
-        help_text=_("Star rating (0-3) for this specific bottle."),
+        verbose_name="Rating",
+        help_text="Star rating (0-3) for this specific bottle.",
     )
 
     class Meta:
-        verbose_name = _("Storage Item")
-        verbose_name_plural = _("Storage Items")
+        verbose_name = "Storage Item"
+        verbose_name_plural = "Storage Items"
         indexes = [
             models.Index(fields=["user", "deleted"], name="storageitem_user_del_idx"),
             models.Index(

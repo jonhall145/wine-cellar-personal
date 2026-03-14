@@ -51,10 +51,10 @@
     <script src="{% static 'stock_add.js' %}" defer></script>
 {% endblock extra_js %}
 {% block title %}
-    {% translate "Add Bottle" %}
+    Add Bottle
 {% endblock title %}
 {% block header %}
-    <h1 class="header__title">{% translate "Add Bottle" %}</h1>
+    <h1 class="header__title">Add Bottle</h1>
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
@@ -62,21 +62,21 @@
             {% storage_cells free_cells_by_storage %}
             {% if storage_suggestions %}
                 <div class="storage-suggestions">
-                    <div class="storage-suggestions__title">{% translate "This wine is already in:" %}</div>
+                    <div class="storage-suggestions__title">This wine is already in:</div>
                     <div class="storage-suggestions__list">
                         {% for suggestion in storage_suggestions %}
                             <div class="storage-suggestion">
                                 <div class="storage-suggestion__info">
                                     <div class="storage-suggestion__name">{{ suggestion.storage_name }}</div>
                                     <div class="storage-suggestion__details">
-                                        {{ suggestion.bottle_count }} {% if suggestion.bottle_count == 1 %}{% translate "bottle" %}{% else %}{% translate "bottles" %}{% endif %}{% if suggestion.free_slots is not None %}, {{ suggestion.free_slots }} {% translate "slots available" %}{% endif %}
+                                        {{ suggestion.bottle_count }} {% if suggestion.bottle_count == 1 %}bottle{% else %}bottles{% endif %}{% if suggestion.free_slots is not None %}, {{ suggestion.free_slots }} slots available{% endif %}
                                     </div>
                                 </div>
                                 {% if suggestion.free_slots is None or suggestion.free_slots > 0 %}
                                     <button type="button"
                                             class="pure-button button__secondary storage-suggestion__btn"
                                             data-storage-id="{{ suggestion.storage_id }}">
-                                        {% translate "Add here" %}
+                                        Add here
                                     </button>
                                 {% endif %}
                             </div>
@@ -101,7 +101,7 @@
                     aria-live="assertive"
                     aria-atomic="true">
                     <li>
-                        <span>{% translate "This row of the shelf is full. Please choose another one." %}</span>
+                        <span>This row of the shelf is full. Please choose another one.</span>
                     </li>
                 </ul>
                 {% include 'forms/form_field.html' with field=form.column %}
@@ -116,7 +116,7 @@
                             <button id="submit_button"
                                     type="submit"
                                     name="save"
-                                    class="pure-button button__secondary">{% translate "Save" %}</button>
+                                    class="pure-button button__secondary">Save</button>
                         </div>
                     </div>
                 </div>

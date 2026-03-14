@@ -1,7 +1,6 @@
 from django import template
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
-from django.utils.translation import gettext_lazy as _
 
 from wine_cellar.apps.core.templatetags.core_tags import (
     _badge_impl,
@@ -20,10 +19,10 @@ WHISKY_TYPE_CLASSES = {
 }
 
 WHISKY_TYPE_LABELS = {
-    "SM": _("Single Malt"),
-    "BM": _("Blended Malt"),
-    "BL": _("Blended"),
-    "SG": _("Single Grain"),
+    "SM": "Single Malt",
+    "BM": "Blended Malt",
+    "BL": "Blended",
+    "SG": "Single Grain",
 }
 
 PEATED_LEVEL_CLASSES = {
@@ -32,8 +31,8 @@ PEATED_LEVEL_CLASSES = {
 }
 
 PEATED_LEVEL_LABELS = {
-    "UP": _("Unpeated"),
-    "PE": _("Peated"),
+    "UP": "Unpeated",
+    "PE": "Peated",
 }
 
 FILL_LEVEL_ICONS = {
@@ -43,9 +42,9 @@ FILL_LEVEL_ICONS = {
 }
 
 FILL_LEVEL_LABELS = {
-    "UN": _("Unopened"),
-    "OP": _("Opened"),
-    "DR": _("Dreg"),
+    "UN": "Unopened",
+    "OP": "Opened",
+    "DR": "Dreg",
 }
 
 FILL_LEVEL_CLASSES = {

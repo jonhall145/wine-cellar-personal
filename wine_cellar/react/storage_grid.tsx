@@ -14,26 +14,25 @@ import {
     Active,
     Over,
 } from '@dnd-kit/core';
-import django from 'django';
 import ErrorBoundary from './components/ErrorBoundary';
 
 const translated = {
-    storage: django.gettext('Storage'),
-    moveMode: django.gettext('Move Mode'),
-    moveModeHint: django.gettext('Select a bottle, then select destination'),
-    source: django.gettext('Source'),
-    destination: django.gettext('Destination'),
-    selectBottle: django.gettext('Select a bottle to move'),
-    selectDestination: django.gettext('Now select an empty cell in the destination'),
-    cancelMove: django.gettext('Cancel'),
-    tapToSeeDetails: django.gettext('Tap a bottle to see details'),
-    dragToMove: django.gettext('Long press and drag to move bottles'),
-    loading: django.gettext('Loading...'),
-    noStorageData: django.gettext('No storage data available'),
-    storageNotFound: django.gettext('Storage not found'),
-    cellOccupied: django.gettext('Cell is already occupied'),
-    movedSuccessfully: django.gettext('Bottle moved successfully'),
-    moveFailed: django.gettext('Move failed'),
+    storage: 'Storage',
+    moveMode: 'Move Mode',
+    moveModeHint: 'Select a bottle, then select destination',
+    source: 'Source',
+    destination: 'Destination',
+    selectBottle: 'Select a bottle to move',
+    selectDestination: 'Now select an empty cell in the destination',
+    cancelMove: 'Cancel',
+    tapToSeeDetails: 'Tap a bottle to see details',
+    dragToMove: 'Long press and drag to move bottles',
+    loading: 'Loading...',
+    noStorageData: 'No storage data available',
+    storageNotFound: 'Storage not found',
+    cellOccupied: 'Cell is already occupied',
+    movedSuccessfully: 'Bottle moved successfully',
+    moveFailed: 'Move failed',
 };
 
 interface WineInfo {

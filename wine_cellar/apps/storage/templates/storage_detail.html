@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static i18n %}
+{% load static %}
 {% block extra_js %}
     {{ block.super }}
     <script src="{% static 'react-vendors.js' %}" defer></script>
@@ -17,11 +17,11 @@
                 {% include "includes/edit_delete_buttons.html" with edit_url=edit_url delete_url=delete_url %}
             </div>
             <div class="pure-u-1 pure-u-md-1 text-align-center">
-                <span class="storage-detail__location">{% translate "Location:" %} {{ storage.location }}</span>
+                <span class="storage-detail__location">Location: {{ storage.location }}</span>
                 {% if storage.total_slots > 0 %}
-                    <span>{% translate "Bottles:" %} {{ storage.used_slots }}/{{ storage.total_slots }}</span>
+                    <span>Bottles: {{ storage.used_slots }}/{{ storage.total_slots }}</span>
                 {% else %}
-                    <span>{% translate "Bottles:" %} {{ storage.used_slots }}</span>
+                    <span>Bottles: {{ storage.used_slots }}</span>
                 {% endif %}
             </div>
             
@@ -30,10 +30,10 @@
             <div class="pure-u-1 text-align-center storage-view-toggle-container">
                 <div class="storage-view-toggle">
                     <button type="button" class="storage-view-toggle__btn" id="btn-list-view" onclick="toggleView('list')">
-                        <i class="fa-solid fa-list"></i> {% translate "List" %}
+                        <i class="fa-solid fa-list"></i> List
                     </button>
                     <button type="button" class="storage-view-toggle__btn storage-view-toggle__btn--active" id="btn-grid-view" onclick="toggleView('grid')">
-                        <i class="fa-solid fa-table-cells"></i> {% translate "Grid" %}
+                        <i class="fa-solid fa-table-cells"></i> Grid
                     </button>
                 </div>
             </div>
@@ -50,9 +50,9 @@
                 {% if object_list %}
                     <table class="storage-list__table">
                         <tr>
-                            <th>{% if CELLAR_APP_TYPE == "whisky" %}{% translate "Whisky" %}{% else %}{% translate "Wine" %}{% endif %}</th>
-                            <th>{% translate "Row" %}</th>
-                            <th>{% translate "Cell" %}</th>
+                            <th>{% if CELLAR_APP_TYPE == "whisky" %}Whisky{% else %}Wine{% endif %}</th>
+                            <th>Row</th>
+                            <th>Cell</th>
                             <th></th>
                         </tr>
                         {% for item in object_list %}
@@ -75,7 +75,7 @@
                     </table>
                     {% include "includes/pagination.html" %}
                 {% else %}
-                    <p>{% if CELLAR_APP_TYPE == "whisky" %}{% translate "No whiskies here yet." %}{% else %}{% translate "No wines here yet." %}{% endif %}</p>
+                    <p>{% if CELLAR_APP_TYPE == "whisky" %}No whiskies here yet.{% else %}No wines here yet.{% endif %}</p>
                 {% endif %}
             </div>
         </div>
