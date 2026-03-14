@@ -285,7 +285,7 @@ const Scanner = () => {
             onChange={(e) => setSelectedFormat(e.target.value)}
             aria-label="Barcode format"
           >
-            <option value="">{'All'}</option>
+            <option value="">All</option>
             <option value="code_39">Code 39</option>
             <option value="code_93">Code 93</option>
             <option value="code_128">Code 128</option>
