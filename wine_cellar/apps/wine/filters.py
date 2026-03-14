@@ -51,7 +51,7 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
         "storageitem__notes__note",
     )
 
-    search = django_filters.CharFilter(method="filter_search", label=_("Search"))
+    search = django_filters.CharFilter(method="filter_search", label="Search")
     stock = ChoiceFilter(
         method="filter_has_stock",
         label="Show only in stock",

@@ -71,7 +71,7 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
         "whiskystorageitem__notes__note",
     )
 
-    search = django_filters.CharFilter(method="filter_search", label=_("Search"))
+    search = django_filters.CharFilter(method="filter_search", label="Search")
 
     whisky_type = ChoiceFilter(
         choices=[("", "Any")] + list(WhiskyType.choices),
