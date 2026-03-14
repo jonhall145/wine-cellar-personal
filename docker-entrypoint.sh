@@ -81,6 +81,7 @@ with connection.cursor() as c:
         python manage.py loaddata fixtures/bottlers.json 2>/dev/null || true
     else
         python manage.py loaddata fixtures/grapes.json 2>/dev/null || true
+        python manage.py loaddata fixtures/appellations.json 2>/dev/null || true
     fi
 
     # Create superuser if configured

@@ -57,7 +57,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 COPY manage.py ./
 COPY wine_cellar/ wine_cellar/
 RUN mkdir -p fixtures
-COPY fixtures/grapes.json fixtures/whisky_regions.json fixtures/distilleries.json fixtures/bottlers.json fixtures/
+COPY fixtures/grapes.json fixtures/appellations.json fixtures/whisky_regions.json fixtures/distilleries.json fixtures/bottlers.json fixtures/
 
 # Copy built frontend assets from Node stage
 COPY --from=frontend-builder /app/wine_cellar/static/ wine_cellar/static/
