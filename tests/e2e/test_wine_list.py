@@ -43,7 +43,7 @@ class TestWineList:
         pagination = page.locator("ul.pagination")
         assert pagination.count() > 0 or "page=2" in page.content()
 
-    def test_wine_list_name_filter(self, authenticated_page, live_server):
+    def test_wine_list_search_filter(self, authenticated_page, live_server):
         """Filtering by search narrows results."""
         page = authenticated_page
         page.goto(f"{live_server.url}/wines/?search=Test+Wine+01")
