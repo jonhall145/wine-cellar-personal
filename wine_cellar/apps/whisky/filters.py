@@ -63,8 +63,18 @@ def get_country_choices(user=None):
 class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
     storage_item_reverse = "whiskystorageitem"
     nullable_order_fields = ("age_statement", "effective_price")
+    search_fields = (
+        "name",
+        "comment",
+        "cask_type",
+        "bottler_series",
+        "whiskydrinkrecord__tasting_notes",
+        "whiskystorageitem__notes__note",
+    )
 
-    name = django_filters.CharFilter(field_name="name", lookup_expr="icontains")
+    search = django_filters.CharFilter(
+        method="filter_search", label=_("Search")
+    )
 
     whisky_type = ChoiceFilter(
         choices=[("", _("Any"))] + list(WhiskyType.choices),
@@ -197,7 +207,7 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
     class Meta:
         model = Whisky
         fields = [
-            "name",
+            "search",
             "whisky_type",
             "distillery",
             "region",

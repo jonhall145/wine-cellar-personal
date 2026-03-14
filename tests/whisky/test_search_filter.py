@@ -1,0 +1,111 @@
+import os
+
+import pytest
+
+if os.environ.get("CELLAR_APP_TYPE") == "whisky":
+    from django.test import RequestFactory
+
+    from wine_cellar.apps.whisky.filters import WhiskyFilter
+    from wine_cellar.apps.whisky.models import (
+        Whisky,
+        WhiskyBottleNote,
+        WhiskyDrinkRecord,
+    )
+
+    @pytest.mark.django_db
+    class TestWhiskySearchFilter:
+        def _filter(self, user, **params):
+            request = RequestFactory().get("/")
+            request.user = user
+            return WhiskyFilter(
+                data=params,
+                queryset=Whisky.objects.filter(user=user),
+                request=request,
+            )
+
+        def test_search_by_name(self, user, whisky_factory):
+            whisky = whisky_factory(user=user, name="Lagavulin 16")
+            whisky_factory(user=user, name="Glenfiddich 12")
+
+            filt = self._filter(user, search="Lagavulin")
+            assert whisky in filt.qs
+            assert filt.qs.count() == 1
+
+        def test_search_by_comment(self, user, whisky_factory):
+            whisky = whisky_factory(user=user, comment="rich peat smoke and iodine")
+            whisky_factory(user=user, comment="light and fruity")
+
+            filt = self._filter(user, search="iodine")
+            assert whisky in filt.qs
+            assert filt.qs.count() == 1
+
+        def test_search_by_cask_type(self, user, whisky_factory):
+            whisky = whisky_factory(user=user, cask_type="Oloroso Sherry Butt")
+            whisky_factory(user=user, cask_type="Bourbon Barrel")
+
+            filt = self._filter(user, search="Oloroso")
+            assert whisky in filt.qs
+            assert filt.qs.count() == 1
+
+        def test_search_by_bottler_series(self, user, whisky_factory):
+            whisky = whisky_factory(
+                user=user, bottler_series="Connoisseurs Choice"
+            )
+            whisky_factory(user=user, bottler_series="")
+
+            filt = self._filter(user, search="Connoisseurs")
+            assert whisky in filt.qs
+            assert filt.qs.count() == 1
+
+        def test_search_by_tasting_notes(self, user, whisky_factory):
+            whisky = whisky_factory(user=user)
+            WhiskyDrinkRecord.objects.create(
+                whisky=whisky,
+                user=user,
+                household=whisky.household,
+                date_consumed="2025-01-01",
+                tasting_notes="Bonfire smoke and dark chocolate",
+            )
+            other = whisky_factory(user=user)
+            WhiskyDrinkRecord.objects.create(
+                whisky=other,
+                user=user,
+                household=other.household,
+                date_consumed="2025-01-01",
+                tasting_notes="Vanilla and honeycomb",
+            )
+
+            filt = self._filter(user, search="bonfire")
+            assert whisky in filt.qs
+            assert other not in filt.qs
+
+        def test_search_by_bottle_note(
+            self, user, whisky_factory, whisky_storage_item_factory
+        ):
+            whisky = whisky_factory(user=user)
+            si = whisky_storage_item_factory(
+                whisky=whisky,
+                storage__user=user,
+                storage__household=whisky.household,
+            )
+            WhiskyBottleNote.objects.create(
+                storage_item=si,
+                user=user,
+                household=whisky.household,
+                note_date="2025-06-01",
+                note="Opened for Burns Night supper",
+            )
+            other = whisky_factory(user=user)
+
+            filt = self._filter(user, search="Burns Night")
+            assert whisky in filt.qs
+            assert other not in filt.qs
+
+        def test_search_no_duplicates(self, user, whisky_factory):
+            """A whisky matching multiple fields should appear only once."""
+            whisky = whisky_factory(
+                user=user, name="Smoky Dram", comment="very smoky finish"
+            )
+
+            filt = self._filter(user, search="smoky")
+            assert list(filt.qs).count(whisky) == 1
