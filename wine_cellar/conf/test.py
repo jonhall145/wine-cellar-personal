@@ -79,6 +79,9 @@ CACHES = {
     }
 }
 
+# Disable allauth rate limiting in tests (e2e tests trigger many logins)
+ACCOUNT_RATE_LIMITS = {}
+
 # Ensure all exports are available
 __all__ = [
     "ACCOUNT_ADAPTER",
