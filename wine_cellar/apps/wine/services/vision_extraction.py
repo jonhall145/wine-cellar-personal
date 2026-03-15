@@ -595,7 +595,17 @@ Please extract the following information if visible in ANY of the images:
 6. **Designation**: The wine's geographic certification or quality designation \
 (e.g., AOC, AOP, DOC, DOCG, DO, DOCA, AVA, GI, IGP, QbA, Qualitätswein, Kabinett, \
 Spätlese, VQA, DOP, Vinho Regional, etc.)
-7. **Grapes/Varieties**: List of grape varieties (e.g., Cabernet Sauvignon, Merlot)
+7. **Grapes/Varieties**: List of grape varieties. HIGH PRIORITY \
+- try hard to identify. Look for:
+   - Grape names on front label (the wine name itself is often \
+the grape, e.g., "Riesling", "Chardonnay")
+   - Back label blend composition (e.g., "60% Cabernet Sauvignon, 40% Merlot")
+   - Infer from well-known appellations if not explicitly stated:
+     Burgundy/Bourgogne red = Pinot Noir, white = Chardonnay, Chablis = Chardonnay,
+     Barolo/Barbaresco = Nebbiolo, Chianti/Brunello = Sangiovese,
+     Rioja = Tempranillo, Sancerre/Pouilly-Fumé = Sauvignon Blanc,
+     Côtes du Rhône = Grenache/Syrah/Mourvèdre, Beaujolais = Gamay
+   - Use full canonical names in title case (e.g., "Cabernet Sauvignon" not "Cab Sav")
 8. **Vineyard/Producer**: The winery or producer name
 9. **ABV**: Alcohol by volume percentage (as a number, e.g., 13.5)
 10. **Volume**: Bottle size in ml (e.g., 750, 375, 1500)
@@ -629,7 +639,8 @@ LABEL_BOUNDS_BACK: [x1,y1,x2,y2 or "not found"]
 **Important**:
 - Combine information from ALL images provided
 - If you cannot read or find a field in any image, write "not found"
-- For grapes, use comma-separated list
+- For grapes, use comma-separated list. If the wine name IS a \
+grape variety, include it. Infer from appellations when not stated
 - For confidence: "high" if confident, "medium" if some unclear, "low" if hard to read
 - For FIELD_CONFIDENCE: rate each extracted field individually as high/medium/low \
 (e.g., "name=high, vintage=high, country=medium, grapes=low")

@@ -175,11 +175,23 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Handle select fields
                         const value = data[apiField];
 
+                        // Fields where AI returns name strings for create-enabled TomSelect
+                        const createFields = ['grapes', 'vineyard'];
+
                         // Function to set TomSelect value with retry logic
                         const setSelectValue = (attempts = 0) => {
                             if (input.tomselect) {
-                                // TomSelect is ready
-                                if (Array.isArray(value)) {
+                                if (createFields.includes(formField)) {
+                                    // For create-enabled M2M fields, AI returns name strings
+                                    // but TomSelect options use PKs. Use addOption/addItem
+                                    // with tom_new_opt prefix to trigger get_or_create on submit.
+                                    const names = Array.isArray(value) ? value : [value];
+                                    names.forEach(name => {
+                                        const optKey = 'tom_new_opt' + name;
+                                        input.tomselect.addOption({ value: optKey, text: name });
+                                        input.tomselect.addItem(optKey);
+                                    });
+                                } else if (Array.isArray(value)) {
                                     input.tomselect.setValue(value);
                                 } else {
                                     // For country field, value should be ISO code like "FR"
