@@ -39,8 +39,8 @@ class TestNormalizeGrapeName:
     def test_alias_garnacha_to_grenache(self):
         assert normalize_grape_name("Garnacha") == "Grenache"
 
-    def test_alias_primitivo_to_zinfandel(self):
-        assert normalize_grape_name("Primitivo") == "Zinfandel"
+    def test_alias_zinfandel_to_primitivo(self):
+        assert normalize_grape_name("Zinfandel") == "Primitivo"
 
     def test_alias_pinot_grigio_to_pinot_gris(self):
         assert normalize_grape_name("Pinot Grigio") == "Pinot Gris"
