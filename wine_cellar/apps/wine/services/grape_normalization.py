@@ -9,7 +9,7 @@ GRAPE_ALIASES = {
     "sav blanc": "Sauvignon Blanc",
     "shiraz": "Syrah",
     "garnacha": "Grenache",
-    "primitivo": "Zinfandel",
+    "zinfandel": "Primitivo",
     "pinot grigio": "Pinot Gris",
     "monastrell": "Mourvèdre",
     "spätburgunder": "Pinot Noir",
