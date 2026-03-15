@@ -18,12 +18,12 @@ services:
     env_file:
       - .env.docker
     depends_on:
-      db:
+      dev-db:
         condition: service_healthy
-      redis:
+      dev-redis:
         condition: service_healthy
 
-  db:
+  dev-db:
     image: postgres:16-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -37,7 +37,7 @@ services:
       timeout: 3s
       retries: 5
 
-  redis:
+  dev-redis:
     image: redis:7-alpine
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
