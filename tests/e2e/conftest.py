@@ -74,7 +74,7 @@ def e2e_user(db):
 def _login(page, live_server, username=TEST_USERNAME, password=TEST_PASSWORD):
     """Helper: log in via the login page."""
     page.goto(f"{live_server.url}/accounts/login/")
-    page.fill("input[name='username']", username)
+    page.fill("input[name='login']", username)
     page.fill("input[name='password']", password)
     page.click("[type='submit']")
     page.wait_for_url(f"{live_server.url}/**")
