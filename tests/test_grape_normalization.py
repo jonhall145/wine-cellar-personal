@@ -45,6 +45,15 @@ class TestNormalizeGrapeName:
     def test_alias_pinot_grigio_to_pinot_gris(self):
         assert normalize_grape_name("Pinot Grigio") == "Pinot Gris"
 
+    def test_alias_brunello_to_sangiovese(self):
+        assert normalize_grape_name("Brunello") == "Sangiovese"
+
+    def test_alias_pinot_bianco_to_pinot_blanc(self):
+        assert normalize_grape_name("Pinot Bianco") == "Pinot Blanc"
+
+    def test_alias_pinot_nero_to_pinot_noir(self):
+        assert normalize_grape_name("Pinot Nero") == "Pinot Noir"
+
     def test_alias_case_insensitive(self):
         assert normalize_grape_name("SHIRAZ") == "Syrah"
         assert normalize_grape_name("tinta roriz") == "Tempranillo"

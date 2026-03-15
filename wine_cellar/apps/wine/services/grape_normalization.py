@@ -19,6 +19,11 @@ GRAPE_ALIASES = {
     "tinta roriz": "Tempranillo",
     "aragonez": "Tempranillo",
     "muskat": "Muskateller",
+    "brunello": "Sangiovese",
+    "morellino": "Sangiovese",
+    "nielluccio": "Sangiovese",
+    "pinot bianco": "Pinot Blanc",
+    "pinot nero": "Pinot Noir",
 }
 
 # Values that should be skipped entirely
