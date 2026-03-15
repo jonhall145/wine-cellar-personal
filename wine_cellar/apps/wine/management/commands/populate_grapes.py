@@ -6,7 +6,7 @@ import time
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from wine_cellar.apps.wine.models import Grape, Wine, WineImage
+from wine_cellar.apps.wine.models import Grape, Wine
 from wine_cellar.apps.wine.services.grape_normalization import (
     normalize_grape_list,
 )
@@ -152,8 +152,8 @@ class Command(BaseCommand):
 
                 # Optionally include label images
                 if not options["skip_images"]:
-                    images = WineImage.objects.filter(wine=wine)
-                    for img in images[:2]:  # Max 2 images
+                    images = list(wine.wineimage_set.all())[:2]
+                    for img in images:
                         try:
                             import base64
 

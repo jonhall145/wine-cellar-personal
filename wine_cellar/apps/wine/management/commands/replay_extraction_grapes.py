@@ -21,14 +21,52 @@ class Command(BaseCommand):
             help="Filter by user ID",
         )
 
+    def _resolve_wine(self, log):
+        """Resolve the wine for a log entry.
+
+        Prefer the linked wine if already set, fall back to name/vintage match.
+        """
+        if log.wine_id and not log.wine.deleted:
+            return log.wine
+
+        data = log.extracted_data or {}
+        name = data.get("name")
+        vintage = data.get("vintage")
+        if not name:
+            return None
+
+        wine_qs = Wine.objects.filter(deleted=False, user=log.user)
+        wine_qs = wine_qs.filter(name__iexact=name)
+        if vintage:
+            wine_qs = wine_qs.filter(vintage=vintage)
+
+        wines = list(wine_qs)
+        if len(wines) == 1:
+            return wines[0]
+
+        if len(wines) > 1:
+            self.stdout.write(
+                self.style.WARNING(
+                    f'  Log {log.pk}: multiple wines match "{name}" '
+                    f"({vintage}) - skipping"
+                )
+            )
+        else:
+            self.stdout.write(
+                self.style.WARNING(
+                    f'  Log {log.pk}: no wine matches "{name}" '
+                    f"({vintage}) - skipping"
+                )
+            )
+        return None
+
     def handle(self, *args, **options):
         commit = options["commit"]
         mode = "COMMIT" if commit else "DRY RUN"
 
         self.stdout.write(f"\n=== Replay Extraction Grapes ({mode}) ===\n")
 
-        # Find logs that have grape data in extracted_data
-        qs = VisionExtractionLog.objects.all()
+        qs = VisionExtractionLog.objects.select_related("wine", "user").all()
         if options["user"]:
             qs = qs.filter(user_id=options["user"])
 
@@ -38,52 +76,23 @@ class Command(BaseCommand):
         skipped = 0
         logs_linked = 0
 
-        for log in qs:
+        for log in qs.iterator(chunk_size=100):
             data = log.extracted_data or {}
             grape_names = data.get("grapes", [])
             if not grape_names or not isinstance(grape_names, list):
                 continue
 
-            name = data.get("name")
-            vintage = data.get("vintage")
-            if not name:
-                continue
-
-            # Normalize and deduplicate grape names
             normalized = normalize_grape_list(grape_names)
             if not normalized:
                 continue
 
-            # Match to a wine by name + vintage + user
-            wine_qs = Wine.objects.filter(deleted=False, user=log.user)
-            wine_qs = wine_qs.filter(name__iexact=name)
-            if vintage:
-                wine_qs = wine_qs.filter(vintage=vintage)
-
-            wines = list(wine_qs)
-            if len(wines) != 1:
-                if len(wines) > 1:
-                    self.stdout.write(
-                        self.style.WARNING(
-                            f'  Log {log.pk}: multiple wines match "{name}" '
-                            f"({vintage}) - skipping"
-                        )
-                    )
-                else:
-                    self.stdout.write(
-                        self.style.WARNING(
-                            f'  Log {log.pk}: no wine matches "{name}" '
-                            f"({vintage}) - skipping"
-                        )
-                    )
+            wine = self._resolve_wine(log)
+            if not wine:
                 skipped += 1
                 continue
 
-            wine = wines[0]
-
             # Skip wines that already have grapes (unless log isn't linked)
             if wine.grapes.exists():
-                # Still link the log if needed
                 if not log.wine_id and commit:
                     log.wine = wine
                     log.save(update_fields=["wine"])
@@ -94,7 +103,6 @@ class Command(BaseCommand):
             self.stdout.write(f'Log {log.pk} -> Wine {wine.pk} "{wine}"')
 
             for grape_name in normalized:
-                # Check if grape already exists for this user
                 existing = Grape.objects.filter(
                     name__iexact=grape_name,
                     user=wine.user,
