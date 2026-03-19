@@ -237,7 +237,7 @@ This is a **mobile-first app**. Mobile testing is mandatory, not optional.
 - Verify bottle counts vs wine counts when filtering
 
 **Static Files & CSS:**
-- Changes to CSS/JS require `make watch` or `npm run build` to be visible
+- **NEVER run `npm run build` or `make watch` locally** — frontend assets are built inside the Docker image on GHCR. Local builds are unnecessary and should not be done.
 - Production requires `collectstatic` - handled automatically inside the Docker image build
 - Check browser cache / use incognito when CSS changes aren't visible
 

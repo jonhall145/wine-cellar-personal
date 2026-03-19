@@ -187,6 +187,60 @@
   vertical-align: middle;
 }
 
+.ios-install-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+}
+
+.ios-install-modal[hidden] {
+  display: none;
+}
+
+.ios-install-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.ios-install-modal__sheet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--white);
+  border-radius: 16px 16px 0 0;
+  padding: var(--spacing-xl) var(--spacing-xl) calc(var(--spacing-xl) + env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+}
+
+.ios-install-modal__close {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  background: none;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-color-gray);
+  padding: 4px 8px;
+}
+
+.ios-install-modal__title {
+  font-size: var(--font-lg);
+  font-weight: 600;
+  margin: 0 0 var(--spacing-md);
+  color: var(--darker-gray);
+}
+
+.ios-install-modal__body {
+  font-size: var(--font-md);
+  line-height: 1.6;
+  color: var(--text-color-gray);
+  margin: 0;
+}
+
 .settings-sidebar {
   margin-top: var(--spacing-xl);
   background-color: transparent;

@@ -132,12 +132,40 @@ function updateOnlineStatus(banner: HTMLElement): void {
   }
 }
 
+function initIosInstallHint(): void {
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = ('standalone' in navigator) && (navigator as Navigator & { standalone: boolean }).standalone;
+  if (!isIos || isStandalone) return;
+
+  const menuItem = document.getElementById('ios-add-to-home-item');
+  const btn = document.getElementById('ios-add-to-home-btn');
+  const modal = document.getElementById('ios-install-modal') as HTMLElement | null;
+  if (!menuItem || !btn || !modal) return;
+
+  menuItem.style.display = '';
+
+  btn.addEventListener('click', () => {
+    modal.hidden = false;
+    // Close hamburger menu if open
+    const toggle = document.getElementById('menu-toggle') as HTMLInputElement | null;
+    if (toggle) toggle.checked = false;
+  });
+
+  modal.querySelector('.ios-install-modal__backdrop')?.addEventListener('click', () => {
+    modal.hidden = true;
+  });
+  modal.querySelector('.ios-install-modal__close')?.addEventListener('click', () => {
+    modal.hidden = true;
+  });
+}
+
 function init(): void {
   const banner = createOfflineBanner();
   const badge = createSyncBadge();
   updateOnlineStatus(banner);
   updateSyncBadge(badge);
   registerServiceWorker();
+  initIosInstallHint();
 
   window.addEventListener('online', async () => {
     updateOnlineStatus(banner);
