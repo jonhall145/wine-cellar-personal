@@ -58,6 +58,7 @@ function updateStorageCells() {
 
     function populateSelect(select: HTMLSelectElement, options: number[], selectedValue?: string) {
         select.innerHTML = ''
+        const nativeOpts: HTMLOptionElement[] = []
         options.forEach(function (val) {
             const opt = document.createElement('option')
             opt.value = String(val)
@@ -66,6 +67,7 @@ function updateStorageCells() {
                 opt.selected = true
             }
             select.appendChild(opt)
+            nativeOpts.push(opt)
         })
         // @ts-ignore
         if (select.tomselect) {
@@ -73,15 +75,22 @@ function updateStorageCells() {
             select.tomselect.clear(true)
             // @ts-ignore
             select.tomselect.clearOptions()
-            options.forEach(function (val) {
+            options.forEach(function (val, idx) {
+                // Pass the native $option reference so TomSelect won't create duplicate
+                // native options when setValue triggers updateOriginalInput.
                 // @ts-ignore
-                select.tomselect.addOption({ value: val, text: val })
+                select.tomselect.addOption({ value: String(val), text: String(val), $option: nativeOpts[idx] })
             })
             // @ts-ignore
             select.tomselect.refreshOptions(false)
-            if (selectedValue && options.includes(Number(selectedValue))) {
+            // Determine which value to show in TomSelect. Auto-select first option when no
+            // selectedValue is given — without a visible selection, iOS won't open the dropdown.
+            const valToSet = selectedValue && options.includes(Number(selectedValue))
+                ? selectedValue
+                : options.length > 0 ? String(options[0]) : null
+            if (valToSet) {
                 // @ts-ignore
-                select.tomselect.setValue(selectedValue, true)
+                select.tomselect.setValue(valToSet, true)
             }
         }
     }
