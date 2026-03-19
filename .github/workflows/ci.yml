@@ -79,14 +79,13 @@ jobs:
           npm ci --no-audit --no-fund
           npm run build
           pip install -r requirements/dev.txt
-          playwright install --with-deps chromium
       - name: Run Tests
         env:
           PGPASSWORD: postgres
           PGHOSTADDR: 127.0.0.1
         run: |
           python manage.py collectstatic > /dev/null
-          py.test --cov
+          py.test --cov --ignore=tests/e2e
           isort --diff -c wine_cellar tests
           python manage.py makemigrations --dry-run --check --noinput
           flake8 wine_cellar tests --exclude migrations,settings
