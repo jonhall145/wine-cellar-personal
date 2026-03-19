@@ -57,41 +57,38 @@ function updateStorageCells() {
     }
 
     function populateSelect(select: HTMLSelectElement, options: number[], selectedValue?: string) {
+        // Determine value to pre-select in the native element.
+        // Auto-select the first option when no restoreValue is given so that
+        // iOS TomSelect can open the dropdown (it won't open with an empty control).
+        const valToSet = selectedValue && options.includes(Number(selectedValue))
+            ? selectedValue
+            : options.length > 0 ? String(options[0]) : null
+
         select.innerHTML = ''
-        const nativeOpts: HTMLOptionElement[] = []
         options.forEach(function (val) {
             const opt = document.createElement('option')
             opt.value = String(val)
             opt.textContent = String(val)
-            if (selectedValue && String(val) === selectedValue) {
+            if (valToSet && String(val) === valToSet) {
                 opt.selected = true
             }
             select.appendChild(opt)
-            nativeOpts.push(opt)
         })
         // @ts-ignore
         if (select.tomselect) {
+            // Clear current TomSelect state then re-sync from the native <select>.
+            // Using sync() rather than addOption() ensures TomSelect's internal
+            // caches (options map, sifter index, rendered items) are fully rebuilt,
+            // which fixes iOS Safari not opening the dropdown after a programmatic
+            // option swap.
             // @ts-ignore
             select.tomselect.clear(true)
             // @ts-ignore
             select.tomselect.clearOptions()
-            options.forEach(function (val, idx) {
-                // Pass the native $option reference so TomSelect won't create duplicate
-                // native options when setValue triggers updateOriginalInput.
-                // @ts-ignore
-                select.tomselect.addOption({ value: String(val), text: String(val), $option: nativeOpts[idx] })
-            })
+            // @ts-ignore
+            select.tomselect.sync()
             // @ts-ignore
             select.tomselect.refreshOptions(false)
-            // Determine which value to show in TomSelect. Auto-select first option when no
-            // selectedValue is given — without a visible selection, iOS won't open the dropdown.
-            const valToSet = selectedValue && options.includes(Number(selectedValue))
-                ? selectedValue
-                : options.length > 0 ? String(options[0]) : null
-            if (valToSet) {
-                // @ts-ignore
-                select.tomselect.setValue(valToSet, true)
-            }
         }
     }
 
