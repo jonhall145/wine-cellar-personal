@@ -9,7 +9,6 @@ import tempfile
 # Import all base settings explicitly
 from wine_cellar.conf.settings import (
     ACCOUNT_ADAPTER,
-    ACCOUNT_RATE_LIMITS,
     ALLOWED_HOSTS,
     ANTHROPIC_API_KEY,
     AUTH_PASSWORD_VALIDATORS,
