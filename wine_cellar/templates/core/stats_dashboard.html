@@ -20,7 +20,7 @@
             <div class="pure-g">
                 {# --- By Type --- #}
                 <div class="pure-u-1 pure-u-md-1-2">
-                    <h3>{{ APP_ITEM_NAME }} by Type</h3>
+                    <h3>{{ APP_ITEM_NAME|capfirst }} by Type</h3>
                     {% if by_type %}
                         <canvas id="chartByType" height="250"></canvas>
                         <details class="mt-4">
