@@ -261,6 +261,18 @@ class TestWineListView:
         assert "Red One" in names
         assert "White One" not in names
 
+    def test_filter_by_multiple_wine_types(self, client, user, wine_factory):
+        wine_factory(user=user, wine_type=WineType.RED, name="Red One")
+        wine_factory(user=user, wine_type=WineType.WHITE, name="White One")
+        wine_factory(user=user, wine_type=WineType.ROSE, name="Rose One")
+        client.force_login(user)
+        r = client.get(reverse("wine-list") + "?wine_type=RE&wine_type=WH")
+        assert r.status_code == HTTPStatus.OK
+        names = [w.name for w in r.context["object_list"]]
+        assert "Red One" in names
+        assert "White One" in names
+        assert "Rose One" not in names
+
     def test_per_page_parameter(self, client, user, wine_factory):
         for i in range(15):
             wine_factory(user=user, name=f"PerPage {i}")

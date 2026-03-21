@@ -35,6 +35,14 @@ class WineFormPostCleanMixin:
     def _post_clean(self):
         """Update tom-select config to prevent data loss in the form"""
         if hasattr(self, "cleaned_data"):
+            wine_type = self.cleaned_data.get("wine_type", [])
+            if wine_type and "wine_type" in self.fields:
+                self.set_tom_config(
+                    name="wine_type",
+                    items=wine_type,
+                    create=False,
+                    clear=False,
+                )
             grapes = self.cleaned_data.get("grapes", [])
             if grapes:
                 self.set_tom_config(
@@ -513,6 +521,7 @@ class WineFilterForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.initial["form_step"] = 0
+        self.set_tom_config(name="wine_type", create=False)
         self.set_tom_config(name="grapes", create=False)
         self.set_tom_config(name="food_pairings", create=False)
         self.set_tom_config(name="source", create=False)

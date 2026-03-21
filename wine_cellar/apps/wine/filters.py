@@ -12,7 +12,7 @@ from wine_cellar.apps.core.filters import (
 )
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.forms import WineFilterForm
-from wine_cellar.apps.wine.models import Appellation, Collection, Wine
+from wine_cellar.apps.wine.models import Appellation, Collection, Wine, WineType
 
 
 def get_country_choices_with_favourites(user=None):
@@ -101,6 +101,10 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
         method="filter_is_cold",
         label="Cold Storage",
         choices=(("", "Any"), (0, "No"), (1, "Yes")),
+    )
+    wine_type = django_filters.MultipleChoiceFilter(
+        choices=WineType.choices,
+        label="Type",
     )
     collection = ChoiceFilter(
         choices=[],
