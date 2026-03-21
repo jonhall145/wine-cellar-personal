@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.3.2 (2026-03-21)
+
+### fix
+
+- persist target storage selection in move mode (#152)
+
+
+
 ## 0.3.1 (2026-03-21)
 
 ### fix
