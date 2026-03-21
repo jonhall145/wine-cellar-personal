@@ -333,9 +333,13 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
             setData(json);
             setSourceStorageId(json.current_storage_id);
             if (json.item_url_prefix) setItemUrlPrefix(json.item_url_prefix);
-            // Set target to a different storage if available, otherwise same as source
+            // Set target storage - prefer last used (localStorage), then another storage, then same as source
+            const savedTargetId = localStorage.getItem('storage_grid_target_id');
+            const savedTarget = savedTargetId
+                ? json.storages.find((s: StorageData) => s.id === parseInt(savedTargetId))
+                : null;
             const otherStorage = json.storages.find((s: StorageData) => s.id !== json.current_storage_id);
-            setTargetStorageId(otherStorage?.id || json.current_storage_id);
+            setTargetStorageId(savedTarget?.id || otherStorage?.id || json.current_storage_id);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Unknown error');
         } finally {
@@ -520,7 +524,15 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                 <select
                     id={isSource ? 'source-select' : 'target-select'}
                     value={storage.id}
-                    onChange={(e) => isSource ? setSourceStorageId(Number(e.target.value)) : setTargetStorageId(Number(e.target.value))}
+                    onChange={(e) => {
+                        const id = Number(e.target.value);
+                        if (isSource) {
+                            setSourceStorageId(id);
+                        } else {
+                            setTargetStorageId(id);
+                            localStorage.setItem('storage_grid_target_id', String(id));
+                        }
+                    }}
                     className="storage-grid__select"
                 >
                     {data.storages.map(s => (
