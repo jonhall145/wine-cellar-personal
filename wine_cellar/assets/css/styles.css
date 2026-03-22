@@ -974,3 +974,50 @@ a:hover {
   padding: 0 4px;
   line-height: 1;
 }
+
+/* PWA install prompt banner */
+.install-banner {
+  display: none;
+  position: fixed;
+  bottom: 60px;
+  left: 0;
+  right: 0;
+  background: var(--primary);
+  color: #fff;
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  z-index: 10001;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+}
+
+.install-banner--visible {
+  display: flex;
+}
+
+.install-banner__btn {
+  background: #fff;
+  color: var(--primary);
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.install-banner__btn:hover {
+  opacity: 0.9;
+}
+
+.install-banner__dismiss {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
