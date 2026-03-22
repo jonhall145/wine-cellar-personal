@@ -193,9 +193,9 @@ Always use `make` targets rather than calling scripts directly. Run `make help` 
 4. **The jsi18n endpoint requires authentication** - script tag is conditionally loaded
 5. **Map tiles require internet access** - expect fetch errors in isolated environments
 6. **Only update jonhall145 repos** - Do not create PRs to upstream repos (the-broke-sommeliers). Only push to origin (jonhall145)
-9. **Always PR to `next`** - Never create PRs targeting `main`. All work goes to `next`; merging to `main` is done manually when ready to release.
-7. **Avoid full rebuilds for tests** - Tests should not require a full frontend rebuild as this is slow and causes timeout issues. Use `make pytest` directly for backend tests.
-8. **Never change user passwords permanently** - If you need to reset a password for testing, always revert it back to the original before finishing. Do not leave changed passwords.
+7. **Always PR to `next`** - Never create PRs targeting `main`. All work goes to `next`; merging to `main` is done manually when ready to release.
+8. **Avoid full rebuilds for tests** - Tests should not require a full frontend rebuild as this is slow and causes timeout issues. Use `make pytest` directly for backend tests.
+9. **Never change user passwords permanently** - If you need to reset a password for testing, always revert it back to the original before finishing. Do not leave changed passwords.
 
 ## Testing Policy
 

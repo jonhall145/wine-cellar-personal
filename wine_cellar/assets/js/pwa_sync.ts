@@ -135,10 +135,12 @@ function updateOnlineStatus(banner: HTMLElement): void {
 function detectIos(): { isIos: boolean; isSafari: boolean } {
   const ua = navigator.userAgent;
   const isIphone = /iphone|ipod/i.test(ua);
-  // iPadOS 13+ reports as Macintosh but retains navigator.standalone (WebKit-only)
+  // On iPadOS 13+, Safari reports the platform as "Macintosh" but still exposes navigator.standalone;
+  // we use that (plus touch support) as a signal that this is iPadOS Safari / iOS-style install UX.
   const isIpad = /ipad/i.test(ua) || (/macintosh/i.test(ua) && 'standalone' in navigator && 'ontouchend' in document);
   const isIos = isIphone || isIpad;
-  // Chrome, Firefox, Edge, Opera on iOS use a different engine and can't install PWAs natively
+  // Chrome, Firefox, Edge, Opera on iOS are still WebKit-based, but are third-party browsers whose
+  // PWA install UX differs from Safari; we only treat Safari as "install-capable" for this banner.
   const isThirdPartyBrowser = /CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
   return { isIos, isSafari: isIos && !isThirdPartyBrowser };
 }
@@ -180,7 +182,7 @@ function initIosInstallBanner(): void {
   if (isStandalone) return;
 
   // User already dismissed
-  if (localStorage.getItem('pwa-install-dismissed')) return;
+  if (localStorage.getItem('wine-cellar-install-dismissed')) return;
 
   const modal = document.getElementById('ios-install-modal') as HTMLElement | null;
   const modalBody = document.getElementById('ios-install-modal-body');
@@ -201,7 +203,23 @@ function initIosInstallBanner(): void {
   }
 
   const banner = createInstallBanner();
-  requestAnimationFrame(() => banner.classList.add('install-banner--visible'));
+
+  function showInstallBanner(): void {
+    // Don't show while offline or update banners are visible — they take priority
+    const offlineBanner = document.getElementById('offline-banner');
+    const updateBanner = document.getElementById('update-banner');
+    const offlineVisible = offlineBanner?.classList.contains('offline-banner--visible');
+    const updateVisible = updateBanner?.classList.contains('update-banner--visible');
+    if (!offlineVisible && !updateVisible) {
+      banner.classList.add('install-banner--visible');
+    }
+  }
+
+  requestAnimationFrame(showInstallBanner);
+
+  // Re-evaluate when offline/update banners change
+  window.addEventListener('online', () => showInstallBanner());
+  window.addEventListener('offline', () => banner.classList.remove('install-banner--visible'));
 
   banner.querySelector('.install-banner__btn')!.addEventListener('click', () => {
     modal.hidden = false;
@@ -210,16 +228,16 @@ function initIosInstallBanner(): void {
 
   banner.querySelector('.install-banner__dismiss')!.addEventListener('click', () => {
     banner.classList.remove('install-banner--visible');
-    localStorage.setItem('pwa-install-dismissed', '1');
+    localStorage.setItem('wine-cellar-install-dismissed', '1');
   });
 
   modal.querySelector('.ios-install-modal__backdrop')?.addEventListener('click', () => {
     modal.hidden = true;
-    banner.classList.add('install-banner--visible');
+    showInstallBanner();
   });
   modal.querySelector('.ios-install-modal__close')?.addEventListener('click', () => {
     modal.hidden = true;
-    banner.classList.add('install-banner--visible');
+    showInstallBanner();
   });
 }
 
