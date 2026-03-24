@@ -291,8 +291,9 @@ class WhiskyStorageItemFilter(django_filters.FilterSet):
     )
     show_used = ChoiceFilter(
         method="filter_show_used",
-        choices=(("", "In stock only"), ("1", "Show all (incl. finished)")),
+        choices=(("0", "In stock only"), ("1", "Show all (incl. finished)")),
         label="Show used",
+        empty_label=None,
     )
     order = OrderingFilter(
         choices=(
@@ -339,6 +340,9 @@ class WhiskyStorageItemFilter(django_filters.FilterSet):
         ]
 
     def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
+        if data is not None and "show_used" not in data:
+            data = data.copy()
+            data["show_used"] = "0"
         super().__init__(data, queryset, request=request, prefix=prefix)
         if request and request.user.is_authenticated:
             household = get_active_household(request.user)
