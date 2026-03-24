@@ -132,30 +132,130 @@ function updateOnlineStatus(banner: HTMLElement): void {
   }
 }
 
-function initIosInstallHint(): void {
-  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const isStandalone = ('standalone' in navigator) && (navigator as Navigator & { standalone: boolean }).standalone;
-  if (!isIos || isStandalone) return;
+function detectIos(): { isIos: boolean; isSafari: boolean } {
+  const ua = navigator.userAgent;
+  const isIphone = /iphone|ipod/i.test(ua);
+  // On iPadOS 13+, Safari reports the platform as "Macintosh" but still exposes navigator.standalone;
+  // we use that (plus touch support) as a signal that this is iPadOS Safari / iOS-style install UX.
+  const isIpad = /ipad/i.test(ua) || (/macintosh/i.test(ua) && 'standalone' in navigator && 'ontouchend' in document);
+  const isIos = isIphone || isIpad;
+  // Chrome, Firefox, Edge, Opera on iOS are still WebKit-based, but are third-party browsers whose
+  // PWA install UX differs from Safari; we only treat Safari as "install-capable" for this banner.
+  const isThirdPartyBrowser = /CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
+  return { isIos, isSafari: isIos && !isThirdPartyBrowser };
+}
 
-  const menuItem = document.getElementById('ios-add-to-home-item');
-  const btn = document.getElementById('ios-add-to-home-btn');
+function createInstallBanner(): HTMLElement {
+  const banner = document.createElement('div');
+  banner.id = 'install-banner';
+  banner.className = 'install-banner';
+  banner.setAttribute('role', 'complementary');
+  banner.setAttribute('aria-label', 'Install app prompt');
+
+  const msg = document.createElement('span');
+  msg.textContent = '📲 Install this app on your device';
+  banner.appendChild(msg);
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'install-banner__btn';
+  addBtn.type = 'button';
+  addBtn.textContent = 'How to install';
+  banner.appendChild(addBtn);
+
+  const dismissBtn = document.createElement('button');
+  dismissBtn.className = 'install-banner__dismiss';
+  dismissBtn.type = 'button';
+  dismissBtn.setAttribute('aria-label', 'Dismiss');
+  dismissBtn.textContent = '\u00d7';
+  banner.appendChild(dismissBtn);
+
+  document.body.appendChild(banner);
+  return banner;
+}
+
+function initIosInstallBanner(): void {
+  const { isIos, isSafari } = detectIos();
+  if (!isIos) return;
+
+  // Already installed as PWA
+  const isStandalone = (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  if (isStandalone) return;
+
+  // User already dismissed
+  if (localStorage.getItem('wine-cellar-install-dismissed')) return;
+
   const modal = document.getElementById('ios-install-modal') as HTMLElement | null;
-  if (!menuItem || !btn || !modal) return;
+  const modalBody = document.getElementById('ios-install-modal-body');
+  if (!modal || !modalBody) return;
 
-  menuItem.style.display = '';
+  if (isSafari) {
+    modalBody.innerHTML =
+      'To install this app and remember camera permissions:<br><br>' +
+      '1. Tap the <strong>Share</strong> button <i class="fa-solid fa-arrow-up-from-bracket"></i> at the bottom of Safari<br>' +
+      '2. Scroll down and tap <strong>Add to Home Screen</strong><br>' +
+      '3. Tap <strong>Add</strong>';
+  } else {
+    modalBody.innerHTML =
+      'To install this app, open this page in <strong>Safari</strong>:<br><br>' +
+      '1. Tap the browser menu and select <strong>Open in Safari</strong><br>' +
+      '2. Tap the <strong>Share</strong> button <i class="fa-solid fa-arrow-up-from-bracket"></i><br>' +
+      '3. Tap <strong>Add to Home Screen</strong>, then <strong>Add</strong>';
+  }
 
-  btn.addEventListener('click', () => {
+  const banner = createInstallBanner();
+
+  function showInstallBanner(): void {
+    // Don't show while offline or when an update banner is present — they take priority.
+    // Treating the presence of the update banner element as blocking avoids same-frame races
+    // where the element exists but its "--visible" class has not yet been applied.
+    const offlineBanner = document.getElementById('offline-banner');
+    const updateBanner = document.getElementById('update-banner');
+    const offlineVisible = offlineBanner?.classList.contains('offline-banner--visible') ?? false;
+    const updateBlocking = !!updateBanner;
+
+    if (!offlineVisible && !updateBlocking) {
+      banner.classList.add('install-banner--visible');
+    } else {
+      banner.classList.remove('install-banner--visible');
+    }
+  }
+
+  requestAnimationFrame(showInstallBanner);
+
+  // Re-evaluate when connectivity changes
+  window.addEventListener('online', () => showInstallBanner());
+  window.addEventListener('offline', () => banner.classList.remove('install-banner--visible'));
+
+  // Re-evaluate when the update banner is dynamically added or removed from the DOM
+  if ('MutationObserver' in window) {
+    const bodyObserver = new MutationObserver((mutations) => {
+      const affectsUpdateBanner = mutations.some((m) =>
+        Array.from(m.addedNodes).concat(Array.from(m.removedNodes)).some(
+          (n) => (n as HTMLElement).id === 'update-banner'
+        )
+      );
+      if (affectsUpdateBanner) showInstallBanner();
+    });
+    bodyObserver.observe(document.body, { childList: true });
+  }
+
+  banner.querySelector('.install-banner__btn')!.addEventListener('click', () => {
     modal.hidden = false;
-    // Close hamburger menu if open
-    const toggle = document.getElementById('menu-toggle') as HTMLInputElement | null;
-    if (toggle) toggle.checked = false;
+    banner.classList.remove('install-banner--visible');
+  });
+
+  banner.querySelector('.install-banner__dismiss')!.addEventListener('click', () => {
+    banner.classList.remove('install-banner--visible');
+    localStorage.setItem('wine-cellar-install-dismissed', '1');
   });
 
   modal.querySelector('.ios-install-modal__backdrop')?.addEventListener('click', () => {
     modal.hidden = true;
+    showInstallBanner();
   });
   modal.querySelector('.ios-install-modal__close')?.addEventListener('click', () => {
     modal.hidden = true;
+    showInstallBanner();
   });
 }
 
@@ -165,7 +265,7 @@ function init(): void {
   updateOnlineStatus(banner);
   updateSyncBadge(badge);
   registerServiceWorker();
-  initIosInstallHint();
+  initIosInstallBanner();
 
   window.addEventListener('online', async () => {
     updateOnlineStatus(banner);
