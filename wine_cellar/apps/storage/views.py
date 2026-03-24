@@ -13,6 +13,7 @@ from django.views.generic import DeleteView, DetailView, FormView, ListView
 from django.views.generic.list import MultipleObjectMixin
 from django_filters.views import FilterView
 
+from wine_cellar.apps.household.mixins import RequireHouseholdMixin
 from wine_cellar.apps.storage.filters import StorageItemFilter
 from wine_cellar.apps.storage.forms import (
     StockAddForm,
@@ -349,7 +350,7 @@ class StorageItemHistoryView(ListView):
         return qs.filter(household=household, deleted=True)
 
 
-class StorageItemListView(FilterView):
+class StorageItemListView(RequireHouseholdMixin, FilterView):
     """List all bottles (StorageItem) with filtering."""
 
     model = StorageItem
@@ -669,7 +670,7 @@ def storage_move_up(request, pk):
     return redirect("storage-list")
 
 
-class BottleHistoryView(DetailView):
+class BottleHistoryView(RequireHouseholdMixin, DetailView):
     """Show the lifecycle history timeline for a single wine bottle (StorageItem)."""
 
     model = StorageItem

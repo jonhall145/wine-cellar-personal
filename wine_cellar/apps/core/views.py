@@ -467,7 +467,9 @@ class BaseDrinkRecordCreateView(RequireMemberMixin, FormView):
         from datetime import date
 
         storage_item.deleted = True
-        storage_item.finished_date = date.today()
+        storage_item.finished_date = (
+            form.cleaned_data.get("date_consumed") or date.today()
+        )
         storage_item.save(update_fields=["deleted", "finished_date"])
 
 

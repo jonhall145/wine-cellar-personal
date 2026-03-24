@@ -1258,7 +1258,7 @@ def crop_whisky_image(request, pk):
     return crop_image_ajax(request, pk, WhiskyImage)
 
 
-class WhiskyBottleHistoryView(DetailView):
+class WhiskyBottleHistoryView(RequireHouseholdMixin, DetailView):
     """Show the lifecycle history timeline for a single whisky bottle."""
 
     model = WhiskyStorageItem

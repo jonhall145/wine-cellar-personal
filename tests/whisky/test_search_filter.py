@@ -5,11 +5,12 @@ import pytest
 if os.environ.get("CELLAR_APP_TYPE") == "whisky":
     from django.test import RequestFactory
 
-    from wine_cellar.apps.whisky.filters import WhiskyFilter
+    from wine_cellar.apps.whisky.filters import WhiskyFilter, WhiskyStorageItemFilter
     from wine_cellar.apps.whisky.models import (
         Whisky,
         WhiskyBottleNote,
         WhiskyDrinkRecord,
+        WhiskyStorageItem,
     )
 
     @pytest.mark.django_db
@@ -107,3 +108,41 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
 
             filt = self._filter(user, search="smoky")
             assert list(filt.qs).count(whisky) == 1
+
+    @pytest.mark.django_db
+    class TestWhiskyStorageItemFilter:
+        def _filter(self, user, **params):
+            request = RequestFactory().get("/")
+            request.user = user
+            return WhiskyStorageItemFilter(
+                data=params,
+                queryset=WhiskyStorageItem.objects.filter(
+                    household=user.user_settings.active_household
+                ),
+                request=request,
+            )
+
+        def test_owner_filter(self, user, whisky_storage_item_factory):
+            whisky_storage_item_factory(user=user, owner="Alice")
+            whisky_storage_item_factory(user=user, owner="Bob")
+
+            filt = self._filter(user, owner="Alice")
+            assert filt.qs.count() == 1
+            assert filt.qs.first().owner == "Alice"
+
+        def test_show_used_default_excludes_deleted(
+            self, user, whisky_storage_item_factory
+        ):
+            whisky_storage_item_factory(user=user)
+            whisky_storage_item_factory(user=user, deleted=True)
+
+            filt = self._filter(user)
+            assert filt.qs.count() == 1
+            assert filt.qs.first().deleted is False
+
+        def test_show_used_includes_deleted(self, user, whisky_storage_item_factory):
+            whisky_storage_item_factory(user=user)
+            whisky_storage_item_factory(user=user, deleted=True)
+
+            filt = self._filter(user, show_used="1")
+            assert filt.qs.count() == 2
