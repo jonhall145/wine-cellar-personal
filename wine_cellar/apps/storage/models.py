@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
@@ -143,6 +144,11 @@ class StorageItem(UserContentModel):
         verbose_name="Rating",
         help_text="Star rating (0-3) for this specific bottle.",
     )
+    finished_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Date Finished",
+    )
 
     class Meta:
         verbose_name = "Storage Item"
@@ -162,3 +168,50 @@ class StorageItem(UserContentModel):
             else "Unassigned"
         )
         return f"{self.wine.name} - {self.storage.name} ({location})"
+
+
+class BottleMoveHistory(models.Model):
+    """Records when a wine bottle is moved to a different storage location."""
+
+    storage_item = models.ForeignKey(
+        StorageItem,
+        on_delete=models.CASCADE,
+        related_name="move_history",
+    )
+    from_storage = models.ForeignKey(
+        Storage,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name="From Storage",
+    )
+    from_row = models.PositiveIntegerField(null=True, blank=True)
+    from_column = models.PositiveIntegerField(null=True, blank=True)
+    to_storage = models.ForeignKey(
+        Storage,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name="To Storage",
+    )
+    to_row = models.PositiveIntegerField(null=True, blank=True)
+    to_column = models.PositiveIntegerField(null=True, blank=True)
+    moved_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.SET_NULL,
+        null=True,
+    )
+
+    class Meta:
+        ordering = ["moved_at"]
+        verbose_name = "Bottle Move History"
+        verbose_name_plural = "Bottle Move Histories"
+
+    def __str__(self):
+        return (
+            f"{self.storage_item} moved to {self.to_storage} on"
+            f" {self.moved_at.date()}"
+        )

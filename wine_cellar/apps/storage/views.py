@@ -19,7 +19,12 @@ from wine_cellar.apps.storage.forms import (
     StorageForm,
     StorageItemEditForm,
 )
-from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
+from wine_cellar.apps.storage.models import (
+    BottleMoveHistory,
+    Storage,
+    StorageItem,
+    get_app_type,
+)
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.utils import classify_cask_type
 from wine_cellar.apps.wine.models import Wine
@@ -318,9 +323,12 @@ class StorageItemDeleteView(DeleteView):
         return qs.filter(household=household, deleted=False)
 
     def form_valid(self, form):
+        from datetime import date
+
         self.object = self.get_object()
         self.object.deleted = True
-        self.object.save(update_fields=["deleted"])
+        self.object.finished_date = date.today()
+        self.object.save(update_fields=["deleted", "finished_date"])
         return redirect(self.get_success_url())
 
 
@@ -353,7 +361,7 @@ class StorageItemListView(FilterView):
     def get_queryset(self):
         household = get_active_household(self.request.user)
         return (
-            StorageItem.objects.filter(household=household, deleted=False)
+            StorageItem.objects.filter(household=household)
             .select_related("wine", "storage")
             .order_by("-created")
         )
@@ -429,9 +437,31 @@ class StorageItemUpdateView(FormView):
 
     def form_valid(self, form):
         item = self.get_object()
-        item.storage = form.cleaned_data["storage"]
-        item.row = form.cleaned_data["row"]
-        item.column = form.cleaned_data["column"]
+        new_storage = form.cleaned_data["storage"]
+        new_row = form.cleaned_data["row"]
+        new_column = form.cleaned_data["column"]
+
+        moved = (
+            item.storage_id != new_storage.pk
+            or item.row != new_row
+            or item.column != new_column
+        )
+
+        if moved:
+            BottleMoveHistory.objects.create(
+                storage_item=item,
+                from_storage=item.storage,
+                from_row=item.row,
+                from_column=item.column,
+                to_storage=new_storage,
+                to_row=new_row,
+                to_column=new_column,
+                user=self.request.user,
+            )
+
+        item.storage = new_storage
+        item.row = new_row
+        item.column = new_column
         item.price = form.cleaned_data["price"]
         item.is_gift = form.cleaned_data["is_gift"]
         item.gift_from = form.cleaned_data["gift_from"]
@@ -637,6 +667,71 @@ def storage_move_up(request, pk):
         storage.save(update_fields=["order"])
         prev_storage.save(update_fields=["order"])
     return redirect("storage-list")
+
+
+class BottleHistoryView(DetailView):
+    """Show the lifecycle history timeline for a single wine bottle (StorageItem)."""
+
+    model = StorageItem
+    template_name = "bottle_history.html"
+    context_object_name = "item"
+
+    def get_queryset(self):
+        household = get_active_household(self.request.user)
+        return StorageItem.objects.filter(household=household).select_related(
+            "wine", "storage"
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        item = self.object
+        events = []
+
+        events.append(
+            {
+                "type": "added",
+                "date": item.created.date(),
+                "label": "Added to cellar",
+                "detail": item.storage.name,
+            }
+        )
+
+        moves = item.move_history.select_related("from_storage", "to_storage").all()
+        for move in moves:
+            from_loc = move.from_storage.name if move.from_storage else "?"
+            to_loc = move.to_storage.name if move.to_storage else "?"
+            events.append(
+                {
+                    "type": "move",
+                    "date": move.moved_at.date(),
+                    "label": "Moved",
+                    "detail": f"{from_loc} → {to_loc}",
+                }
+            )
+
+        for drink in item.drink_records.all():
+            events.append(
+                {
+                    "type": "drink",
+                    "date": drink.date_consumed,
+                    "label": "Drink recorded",
+                    "detail": drink.tasting_notes or "",
+                }
+            )
+
+        if item.finished_date:
+            events.append(
+                {
+                    "type": "finished",
+                    "date": item.finished_date,
+                    "label": "Finished",
+                    "detail": "",
+                }
+            )
+
+        context["events"] = sorted(events, key=lambda e: e["date"])
+        context["beverage"] = item.wine
+        return context
 
 
 @login_required

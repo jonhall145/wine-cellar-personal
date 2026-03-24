@@ -156,4 +156,10 @@ urlpatterns = [
         views.BottleNoteCreateView.as_view(),
         name="bottle-note-add",
     ),
+    # Bottle history
+    path(
+        "stock/<int:pk>/history/",
+        views.WhiskyBottleHistoryView.as_view(),
+        name="bottle-history",
+    ),
 ]
