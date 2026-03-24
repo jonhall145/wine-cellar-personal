@@ -464,8 +464,11 @@ class BaseDrinkRecordCreateView(RequireMemberMixin, FormView):
 
     def handle_bottle_update(self, form, storage_item):
         """Default: mark bottle as consumed. Override for custom behavior."""
+        from datetime import date
+
         storage_item.deleted = True
-        storage_item.save(update_fields=["deleted"])
+        storage_item.finished_date = date.today()
+        storage_item.save(update_fields=["deleted", "finished_date"])
 
 
 class BaseReorderReminderDeleteView(RequireMemberMixin, DeleteView):

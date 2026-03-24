@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block header %}
+    {% if CELLAR_APP_TYPE == "whisky" %}
+        <h1 class="header__title">{{ item.whisky.name }}</h1>
+    {% else %}
+        <h1 class="header__title">{{ item.wine.name }}</h1>
+    {% endif %}
+{% endblock header %}
+{% block content %}
+    <div class="storage-list__container">
+        <div class="pure-g">
+            <div class="pure-u-1 pure-u-md-2-3">
+                <div style="margin-bottom: 1rem;">
+                    {% if CELLAR_APP_TYPE == "whisky" %}
+                        <a href="{% url 'whisky-detail' item.whisky.pk %}" class="pure-button button__neutral">
+                            <i class="fa-solid fa-arrow-left"></i> Back to {{ item.whisky.name }}
+                        </a>
+                    {% else %}
+                        <a href="{% url 'wine-detail' item.wine.pk %}" class="pure-button button__neutral">
+                            <i class="fa-solid fa-arrow-left"></i> Back to {{ item.wine.name }}
+                        </a>
+                    {% endif %}
+                </div>
+
+                <h2>Bottle History</h2>
+                <p class="text-muted" style="margin-bottom: 1.5rem;">
+                    {% if item.storage %}Storage: {{ item.storage.name }}{% endif %}
+                    {% if item.row and item.column %} &mdash; Row {{ item.row }}, Cell {{ item.column }}{% endif %}
+                    {% if CELLAR_APP_TYPE == "whisky" and item.fill_level %}
+                        &mdash; {{ item.get_fill_level_display }}
+                    {% endif %}
+                </p>
+
+                {% if events %}
+                    <div class="bottle-history-timeline">
+                        {% for event in events %}
+                            <div class="bottle-history-event bottle-history-event--{{ event.type }}">
+                                <div class="bottle-history-event__icon">
+                                    {% if event.type == "added" %}
+                                        <i class="fa-solid fa-plus"></i>
+                                    {% elif event.type == "move" %}
+                                        <i class="fa-solid fa-truck-moving"></i>
+                                    {% elif event.type == "drink" %}
+                                        {% if CELLAR_APP_TYPE == "whisky" %}
+                                            <i class="fa-solid fa-whiskey-glass"></i>
+                                        {% else %}
+                                            <i class="fa-solid fa-wine-glass"></i>
+                                        {% endif %}
+                                    {% elif event.type == "opened" %}
+                                        <i class="fa-solid fa-bottle-droplet"></i>
+                                    {% elif event.type == "dreg" %}
+                                        <i class="fa-solid fa-droplet"></i>
+                                    {% elif event.type == "finished" %}
+                                        <i class="fa-solid fa-check"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="bottle-history-event__body">
+                                    <div class="bottle-history-event__date">{{ event.date }}</div>
+                                    <div class="bottle-history-event__label">{{ event.label }}</div>
+                                    {% if event.detail %}
+                                        <div class="bottle-history-event__detail">{{ event.detail }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p>No history recorded for this bottle.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <style>
+        .bottle-history-timeline {
+            position: relative;
+            padding-left: 2.5rem;
+        }
+        .bottle-history-timeline::before {
+            content: "";
+            position: absolute;
+            left: 1rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e0e0e0;
+        }
+        .bottle-history-event {
+            position: relative;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        .bottle-history-event__icon {
+            position: absolute;
+            left: -2rem;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background: #6c757d;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+        .bottle-history-event--added .bottle-history-event__icon { background: #28a745; }
+        .bottle-history-event--move .bottle-history-event__icon { background: #17a2b8; }
+        .bottle-history-event--drink .bottle-history-event__icon { background: #6f42c1; }
+        .bottle-history-event--opened .bottle-history-event__icon { background: #fd7e14; }
+        .bottle-history-event--dreg .bottle-history-event__icon { background: #dc3545; }
+        .bottle-history-event--finished .bottle-history-event__icon { background: #343a40; }
+        .bottle-history-event__body {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 0.75rem 1rem;
+            flex: 1;
+        }
+        .bottle-history-event__date {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
+        }
+        .bottle-history-event__label {
+            font-weight: 600;
+        }
+        .bottle-history-event__detail {
+            font-size: 0.9rem;
+            color: #495057;
+            margin-top: 0.25rem;
+            white-space: pre-line;
+        }
+    </style>
+{% endblock content %}

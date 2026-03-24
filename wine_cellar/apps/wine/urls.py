@@ -1,6 +1,7 @@
 from django.urls import path
 
 from wine_cellar.apps.storage.views import (
+    BottleHistoryView,
     StorageItemAddView,
     StorageItemDeleteView,
     StorageItemHistoryView,
@@ -161,6 +162,8 @@ urlpatterns = [
     path("label-scan/", LabelScanView.as_view(), name="label-scan"),
     # Random bottle picker
     path("random/", RandomBottleView.as_view(), name="random-bottle"),
+    # Bottle history
+    path("bottle/<int:pk>/history/", BottleHistoryView.as_view(), name="bottle-history"),
     # Homepage
     path("", HomePageView.as_view(), name="homepage"),
 ]

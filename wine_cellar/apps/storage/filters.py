@@ -26,6 +26,11 @@ class StorageItemFilter(django_filters.FilterSet):
         choices=(("", "All"), ("1", "Yes"), ("0", "No")),
         label="Has Occasion",
     )
+    show_used = ChoiceFilter(
+        method="filter_show_used",
+        choices=(("", "In stock only"), ("1", "Show all (incl. finished)")),
+        label="Show used",
+    )
     order = OrderingFilter(
         choices=(
             ("-created", "Recently Added"),
@@ -39,6 +44,11 @@ class StorageItemFilter(django_filters.FilterSet):
         label="Sort By",
         empty_label=None,
     )
+
+    def filter_show_used(self, queryset, name, value):
+        if value == "1":
+            return queryset
+        return queryset.filter(deleted=False)
 
     def filter_has_occasion(self, queryset, name, value):
         if value == "1":
