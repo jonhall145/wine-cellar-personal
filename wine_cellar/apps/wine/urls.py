@@ -163,7 +163,11 @@ urlpatterns = [
     # Random bottle picker
     path("random/", RandomBottleView.as_view(), name="random-bottle"),
     # Bottle history
-    path("bottle/<int:pk>/history/", BottleHistoryView.as_view(), name="bottle-history"),
+    path(
+        "bottle/<int:pk>/history/",
+        BottleHistoryView.as_view(),
+        name="bottle-history",
+    ),
     # Homepage
     path("", HomePageView.as_view(), name="homepage"),
 ]

@@ -696,7 +696,8 @@ class BottleHistoryView(DetailView):
             }
         )
 
-        for move in item.move_history.select_related("from_storage", "to_storage").all():
+        moves = item.move_history.select_related("from_storage", "to_storage").all()
+        for move in moves:
             from_loc = move.from_storage.name if move.from_storage else "?"
             to_loc = move.to_storage.name if move.to_storage else "?"
             events.append(
@@ -732,6 +733,7 @@ class BottleHistoryView(DetailView):
         context["beverage"] = item.wine
         return context
 
+
 @login_required
 def storage_move_down(request, pk):
     """Move a storage down in the display order."""
@@ -749,4 +751,3 @@ def storage_move_down(request, pk):
         storage.save(update_fields=["order"])
         next_storage.save(update_fields=["order"])
     return redirect("storage-list")
-

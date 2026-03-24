@@ -1285,7 +1285,8 @@ class WhiskyBottleHistoryView(DetailView):
             }
         )
 
-        for move in item.move_history.select_related("from_storage", "to_storage").all():
+        moves = item.move_history.select_related("from_storage", "to_storage").all()
+        for move in moves:
             from_loc = move.from_storage.name if move.from_storage else "?"
             to_loc = move.to_storage.name if move.to_storage else "?"
             events.append(
@@ -1317,7 +1318,10 @@ class WhiskyBottleHistoryView(DetailView):
                 }
             )
 
-        for drink in WhiskyDrinkRecord.objects.filter(storage_item=item).order_by("date_consumed"):
+        drinks = WhiskyDrinkRecord.objects.filter(storage_item=item).order_by(
+            "date_consumed"
+        )
+        for drink in drinks:
             events.append(
                 {
                     "type": "drink",
