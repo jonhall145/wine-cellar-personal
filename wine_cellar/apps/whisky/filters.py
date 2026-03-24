@@ -246,16 +246,17 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
         if user and user.is_authenticated:
             household = get_active_household(user)
             if household:
-                owner_values = (
+                owner_values = list(
                     Whisky.objects.filter(household=household)
                     .exclude(owner="")
                     .values_list("owner", flat=True)
                     .distinct()
                     .order_by("owner")
                 )
-                self.filters["owner"].extra["choices"] = [("", "Any")] + [
-                    (v, v) for v in owner_values
-                ]
+                if owner_values:
+                    self.filters["owner"].extra["choices"] = [("", "Any")] + [
+                        (v, v) for v in owner_values
+                    ]
 
 
 class WhiskyStorageItemFilter(django_filters.FilterSet):
@@ -346,13 +347,14 @@ class WhiskyStorageItemFilter(django_filters.FilterSet):
                     household=household,
                     app_type=get_app_type(),
                 ).order_by("order", "created")
-                owner_values = (
+                owner_values = list(
                     WhiskyStorageItem.objects.filter(household=household)
                     .exclude(owner="")
                     .values_list("owner", flat=True)
                     .distinct()
                     .order_by("owner")
                 )
-                self.filters["owner"].extra["choices"] = [("", "Any")] + [
-                    (v, v) for v in owner_values
-                ]
+                if owner_values:
+                    self.filters["owner"].extra["choices"] = [("", "Any")] + [
+                        (v, v) for v in owner_values
+                    ]
