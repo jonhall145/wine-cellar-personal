@@ -139,6 +139,11 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
         choices=(("", "Any"), (0, "No (IB)"), (1, "Yes (OB)")),
     )
 
+    owner = ChoiceFilter(
+        choices=[],
+        label="Owner",
+    )
+
     rating = ChoiceFilter(
         method="filter_rating",
         label="Rating",
@@ -218,6 +223,7 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
             "age_max",
             "is_nas",
             "is_ob",
+            "owner",
             "rating",
         ]
 
@@ -236,6 +242,20 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
         self.filters["collection"].extra["choices"] = get_collection_choices(
             user, collection_model=Collection
         )
+
+        if user and user.is_authenticated:
+            household = get_active_household(user)
+            if household:
+                owner_values = (
+                    Whisky.objects.filter(household=household)
+                    .exclude(owner="")
+                    .values_list("owner", flat=True)
+                    .distinct()
+                    .order_by("owner")
+                )
+                self.filters["owner"].extra["choices"] = [("", "Any")] + [
+                    (v, v) for v in owner_values
+                ]
 
 
 class WhiskyStorageItemFilter(django_filters.FilterSet):
@@ -263,6 +283,10 @@ class WhiskyStorageItemFilter(django_filters.FilterSet):
         method="filter_has_occasion",
         choices=(("", "All"), ("1", "Yes"), ("0", "No")),
         label="Has Occasion",
+    )
+    owner = ChoiceFilter(
+        choices=[],
+        label="Owner",
     )
     show_used = ChoiceFilter(
         method="filter_show_used",
@@ -304,7 +328,14 @@ class WhiskyStorageItemFilter(django_filters.FilterSet):
 
     class Meta:
         model = WhiskyStorageItem
-        fields = ["whisky_name", "storage", "fill_level", "is_gift", "has_occasion"]
+        fields = [
+            "whisky_name",
+            "storage",
+            "fill_level",
+            "is_gift",
+            "has_occasion",
+            "owner",
+        ]
 
     def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
         super().__init__(data, queryset, request=request, prefix=prefix)
@@ -315,3 +346,13 @@ class WhiskyStorageItemFilter(django_filters.FilterSet):
                     household=household,
                     app_type=get_app_type(),
                 ).order_by("order", "created")
+                owner_values = (
+                    WhiskyStorageItem.objects.filter(household=household)
+                    .exclude(owner="")
+                    .values_list("owner", flat=True)
+                    .distinct()
+                    .order_by("owner")
+                )
+                self.filters["owner"].extra["choices"] = [("", "Any")] + [
+                    (v, v) for v in owner_values
+                ]
