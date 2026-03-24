@@ -205,21 +205,39 @@ function initIosInstallBanner(): void {
   const banner = createInstallBanner();
 
   function showInstallBanner(): void {
-    // Don't show while offline or update banners are visible — they take priority
+    // Don't show while offline or when an update banner is present — they take priority.
+    // Treating the presence of the update banner element as blocking avoids same-frame races
+    // where the element exists but its "--visible" class has not yet been applied.
     const offlineBanner = document.getElementById('offline-banner');
     const updateBanner = document.getElementById('update-banner');
-    const offlineVisible = offlineBanner?.classList.contains('offline-banner--visible');
-    const updateVisible = updateBanner?.classList.contains('update-banner--visible');
-    if (!offlineVisible && !updateVisible) {
+    const offlineVisible = offlineBanner?.classList.contains('offline-banner--visible') ?? false;
+    const updateBlocking = !!updateBanner;
+
+    if (!offlineVisible && !updateBlocking) {
       banner.classList.add('install-banner--visible');
+    } else {
+      banner.classList.remove('install-banner--visible');
     }
   }
 
   requestAnimationFrame(showInstallBanner);
 
-  // Re-evaluate when offline/update banners change
+  // Re-evaluate when connectivity changes
   window.addEventListener('online', () => showInstallBanner());
   window.addEventListener('offline', () => banner.classList.remove('install-banner--visible'));
+
+  // Re-evaluate when the update banner is dynamically added or removed from the DOM
+  if ('MutationObserver' in window) {
+    const bodyObserver = new MutationObserver((mutations) => {
+      const affectsUpdateBanner = mutations.some((m) =>
+        Array.from(m.addedNodes).concat(Array.from(m.removedNodes)).some(
+          (n) => (n as HTMLElement).id === 'update-banner'
+        )
+      );
+      if (affectsUpdateBanner) showInstallBanner();
+    });
+    bodyObserver.observe(document.body, { childList: true });
+  }
 
   banner.querySelector('.install-banner__btn')!.addEventListener('click', () => {
     modal.hidden = false;
