@@ -135,6 +135,29 @@ class WineWriteSerializer(serializers.ModelSerializer):
         model = Wine
         exclude = ["user", "household", "deleted"]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get("request")
+        if request and hasattr(request, "api_key"):
+            hh = request.api_key.household
+            self.fields["grapes"].child_relation.queryset = Grape.objects.filter(
+                household=hh
+            )
+            self.fields["attributes"].child_relation.queryset = (
+                Attribute.objects.filter(household=hh)
+            )
+            self.fields["food_pairings"].child_relation.queryset = (
+                FoodPairing.objects.filter(household=hh)
+            )
+            self.fields["vineyard"].child_relation.queryset = Vineyard.objects.filter(
+                household=hh
+            )
+            self.fields["source"].child_relation.queryset = Source.objects.filter(
+                household=hh
+            )
+            if "size" in self.fields:
+                self.fields["size"].queryset = Size.objects.filter(household=hh)
+
     def create(self, validated_data):
         m2m = {
             "grapes": validated_data.pop("grapes", []),
@@ -178,6 +201,15 @@ class WineCollectionWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Collection
         exclude = ["user", "household"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get("request")
+        if request and hasattr(request, "api_key"):
+            hh = request.api_key.household
+            self.fields["wines"].child_relation.queryset = Wine.objects.filter(
+                household=hh, deleted=False
+            )
 
     def create(self, validated_data):
         wines = validated_data.pop("wines", [])

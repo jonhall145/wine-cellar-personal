@@ -1,7 +1,12 @@
 from rest_framework import serializers
 
 from wine_cellar.apps.storage.models import BottleMoveHistory, Storage, StorageItem
-from wine_cellar.apps.whisky.models import WhiskyBottleMoveHistory, WhiskyStorageItem
+from wine_cellar.apps.whisky.models import (
+    Whisky,
+    WhiskyBottleMoveHistory,
+    WhiskyStorageItem,
+)
+from wine_cellar.apps.wine.models import Wine
 
 # --- Storage ---
 
@@ -32,6 +37,16 @@ class StorageItemWriteSerializer(serializers.ModelSerializer):
         model = StorageItem
         exclude = ["user", "household", "deleted"]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get("request")
+        if request and hasattr(request, "api_key"):
+            hh = request.api_key.household
+            self.fields["storage"].queryset = Storage.objects.filter(household=hh)
+            self.fields["wine"].queryset = Wine.objects.filter(
+                household=hh, deleted=False
+            )
+
 
 # --- Whisky StorageItem ---
 
@@ -49,6 +64,16 @@ class WhiskyStorageItemWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = WhiskyStorageItem
         exclude = ["user", "household", "deleted"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get("request")
+        if request and hasattr(request, "api_key"):
+            hh = request.api_key.household
+            self.fields["storage"].queryset = Storage.objects.filter(household=hh)
+            self.fields["whisky"].queryset = Whisky.objects.filter(
+                household=hh, deleted=False
+            )
 
 
 # --- Move histories ---

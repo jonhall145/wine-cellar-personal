@@ -101,7 +101,6 @@ REST_FRAMEWORK = {
         "wine_cellar.apps.api.permissions.ScopeBasedPermission",
     ],
     "DEFAULT_PAGINATION_CLASS": "wine_cellar.apps.api.pagination.StandardPagination",
-    "PAGE_SIZE": 50,
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],

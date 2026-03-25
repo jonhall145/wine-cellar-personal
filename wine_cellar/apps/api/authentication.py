@@ -15,7 +15,7 @@ class APIKeyAuthentication(BaseAuthentication):
         if not auth_header.startswith(f"{self.keyword} "):
             return None
 
-        raw_key = auth_header[len(self.keyword) + 1 :]
+        raw_key = auth_header[len(self.keyword) + 1 :].strip()
         if len(raw_key) < 8:
             raise AuthenticationFailed("Invalid API key")
 
@@ -34,7 +34,10 @@ class APIKeyAuthentication(BaseAuthentication):
                 raise AuthenticationFailed("API key has expired")
             raise AuthenticationFailed("API key is inactive")
 
-        APIKey.objects.filter(pk=api_key.pk).update(last_used=timezone.now())
+        # Rate-limit last_used updates to avoid a write on every request
+        now = timezone.now()
+        if not api_key.last_used or (now - api_key.last_used).total_seconds() > 300:
+            APIKey.objects.filter(pk=api_key.pk).update(last_used=now)
 
         request.api_key = api_key
         return (api_key.user, api_key)

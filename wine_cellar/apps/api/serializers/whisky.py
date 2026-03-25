@@ -150,6 +150,19 @@ class WhiskyWriteSerializer(serializers.ModelSerializer):
         model = Whisky
         exclude = ["user", "household", "deleted"]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get("request")
+        if request and hasattr(request, "api_key"):
+            hh = request.api_key.household
+            self.fields["attributes"].child_relation.queryset = (
+                WhiskyAttribute.objects.filter(household=hh)
+            )
+            if "source" in self.fields:
+                self.fields["source"].queryset = WhiskySource.objects.filter(
+                    household=hh
+                )
+
     def create(self, validated_data):
         attributes = validated_data.pop("attributes", [])
         whisky = super().create(validated_data)
@@ -183,6 +196,15 @@ class WhiskyCollectionWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Collection
         exclude = ["user", "household"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get("request")
+        if request and hasattr(request, "api_key"):
+            hh = request.api_key.household
+            self.fields["whiskies"].child_relation.queryset = Whisky.objects.filter(
+                household=hh, deleted=False
+            )
 
     def create(self, validated_data):
         whiskies = validated_data.pop("whiskies", [])

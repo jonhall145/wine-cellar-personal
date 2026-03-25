@@ -50,6 +50,7 @@ class WineViewSet(HouseholdScopedModelViewSet):
             .filter(deleted=False)
             .with_related()
             .with_stock_count()
+            .prefetch_related("barcodes")
         )
 
     class Meta:
@@ -95,6 +96,20 @@ class WineCollectionViewSet(HouseholdScopedModelViewSet):
         if self.action in ("list", "retrieve"):
             return WineCollectionReadSerializer
         return WineCollectionWriteSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.action in ("list", "retrieve"):
+            qs = qs.prefetch_related(
+                "wines__grapes",
+                "wines__attributes",
+                "wines__food_pairings",
+                "wines__vineyard",
+                "wines__source",
+                "wines__wineimage_set",
+                "wines__barcodes",
+            )
+        return qs
 
 
 class DrinkRecordViewSet(HouseholdScopedModelViewSet):

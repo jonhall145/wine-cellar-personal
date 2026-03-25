@@ -48,6 +48,7 @@ class WhiskyViewSet(HouseholdScopedModelViewSet):
             .filter(deleted=False)
             .with_related()
             .with_stock_count()
+            .prefetch_related("barcodes", "cask_history")
         )
 
 
@@ -68,6 +69,21 @@ class WhiskyCollectionViewSet(HouseholdScopedModelViewSet):
         if self.action in ("list", "retrieve"):
             return WhiskyCollectionReadSerializer
         return WhiskyCollectionWriteSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.action in ("list", "retrieve"):
+            qs = qs.prefetch_related(
+                "whiskies__distillery",
+                "whiskies__region",
+                "whiskies__bottler",
+                "whiskies__source",
+                "whiskies__attributes",
+                "whiskies__images",
+                "whiskies__barcodes",
+                "whiskies__cask_history",
+            )
+        return qs
 
 
 class WhiskyDrinkRecordViewSet(HouseholdScopedModelViewSet):

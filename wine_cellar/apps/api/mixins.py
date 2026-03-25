@@ -27,8 +27,15 @@ class HouseholdScopedViewSetMixin:
 
     def perform_destroy(self, instance):
         if hasattr(instance, "deleted"):
+            update_fields = ["deleted"]
             instance.deleted = True
-            instance.save(update_fields=["deleted"])
+            # Match UI behavior: also set finished_date for storage items
+            if hasattr(instance, "finished_date") and not instance.finished_date:
+                from django.utils import timezone
+
+                instance.finished_date = timezone.now().date()
+                update_fields.append("finished_date")
+            instance.save(update_fields=update_fields)
         else:
             instance.delete()
 
