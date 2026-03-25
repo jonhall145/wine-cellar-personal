@@ -45,6 +45,7 @@ EXEMPT_URL_PREFIXES = {
     "/admin/",
     "/accounts/",
     "/household/",
+    "/rest/",
     "/static/",
     "/media/",
 }

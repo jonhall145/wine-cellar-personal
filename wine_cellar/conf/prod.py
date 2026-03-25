@@ -33,6 +33,7 @@ from wine_cellar.conf.settings import (  # noqa: F401
     MEDIA_ROOT,
     MEDIA_URL,
     MIDDLEWARE,
+    REST_FRAMEWORK,
     ROOT_DIR,
     ROOT_URLCONF,
     SECRET_KEY,
