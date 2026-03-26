@@ -40,32 +40,8 @@
   max-width: 100%;
   overflow-x: auto;
   padding: var(--spacing-md);
-  position: relative;
 }
 
-/* Scroll hint gradient on right edge */
-.storage-grid::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 40px;
-  background: linear-gradient(to left, var(--bg-primary), transparent);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-}
-
-.storage-grid:not(:hover)::after {
-  opacity: 1;
-}
-
-@media screen and (min-width: 48em) {
-  .storage-grid::after {
-    display: none;
-  }
-}
 
 .storage-grid__controls {
   display: flex;
