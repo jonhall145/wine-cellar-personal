@@ -11,7 +11,13 @@ from wine_cellar.apps.wine.models import Wine
 # --- Storage ---
 
 
-class StorageSerializer(serializers.ModelSerializer):
+class StorageListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Storage
+        exclude = ["user", "household"]
+
+
+class StorageDetailSerializer(serializers.ModelSerializer):
     total_slots = serializers.IntegerField(read_only=True)
     used_slots = serializers.IntegerField(read_only=True)
 
@@ -89,7 +95,7 @@ class BottleMoveHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BottleMoveHistory
-        fields = "__all__"
+        exclude = ["user"]
 
 
 class WhiskyBottleMoveHistorySerializer(serializers.ModelSerializer):
@@ -102,4 +108,4 @@ class WhiskyBottleMoveHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WhiskyBottleMoveHistory
-        fields = "__all__"
+        exclude = ["user"]

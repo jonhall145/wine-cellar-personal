@@ -13,6 +13,11 @@ class Command(BaseCommand):
             action="store_true",
             help="Permanently delete instead of deactivating",
         )
+        parser.add_argument(
+            "--all",
+            action="store_true",
+            help="Revoke all matching keys (required when multiple keys match)",
+        )
 
     def handle(self, *args, **options):
         identifier = options["key"]
@@ -21,6 +26,13 @@ class Command(BaseCommand):
             keys = APIKey.objects.filter(name=identifier)
         if not keys.exists():
             raise CommandError(f"No API key found matching '{identifier}'")
+
+        count = keys.count()
+        if count > 1 and not options["all"]:
+            raise CommandError(
+                f"Found {count} keys matching '{identifier}'."
+                " Use --all to revoke all of them."
+            )
 
         for key in keys:
             if options["delete"]:

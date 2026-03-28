@@ -6,9 +6,10 @@ from wine_cellar.apps.api.pagination import StandardPagination
 from wine_cellar.apps.api.permissions import ScopeBasedPermission
 from wine_cellar.apps.api.serializers.storage import (
     BottleMoveHistorySerializer,
+    StorageDetailSerializer,
     StorageItemReadSerializer,
     StorageItemWriteSerializer,
-    StorageSerializer,
+    StorageListSerializer,
     WhiskyBottleMoveHistorySerializer,
     WhiskyStorageItemReadSerializer,
     WhiskyStorageItemWriteSerializer,
@@ -18,8 +19,12 @@ from wine_cellar.apps.whisky.models import WhiskyBottleMoveHistory, WhiskyStorag
 
 
 class StorageViewSet(HouseholdScopedModelViewSet):
-    serializer_class = StorageSerializer
     queryset = Storage.objects.all()
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return StorageDetailSerializer
+        return StorageListSerializer
 
 
 class StorageItemViewSet(HouseholdScopedModelViewSet):

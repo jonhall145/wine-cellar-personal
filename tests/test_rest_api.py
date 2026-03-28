@@ -11,7 +11,9 @@ from wine_cellar.apps.household.models import (
     HouseholdRole,
     HouseholdSettings,
 )
+from wine_cellar.apps.storage.models import Storage, StorageItem
 from wine_cellar.apps.user.models import UserSettings
+from wine_cellar.apps.whisky.models import Whisky, WhiskyType
 from wine_cellar.apps.wine.models import Grape, Wine, WineType
 
 
@@ -495,3 +497,279 @@ class TestAPIRoot:
         assert "wines" in resp.data
         assert "whiskies" in resp.data
         assert "storages" in resp.data
+
+
+# ---------------------------------------------------------------
+# Whisky CRUD tests
+# ---------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestWhiskyCRUD:
+    def test_list_whiskies(self, api_client, api_key_read, user, household):
+        Whisky.objects.create(
+            name="Lagavulin 16",
+            whisky_type=WhiskyType.SINGLE_MALT,
+            country="XS",
+            user=user,
+            household=household,
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_read}")
+        resp = api_client.get("/rest/whiskies/")
+        assert resp.status_code == 200
+        assert resp.data["count"] == 1
+        assert resp.data["results"][0]["name"] == "Lagavulin 16"
+
+    def test_create_whisky(self, api_client, api_key_write):
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
+        resp = api_client.post(
+            "/rest/whiskies/",
+            {
+                "name": "Ardbeg 10",
+                "whisky_type": "SM",
+                "country": "XS",
+                "age_statement": 10,
+            },
+        )
+        assert resp.status_code == 201
+        whisky = Whisky.objects.get(name="Ardbeg 10")
+        assert whisky.whisky_type == "SM"
+        assert whisky.age_statement == 10
+
+    def test_update_whisky(self, api_client, api_key_write, user, household):
+        whisky = Whisky.objects.create(
+            name="Old Name",
+            whisky_type=WhiskyType.SINGLE_MALT,
+            country="XS",
+            user=user,
+            household=household,
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
+        resp = api_client.patch(
+            f"/rest/whiskies/{whisky.pk}/",
+            {"name": "New Name"},
+        )
+        assert resp.status_code == 200
+        whisky.refresh_from_db()
+        assert whisky.name == "New Name"
+
+    def test_delete_whisky_soft_deletes(
+        self, api_client, api_key_write, user, household
+    ):
+        whisky = Whisky.objects.create(
+            name="To Delete",
+            whisky_type=WhiskyType.SINGLE_MALT,
+            country="XS",
+            user=user,
+            household=household,
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
+        resp = api_client.delete(f"/rest/whiskies/{whisky.pk}/")
+        assert resp.status_code == 204
+        whisky.refresh_from_db()
+        assert whisky.deleted is True
+
+    def test_deleted_whiskies_not_listed(
+        self, api_client, api_key_read, user, household
+    ):
+        Whisky.objects.create(
+            name="Deleted",
+            whisky_type=WhiskyType.SINGLE_MALT,
+            country="XS",
+            user=user,
+            household=household,
+            deleted=True,
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_read}")
+        resp = api_client.get("/rest/whiskies/")
+        assert resp.data["count"] == 0
+
+
+# ---------------------------------------------------------------
+# Storage item CRUD tests
+# ---------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestStorageItemCRUD:
+    @pytest.fixture
+    def storage(self, user, household):
+        return Storage.objects.create(
+            name="Rack A",
+            location="Cellar",
+            user=user,
+            household=household,
+        )
+
+    @pytest.fixture
+    def wine(self, user, household):
+        return Wine.objects.create(
+            name="Test Wine",
+            wine_type=WineType.RED,
+            country="FR",
+            user=user,
+            household=household,
+        )
+
+    def test_create_storage_item(self, api_client, api_key_write, storage, wine):
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
+        resp = api_client.post(
+            "/rest/wine-bottles/",
+            {"storage": storage.pk, "wine": wine.pk},
+        )
+        assert resp.status_code == 201
+        assert StorageItem.objects.filter(wine=wine, storage=storage).exists()
+
+    def test_list_storage_items(
+        self, api_client, api_key_read, user, household, storage, wine
+    ):
+        StorageItem.objects.create(
+            storage=storage,
+            wine=wine,
+            user=user,
+            household=household,
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_read}")
+        resp = api_client.get("/rest/wine-bottles/")
+        assert resp.status_code == 200
+        assert resp.data["count"] == 1
+
+    def test_delete_storage_item_soft_deletes_with_finished_date(
+        self, api_client, api_key_write, user, household, storage, wine
+    ):
+        item = StorageItem.objects.create(
+            storage=storage,
+            wine=wine,
+            user=user,
+            household=household,
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
+        resp = api_client.delete(f"/rest/wine-bottles/{item.pk}/")
+        assert resp.status_code == 204
+        item.refresh_from_db()
+        assert item.deleted is True
+        assert item.finished_date is not None
+
+    def test_cannot_reference_other_household_storage(
+        self, api_client, api_key_write, wine, django_user_model
+    ):
+        """Write serializer should reject FK references to other households."""
+        other_user = django_user_model.objects.create_user(
+            username="other2", password="pass"
+        )
+        other_hh = Household.objects.create(name="Other HH")
+        HouseholdMembership.objects.create(
+            user=other_user, household=other_hh, role=HouseholdRole.OWNER
+        )
+        other_storage = Storage.objects.create(
+            name="Other Rack",
+            location="Other",
+            user=other_user,
+            household=other_hh,
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
+        resp = api_client.post(
+            "/rest/wine-bottles/",
+            {"storage": other_storage.pk, "wine": wine.pk},
+        )
+        assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------
+# Pagination tests
+# ---------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestPagination:
+    def test_pagination_fields_present(self, api_client, api_key_read):
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_read}")
+        resp = api_client.get("/rest/wines/")
+        assert resp.status_code == 200
+        assert "count" in resp.data
+        assert "next" in resp.data
+        assert "previous" in resp.data
+        assert "results" in resp.data
+
+    def test_limit_offset(self, api_client, api_key_read, user, household):
+        for i in range(3):
+            Wine.objects.create(
+                name=f"Wine {i}",
+                wine_type=WineType.RED,
+                country="FR",
+                user=user,
+                household=household,
+            )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_read}")
+        resp = api_client.get("/rest/wines/?limit=2&offset=0")
+        assert resp.status_code == 200
+        assert resp.data["count"] == 3
+        assert len(resp.data["results"]) == 2
+
+
+# ---------------------------------------------------------------
+# Global reference data cross-household tests
+# ---------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestGlobalReferenceData:
+    def test_appellations_visible_across_households(self, api_client, api_key_read):
+        from wine_cellar.apps.wine.models import Appellation
+
+        Appellation.objects.get_or_create(
+            name="Bordeaux",
+            country="FR",
+            defaults={"latitude": 44.8, "longitude": -0.5},
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_read}")
+        resp = api_client.get("/rest/appellations/")
+        assert resp.status_code == 200
+        names = [r["name"] for r in resp.data["results"]]
+        assert "Bordeaux" in names
+
+
+# ---------------------------------------------------------------
+# Revoke command --all flag tests
+# ---------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestRevokeMultipleKeys:
+    def test_revoke_refuses_multiple_without_all(self, user, household):
+        from io import StringIO
+
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+
+        for i in range(2):
+            raw, prefix, hashed = APIKey.generate_key()
+            APIKey.objects.create(
+                name="dup-name",
+                prefix=prefix,
+                hashed_key=hashed,
+                user=user,
+                household=household,
+                scope=APIKeyScope.READ,
+            )
+        with pytest.raises(CommandError, match="Found 2 keys"):
+            call_command("revoke_api_key", "dup-name", stdout=StringIO())
+
+    def test_revoke_multiple_with_all_flag(self, user, household):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        for i in range(2):
+            raw, prefix, hashed = APIKey.generate_key()
+            APIKey.objects.create(
+                name="dup-name2",
+                prefix=prefix,
+                hashed_key=hashed,
+                user=user,
+                household=household,
+                scope=APIKeyScope.READ,
+            )
+        out = StringIO()
+        call_command("revoke_api_key", "dup-name2", all=True, stdout=out)
+        assert APIKey.objects.filter(name="dup-name2", is_active=True).count() == 0

@@ -43,6 +43,11 @@ class WineViewSet(HouseholdScopedModelViewSet):
             return WineReadSerializer
         return WineWriteSerializer
 
+    queryset = Wine.objects.all()
+    filterset_fields = ["wine_type", "country", "vintage", "rating"]
+    search_fields = ["name", "comment"]
+    ordering_fields = ["name", "vintage", "rating", "created"]
+
     def get_queryset(self):
         return (
             super()
@@ -52,11 +57,6 @@ class WineViewSet(HouseholdScopedModelViewSet):
             .with_stock_count()
             .prefetch_related("barcodes")
         )
-
-    class Meta:
-        model = Wine
-
-    queryset = Wine.objects.all()
 
 
 class GrapeViewSet(HouseholdScopedModelViewSet):
@@ -100,15 +100,7 @@ class WineCollectionViewSet(HouseholdScopedModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         if self.action in ("list", "retrieve"):
-            qs = qs.prefetch_related(
-                "wines__grapes",
-                "wines__attributes",
-                "wines__food_pairings",
-                "wines__vineyard",
-                "wines__source",
-                "wines__wineimage_set",
-                "wines__barcodes",
-            )
+            qs = qs.prefetch_related("wines")
         return qs
 
 

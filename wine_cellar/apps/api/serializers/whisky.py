@@ -177,11 +177,30 @@ class WhiskyWriteSerializer(serializers.ModelSerializer):
         return instance
 
 
+class WhiskySummarySerializer(serializers.ModelSerializer):
+    """Slim serializer for embedding whiskies in collections."""
+
+    whisky_type_display = serializers.CharField(
+        source="get_whisky_type_display", read_only=True
+    )
+
+    class Meta:
+        model = Whisky
+        fields = [
+            "id",
+            "name",
+            "whisky_type",
+            "whisky_type_display",
+            "country",
+            "age_statement",
+        ]
+
+
 # --- Collection ---
 
 
 class WhiskyCollectionReadSerializer(serializers.ModelSerializer):
-    whiskies = WhiskyReadSerializer(many=True, read_only=True)
+    whiskies = WhiskySummarySerializer(many=True, read_only=True)
 
     class Meta:
         model = Collection

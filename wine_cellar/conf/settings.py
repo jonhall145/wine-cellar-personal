@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.openid_connect",
     "widget_tweaks",
     "rest_framework",
+    "django_filters",
     "wine_cellar.apps.core",
     "wine_cellar.apps.household",
     "wine_cellar.apps.wine",
@@ -103,6 +104,11 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "wine_cellar.apps.api.pagination.StandardPagination",
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
+    ],
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
     ],
 }
 

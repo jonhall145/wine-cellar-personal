@@ -35,6 +35,9 @@ from wine_cellar.apps.whisky.models import (
 
 class WhiskyViewSet(HouseholdScopedModelViewSet):
     queryset = Whisky.objects.all()
+    filterset_fields = ["whisky_type", "country", "distillery", "region"]
+    search_fields = ["name"]
+    ordering_fields = ["name", "age_statement", "vintage_year", "created"]
 
     def get_serializer_class(self):
         if self.action in ("list", "retrieve"):
@@ -73,16 +76,7 @@ class WhiskyCollectionViewSet(HouseholdScopedModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         if self.action in ("list", "retrieve"):
-            qs = qs.prefetch_related(
-                "whiskies__distillery",
-                "whiskies__region",
-                "whiskies__bottler",
-                "whiskies__source",
-                "whiskies__attributes",
-                "whiskies__images",
-                "whiskies__barcodes",
-                "whiskies__cask_history",
-            )
+            qs = qs.prefetch_related("whiskies")
         return qs
 
 

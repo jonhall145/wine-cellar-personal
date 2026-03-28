@@ -182,11 +182,21 @@ class WineWriteSerializer(serializers.ModelSerializer):
         return instance
 
 
+class WineSummarySerializer(serializers.ModelSerializer):
+    """Slim serializer for embedding wines in collections."""
+
+    wine_type_display = serializers.CharField(source="get_type", read_only=True)
+
+    class Meta:
+        model = Wine
+        fields = ["id", "name", "wine_type", "wine_type_display", "country", "vintage"]
+
+
 # --- Collection ---
 
 
 class WineCollectionReadSerializer(serializers.ModelSerializer):
-    wines = WineReadSerializer(many=True, read_only=True)
+    wines = WineSummarySerializer(many=True, read_only=True)
 
     class Meta:
         model = Collection
