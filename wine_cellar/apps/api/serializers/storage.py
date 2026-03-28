@@ -39,6 +39,9 @@ class StorageItemReadSerializer(serializers.ModelSerializer):
 
 
 class StorageItemWriteSerializer(serializers.ModelSerializer):
+    storage = serializers.PrimaryKeyRelatedField(queryset=Storage.objects.none())
+    wine = serializers.PrimaryKeyRelatedField(queryset=Wine.objects.none())
+
     class Meta:
         model = StorageItem
         exclude = ["user", "household", "deleted"]
@@ -67,6 +70,9 @@ class WhiskyStorageItemReadSerializer(serializers.ModelSerializer):
 
 
 class WhiskyStorageItemWriteSerializer(serializers.ModelSerializer):
+    storage = serializers.PrimaryKeyRelatedField(queryset=Storage.objects.none())
+    whisky = serializers.PrimaryKeyRelatedField(queryset=Whisky.objects.none())
+
     class Meta:
         model = WhiskyStorageItem
         exclude = ["user", "household", "deleted"]

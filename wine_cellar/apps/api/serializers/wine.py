@@ -116,19 +116,22 @@ class WineReadSerializer(serializers.ModelSerializer):
 
 class WineWriteSerializer(serializers.ModelSerializer):
     grapes = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=Grape.objects.all(), required=False
+        many=True, queryset=Grape.objects.none(), required=False
     )
     attributes = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=Attribute.objects.all(), required=False
+        many=True, queryset=Attribute.objects.none(), required=False
     )
     food_pairings = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=FoodPairing.objects.all(), required=False
+        many=True, queryset=FoodPairing.objects.none(), required=False
     )
     vineyard = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=Vineyard.objects.all(), required=False
+        many=True, queryset=Vineyard.objects.none(), required=False
     )
     source = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=Source.objects.all(), required=False
+        many=True, queryset=Source.objects.none(), required=False
+    )
+    size = serializers.PrimaryKeyRelatedField(
+        queryset=Size.objects.none(), required=False, allow_null=True
     )
 
     class Meta:
@@ -155,8 +158,7 @@ class WineWriteSerializer(serializers.ModelSerializer):
             self.fields["source"].child_relation.queryset = Source.objects.filter(
                 household=hh
             )
-            if "size" in self.fields:
-                self.fields["size"].queryset = Size.objects.filter(household=hh)
+            self.fields["size"].queryset = Size.objects.filter(household=hh)
 
     def create(self, validated_data):
         m2m = {
@@ -205,7 +207,7 @@ class WineCollectionReadSerializer(serializers.ModelSerializer):
 
 class WineCollectionWriteSerializer(serializers.ModelSerializer):
     wines = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=Wine.objects.all(), required=False
+        many=True, queryset=Wine.objects.none(), required=False
     )
 
     class Meta:

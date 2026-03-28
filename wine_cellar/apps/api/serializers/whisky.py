@@ -143,7 +143,10 @@ class WhiskyReadSerializer(serializers.ModelSerializer):
 
 class WhiskyWriteSerializer(serializers.ModelSerializer):
     attributes = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=WhiskyAttribute.objects.all(), required=False
+        many=True, queryset=WhiskyAttribute.objects.none(), required=False
+    )
+    source = serializers.PrimaryKeyRelatedField(
+        queryset=WhiskySource.objects.none(), required=False, allow_null=True
     )
 
     class Meta:
@@ -158,10 +161,7 @@ class WhiskyWriteSerializer(serializers.ModelSerializer):
             self.fields["attributes"].child_relation.queryset = (
                 WhiskyAttribute.objects.filter(household=hh)
             )
-            if "source" in self.fields:
-                self.fields["source"].queryset = WhiskySource.objects.filter(
-                    household=hh
-                )
+            self.fields["source"].queryset = WhiskySource.objects.filter(household=hh)
 
     def create(self, validated_data):
         attributes = validated_data.pop("attributes", [])
@@ -209,7 +209,7 @@ class WhiskyCollectionReadSerializer(serializers.ModelSerializer):
 
 class WhiskyCollectionWriteSerializer(serializers.ModelSerializer):
     whiskies = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=Whisky.objects.all(), required=False
+        many=True, queryset=Whisky.objects.none(), required=False
     )
 
     class Meta:
