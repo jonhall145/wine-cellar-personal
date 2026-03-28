@@ -13,3 +13,4 @@ pyzbar==0.1.9
 django-ratelimit==4.1.0
 qrcode==8.2
 pywebpush==2.3.0
+djangorestframework==3.16.0

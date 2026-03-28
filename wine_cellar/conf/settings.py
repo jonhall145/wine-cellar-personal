@@ -63,15 +63,16 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     "allauth.socialaccount.providers.openid_connect",
     "widget_tweaks",
+    "rest_framework",
+    "django_filters",
     "wine_cellar.apps.core",
     "wine_cellar.apps.household",
     "wine_cellar.apps.wine",
+    "wine_cellar.apps.whisky",
     "wine_cellar.apps.user",
     "wine_cellar.apps.storage",
+    "wine_cellar.apps.api",
 ]
-
-if CELLAR_APP_TYPE == "whisky":
-    INSTALLED_APPS.append("wine_cellar.apps.whisky")
 
 MIDDLEWARE = [
     "django.middleware.gzip.GZipMiddleware",  # Compress responses for faster transfers
@@ -91,6 +92,25 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "wine_cellar.conf.urls"
+
+# Django REST Framework
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "wine_cellar.apps.api.authentication.APIKeyAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "wine_cellar.apps.api.permissions.ScopeBasedPermission",
+    ],
+    "DEFAULT_PAGINATION_CLASS": "wine_cellar.apps.api.pagination.StandardPagination",
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ],
+}
 
 TEMPLATES = [
     {
