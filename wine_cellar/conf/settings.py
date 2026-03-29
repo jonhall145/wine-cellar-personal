@@ -68,11 +68,16 @@ INSTALLED_APPS = [
     "wine_cellar.apps.core",
     "wine_cellar.apps.household",
     "wine_cellar.apps.wine",
-    "wine_cellar.apps.whisky",
     "wine_cellar.apps.user",
     "wine_cellar.apps.storage",
     "wine_cellar.apps.api",
 ]
+
+# Whisky app is always installed — the REST API registers whisky endpoints
+# unconditionally, so the models/migrations must be available regardless of
+# CELLAR_APP_TYPE. The app_type setting controls branding/URLs, not app loading.
+if "wine_cellar.apps.whisky" not in INSTALLED_APPS:
+    INSTALLED_APPS.append("wine_cellar.apps.whisky")
 
 MIDDLEWARE = [
     "django.middleware.gzip.GZipMiddleware",  # Compress responses for faster transfers

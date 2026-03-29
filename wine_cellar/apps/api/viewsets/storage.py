@@ -1,3 +1,5 @@
+from django.db import transaction
+from rest_framework import serializers as drf_serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from wine_cellar.apps.api.authentication import APIKeyAuthentication
@@ -16,6 +18,31 @@ from wine_cellar.apps.api.serializers.storage import (
 )
 from wine_cellar.apps.storage.models import BottleMoveHistory, Storage, StorageItem
 from wine_cellar.apps.whisky.models import WhiskyBottleMoveHistory, WhiskyStorageItem
+
+
+def _validate_storage_position(storage, row, column, exclude_item=None):
+    """Validate that a position is within bounds, active, and unoccupied."""
+    if storage.rows and storage.columns:
+        if row is not None and (row < 1 or row > storage.rows):
+            raise drf_serializers.ValidationError(
+                {"row": f"Row must be between 1 and {storage.rows}."}
+            )
+        if column is not None and (column < 1 or column > storage.columns):
+            raise drf_serializers.ValidationError(
+                {"column": f"Column must be between 1 and {storage.columns}."}
+            )
+    if row is not None and column is not None:
+        if not storage.is_cell_active(row, column):
+            raise drf_serializers.ValidationError(
+                {"row": "Target cell is not active."}
+            )
+        qs = storage._get_items().filter(row=row, column=column, deleted=False)
+        if exclude_item:
+            qs = qs.exclude(pk=exclude_item.pk)
+        if qs.exists():
+            raise drf_serializers.ValidationError(
+                {"row": "Target position is already occupied."}
+            )
 
 
 class StorageViewSet(HouseholdScopedModelViewSet):
@@ -43,28 +70,43 @@ class StorageItemViewSet(HouseholdScopedModelViewSet):
             .select_related("storage", "wine")
         )
 
+    def perform_create(self, serializer):
+        storage = serializer.validated_data.get("storage")
+        row = serializer.validated_data.get("row")
+        column = serializer.validated_data.get("column")
+        if storage and row is not None and column is not None:
+            _validate_storage_position(storage, row, column)
+        super().perform_create(serializer)
+
     def perform_update(self, serializer):
         item = self.get_object()
         old_storage = item.storage
         old_row = item.row
         old_column = item.column
-        instance = serializer.save()
-        moved = (
-            old_storage.pk != instance.storage_id
-            or old_row != instance.row
-            or old_column != instance.column
-        )
-        if moved:
-            BottleMoveHistory.objects.create(
-                storage_item=instance,
-                from_storage=old_storage,
-                from_row=old_row,
-                from_column=old_column,
-                to_storage=instance.storage,
-                to_row=instance.row,
-                to_column=instance.column,
-                user=self.request.api_key.user,
+
+        storage = serializer.validated_data.get("storage", old_storage)
+        row = serializer.validated_data.get("row", old_row)
+        column = serializer.validated_data.get("column", old_column)
+        _validate_storage_position(storage, row, column, exclude_item=item)
+
+        with transaction.atomic():
+            instance = serializer.save()
+            moved = (
+                old_storage.pk != instance.storage_id
+                or old_row != instance.row
+                or old_column != instance.column
             )
+            if moved:
+                BottleMoveHistory.objects.create(
+                    storage_item=instance,
+                    from_storage=old_storage,
+                    from_row=old_row,
+                    from_column=old_column,
+                    to_storage=instance.storage,
+                    to_row=instance.row,
+                    to_column=instance.column,
+                    user=self.request.api_key.user,
+                )
 
 
 class WhiskyStorageItemViewSet(HouseholdScopedModelViewSet):
@@ -83,28 +125,43 @@ class WhiskyStorageItemViewSet(HouseholdScopedModelViewSet):
             .select_related("storage", "whisky")
         )
 
+    def perform_create(self, serializer):
+        storage = serializer.validated_data.get("storage")
+        row = serializer.validated_data.get("row")
+        column = serializer.validated_data.get("column")
+        if storage and row is not None and column is not None:
+            _validate_storage_position(storage, row, column)
+        super().perform_create(serializer)
+
     def perform_update(self, serializer):
         item = self.get_object()
         old_storage = item.storage
         old_row = item.row
         old_column = item.column
-        instance = serializer.save()
-        moved = (
-            old_storage.pk != instance.storage_id
-            or old_row != instance.row
-            or old_column != instance.column
-        )
-        if moved:
-            WhiskyBottleMoveHistory.objects.create(
-                storage_item=instance,
-                from_storage=old_storage,
-                from_row=old_row,
-                from_column=old_column,
-                to_storage=instance.storage,
-                to_row=instance.row,
-                to_column=instance.column,
-                user=self.request.api_key.user,
+
+        storage = serializer.validated_data.get("storage", old_storage)
+        row = serializer.validated_data.get("row", old_row)
+        column = serializer.validated_data.get("column", old_column)
+        _validate_storage_position(storage, row, column, exclude_item=item)
+
+        with transaction.atomic():
+            instance = serializer.save()
+            moved = (
+                old_storage.pk != instance.storage_id
+                or old_row != instance.row
+                or old_column != instance.column
             )
+            if moved:
+                WhiskyBottleMoveHistory.objects.create(
+                    storage_item=instance,
+                    from_storage=old_storage,
+                    from_row=old_row,
+                    from_column=old_column,
+                    to_storage=instance.storage,
+                    to_row=instance.row,
+                    to_column=instance.column,
+                    user=self.request.api_key.user,
+                )
 
 
 class BottleMoveHistoryViewSet(ReadOnlyModelViewSet):
