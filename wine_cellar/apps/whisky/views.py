@@ -11,7 +11,13 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
-from django.views.generic import DeleteView, FormView, ListView, TemplateView
+from django.views.generic import (
+    DeleteView,
+    DetailView,
+    FormView,
+    ListView,
+    TemplateView,
+)
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
@@ -72,6 +78,7 @@ from wine_cellar.apps.whisky.models import (
     FillLevel,
     Whisky,
     WhiskyBarcode,
+    WhiskyBottleMoveHistory,
     WhiskyBottleNote,
     WhiskyDrinkingWindowAlert,
     WhiskyDrinkRecord,
@@ -785,7 +792,8 @@ class DrinkRecordCreateView(BaseDrinkRecordCreateView):
 
         if post_drink_status == POST_DRINK_STATUS_CONSUMED:
             storage_item.deleted = True
-            storage_item.save(update_fields=["deleted"])
+            storage_item.finished_date = date_consumed
+            storage_item.save(update_fields=["deleted", "finished_date"])
         elif post_drink_status in (FillLevel.OPENED, FillLevel.DREG):
             old_fill_level = storage_item.fill_level
             storage_item.fill_level = post_drink_status
@@ -1064,10 +1072,19 @@ class StorageItemDeleteView(RequireMemberMixin, DeleteView):
 
     def get_queryset(self):
         household = get_active_household(self.request.user)
-        return WhiskyStorageItem.objects.filter(household=household)
+        return WhiskyStorageItem.objects.filter(household=household, deleted=False)
 
     def get_success_url(self):
         return reverse_lazy("whisky-detail", kwargs={"pk": self.object.whisky.pk})
+
+    def form_valid(self, form):
+        import datetime
+
+        self.object = self.get_object()
+        self.object.deleted = True
+        self.object.finished_date = datetime.date.today()
+        self.object.save(update_fields=["deleted", "finished_date"])
+        return redirect(self.get_success_url())
 
 
 class StorageItemListView(RequireHouseholdMixin, FilterView):
@@ -1082,7 +1099,7 @@ class StorageItemListView(RequireHouseholdMixin, FilterView):
     def get_queryset(self):
         household = get_active_household(self.request.user)
         return (
-            WhiskyStorageItem.objects.filter(household=household, deleted=False)
+            WhiskyStorageItem.objects.filter(household=household)
             .select_related("whisky", "storage")
             .order_by("-created")
         )
@@ -1143,9 +1160,30 @@ class StorageItemUpdateView(RequireMemberMixin, FormView):
         old_fill_level = item.fill_level
         new_fill_level = form.cleaned_data["fill_level"]
 
-        item.storage = form.cleaned_data["storage"]
-        item.row = form.cleaned_data.get("row")
-        item.column = form.cleaned_data.get("column")
+        new_storage = form.cleaned_data["storage"]
+        new_row = form.cleaned_data.get("row")
+        new_column = form.cleaned_data.get("column")
+
+        moved = (
+            item.storage_id != new_storage.pk
+            or item.row != new_row
+            or item.column != new_column
+        )
+        if moved:
+            WhiskyBottleMoveHistory.objects.create(
+                storage_item=item,
+                from_storage=item.storage,
+                from_row=item.row,
+                from_column=item.column,
+                to_storage=new_storage,
+                to_row=new_row,
+                to_column=new_column,
+                user=self.request.user,
+            )
+
+        item.storage = new_storage
+        item.row = new_row
+        item.column = new_column
         item.price = form.cleaned_data.get("price")
         item.is_gift = form.cleaned_data.get("is_gift", False)
         item.gift_from = form.cleaned_data.get("gift_from")
@@ -1218,3 +1256,92 @@ def set_primary_image(request, pk):
 def crop_whisky_image(request, pk):
     """Apply manual crop to a WhiskyImage and create a new thumbnail."""
     return crop_image_ajax(request, pk, WhiskyImage)
+
+
+class WhiskyBottleHistoryView(RequireHouseholdMixin, DetailView):
+    """Show the lifecycle history timeline for a single whisky bottle."""
+
+    model = WhiskyStorageItem
+    template_name = "bottle_history.html"
+    context_object_name = "item"
+
+    def get_queryset(self):
+        household = get_active_household(self.request.user)
+        return WhiskyStorageItem.objects.filter(household=household).select_related(
+            "whisky", "storage"
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        item = self.object
+        events = []
+
+        events.append(
+            {
+                "type": "added",
+                "date": item.created.date(),
+                "label": "Added to collection",
+                "detail": item.storage.name,
+            }
+        )
+
+        moves = item.move_history.select_related("from_storage", "to_storage").all()
+        for move in moves:
+            from_loc = move.from_storage.name if move.from_storage else "?"
+            to_loc = move.to_storage.name if move.to_storage else "?"
+            events.append(
+                {
+                    "type": "move",
+                    "date": move.moved_at.date(),
+                    "label": "Moved",
+                    "detail": f"{from_loc} → {to_loc}",
+                }
+            )
+
+        if item.opened_date:
+            events.append(
+                {
+                    "type": "opened",
+                    "date": item.opened_date,
+                    "label": "Opened",
+                    "detail": "",
+                }
+            )
+
+        if item.dreg_date:
+            events.append(
+                {
+                    "type": "dreg",
+                    "date": item.dreg_date,
+                    "label": "Reached dreg",
+                    "detail": "",
+                }
+            )
+
+        drinks = WhiskyDrinkRecord.objects.filter(storage_item=item).order_by(
+            "date_consumed"
+        )
+        for drink in drinks:
+            events.append(
+                {
+                    "type": "drink",
+                    "date": drink.date_consumed,
+                    "label": "Drink recorded",
+                    "detail": drink.tasting_notes or "",
+                }
+            )
+
+        if item.finished_date:
+            events.append(
+                {
+                    "type": "finished",
+                    "date": item.finished_date,
+                    "label": "Finished",
+                    "detail": "",
+                }
+            )
+
+        context["events"] = sorted(events, key=lambda e: e["date"])
+        context["beverage"] = item.whisky
+        context["is_whisky"] = True
+        return context

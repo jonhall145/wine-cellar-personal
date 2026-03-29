@@ -150,6 +150,8 @@ urlpatterns = [
         name="api-vapid-public-key",
     ),
     path("api/version/", api_version, name="api-version"),
+    # REST API
+    path("rest/", include("wine_cellar.apps.api.urls")),
 ]
 
 # Include app-specific URLs

@@ -115,15 +115,22 @@
                                     <td>{{ bottle.occasion|default_if_none:"" }}</td>
                                     <td>
                                         <a class="pure-button"
-                                           href="{% url 'bottle-edit' bottle.pk %}?next=list"
-                                           title="Edit bottle">
-                                            <i class="fa-regular fa-pen-to-square"></i>
+                                           href="{% url 'bottle-history' bottle.pk %}"
+                                           title="History">
+                                            <i class="fa-regular fa-clock-rotate-left"></i>
                                         </a>
-                                        <a class="pure-button"
-                                           href="{% url 'stock-delete' bottle.pk %}"
-                                           title="Remove bottle">
-                                            <i class="fa-regular fa-trash-can"></i>
-                                        </a>
+                                        {% if not bottle.deleted %}
+                                            <a class="pure-button"
+                                               href="{% url 'bottle-edit' bottle.pk %}?next=list"
+                                               title="Edit bottle">
+                                                <i class="fa-regular fa-pen-to-square"></i>
+                                            </a>
+                                            <a class="pure-button"
+                                               href="{% url 'stock-delete' bottle.pk %}"
+                                               title="Remove bottle">
+                                                <i class="fa-regular fa-trash-can"></i>
+                                            </a>
+                                        {% endif %}
                                     </td>
                                 </tr>
                             {% endfor %}

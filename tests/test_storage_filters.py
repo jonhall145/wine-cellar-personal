@@ -55,3 +55,40 @@ def test_storage_item_filter_sets_storage_queryset(user, storage_factory):
     )
 
     assert storage in filt.filters["storage"].queryset
+
+
+@pytest.mark.django_db
+def test_storage_item_filter_show_used_default_excludes_deleted(
+    user, storage_item_factory
+):
+    storage_item_factory(user=user)
+    storage_item_factory(user=user, deleted=True)
+
+    request = RequestFactory().get("/")
+    request.user = user
+
+    filt = StorageItemFilter(
+        data={},
+        queryset=StorageItem.objects.filter(user=user),
+        request=request,
+    )
+
+    assert filt.qs.count() == 1
+    assert filt.qs.first().deleted is False
+
+
+@pytest.mark.django_db
+def test_storage_item_filter_show_used_includes_deleted(user, storage_item_factory):
+    storage_item_factory(user=user)
+    storage_item_factory(user=user, deleted=True)
+
+    request = RequestFactory().get("/")
+    request.user = user
+
+    filt = StorageItemFilter(
+        data={"show_used": "1"},
+        queryset=StorageItem.objects.filter(user=user),
+        request=request,
+    )
+
+    assert filt.qs.count() == 2

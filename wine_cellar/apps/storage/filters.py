@@ -26,6 +26,12 @@ class StorageItemFilter(django_filters.FilterSet):
         choices=(("", "All"), ("1", "Yes"), ("0", "No")),
         label="Has Occasion",
     )
+    show_used = ChoiceFilter(
+        method="filter_show_used",
+        choices=(("0", "In stock only"), ("1", "Show all (incl. finished)")),
+        label="Show used",
+        empty_label=None,
+    )
     order = OrderingFilter(
         choices=(
             ("-created", "Recently Added"),
@@ -40,6 +46,11 @@ class StorageItemFilter(django_filters.FilterSet):
         empty_label=None,
     )
 
+    def filter_show_used(self, queryset, name, value):
+        if value == "1":
+            return queryset
+        return queryset.filter(deleted=False)
+
     def filter_has_occasion(self, queryset, name, value):
         if value == "1":
             return queryset.exclude(occasion__isnull=True).exclude(occasion="")
@@ -52,6 +63,9 @@ class StorageItemFilter(django_filters.FilterSet):
         fields = ["wine_name", "storage", "is_gift", "has_occasion"]
 
     def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
+        if data is not None and "show_used" not in data:
+            data = data.copy()
+            data["show_used"] = "0"
         super().__init__(data, queryset, request=request, prefix=prefix)
         if request and request.user.is_authenticated:
             self.filters["storage"].queryset = Storage.objects.filter(
