@@ -632,6 +632,20 @@ def move_bottle(request):
         old_column = item.column
 
         with transaction.atomic():
+            # Lock the item row to prevent concurrent moves to the same slot
+            ItemModel.objects.select_for_update().filter(pk=item.pk).first()
+
+            # Re-check occupancy under lock
+            if target_storage.is_slot_occupied(target_row, target_column):
+                if not (
+                    item.storage_id == target_storage_id
+                    and item.row == target_row
+                    and item.column == target_column
+                ):
+                    return JsonResponse(
+                        {"error": "Target position is occupied"}, status=400
+                    )
+
             item.storage = target_storage
             item.row = target_row
             item.column = target_column
