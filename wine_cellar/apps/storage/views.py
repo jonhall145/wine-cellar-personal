@@ -626,6 +626,36 @@ def move_bottle(request):
                 return JsonResponse({"success": True, "message": "No change needed"})
             return JsonResponse({"error": "Target position is occupied"}, status=400)
 
+        # Record move history
+        old_storage = item.storage
+        old_row = item.row
+        old_column = item.column
+
+        if _is_whisky_mode():
+            from wine_cellar.apps.whisky.models import WhiskyBottleMoveHistory
+
+            WhiskyBottleMoveHistory.objects.create(
+                storage_item=item,
+                from_storage=old_storage,
+                from_row=old_row,
+                from_column=old_column,
+                to_storage=target_storage,
+                to_row=target_row,
+                to_column=target_column,
+                user=request.user,
+            )
+        else:
+            BottleMoveHistory.objects.create(
+                storage_item=item,
+                from_storage=old_storage,
+                from_row=old_row,
+                from_column=old_column,
+                to_storage=target_storage,
+                to_row=target_row,
+                to_column=target_column,
+                user=request.user,
+            )
+
         # Move the bottle
         item.storage = target_storage
         item.row = target_row

@@ -43,6 +43,29 @@ class StorageItemViewSet(HouseholdScopedModelViewSet):
             .select_related("storage", "wine")
         )
 
+    def perform_update(self, serializer):
+        item = self.get_object()
+        old_storage = item.storage
+        old_row = item.row
+        old_column = item.column
+        instance = serializer.save()
+        moved = (
+            old_storage.pk != instance.storage_id
+            or old_row != instance.row
+            or old_column != instance.column
+        )
+        if moved:
+            BottleMoveHistory.objects.create(
+                storage_item=instance,
+                from_storage=old_storage,
+                from_row=old_row,
+                from_column=old_column,
+                to_storage=instance.storage,
+                to_row=instance.row,
+                to_column=instance.column,
+                user=self.request.api_key.user,
+            )
+
 
 class WhiskyStorageItemViewSet(HouseholdScopedModelViewSet):
     queryset = WhiskyStorageItem.objects.all()
@@ -59,6 +82,29 @@ class WhiskyStorageItemViewSet(HouseholdScopedModelViewSet):
             .filter(deleted=False)
             .select_related("storage", "whisky")
         )
+
+    def perform_update(self, serializer):
+        item = self.get_object()
+        old_storage = item.storage
+        old_row = item.row
+        old_column = item.column
+        instance = serializer.save()
+        moved = (
+            old_storage.pk != instance.storage_id
+            or old_row != instance.row
+            or old_column != instance.column
+        )
+        if moved:
+            WhiskyBottleMoveHistory.objects.create(
+                storage_item=instance,
+                from_storage=old_storage,
+                from_row=old_row,
+                from_column=old_column,
+                to_storage=instance.storage,
+                to_row=instance.row,
+                to_column=instance.column,
+                user=self.request.api_key.user,
+            )
 
 
 class BottleMoveHistoryViewSet(ReadOnlyModelViewSet):
