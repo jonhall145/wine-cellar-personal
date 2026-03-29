@@ -3,7 +3,7 @@ import json
 import pytest
 from django.urls import reverse
 
-from wine_cellar.apps.storage.models import Storage, StorageItem
+from wine_cellar.apps.storage.models import BottleMoveHistory, Storage, StorageItem
 
 
 @pytest.mark.django_db
@@ -185,6 +185,59 @@ class TestMoveBottle:
         assert r.status_code == 200
         data = json.loads(r.content)
         assert data["success"] is True
+
+    def test_move_creates_history(
+        self, client, user, wine_factory, storage_item_factory, storage_factory
+    ):
+        storage = storage_factory(user=user, rows=3, columns=3)
+        wine = wine_factory(user=user)
+        item = storage_item_factory(
+            wine=wine, storage=storage, row=1, column=1, user=user
+        )
+        client.force_login(user)
+        r = client.post(
+            reverse("storage-move-bottle"),
+            json.dumps(
+                {
+                    "item_id": item.pk,
+                    "target_storage_id": storage.pk,
+                    "target_row": 2,
+                    "target_column": 3,
+                }
+            ),
+            content_type="application/json",
+        )
+        assert r.status_code == 200
+        history = BottleMoveHistory.objects.filter(storage_item=item)
+        assert history.count() == 1
+        entry = history.first()
+        assert entry.from_row == 1
+        assert entry.from_column == 1
+        assert entry.to_row == 2
+        assert entry.to_column == 3
+
+    def test_noop_does_not_create_history(
+        self, client, user, wine_factory, storage_item_factory, storage_factory
+    ):
+        storage = storage_factory(user=user, rows=2, columns=2)
+        wine = wine_factory(user=user)
+        item = storage_item_factory(
+            wine=wine, storage=storage, row=1, column=1, user=user
+        )
+        client.force_login(user)
+        client.post(
+            reverse("storage-move-bottle"),
+            json.dumps(
+                {
+                    "item_id": item.pk,
+                    "target_storage_id": storage.pk,
+                    "target_row": 1,
+                    "target_column": 1,
+                }
+            ),
+            content_type="application/json",
+        )
+        assert BottleMoveHistory.objects.filter(storage_item=item).count() == 0
 
 
 @pytest.mark.django_db

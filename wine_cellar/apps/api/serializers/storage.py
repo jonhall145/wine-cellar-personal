@@ -51,7 +51,9 @@ class StorageItemWriteSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request and hasattr(request, "api_key"):
             hh = request.api_key.household
-            self.fields["storage"].queryset = Storage.objects.filter(household=hh)
+            self.fields["storage"].queryset = Storage.objects.filter(
+                household=hh, app_type="wine"
+            )
             self.fields["wine"].queryset = Wine.objects.filter(
                 household=hh, deleted=False
             )
@@ -82,7 +84,9 @@ class WhiskyStorageItemWriteSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request and hasattr(request, "api_key"):
             hh = request.api_key.household
-            self.fields["storage"].queryset = Storage.objects.filter(household=hh)
+            self.fields["storage"].queryset = Storage.objects.filter(
+                household=hh, app_type="whisky"
+            )
             self.fields["whisky"].queryset = Whisky.objects.filter(
                 household=hh, deleted=False
             )

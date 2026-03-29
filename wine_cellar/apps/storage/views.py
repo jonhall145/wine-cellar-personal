@@ -3,7 +3,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.db import models
+from django.db import models, transaction
 from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -626,11 +626,55 @@ def move_bottle(request):
                 return JsonResponse({"success": True, "message": "No change needed"})
             return JsonResponse({"error": "Target position is occupied"}, status=400)
 
-        # Move the bottle
-        item.storage = target_storage
-        item.row = target_row
-        item.column = target_column
-        item.save(update_fields=["storage", "row", "column"])
+        # Record move history + update in a single transaction
+        old_storage = item.storage
+        old_row = item.row
+        old_column = item.column
+
+        with transaction.atomic():
+            # Lock the item row to prevent concurrent moves to the same slot
+            ItemModel.objects.select_for_update().filter(pk=item.pk).first()
+
+            # Re-check occupancy under lock
+            if target_storage.is_slot_occupied(target_row, target_column):
+                if not (
+                    item.storage_id == target_storage_id
+                    and item.row == target_row
+                    and item.column == target_column
+                ):
+                    return JsonResponse(
+                        {"error": "Target position is occupied"}, status=400
+                    )
+
+            item.storage = target_storage
+            item.row = target_row
+            item.column = target_column
+            item.save(update_fields=["storage", "row", "column"])
+
+            if _is_whisky_mode():
+                from wine_cellar.apps.whisky.models import WhiskyBottleMoveHistory
+
+                WhiskyBottleMoveHistory.objects.create(
+                    storage_item=item,
+                    from_storage=old_storage,
+                    from_row=old_row,
+                    from_column=old_column,
+                    to_storage=target_storage,
+                    to_row=target_row,
+                    to_column=target_column,
+                    user=request.user,
+                )
+            else:
+                BottleMoveHistory.objects.create(
+                    storage_item=item,
+                    from_storage=old_storage,
+                    from_row=old_row,
+                    from_column=old_column,
+                    to_storage=target_storage,
+                    to_row=target_row,
+                    to_column=target_column,
+                    user=request.user,
+                )
 
         return JsonResponse(
             {
