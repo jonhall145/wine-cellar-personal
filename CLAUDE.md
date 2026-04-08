@@ -89,6 +89,28 @@ page.context.add_cookies([{"name": "sessionid", "value": "SESSION_VALUE", "url":
 
 This avoids the fragile login form flow entirely for ad-hoc UI checks.
 
+### REST API Access
+
+A persistent admin-scoped API key is stored in `.env.prod` (gitignored) as `WINE_CELLAR_API_TOKEN`. Use it for REST API queries against the production Docker stack:
+
+```bash
+# Load the token
+source .env.prod
+
+# Query wines via the REST API (production, through nginx on port 80)
+curl -s -H "Authorization: Bearer $WINE_CELLAR_API_TOKEN" http://localhost:80/rest/wines/ | python3 -m json.tool
+
+# With httpie
+http GET http://localhost:80/rest/wines/ "Authorization:Bearer $WINE_CELLAR_API_TOKEN"
+```
+
+**Key details:**
+- **User:** admin | **Household:** admin's Cellar (ID 1, has production data) | **Scope:** admin (full read/write)
+- **Base URL:** `http://localhost:80/rest/` (through nginx) or `http://localhost:8000/rest/` (direct to gunicorn)
+- **Endpoints:** `/rest/wines/`, `/rest/storage/`, `/rest/shelves/`, `/rest/grapes/`, `/rest/countries/`, etc.
+- **Format:** Bearer token in `Authorization` header
+- To create a new key: `docker compose -f docker-compose.prod.yml exec -T wine-web python manage.py create_api_key --name "Name" --user admin --household 1 --scope admin`
+
 ## Project Context
 
 ### Technology Stack

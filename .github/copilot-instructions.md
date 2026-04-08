@@ -17,6 +17,13 @@
 - Data layer uses Django ORM; SQLite in development and PostgreSQL in production.
 - Background jobs run through Celery + Redis (drink-by reminders).
 
+## REST API Access
+- An admin API key is stored in `.env.prod` (gitignored) as `WINE_CELLAR_API_TOKEN`.
+- Use it for REST API queries: `curl -H "Authorization: Bearer $WINE_CELLAR_API_TOKEN" http://localhost:80/rest/wines/`
+- Scope: admin (full read/write), household: admin's Cellar (ID 1), user: admin.
+- Endpoints at `/rest/`: wines, storage, shelves, grapes, countries, etc.
+- Create new keys via: `docker compose -f docker-compose.prod.yml exec -T wine-web python manage.py create_api_key --name "Name" --user admin --household 1 --scope admin`
+
 ## Key conventions
 - `CELLAR_APP_TYPE` switches wine vs whisky mode; URL routing includes only one app at runtime, and whisky tests require `CELLAR_APP_TYPE=whisky` set before Django loads.
 - UI is mobile-first; verify UI/CSS changes on a mobile viewport and use HTTPS for camera-based scanning.
