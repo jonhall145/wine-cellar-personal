@@ -111,6 +111,18 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
 
     @pytest.mark.django_db
     class TestWhiskyStorageItemFilter:
+        def _create_storage_item(self, user, whisky_storage_item_factory, **kwargs):
+            household = user.user_settings.active_household
+            return whisky_storage_item_factory(
+                user=user,
+                household=household,
+                storage__user=user,
+                storage__household=household,
+                whisky__user=user,
+                whisky__household=household,
+                **kwargs,
+            )
+
         def _filter(self, user, **params):
             request = RequestFactory().get("/")
             request.user = user
@@ -123,8 +135,8 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
             )
 
         def test_owner_filter(self, user, whisky_storage_item_factory):
-            whisky_storage_item_factory(user=user, owner="Alice")
-            whisky_storage_item_factory(user=user, owner="Bob")
+            self._create_storage_item(user, whisky_storage_item_factory, owner="Alice")
+            self._create_storage_item(user, whisky_storage_item_factory, owner="Bob")
 
             filt = self._filter(user, owner="Alice")
             assert filt.qs.count() == 1
@@ -133,16 +145,16 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
         def test_show_used_default_excludes_deleted(
             self, user, whisky_storage_item_factory
         ):
-            whisky_storage_item_factory(user=user)
-            whisky_storage_item_factory(user=user, deleted=True)
+            self._create_storage_item(user, whisky_storage_item_factory)
+            self._create_storage_item(user, whisky_storage_item_factory, deleted=True)
 
             filt = self._filter(user)
             assert filt.qs.count() == 1
             assert filt.qs.first().deleted is False
 
         def test_show_used_includes_deleted(self, user, whisky_storage_item_factory):
-            whisky_storage_item_factory(user=user)
-            whisky_storage_item_factory(user=user, deleted=True)
+            self._create_storage_item(user, whisky_storage_item_factory)
+            self._create_storage_item(user, whisky_storage_item_factory, deleted=True)
 
             filt = self._filter(user, show_used="1")
             assert filt.qs.count() == 2

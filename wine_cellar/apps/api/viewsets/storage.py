@@ -46,9 +46,7 @@ def _validate_storage_position(storage, row, column, exclude_item=None):
             {"column": f"Column must be between 1 and {storage.columns}."}
         )
     if not storage.is_cell_active(row, column):
-        raise drf_serializers.ValidationError(
-            {"row": "Target cell is not active."}
-        )
+        raise drf_serializers.ValidationError({"row": "Target cell is not active."})
     qs = storage._get_items().filter(row=row, column=column, deleted=False)
     if exclude_item:
         qs = qs.exclude(pk=exclude_item.pk)
