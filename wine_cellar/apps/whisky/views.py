@@ -1,5 +1,6 @@
 import base64
 import logging
+import re
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -92,6 +93,84 @@ from wine_cellar.apps.whisky.models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize_scan_lookup_text(value: str) -> str:
+    """Normalize scan text so distillery name checks survive punctuation and spacing."""
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", value.casefold()).split())
+
+
+def _find_named_match(model, value: str):
+    """Return an exact case-insensitive name match for a model, if one exists."""
+    value = value.strip()
+    if not value:
+        return None
+    return model.objects.filter(name__iexact=value).first()
+
+
+def _find_distillery_match(result_data: dict):
+    """Resolve a distillery from extracted scan data or the whisky name itself."""
+    search_values = []
+
+    distillery_value = result_data.get("distillery")
+    if isinstance(distillery_value, str) and distillery_value.strip():
+        search_values.append((0, distillery_value.strip()))
+
+    name_value = result_data.get("name")
+    if isinstance(name_value, str) and name_value.strip():
+        search_values.append((1, name_value.strip()))
+
+    for _, value in search_values:
+        match = _find_named_match(Distillery, value)
+        if match:
+            return match
+
+    distilleries = list(Distillery.objects.only("pk", "name"))
+    substring_matches = []
+    for priority, value in search_values:
+        normalized_value = _normalize_scan_lookup_text(value)
+        if not normalized_value:
+            continue
+
+        for distillery in distilleries:
+            normalized_name = _normalize_scan_lookup_text(distillery.name)
+            if normalized_name and normalized_name in normalized_value:
+                substring_matches.append(
+                    (priority, -len(normalized_name), distillery.name, distillery)
+                )
+
+    if substring_matches:
+        substring_matches.sort()
+        return substring_matches[0][3]
+
+    return None
+
+
+def _resolve_whisky_extracted_fks(
+    result_data: dict, *, preserve_unmatched_names: bool = False
+):
+    """Resolve extracted whisky FK fields for both add-form and AJAX scan flows."""
+    distillery_match = _find_distillery_match(result_data)
+    if distillery_match:
+        result_data["distillery"] = distillery_match.pk
+    elif "distillery" in result_data and isinstance(result_data["distillery"], str):
+        unresolved_distillery = result_data.pop("distillery")
+        if preserve_unmatched_names:
+            result_data["distillery_name"] = unresolved_distillery
+
+    for field_name, model in (("region", WhiskyRegion), ("bottler", Bottler)):
+        value = result_data.get(field_name)
+        if not isinstance(value, str):
+            continue
+
+        match = _find_named_match(model, value)
+        if match:
+            result_data[field_name] = match.pk
+            continue
+
+        unresolved_value = result_data.pop(field_name)
+        if preserve_unmatched_names:
+            result_data[f"{field_name}_name"] = unresolved_value
 
 
 class QRCodeView(BaseQRCodeView):
@@ -191,28 +270,7 @@ class WhiskyCreateView(BaseBeverageCreateView):
     beverage_label = "whisky"
 
     def resolve_extracted_data(self, result_data, initial):
-        if "distillery" in result_data and isinstance(result_data["distillery"], str):
-            match = Distillery.objects.filter(
-                name__iexact=result_data["distillery"]
-            ).first()
-            if match:
-                result_data["distillery"] = match.pk
-            else:
-                result_data.pop("distillery")
-        if "region" in result_data and isinstance(result_data["region"], str):
-            match = WhiskyRegion.objects.filter(
-                name__iexact=result_data["region"]
-            ).first()
-            if match:
-                result_data["region"] = match.pk
-            else:
-                result_data.pop("region")
-        if "bottler" in result_data and isinstance(result_data["bottler"], str):
-            match = Bottler.objects.filter(name__iexact=result_data["bottler"]).first()
-            if match:
-                result_data["bottler"] = match.pk
-            else:
-                result_data.pop("bottler")
+        _resolve_whisky_extracted_fks(result_data)
 
     @staticmethod
     @transaction.atomic
@@ -678,25 +736,8 @@ def extract_whisky_vision_ajax(request):
     from wine_cellar.apps.whisky.services.barcode_service import WhiskyBarcodeScanner
 
     def resolve_fks(data):
-        """Resolve distillery, region, bottler strings to PKs for TomSelect."""
-        if "distillery" in data and isinstance(data["distillery"], str):
-            match = Distillery.objects.filter(name__iexact=data["distillery"]).first()
-            if match:
-                data["distillery"] = match.pk
-            else:
-                data["distillery_name"] = data.pop("distillery")
-        if "region" in data and isinstance(data["region"], str):
-            match = WhiskyRegion.objects.filter(name__iexact=data["region"]).first()
-            if match:
-                data["region"] = match.pk
-            else:
-                data["region_name"] = data.pop("region")
-        if "bottler" in data and isinstance(data["bottler"], str):
-            match = Bottler.objects.filter(name__iexact=data["bottler"]).first()
-            if match:
-                data["bottler"] = match.pk
-            else:
-                data["bottler_name"] = data.pop("bottler")
+        """Resolve distillery, region, and bottler strings to PKs for TomSelect."""
+        _resolve_whisky_extracted_fks(data, preserve_unmatched_names=True)
 
     return extract_vision_ajax(
         request,

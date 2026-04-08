@@ -720,8 +720,12 @@ class TestStorageItemMoveHistoryAPI:
         from wine_cellar.apps.storage.models import BottleMoveHistory
 
         item = StorageItem.objects.create(
-            storage=storage, wine=wine, row=1, column=1,
-            user=user, household=household,
+            storage=storage,
+            wine=wine,
+            row=1,
+            column=1,
+            user=user,
+            household=household,
         )
         api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
         resp = api_client.patch(
@@ -745,8 +749,12 @@ class TestStorageItemMoveHistoryAPI:
         from wine_cellar.apps.storage.models import BottleMoveHistory
 
         item = StorageItem.objects.create(
-            storage=storage, wine=wine, row=1, column=1,
-            user=user, household=household,
+            storage=storage,
+            wine=wine,
+            row=1,
+            column=1,
+            user=user,
+            household=household,
         )
         api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
         resp = api_client.patch(
@@ -760,16 +768,27 @@ class TestStorageItemMoveHistoryAPI:
         self, api_client, api_key_write, user, household, storage, wine
     ):
         StorageItem.objects.create(
-            storage=storage, wine=wine, row=1, column=1,
-            user=user, household=household,
+            storage=storage,
+            wine=wine,
+            row=1,
+            column=1,
+            user=user,
+            household=household,
         )
         wine2 = Wine.objects.create(
-            name="Other Wine", wine_type=WineType.WHITE, country="DE",
-            user=user, household=household,
+            name="Other Wine",
+            wine_type=WineType.WHITE,
+            country="DE",
+            user=user,
+            household=household,
         )
         item2 = StorageItem.objects.create(
-            storage=storage, wine=wine2, row=2, column=2,
-            user=user, household=household,
+            storage=storage,
+            wine=wine2,
+            row=2,
+            column=2,
+            user=user,
+            household=household,
         )
         api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
         resp = api_client.patch(
@@ -782,8 +801,12 @@ class TestStorageItemMoveHistoryAPI:
         self, api_client, api_key_write, user, household, storage, wine
     ):
         item = StorageItem.objects.create(
-            storage=storage, wine=wine, row=1, column=1,
-            user=user, household=household,
+            storage=storage,
+            wine=wine,
+            row=1,
+            column=1,
+            user=user,
+            household=household,
         )
         api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
         resp = api_client.patch(

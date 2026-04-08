@@ -1,8 +1,10 @@
 import datetime
 import json
 from http import HTTPStatus
+from unittest.mock import MagicMock, patch
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from pytest_django.asserts import assertRedirects, assertTemplateUsed
 
@@ -339,6 +341,84 @@ def test_whisky_create_get(client, user):
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="whisky/whisky_create.html")
     assert "form" in r.context
+
+
+@pytest.mark.django_db
+def test_whisky_create_prefills_distillery_when_scan_returns_full_whisky_name(
+    client, user, distillery_factory
+):
+    """Scan prefill should still resolve an existing distillery from the whisky name."""
+    distillery = distillery_factory(name="Lagavulin")
+    client.force_login(user)
+
+    session = client.session
+    session["extraction_result"] = {
+        "confidence": "medium",
+        "extracted_fields": ["name", "distillery"],
+        "errors": [],
+        "scanned_image": "dGVzdA==",
+        "extracted_data": {
+            "name": "Lagavulin 16",
+            "distillery": "Lagavulin 16",
+        },
+    }
+    session.save()
+
+    response = client.get(reverse("whisky-add"))
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.context["form"].initial["distillery"] == distillery.pk
+
+
+@pytest.mark.django_db
+def test_whisky_extract_vision_infers_distillery_from_whisky_name(
+    client, user, distillery_factory
+):
+    """AJAX auto-fill should infer a known distillery from the whisky name."""
+    distillery = distillery_factory(name="Lagavulin")
+    client.force_login(user)
+    image = SimpleUploadedFile(
+        "label.jpg", b"fake-image-bytes", content_type="image/jpeg"
+    )
+
+    with (
+        patch(
+            "wine_cellar.apps.whisky.services.barcode_service.WhiskyBarcodeScanner"
+        ) as mock_scanner_cls,
+        patch(
+            "wine_cellar.apps.whisky.services.vision_extraction.WhiskyVisionExtractor"
+        ) as mock_vision_cls,
+    ):
+        mock_scanner = MagicMock()
+        mock_scanner.scan_and_match.return_value = {
+            "matched": False,
+            "barcode": None,
+            "whisky_data": None,
+            "all_barcodes": [],
+        }
+        mock_scanner_cls.return_value = mock_scanner
+
+        mock_vision = MagicMock()
+        mock_vision.extract_from_images.return_value = {
+            "data": {"name": "Lagavulin 16"},
+            "confidence": "medium",
+            "extracted_fields": ["name"],
+            "errors": [],
+            "field_confidence": {"name": "high"},
+        }
+        mock_vision_cls.return_value = mock_vision
+
+        response = client.post(
+            reverse("whisky-extract-vision"),
+            {"image_front_label": image},
+        )
+
+    assert response.status_code == HTTPStatus.OK
+    data = response.json()
+    assert data["success"] is True
+    assert data["match_type"] == "vision"
+    assert data["data"]["distillery"] == distillery.pk
+    assert "distillery_name" not in data["data"]
 
 
 @pytest.mark.django_db
