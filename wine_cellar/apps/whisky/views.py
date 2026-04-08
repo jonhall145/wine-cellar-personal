@@ -108,6 +108,19 @@ def _find_named_match(model, value: str):
     return model.objects.filter(name__iexact=value).first()
 
 
+def _store_unresolved_name(
+    result_data: dict, field_name: str, preserve_unmatched_names: bool
+):
+    """Store a trimmed unresolved FK name when requested and non-empty."""
+    unresolved_value = result_data.pop(field_name, None)
+    if not preserve_unmatched_names or not isinstance(unresolved_value, str):
+        return
+
+    unresolved_value = unresolved_value.strip()
+    if unresolved_value:
+        result_data[f"{field_name}_name"] = unresolved_value
+
+
 def _find_distillery_match(result_data: dict):
     """Resolve a distillery from extracted scan data or the whisky name itself."""
     search_values = []
@@ -120,20 +133,30 @@ def _find_distillery_match(result_data: dict):
     if isinstance(name_value, str) and name_value.strip():
         search_values.append((1, name_value.strip()))
 
+    if not search_values:
+        return None
+
     for _, value in search_values:
         match = _find_named_match(Distillery, value)
         if match:
             return match
 
-    distilleries = list(Distillery.objects.only("pk", "name"))
-    substring_matches = []
+    normalized_search_values = []
     for priority, value in search_values:
         normalized_value = _normalize_scan_lookup_text(value)
-        if not normalized_value:
-            continue
+        if normalized_value:
+            normalized_search_values.append((priority, normalized_value))
 
-        for distillery in distilleries:
-            normalized_name = _normalize_scan_lookup_text(distillery.name)
+    if not normalized_search_values:
+        return None
+
+    distilleries = [
+        (distillery, _normalize_scan_lookup_text(distillery.name))
+        for distillery in Distillery.objects.only("pk", "name")
+    ]
+    substring_matches = []
+    for priority, normalized_value in normalized_search_values:
+        for distillery, normalized_name in distilleries:
             if normalized_name and normalized_name in normalized_value:
                 substring_matches.append(
                     (priority, -len(normalized_name), distillery.name, distillery)
@@ -154,9 +177,7 @@ def _resolve_whisky_extracted_fks(
     if distillery_match:
         result_data["distillery"] = distillery_match.pk
     elif "distillery" in result_data and isinstance(result_data["distillery"], str):
-        unresolved_distillery = result_data.pop("distillery")
-        if preserve_unmatched_names:
-            result_data["distillery_name"] = unresolved_distillery
+        _store_unresolved_name(result_data, "distillery", preserve_unmatched_names)
 
     for field_name, model in (("region", WhiskyRegion), ("bottler", Bottler)):
         value = result_data.get(field_name)
@@ -168,9 +189,7 @@ def _resolve_whisky_extracted_fks(
             result_data[field_name] = match.pk
             continue
 
-        unresolved_value = result_data.pop(field_name)
-        if preserve_unmatched_names:
-            result_data[f"{field_name}_name"] = unresolved_value
+        _store_unresolved_name(result_data, field_name, preserve_unmatched_names)
 
 
 class QRCodeView(BaseQRCodeView):
