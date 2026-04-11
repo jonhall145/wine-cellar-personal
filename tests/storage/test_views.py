@@ -1,3 +1,4 @@
+from datetime import date
 from http import HTTPStatus
 
 import pytest
@@ -7,7 +8,7 @@ from pytest_django.asserts import (
     assertTemplateUsed,
 )
 
-from wine_cellar.apps.storage.models import Storage, StorageItem
+from wine_cellar.apps.storage.models import BottleMoveHistory, Storage, StorageItem
 
 
 @pytest.mark.django_db
@@ -376,3 +377,106 @@ def test_used_slot_is_free_after_delete(
     assert item.row == 1
     assert item.column == 1
     assert item.deleted is False
+
+
+@pytest.mark.django_db
+def test_bottle_history_shows_move_positions(
+    client, user, wine_factory, storage_item_factory
+):
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(
+        wine=wine,
+        storage=storage,
+        user=user,
+        row=1,
+        column=1,
+    )
+    BottleMoveHistory.objects.create(
+        storage_item=bottle,
+        from_storage=storage,
+        from_row=1,
+        from_column=1,
+        to_storage=storage,
+        to_row=2,
+        to_column=3,
+        user=user,
+    )
+    bottle.row = 2
+    bottle.column = 3
+    bottle.save(update_fields=["row", "column"])
+
+    client.force_login(user)
+    r = client.get(reverse("bottle-history", kwargs={"pk": bottle.pk}))
+    content = r.content.decode()
+
+    assert r.status_code == HTTPStatus.OK
+    assert "Moved" in content
+    assert "Row 1, Cell 1" in content
+    assert "Row 2, Cell 3" in content
+
+
+@pytest.mark.django_db
+def test_bottle_history_shows_moves_between_storages(
+    client, user, wine_factory, storage_item_factory, storage_factory
+):
+    wine = wine_factory(user=user)
+    source_storage = user.storage_set.first()
+    target_storage = storage_factory(user=user, name="Archive Rack")
+    bottle = storage_item_factory(
+        wine=wine,
+        storage=source_storage,
+        user=user,
+        row=1,
+        column=1,
+    )
+    BottleMoveHistory.objects.create(
+        storage_item=bottle,
+        from_storage=source_storage,
+        from_row=1,
+        from_column=1,
+        to_storage=target_storage,
+        to_row=2,
+        to_column=3,
+        user=user,
+    )
+    bottle.storage = target_storage
+    bottle.row = 2
+    bottle.column = 3
+    bottle.save(update_fields=["storage", "row", "column"])
+
+    client.force_login(user)
+    r = client.get(reverse("bottle-history", kwargs={"pk": bottle.pk}))
+    content = r.content.decode()
+
+    assert r.status_code == HTTPStatus.OK
+    assert source_storage.name in content
+    assert target_storage.name in content
+    assert "Row 1, Cell 1" in content
+    assert "Row 2, Cell 3" in content
+
+
+@pytest.mark.django_db
+def test_consumed_bottle_history_links_back_to_consumed_bottles(
+    client, user, wine_factory, storage_item_factory
+):
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(
+        wine=wine,
+        storage=storage,
+        user=user,
+        deleted=True,
+        finished_date=date(2025, 1, 5),
+    )
+
+    client.force_login(user)
+    r = client.get(reverse("bottle-history", kwargs={"pk": bottle.pk}))
+    content = r.content.decode()
+    expected_href = (
+        f'href="{reverse("wine-detail", kwargs={"pk": wine.pk})}'
+        "?show_consumed=1#consumed-bottles"
+    )
+
+    assert r.status_code == HTTPStatus.OK
+    assert expected_href in content

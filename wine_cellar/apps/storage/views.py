@@ -7,7 +7,7 @@ from django.db import models, transaction
 from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
 from django.views.generic import DeleteView, DetailView, FormView, ListView
 from django.views.generic.list import MultipleObjectMixin
@@ -26,6 +26,7 @@ from wine_cellar.apps.storage.models import (
     StorageItem,
     get_app_type,
 )
+from wine_cellar.apps.storage.utils import format_bottle_location, format_move_detail
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.utils import classify_cask_type
 from wine_cellar.apps.wine.models import Wine
@@ -737,20 +738,25 @@ class BottleHistoryView(RequireHouseholdMixin, DetailView):
                 "type": "added",
                 "date": item.created.date(),
                 "label": "Added to cellar",
-                "detail": item.storage.name,
+                "detail": format_bottle_location(item.storage, item.row, item.column),
             }
         )
 
         moves = item.move_history.select_related("from_storage", "to_storage").all()
         for move in moves:
-            from_loc = move.from_storage.name if move.from_storage else "?"
-            to_loc = move.to_storage.name if move.to_storage else "?"
             events.append(
                 {
                     "type": "move",
                     "date": move.moved_at.date(),
                     "label": "Moved",
-                    "detail": f"{from_loc} → {to_loc}",
+                    "detail": format_move_detail(
+                        move.from_storage,
+                        move.from_row,
+                        move.from_column,
+                        move.to_storage,
+                        move.to_row,
+                        move.to_column,
+                    ),
                 }
             )
 
@@ -776,6 +782,11 @@ class BottleHistoryView(RequireHouseholdMixin, DetailView):
 
         context["events"] = sorted(events, key=lambda e: e["date"])
         context["beverage"] = item.wine
+        context["beverage_detail_url"] = reverse(
+            "wine-detail", kwargs={"pk": item.wine.pk}
+        )
+        if item.deleted:
+            context["beverage_detail_url"] += "?show_consumed=1#consumed-bottles"
         return context
 
 

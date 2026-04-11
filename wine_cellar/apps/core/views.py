@@ -81,7 +81,11 @@ class BaseDrinkRecordListView(RequireHouseholdMixin, TemplateView):
         household = get_active_household(self.request.user)
         context["drink_records"] = self.drink_record_model.objects.filter(
             household=household
-        ).select_related(self.beverage_fk_name)
+        ).select_related(
+            self.beverage_fk_name,
+            "storage_item",
+            "storage_item__storage",
+        )
         context["beverage_fk_name"] = self.beverage_fk_name
         context["beverage_icon"] = self.beverage_icon or "wine-glass"
         return context

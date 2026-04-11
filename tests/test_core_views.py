@@ -229,6 +229,64 @@ class TestWineDetailView:
         recent = session.get("recent_views", [])
         assert any(r["pk"] == wine.pk for r in recent)
 
+    def test_consumed_bottles_are_hidden_by_default(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user)
+        storage = user.storage_set.first()
+        consumed_bottle = storage_item_factory(
+            wine=wine,
+            storage=storage,
+            user=user,
+            row=1,
+            column=2,
+            deleted=True,
+            finished_date=timezone.localdate(),
+        )
+        client.force_login(user)
+
+        r = client.get(reverse("wine-detail", kwargs={"pk": wine.pk}))
+        content = r.content.decode()
+
+        assert r.status_code == HTTPStatus.OK
+        assert r.context["consumed_bottle_count"] == 1
+        assert r.context["show_consumed_bottles"] is False
+        assert "Show consumed bottles (1)" in content
+        assert (
+            reverse("bottle-history", kwargs={"pk": consumed_bottle.pk}) not in content
+        )
+
+    def test_consumed_bottles_can_be_shown(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user)
+        storage = user.storage_set.first()
+        consumed_bottle = storage_item_factory(
+            wine=wine,
+            storage=storage,
+            user=user,
+            row=1,
+            column=2,
+            deleted=True,
+            finished_date=timezone.localdate(),
+        )
+        client.force_login(user)
+
+        r = client.get(
+            f"{reverse('wine-detail', kwargs={'pk': wine.pk})}?show_consumed=1"
+        )
+        content = r.content.decode()
+
+        assert r.status_code == HTTPStatus.OK
+        assert r.context["show_consumed_bottles"] is True
+        assert consumed_bottle in list(r.context["consumed_bottles"])
+        assert (
+            consumed_bottle.finished_date
+            == r.context["consumed_bottles"][0].finished_date
+        )
+        assert "Hide consumed bottles" in content
+        assert reverse("bottle-history", kwargs={"pk": consumed_bottle.pk}) in content
+
 
 # ---------------------------------------------------------------------------
 # Wine list view
@@ -821,6 +879,42 @@ class TestDrinkRecordListView:
         r = client.get(reverse("drink-history"))
         assert r.status_code == HTTPStatus.OK
         assert len(r.context["drink_records"]) == 1
+
+    def test_bottle_backed_records_link_to_bottle_history(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        from datetime import date
+
+        from wine_cellar.apps.wine.models import DrinkRecord
+
+        wine = wine_factory(user=user)
+        household = user.user_settings.active_household
+        storage = user.storage_set.first()
+        bottle = storage_item_factory(
+            wine=wine,
+            storage=storage,
+            user=user,
+            row=2,
+            column=3,
+            deleted=True,
+            finished_date=date(2025, 1, 5),
+        )
+        DrinkRecord.objects.create(
+            wine=wine,
+            user=user,
+            household=household,
+            date_consumed=date(2025, 1, 5),
+            storage_item=bottle,
+        )
+
+        client.force_login(user)
+        r = client.get(reverse("drink-history"))
+        content = r.content.decode()
+
+        assert r.status_code == HTTPStatus.OK
+        assert reverse("bottle-history", kwargs={"pk": bottle.pk}) in content
+        assert reverse("wine-detail", kwargs={"pk": wine.pk}) in content
+        assert "Row 2, Cell 3" in content
 
 
 # ---------------------------------------------------------------------------
