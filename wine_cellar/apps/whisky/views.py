@@ -62,6 +62,7 @@ from wine_cellar.apps.household.mixins import (
     require_member,
 )
 from wine_cellar.apps.storage.models import Storage, get_app_type
+from wine_cellar.apps.storage.utils import format_bottle_location, format_move_detail
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.filters import WhiskyFilter, WhiskyStorageItemFilter
 from wine_cellar.apps.whisky.forms import (
@@ -1341,20 +1342,25 @@ class WhiskyBottleHistoryView(RequireHouseholdMixin, DetailView):
                 "type": "added",
                 "date": item.created.date(),
                 "label": "Added to collection",
-                "detail": item.storage.name,
+                "detail": format_bottle_location(item.storage, item.row, item.column),
             }
         )
 
         moves = item.move_history.select_related("from_storage", "to_storage").all()
         for move in moves:
-            from_loc = move.from_storage.name if move.from_storage else "?"
-            to_loc = move.to_storage.name if move.to_storage else "?"
             events.append(
                 {
                     "type": "move",
                     "date": move.moved_at.date(),
                     "label": "Moved",
-                    "detail": f"{from_loc} → {to_loc}",
+                    "detail": format_move_detail(
+                        move.from_storage,
+                        move.from_row,
+                        move.from_column,
+                        move.to_storage,
+                        move.to_row,
+                        move.to_column,
+                    ),
                 }
             )
 
@@ -1403,5 +1409,8 @@ class WhiskyBottleHistoryView(RequireHouseholdMixin, DetailView):
 
         context["events"] = sorted(events, key=lambda e: e["date"])
         context["beverage"] = item.whisky
+        context["beverage_detail_url"] = reverse(
+            "whisky-detail", kwargs={"pk": item.whisky.pk}
+        )
         context["is_whisky"] = True
         return context
