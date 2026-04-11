@@ -1,12 +1,12 @@
 """Tests for core shared views: QR code, random bottle, detail, list, delete, export."""
 
 import json
-from datetime import date
 from decimal import Decimal
 from http import HTTPStatus
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from wine_cellar.apps.wine.models import Wine, WineType
 
@@ -524,7 +524,7 @@ class TestDrinkRecordCreateView:
         value = r.context["form"]["date_consumed"].value()
         if hasattr(value, "isoformat"):
             value = value.isoformat()
-        assert value == date.today().isoformat()
+        assert value == timezone.localdate().isoformat()
 
     def test_post_creates_record(self, client, user, wine_factory):
         from datetime import date

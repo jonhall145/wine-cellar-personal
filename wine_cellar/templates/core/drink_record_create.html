@@ -19,7 +19,7 @@
                     return;
                 }
 
-                let autoStatusValue = statusSelect.value;
+                let isAutoManaged = {% if form.is_bound %}false{% else %}true{% endif %};
 
                 const updateDefaultStatus = () => {
                     const selectedOption = bottleSelect.options[bottleSelect.selectedIndex];
@@ -28,15 +28,16 @@
                             ? dregStatus
                             : defaultStatus;
 
-                    if (statusSelect.value === autoStatusValue || statusSelect.value === "") {
+                    if (isAutoManaged) {
                         statusSelect.value = nextStatus;
                     }
-
-                    autoStatusValue = nextStatus;
                 };
 
                 updateDefaultStatus();
                 bottleSelect.addEventListener("change", updateDefaultStatus);
+                statusSelect.addEventListener("change", function () {
+                    isAutoManaged = false;
+                });
             });
         </script>
     {% endif %}
