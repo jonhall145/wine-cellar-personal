@@ -3,6 +3,45 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.3.5 (2026-03-29)
+
+
+## 0.3.4 (2026-03-24)
+
+### fix
+
+- iOS PWA install banner with iPadOS 13+ and Chrome detection (#154)
+    
+    * ci: always PR to next branch
+    
+    * fix: ios pwa install banner with ipadOS 13+ and chrome detection
+    
+    * fix: address pr review comments on ios install banner
+    
+    * fix: tighten iOS install banner / update-banner coordination (#155)
+    
+    * Initial plan
+    
+    * fix: improve install banner/update-banner coordination per review feedback
+    
+    Co-authored-by: jonhall145 <105321987+jonhall145@users.noreply.github.com>
+    Agent-Logs-Url: https://github.com/jonhall145/wine-cellar-personal/sessions/7237621d-17dd-469b-ae6c-d6db821b6451
+    
+    ---------
+    
+    Co-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>
+    Co-authored-by: jonhall145 <105321987+jonhall145@users.noreply.github.com>
+    
+    ---------
+    
+    Co-authored-by: jonhall145 <jonhall145@users.noreply.github.com>
+    Co-authored-by: Copilot <198982749+Copilot@users.noreply.github.com>
+
+
+
+## 0.3.3 (2026-03-22)
+
+
 ## 0.3.2 (2026-03-21)
 
 ### fix
