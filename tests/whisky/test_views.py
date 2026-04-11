@@ -212,6 +212,84 @@ def test_drink_record_form_invites_bottle_status_selection(
 
 
 @pytest.mark.django_db
+def test_drink_record_form_defaults_bottle_status_to_opened(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.UNOPENED,
+    )
+
+    client.force_login(user)
+    response = client.get(reverse("drink-record-add", kwargs={"pk": bottle.whisky.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.context["form"]["post_drink_status"].value() == FillLevel.OPENED
+
+
+@pytest.mark.django_db
+def test_drink_record_form_exposes_fill_level_defaults_for_whisky(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.DREG,
+    )
+
+    client.force_login(user)
+    response = client.get(reverse("drink-record-add", kwargs={"pk": bottle.whisky.pk}))
+    html = response.content.decode()
+
+    assert response.status_code == HTTPStatus.OK
+    assert f'data-default-status="{FillLevel.OPENED}"' in html
+    assert f'data-dreg-status="{FillLevel.DREG}"' in html
+    assert f'data-fill-level="{FillLevel.DREG}"' in html
+
+
+@pytest.mark.django_db
+def test_drink_record_form_bound_post_disables_auto_status_updates(
+    client, user, whisky_storage_item_factory
+):
+    from wine_cellar.apps.whisky.forms import POST_DRINK_STATUS_CONSUMED
+
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.UNOPENED,
+    )
+
+    client.force_login(user)
+    response = client.post(
+        reverse("drink-record-add", kwargs={"pk": bottle.whisky.pk}),
+        {
+            "storage_item": bottle.pk,
+            "post_drink_status": POST_DRINK_STATUS_CONSUMED,
+            "date_consumed": "",
+        },
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert "let isAutoManaged = false;" in response.content.decode()
+
+
+@pytest.mark.django_db
 def test_drink_record_with_selected_bottle_can_mark_consumed(
     client, user, whisky_storage_item_factory
 ):

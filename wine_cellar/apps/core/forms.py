@@ -2,6 +2,7 @@ import json
 
 from django import forms
 from django.conf import settings
+from django.utils import timezone
 
 from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
@@ -127,6 +128,7 @@ class BaseDrinkRecordForm(forms.Form):
         help_text="Select which bottle you consumed (optional).",
     )
     date_consumed = forms.DateField(
+        initial=timezone.localdate,
         widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
         help_text="When did you drink this?",
     )
