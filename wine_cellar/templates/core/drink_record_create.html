@@ -1,5 +1,46 @@
 {% extends 'base.html' %}
 {% load static %}
+{% block extra_js %}
+    {{ block.super }}
+    {% if form.fields.post_drink_status %}
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                const bottleSelect = document.getElementById("id_storage_item");
+                const statusSelect = document.getElementById("id_post_drink_status");
+
+                if (!bottleSelect || !statusSelect) {
+                    return;
+                }
+
+                const defaultStatus = statusSelect.dataset.defaultStatus;
+                const dregStatus = statusSelect.dataset.dregStatus;
+
+                if (!defaultStatus || !dregStatus) {
+                    return;
+                }
+
+                let autoStatusValue = statusSelect.value;
+
+                const updateDefaultStatus = () => {
+                    const selectedOption = bottleSelect.options[bottleSelect.selectedIndex];
+                    const nextStatus =
+                        selectedOption && selectedOption.dataset.fillLevel === dregStatus
+                            ? dregStatus
+                            : defaultStatus;
+
+                    if (statusSelect.value === autoStatusValue || statusSelect.value === "") {
+                        statusSelect.value = nextStatus;
+                    }
+
+                    autoStatusValue = nextStatus;
+                };
+
+                updateDefaultStatus();
+                bottleSelect.addEventListener("change", updateDefaultStatus);
+            });
+        </script>
+    {% endif %}
+{% endblock extra_js %}
 {% block title %}
     Record Drink
 {% endblock title %}

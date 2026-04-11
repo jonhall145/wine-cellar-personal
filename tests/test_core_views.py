@@ -1,6 +1,7 @@
 """Tests for core shared views: QR code, random bottle, detail, list, delete, export."""
 
 import json
+from datetime import date
 from decimal import Decimal
 from http import HTTPStatus
 
@@ -515,6 +516,15 @@ class TestDrinkRecordCreateView:
         r = client.get(reverse("drink-record-add", kwargs={"pk": wine.pk}))
         assert r.status_code == HTTPStatus.OK
         assert r.context["beverage"].pk == wine.pk
+
+    def test_get_defaults_date_consumed_to_today(self, client, user, wine_factory):
+        wine = wine_factory(user=user)
+        client.force_login(user)
+        r = client.get(reverse("drink-record-add", kwargs={"pk": wine.pk}))
+        value = r.context["form"]["date_consumed"].value()
+        if hasattr(value, "isoformat"):
+            value = value.isoformat()
+        assert value == date.today().isoformat()
 
     def test_post_creates_record(self, client, user, wine_factory):
         from datetime import date

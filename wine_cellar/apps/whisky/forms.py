@@ -798,14 +798,47 @@ class WhiskyStockAddForm(TomSelectMixin, forms.Form):
 POST_DRINK_STATUS_CONSUMED = "consumed"
 
 
+class WhiskyStorageItemSelect(forms.Select):
+    def create_option(
+        self,
+        name,
+        value,
+        label,
+        selected,
+        index,
+        subindex=None,
+        attrs=None,
+    ):
+        option = super().create_option(
+            name,
+            value,
+            label,
+            selected,
+            index,
+            subindex=subindex,
+            attrs=attrs,
+        )
+        storage_item = getattr(value, "instance", None)
+        if storage_item is not None:
+            option.setdefault("attrs", {})["data-fill-level"] = storage_item.fill_level
+        return option
+
+
 class WhiskyDrinkRecordForm(BaseDrinkRecordForm):
     storage_item_model = WhiskyStorageItem
     beverage_fk_name = "whisky"
     beverage_label = "whisky"
+    storage_item = forms.ModelChoiceField(
+        queryset=WhiskyStorageItem.objects.none(),
+        required=False,
+        label="Bottle",
+        help_text="Select which bottle you consumed (optional).",
+        widget=WhiskyStorageItemSelect,
+    )
 
     post_drink_status = forms.ChoiceField(
         required=False,
-        initial=POST_DRINK_STATUS_CONSUMED,
+        initial=FillLevel.OPENED,
         label="Bottle status after drink",
         choices=(
             (
@@ -818,6 +851,32 @@ class WhiskyDrinkRecordForm(BaseDrinkRecordForm):
         help_text="If you select a bottle, choose how that bottle "
         "should be updated.",
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["post_drink_status"].initial = self.get_default_post_drink_status()
+        self.fields["post_drink_status"].widget.attrs.update(
+            {
+                "data-default-status": FillLevel.OPENED,
+                "data-dreg-status": FillLevel.DREG,
+            }
+        )
+
+    def get_default_post_drink_status(self):
+        bottle = self.get_initial_storage_item()
+        if bottle and bottle.fill_level == FillLevel.DREG:
+            return FillLevel.DREG
+        return FillLevel.OPENED
+
+    def get_initial_storage_item(self):
+        initial_storage_item = self.initial.get("storage_item")
+        if not initial_storage_item:
+            return None
+        if isinstance(initial_storage_item, WhiskyStorageItem):
+            return initial_storage_item
+        return (
+            self.fields["storage_item"].queryset.filter(pk=initial_storage_item).first()
+        )
 
     def clean(self):
         cleaned_data = super().clean()
