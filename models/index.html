@@ -1,0 +1,2440 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../testing/">
+      
+      
+        <link rel="next" href="../wine/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../logo.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Models - Wine Cellar Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#database-models" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Wine Cellar Documentation" class="md-header__button md-logo" aria-label="Wine Cellar Documentation" data-md-component="logo">
+      
+  <img src="../logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Wine Cellar Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Models
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Wine Cellar Documentation" class="md-nav__button md-logo" aria-label="Wine Cellar Documentation" data-md-component="logo">
+      
+  <img src="../logo.svg" alt="logo">
+
+    </a>
+    Wine Cellar Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Database
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#base-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Base Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Base Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#usercontentmodel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserContentModel
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wine-app-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wine App Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Wine App Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#wine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wineimage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WineImage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vineyard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vineyard
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#size" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Size
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#foodpairing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FoodPairing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#attribute" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attribute
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#drinkrecord" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DrinkRecord
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wishlist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wishlist
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bottlenote" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BottleNote
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#drinkingwindowalert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DrinkingWindowAlert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reorderreminder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ReorderReminder
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-app-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage App Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Storage App Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#storageitem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StorageItem
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#user-app-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User App Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="User App Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#usersettings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserSettings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enumerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enumerations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Enumerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#winetype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WineType
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#category-sweetness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Category (Sweetness)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#model-relationships" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Relationships
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Model Relationships">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#relationship-diagram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationship Diagram
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-design-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Design Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Design Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-wine-vs-bottle-separation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Wine vs Bottle Separation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-user-isolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. User Isolation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-soft-deletes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Soft Deletes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-flexible-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Flexible Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-rich-metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Rich Metadata
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#database-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database Constraints
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Database Constraints">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unique-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unique Constraints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#indexes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Indexes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration Notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Migration Notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#size-field-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Size Field Migration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related Documentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Features
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wine Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vision-wine-entry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vision-Based Entry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Skills
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    AI Skills
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/ui-testing-playwright/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI Testing with Playwright
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/css-debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CSS Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/empty-state-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Empty State Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/django-test-users/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Django Test Users
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/fixing-console-errors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fixing Console Errors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#base-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Base Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Base Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#usercontentmodel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserContentModel
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wine-app-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wine App Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Wine App Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#wine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wineimage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WineImage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vineyard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vineyard
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#size" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Size
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#foodpairing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FoodPairing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#attribute" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attribute
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#drinkrecord" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DrinkRecord
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wishlist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wishlist
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bottlenote" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BottleNote
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#drinkingwindowalert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DrinkingWindowAlert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reorderreminder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ReorderReminder
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage-app-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage App Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Storage App Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#storageitem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        StorageItem
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#user-app-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User App Models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="User App Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#usersettings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UserSettings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enumerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enumerations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Enumerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#winetype" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WineType
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#category-sweetness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Category (Sweetness)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#model-relationships" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Relationships
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Model Relationships">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#relationship-diagram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationship Diagram
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-design-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Design Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Design Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-wine-vs-bottle-separation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Wine vs Bottle Separation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-user-isolation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. User Isolation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-soft-deletes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Soft Deletes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-flexible-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Flexible Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-rich-metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Rich Metadata
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#database-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database Constraints
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Database Constraints">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unique-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unique Constraints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#indexes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Indexes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration Notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Migration Notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#size-field-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Size Field Migration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related Documentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="database-models">Database Models</h1>
+<h2 id="overview">Overview</h2>
+<p>This document provides comprehensive documentation for all Django models in the Wine Cellar application. The models are organized into three main Django apps: <strong>Wine</strong>, <strong>Storage</strong>, and <strong>User</strong>.</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#base-models">Base Models</a></li>
+<li><a href="#wine-app-models">Wine App Models</a></li>
+<li><a href="#storage-app-models">Storage App Models</a></li>
+<li><a href="#user-app-models">User App Models</a></li>
+<li><a href="#model-relationships">Model Relationships</a></li>
+</ul>
+<hr />
+<h2 id="base-models">Base Models</h2>
+<h3 id="usercontentmodel">UserContentModel</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/models.py:17</code></p>
+<p>Abstract base model that provides common fields for all user-owned content.</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>user</code> | ForeignKey | Reference to User model | CASCADE, nullable, indexed |
+| <code>created</code> | DateTimeField | Auto-set on creation | Auto-now-add, indexed |
+| <code>modified</code> | DateTimeField | Auto-updated on save | Auto-now |</p>
+<p><strong>Usage</strong>: All models that belong to users inherit from this base model to ensure consistent tracking of ownership and timestamps.</p>
+<hr />
+<h2 id="wine-app-models">Wine App Models</h2>
+<h3 id="wine">Wine</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/models.py:204</code></p>
+<p>Core model representing a unique wine type or label. This is the template for actual bottles stored in the cellar.</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>name</code> | CharField(100) | Wine name | Required |
+| <code>barcode</code> | CharField(100) | Barcode identifier | Optional |
+| <code>wine_type</code> | CharField(2) | Type of wine (Red, White, etc.) | Required, choices from WineType |
+| <code>category</code> | CharField(2) | Sweetness category | Optional, choices from Category |
+| <code>grapes</code> | ManyToManyField | Grape varieties used | Links to Grape model |
+| <code>attributes</code> | ManyToManyField | Wine characteristics | Links to Attribute model |
+| <code>food_pairings</code> | ManyToManyField | Recommended food pairings | Links to FoodPairing model |
+| <code>abv</code> | FloatField | Alcohol by volume percentage | Optional |
+| <code>size</code> | ForeignKey | Bottle size | SET_NULL, links to Size model |
+| <code>vintage</code> | PositiveIntegerField | Year of production | Optional, min 1900, indexed |
+| <code>drink_by</code> | DateField | Recommended consumption date | Optional, indexed |
+| <code>comment</code> | CharField(250) | Additional notes | Optional |
+| <code>rating</code> | PositiveIntegerField | Wine rating | Optional, 0-10 range |
+| <code>country</code> | CharField(3) | Country of origin | Required, ISO alpha-2 code (max 3 chars), indexed |
+| <code>subregion</code> | CharField(100) | Wine region/subregion | Optional |
+| <code>vineyard</code> | ManyToManyField | Producer vineyards | Links to Vineyard model |
+| <code>source</code> | ManyToManyField | Purchase sources | Links to Source model |
+| <code>price</code> | DecimalField(6,2) | Reference price | Optional |
+| <code>rrp</code> | DecimalField(6,2) | Recommended retail price | Optional |</p>
+<p><strong>Properties</strong>:
+- <code>get_absolute_url()</code>: Returns detail view URL
+- <code>get_vineyards</code>: Newline-separated vineyard names
+- <code>get_grapes</code>: Comma-separated grape names
+- <code>get_sources</code>: Comma-separated source names
+- <code>get_attributes</code>: Newline-separated attributes
+- <code>get_price_with_currency</code>: Formatted price with currency symbol
+- <code>get_rrp_with_currency</code>: Formatted RRP with currency symbol
+- <code>get_average_price_with_currency</code>: Average price across all bottles
+- <code>get_food_pairings</code>: Newline-separated food pairings
+- <code>get_type</code>: Human-readable wine type label
+- <code>get_category</code>: Human-readable category label
+- <code>total_stock</code>: Count of non-deleted bottles
+- <code>get_stock</code>: QuerySet of non-deleted storage items
+- <code>image</code>: URL to first wine image or default
+- <code>image_thumbnail</code>: URL to thumbnail or full image
+- <code>image_thumbnails</code>: List of thumbnail URLs in order
+- <code>country_name</code>: Full country name from ISO code
+- <code>country_icon</code>: Country flag emoji</p>
+<p><strong>Constraints</strong>:
+- Unique constraint on: <code>name</code>, <code>wine_type</code>, <code>abv</code>, <code>size</code>, <code>vintage</code>, <code>country</code>, <code>user</code></p>
+<p><strong>Related Models</strong>:
+- Has many <code>WineImage</code> records (one-to-many)
+- Has many <code>StorageItem</code> records (one-to-many)
+- Has many <code>DrinkRecord</code> records (one-to-many)
+- Has many <code>DrinkingWindowAlert</code> records (one-to-many)
+- Has many <code>ReorderReminder</code> records (one-to-many)</p>
+<hr />
+<h3 id="wineimage">WineImage</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/models.py:394</code></p>
+<p>Stores multiple images for each wine with type classification.</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>image</code> | ImageField | Full-size image file | Required, user directory path |
+| <code>thumbnail</code> | ImageField | Thumbnail version | Optional, user directory path |
+| <code>wine</code> | ForeignKey | Parent wine | CASCADE, required |
+| <code>user</code> | ForeignKey | Owner | SET_NULL, nullable |
+| <code>image_type</code> | CharField(3) | Image category | Choices: Front, Back, Label Front, Label Back |</p>
+<p><strong>Image Types</strong> (from <code>ImageType</code> enum):
+- <code>FR</code> - Front: Bottle front view
+- <code>BA</code> - Back: Bottle back view
+- <code>LF</code> - Label Front: Close-up of front label
+- <code>LB</code> - Label Back: Close-up of back label</p>
+<hr />
+<h3 id="grape">Grape</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/models.py:111</code></p>
+<p>Represents grape varieties used in wines.</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>name</code> | CharField(100) | Grape variety name | Required |</p>
+<p><strong>Constraints</strong>:
+- Unique constraint on: <code>name</code>, <code>user</code></p>
+<p><strong>Usage</strong>: Linked to wines via many-to-many relationship to track grape composition.</p>
+<hr />
+<h3 id="vineyard">Vineyard</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/models.py:128</code></p>
+<p>Stores information about wine producers and vineyards.</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>name</code> | CharField(100) | Vineyard name | Required |
+| <code>website</code> | CharField(100) | Website URL | Optional |
+| <code>region</code> | CharField(250) | Geographic region | Optional |
+| <code>country</code> | CharField(3) | Country code | Optional, ISO alpha-2 code (max 3 chars) |</p>
+<p><strong>Constraints</strong>:
+- Unique constraint on: <code>name</code>, <code>country</code>, <code>region</code>, <code>user</code></p>
+<hr />
+<h3 id="size">Size</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/models.py:89</code></p>
+<p>Defines bottle size options.</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>name</code> | CharField(2) | Size code | Required, choices from SizeChoices |</p>
+<p><strong>Size Options</strong> (from <code>SizeChoices</code> enum):
+- <code>PI</code> - Piccolo (187ml)
+- <code>DE</code> - Demi (375ml)
+- <code>HA</code> - Half (500ml)
+- <code>ST</code> - Standard (750ml) - Default
+- <code>LI</code> - Liter (1L)
+- <code>MA</code> - Magnum (1.5L)
+- <code>JE</code> - Jeroboam (3L)
+- <code>RE</code> - Rehoboam (4.5L)</p>
+<p><strong>Constraints</strong>:
+- Unique constraint on: <code>name</code>, <code>user</code></p>
+<hr />
+<h3 id="foodpairing">FoodPairing</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/models.py:153</code></p>
+<p>Represents foods that pair well with wines.</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>name</code> | CharField(100) | Food name | Required |</p>
+<p><strong>Constraints</strong>:
+- Unique constraint on: <code>name</code>, <code>user</code></p>
+<p><strong>Usage</strong>: Linked to wines to suggest complementary food pairings.</p>
+<hr />
+<h3 id="attribute">Attribute</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/models.py:170</code></p>
+<p>Stores wine characteristics and descriptors (e.g., "Oak-aged", "Full-bodied", "Fruity").</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>name</code> | CharField(100) | Attribute name | Required |</p>
+<p><strong>Constraints</strong>:
+- Unique constraint on: <code>name</code>, <code>user</code></p>
+<hr />
+<h3 id="source">Source</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/models.py:187</code></p>
+<p>Tracks where wines were purchased or acquired.</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>name</code> | CharField(250) | Source name | Required |</p>
+<p><strong>Constraints</strong>:
+- Unique constraint on: <code>name</code>, <code>user</code></p>
+<p><strong>Examples</strong>: "Local Wine Shop", "Online Retailer", "Vineyard Direct", "Gift"</p>
+<hr />
+<h3 id="drinkrecord">DrinkRecord</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/models.py:447</code></p>
+<p>Records when and how a bottle was consumed, optionally linking to a specific bottle.</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>wine</code> | ForeignKey | Wine consumed | CASCADE, required |
+| <code>storage_item</code> | ForeignKey | Specific bottle consumed | SET_NULL, optional, related_name='drink_records' |
+| <code>date_consumed</code> | DateField | Consumption date | Required |
+| <code>tasting_notes</code> | TextField | Detailed tasting notes | Optional |
+| <code>rating</code> | PositiveIntegerField | Rating for this tasting | Optional, 0-3 range |
+| <code>shared_with</code> | CharField(250) | People shared with | Optional |
+| <code>occasion</code> | CharField(100) | Special occasion | Optional |</p>
+<p><strong>Ordering</strong>: By <code>date_consumed</code> descending (most recent first)</p>
+<p><strong>Purpose</strong>: Tracks drinking history and allows retrospective tasting notes separate from the wine's general rating. The optional <code>storage_item</code> field links the drink record to a specific bottle, enabling better inventory tracking. When a bottle is selected during drink recording, it is automatically marked as deleted.</p>
+<hr />
+<h3 id="wishlist">Wishlist</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/models.py:454</code></p>
+<p>Tracks wines the user wants to purchase.</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>name</code> | CharField(100) | Wine name | Required |
+| <code>wine_type</code> | CharField(2) | Wine type | Optional, choices from WineType |
+| <code>country</code> | CharField(3) | Country | Optional, ISO alpha-2 code (max 3 chars) |
+| <code>subregion</code> | CharField(100) | Region | Optional |
+| <code>vintage</code> | PositiveIntegerField | Desired vintage | Optional |
+| <code>price_limit</code> | DecimalField(6,2) | Maximum price | Optional |
+| <code>notes</code> | TextField | Additional notes | Optional |
+| <code>priority</code> | PositiveIntegerField | Priority level | Default 1, range 1-5 |
+| <code>purchased</code> | BooleanField | Marked as bought | Default False |</p>
+<p><strong>Ordering</strong>: By <code>priority</code> descending, then <code>name</code> ascending</p>
+<p><strong>Purpose</strong>: Shopping list and wine acquisition planning.</p>
+<hr />
+<h3 id="bottlenote">BottleNote</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/models.py:491</code></p>
+<p>Dated notes for tracking a specific bottle's evolution over time.</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>storage_item</code> | ForeignKey | Specific bottle | CASCADE, required, related_name='notes' |
+| <code>note_date</code> | DateField | Date of note | Required |
+| <code>note</code> | TextField | Note content | Required |</p>
+<p><strong>Ordering</strong>: By <code>note_date</code> descending (most recent first)</p>
+<p><strong>Purpose</strong>: Track how individual bottles age and change, separate from general wine comments.</p>
+<hr />
+<h3 id="drinkingwindowalert">DrinkingWindowAlert</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/models.py:509</code></p>
+<p>Alerts for wines approaching their optimal drinking window.</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>wine</code> | ForeignKey | Wine to alert about | CASCADE, required |
+| <code>alert_date</code> | DateField | When to alert | Required |
+| <code>message</code> | CharField(250) | Alert message | Optional |
+| <code>is_read</code> | BooleanField | Marked as read | Default False |</p>
+<p><strong>Ordering</strong>: By <code>alert_date</code> ascending (soonest first)</p>
+<p><strong>Purpose</strong>: Notify users to drink wines before they pass their peak.</p>
+<hr />
+<h3 id="reorderreminder">ReorderReminder</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/models.py:527</code></p>
+<p>Reminds users to reorder wines when stock is low.</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>wine</code> | ForeignKey | Wine to monitor | CASCADE, required |
+| <code>min_stock</code> | PositiveIntegerField | Minimum bottle count | Default 1 |
+| <code>is_active</code> | BooleanField | Reminder enabled | Default True |</p>
+<p><strong>Constraints</strong>:
+- Unique constraint on: <code>wine</code>, <code>user</code></p>
+<p><strong>Purpose</strong>: Automated inventory management - alerts when stock drops below threshold.</p>
+<hr />
+<h2 id="storage-app-models">Storage App Models</h2>
+<h3 id="storage">Storage</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/storage/models.py:7</code></p>
+<p>Represents physical storage locations (racks, shelves, fridges) with optional grid layout.</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>name</code> | CharField(100) | Storage name | Required |
+| <code>description</code> | TextField | Detailed description | Optional |
+| <code>location</code> | CharField(100) | Physical location | Required |
+| <code>rows</code> | PositiveIntegerField | Number of rows | Default 0 |
+| <code>columns</code> | PositiveIntegerField | Number of columns | Default 0 |</p>
+<p><strong>Properties</strong>:
+- <code>total_slots</code>: Total capacity (rows × columns)
+- <code>used_slots</code>: Count of bottles currently stored
+- <code>is_full</code>: True if used_slots &gt;= total_slots
+- <code>is_slot_occupied(row, column)</code>: Check if specific position is taken
+- <code>get_wines</code>: QuerySet of non-deleted bottles, ordered by position</p>
+<p><strong>Storage Modes</strong>:
+- <strong>Unstructured</strong> (rows=0, columns=0): No grid, unlimited capacity
+- <strong>Structured</strong> (rows&gt;0, columns&gt;0): Fixed grid with specific positions</p>
+<p><strong>Example</strong>:
+<div class="highlight"><pre><span></span><code><span class="c1"># Unstructured storage (e.g., wine fridge)</span>
+<span class="n">fridge</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;Wine Fridge&quot;</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="s2">&quot;Kitchen&quot;</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># Structured storage (e.g., 4x6 rack)</span>
+<span class="n">rack</span> <span class="o">=</span> <span class="n">Storage</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;Main Rack&quot;</span><span class="p">,</span> <span class="n">location</span><span class="o">=</span><span class="s2">&quot;Cellar&quot;</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+</code></pre></div></p>
+<hr />
+<h3 id="storageitem">StorageItem</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/storage/models.py:46</code></p>
+<p>Represents an individual bottle stored in a location. This is the actual inventory item.</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>storage</code> | ForeignKey | Storage location | CASCADE, required, related_name='items' |
+| <code>wine</code> | ForeignKey | Wine type | CASCADE, required |
+| <code>row</code> | PositiveIntegerField | Row position | Optional (for grid storage) |
+| <code>column</code> | PositiveIntegerField | Column position | Optional (for grid storage) |
+| <code>deleted</code> | BooleanField | Soft delete flag | Default False, indexed |
+| <code>price</code> | DecimalField(6,2) | Purchase price | Optional |
+| <code>is_gift</code> | BooleanField | Received as gift | Default False |
+| <code>gift_from</code> | CharField(100) | Gift giver name | Optional |
+| <code>occasion</code> | CharField(100) | Gift occasion | Optional |
+| <code>rating</code> | PositiveIntegerField | Rating for this specific bottle | Optional, 0-3 range |</p>
+<p><strong>Methods</strong>:
+- <code>__str__()</code>: Returns formatted string: "Wine Name - Storage Name (Row X, Col Y)" or "...  (Unassigned)" if no position</p>
+<p><strong>Usage</strong>:
+- Each <code>StorageItem</code> represents one physical bottle
+- Multiple bottles of the same wine each have their own <code>StorageItem</code>
+- <code>deleted=True</code> marks consumed or removed bottles (soft delete for history)
+- <code>row</code> and <code>column</code> only used for structured storage
+- Individual pricing allows tracking of bottles bought at different times/prices
+- Individual ratings allow rating specific bottles separately from the wine template</p>
+<p><strong>Related via</strong>:
+- <code>storage.items.all()</code> - All items in a storage location
+- <code>wine.storageitem_set.all()</code> - All bottles of a specific wine
+- <code>drink_records</code> - DrinkRecord instances that reference this bottle</p>
+<hr />
+<h2 id="user-app-models">User App Models</h2>
+<h3 id="usersettings">UserSettings</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/user/models.py:7</code></p>
+<p>Stores per-user preferences and configuration.</p>
+<p><strong>Fields</strong>:
+| Field | Type | Description | Constraints |
+|-------|------|-------------|-------------|
+| <code>user</code> | OneToOneField | User account | CASCADE, required, related_name='user_settings' |
+| <code>language</code> | CharField(7) | Preferred language | Choices from LANGUAGES, default from settings |
+| <code>currency</code> | CharField(3) | Preferred currency | Choices from CURRENCIES, default EUR |
+| <code>notifications</code> | BooleanField | Enable notifications | Default True |</p>
+<p><strong>Relationship</strong>: One-to-one with Django's User model</p>
+<p><strong>Supported Currencies</strong> (configured in settings):
+- EUR, USD, GBP, and others as configured</p>
+<p><strong>Purpose</strong>: Customize display formats, language, and notification preferences per user.</p>
+<hr />
+<h2 id="enumerations">Enumerations</h2>
+<h3 id="winetype">WineType</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/models.py:40</code></p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Label</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>WH</code></td>
+<td>White</td>
+</tr>
+<tr>
+<td><code>RE</code></td>
+<td>Red</td>
+</tr>
+<tr>
+<td><code>RO</code></td>
+<td>Rose</td>
+</tr>
+<tr>
+<td><code>SP</code></td>
+<td>Sparkling</td>
+</tr>
+<tr>
+<td><code>DE</code></td>
+<td>Dessert</td>
+</tr>
+<tr>
+<td><code>FO</code></td>
+<td>Fortified</td>
+</tr>
+<tr>
+<td><code>OR</code></td>
+<td>Orange</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="category-sweetness">Category (Sweetness)</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/models.py:50</code></p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Label</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DR</code></td>
+<td>Dry</td>
+</tr>
+<tr>
+<td><code>SD</code></td>
+<td>Semi-Dry</td>
+</tr>
+<tr>
+<td><code>MS</code></td>
+<td>Medium Sweet</td>
+</tr>
+<tr>
+<td><code>SW</code></td>
+<td>Sweet</td>
+</tr>
+<tr>
+<td><code>FH</code></td>
+<td>Feinherb</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="model-relationships">Model Relationships</h2>
+<h3 id="relationship-diagram">Relationship Diagram</h3>
+<div class="highlight"><pre><span></span><code>User (Django Auth)
+  ├─── UserSettings (1:1)
+  │
+  ├─── Wine (1:N)
+  │     ├─── WineImage (1:N)
+  │     ├─── StorageItem (1:N) ──→ Storage (N:1)
+  │     ├─── DrinkRecord (1:N)
+  │     ├─── DrinkingWindowAlert (1:N)
+  │     ├─── ReorderReminder (1:N)
+  │     │
+  │     └─── Many-to-Many:
+  │           ├─── Grape (N:M)
+  │           ├─── Vineyard (N:M)
+  │           ├─── Attribute (N:M)
+  │           ├─── FoodPairing (N:M)
+  │           └─── Source (N:M)
+  │
+  ├─── Wishlist (1:N)
+  │
+  ├─── Storage (1:N)
+  │     └─── StorageItem (1:N) ──→ Wine (N:1)
+  │           └─── BottleNote (1:N)
+  │
+  └─── Supporting Models (1:N each)
+        ├─── Grape
+        ├─── Vineyard
+        ├─── Size
+        ├─── Attribute
+        ├─── FoodPairing
+        └─── Source
+</code></pre></div>
+<hr />
+<h2 id="key-design-patterns">Key Design Patterns</h2>
+<h3 id="1-wine-vs-bottle-separation">1. Wine vs Bottle Separation</h3>
+<ul>
+<li><strong>Wine</strong>: Template/metadata about a wine type</li>
+<li><strong>StorageItem</strong>: Individual bottles in inventory</li>
+<li>Allows: Multiple bottles of same wine, individual pricing, location tracking</li>
+</ul>
+<h3 id="2-user-isolation">2. User Isolation</h3>
+<ul>
+<li>All models extend <code>UserContentModel</code> or have <code>user</code> ForeignKey</li>
+<li>Ensures multi-tenant data isolation</li>
+<li>Each user sees only their own data</li>
+</ul>
+<h3 id="3-soft-deletes">3. Soft Deletes</h3>
+<ul>
+<li><code>StorageItem.deleted</code> instead of hard deletion</li>
+<li>Preserves history for consumed bottles</li>
+<li>Maintains referential integrity</li>
+</ul>
+<h3 id="4-flexible-storage">4. Flexible Storage</h3>
+<ul>
+<li>Supports both structured (grid) and unstructured (freeform) storage</li>
+<li><code>rows=0, columns=0</code> = unstructured</li>
+<li><code>rows&gt;0, columns&gt;0</code> = structured grid</li>
+</ul>
+<h3 id="5-rich-metadata">5. Rich Metadata</h3>
+<ul>
+<li>Many-to-many relationships for flexible categorization</li>
+<li>Choice fields with enums for consistency</li>
+<li>Optional fields for gradual data entry</li>
+</ul>
+<hr />
+<h2 id="database-constraints">Database Constraints</h2>
+<h3 id="unique-constraints">Unique Constraints</h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Unique Fields</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Wine</strong></td>
+<td>name, wine_type, abv, size, vintage, country, user</td>
+</tr>
+<tr>
+<td><strong>Grape</strong></td>
+<td>name, user</td>
+</tr>
+<tr>
+<td><strong>Vineyard</strong></td>
+<td>name, country, region, user</td>
+</tr>
+<tr>
+<td><strong>FoodPairing</strong></td>
+<td>name, user</td>
+</tr>
+<tr>
+<td><strong>Attribute</strong></td>
+<td>name, user</td>
+</tr>
+<tr>
+<td><strong>Source</strong></td>
+<td>name, user</td>
+</tr>
+<tr>
+<td><strong>Size</strong></td>
+<td>name, user</td>
+</tr>
+<tr>
+<td><strong>ReorderReminder</strong></td>
+<td>wine, user</td>
+</tr>
+</tbody>
+</table>
+<h3 id="indexes">Indexes</h3>
+<ul>
+<li><code>created</code> and <code>modified</code> on all UserContentModel descendants</li>
+<li><code>vintage</code> on Wine</li>
+<li><code>drink_by</code> on Wine</li>
+<li><code>country</code> on Wine</li>
+<li><code>deleted</code> on StorageItem</li>
+</ul>
+<hr />
+<h2 id="migration-notes">Migration Notes</h2>
+<h3 id="size-field-migration">Size Field Migration</h3>
+<p>The <code>Size</code> model was previously a decimal field (liters). A mapping constant <code>SIZE_LITERS_TO_CODE</code> exists in <code>wine_cellar/apps/wine/models.py:76</code> for migrating historical data:</p>
+<div class="highlight"><pre><span></span><code><span class="n">SIZE_LITERS_TO_CODE</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="mf">0.1875</span><span class="p">:</span> <span class="s2">&quot;PI&quot;</span><span class="p">,</span>  <span class="c1"># Piccolo</span>
+    <span class="mf">0.375</span><span class="p">:</span> <span class="s2">&quot;DE&quot;</span><span class="p">,</span>   <span class="c1"># Demi</span>
+    <span class="mf">0.5</span><span class="p">:</span> <span class="s2">&quot;HA&quot;</span><span class="p">,</span>     <span class="c1"># Half</span>
+    <span class="mf">0.75</span><span class="p">:</span> <span class="s2">&quot;ST&quot;</span><span class="p">,</span>    <span class="c1"># Standard</span>
+    <span class="mf">1.0</span><span class="p">:</span> <span class="s2">&quot;LI&quot;</span><span class="p">,</span>     <span class="c1"># Liter</span>
+    <span class="mf">1.5</span><span class="p">:</span> <span class="s2">&quot;MA&quot;</span><span class="p">,</span>     <span class="c1"># Magnum</span>
+    <span class="mf">3.0</span><span class="p">:</span> <span class="s2">&quot;JE&quot;</span><span class="p">,</span>     <span class="c1"># Jeroboam</span>
+    <span class="mf">4.5</span><span class="p">:</span> <span class="s2">&quot;RE&quot;</span><span class="p">,</span>     <span class="c1"># Rehoboam</span>
+<span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="../wine/">Wine Concepts</a> - High-level wine vs bottle explanation</li>
+<li><a href="../storage/">Storage Concepts</a> - Storage organization patterns</li>
+<li><a href="../agents.md">agents.md</a> - Full project context including database schema</li>
+<li><a href="../CLAUDE.md">CLAUDE.md</a> - AI agent capabilities and testing tools</li>
+</ul>
+<hr />
+<p><em>Generated: 2026-01-05</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

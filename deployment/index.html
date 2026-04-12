@@ -1,0 +1,2466 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../setup/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../logo.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Getting Started - Wine Cellar Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#deployment-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Wine Cellar Documentation" class="md-header__button md-logo" aria-label="Wine Cellar Documentation" data-md-component="logo">
+      
+  <img src="../logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Wine Cellar Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Getting Started
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Wine Cellar Documentation" class="md-nav__button md-logo" aria-label="Wine Cellar Documentation" data-md-component="logo">
+      
+  <img src="../logo.svg" alt="logo">
+
+    </a>
+    Wine Cellar Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Development Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manual-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#development-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#production-deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production Deployment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Production Deployment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#installation-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation Steps
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installation Steps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-install-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Install Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-configure-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Configure Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-generate-secret-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Generate Secret Key
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-prepare-static-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Prepare Static Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-start-production-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Start Production Server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#alternative-run-on-port-8000-no-sudo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alternative: Run on Port 8000 (No Sudo)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#https-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTPS Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="HTTPS Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-1-caddy-with-domain-name-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 1: Caddy with Domain Name (Recommended)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Option 1: Caddy with Domain Name (Recommended)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#install-caddy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install Caddy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure-caddy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure Caddy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#update-django-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Update Django Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#start-services" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Start Services
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-2-self-signed-certificate-ip-address-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 2: Self-Signed Certificate (IP Address Only)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Option 2: Self-Signed Certificate (IP Address Only)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#generate-certificate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate Certificate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure-caddy_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure Caddy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trust-certificate-on-mobile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trust Certificate on Mobile
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-3-nginx-with-lets-encrypt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 3: Nginx with Let's Encrypt
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#email-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Email Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#drink-by-reminders-cron" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drink-By Reminders (Cron)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Drink-By Reminders (Cron)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker-deployments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker deployments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#non-docker-bare-metal-virtualenv-deployments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-Docker (bare-metal / virtualenv) deployments
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#systemd-service-auto-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Systemd Service (Auto-Start)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Checklist
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#connection-refused" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connection Refused
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disallowedhost-error" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DisallowedHost Error
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#csrf-verification-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CSRF Verification Failed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-files-not-loading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static Files Not Loading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#camera-not-working-mobile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Camera Not Working (Mobile)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#useful-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Useful Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Tuning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Database
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Features
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wine Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vision-wine-entry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vision-Based Entry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Skills
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    AI Skills
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/ui-testing-playwright/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI Testing with Playwright
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/css-debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CSS Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/empty-state-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Empty State Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/django-test-users/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Django Test Users
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/fixing-console-errors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fixing Console Errors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Development Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manual-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#development-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#production-deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production Deployment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Production Deployment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#installation-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installation Steps
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installation Steps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-install-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Install Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-configure-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Configure Environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-generate-secret-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Generate Secret Key
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-prepare-static-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Prepare Static Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-start-production-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Start Production Server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#alternative-run-on-port-8000-no-sudo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alternative: Run on Port 8000 (No Sudo)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#https-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTPS Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="HTTPS Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-1-caddy-with-domain-name-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 1: Caddy with Domain Name (Recommended)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Option 1: Caddy with Domain Name (Recommended)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#install-caddy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install Caddy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure-caddy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure Caddy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#update-django-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Update Django Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#start-services" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Start Services
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-2-self-signed-certificate-ip-address-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 2: Self-Signed Certificate (IP Address Only)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Option 2: Self-Signed Certificate (IP Address Only)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#generate-certificate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate Certificate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configure-caddy_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configure Caddy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trust-certificate-on-mobile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trust Certificate on Mobile
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-3-nginx-with-lets-encrypt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 3: Nginx with Let's Encrypt
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#email-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Email Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#drink-by-reminders-cron" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drink-By Reminders (Cron)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Drink-By Reminders (Cron)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker-deployments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Docker deployments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#non-docker-bare-metal-virtualenv-deployments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-Docker (bare-metal / virtualenv) deployments
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#systemd-service-auto-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Systemd Service (Auto-Start)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Checklist
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#connection-refused" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connection Refused
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disallowedhost-error" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DisallowedHost Error
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#csrf-verification-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CSRF Verification Failed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-files-not-loading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static Files Not Loading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#camera-not-working-mobile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Camera Not Working (Mobile)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#useful-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Useful Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance Tuning
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="deployment-guide">Deployment Guide</h1>
+<p>This guide covers all deployment options for Wine Cellar, from local development to production.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#development-setup">Development Setup</a></li>
+<li><a href="#production-deployment">Production Deployment</a></li>
+<li><a href="#https-configuration">HTTPS Configuration</a></li>
+<li><a href="#email-configuration">Email Configuration</a></li>
+<li><a href="#systemd-service-auto-start">Systemd Service</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+</ol>
+<hr />
+<h2 id="development-setup">Development Setup</h2>
+<h3 id="quick-start">Quick Start</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Clone and install</span>
+git<span class="w"> </span>clone<span class="w"> </span>https://github.com/jonhall145/wine-cellar-personal.git
+<span class="nb">cd</span><span class="w"> </span>wine-cellar-personal
+make<span class="w"> </span>install
+
+<span class="c1"># Start server</span>
+make<span class="w"> </span>server
+<span class="c1"># Visit http://localhost:8003</span>
+</code></pre></div>
+<h3 id="manual-setup">Manual Setup</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create virtual environment</span>
+python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
+<span class="nb">source</span><span class="w"> </span>venv/bin/activate
+
+<span class="c1"># Install dependencies</span>
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+npm<span class="w"> </span>install
+npm<span class="w"> </span>run<span class="w"> </span>build
+
+<span class="c1"># Set up environment</span>
+cp<span class="w"> </span>.env.dev-sample<span class="w"> </span>.env.dev
+
+<span class="c1"># Run migrations</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>migrate
+
+<span class="c1"># Create admin user</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>createsuperuser
+
+<span class="c1"># Start server</span>
+./run_local.sh
+</code></pre></div>
+<p><strong>Access:</strong>
+- Main site: http://localhost:8000
+- Admin: http://localhost:8000/admin/</p>
+<h3 id="development-commands">Development Commands</h3>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>make install</code></td>
+<td>Install dependencies and set up database</td>
+</tr>
+<tr>
+<td><code>make server</code></td>
+<td>Start dev server on port 8003</td>
+</tr>
+<tr>
+<td><code>make watch</code></td>
+<td>Dev server with frontend hot reload</td>
+</tr>
+<tr>
+<td><code>make pytest</code></td>
+<td>Run backend tests</td>
+</tr>
+<tr>
+<td><code>make lint</code></td>
+<td>Run all linters</td>
+</tr>
+<tr>
+<td><code>make fixtures</code></td>
+<td>Load sample data</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="production-deployment">Production Deployment</h2>
+<h3 id="prerequisites">Prerequisites</h3>
+<ul>
+<li>Python 3.12+</li>
+<li>Node.js 20+</li>
+<li>Domain name (optional, for HTTPS)</li>
+<li>PostgreSQL (recommended) or SQLite</li>
+</ul>
+<h3 id="installation-steps">Installation Steps</h3>
+<h4 id="1-install-dependencies">1. Install Dependencies</h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># Create virtual environment</span>
+python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
+<span class="nb">source</span><span class="w"> </span>venv/bin/activate
+
+<span class="c1"># Install production dependencies</span>
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements/prod.txt
+pip<span class="w"> </span>install<span class="w"> </span>gunicorn
+
+<span class="c1"># Build frontend</span>
+npm<span class="w"> </span>install
+npm<span class="w"> </span>run<span class="w"> </span>build:prod
+</code></pre></div>
+<h4 id="2-configure-environment">2. Configure Environment</h4>
+<p>Create <code>.env.prod.local</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Core Settings</span>
+<span class="nv">DJANGO_DEBUG</span><span class="o">=</span>False
+<span class="nv">SECRET_KEY</span><span class="o">=</span>&lt;your-secure-64-char-key&gt;
+<span class="nv">DJANGO_ALLOWED_HOSTS</span><span class="o">=</span><span class="s2">&quot;localhost,127.0.0.1,your-domain.com,your-ip&quot;</span>
+<span class="nv">DJANGO_CSRF_TRUSTED_ORIGINS</span><span class="o">=</span><span class="s2">&quot;http://your-domain.com,http://your-ip&quot;</span>
+<span class="nv">SITE_URL</span><span class="o">=</span>http://your-domain.com
+
+<span class="c1"># Database (SQLite for simple setup)</span>
+<span class="nv">SQL_ENGINE</span><span class="o">=</span>django.db.backends.sqlite3
+<span class="nv">SQL_DATABASE</span><span class="o">=</span>db.sqlite3
+
+<span class="c1"># Or PostgreSQL for production</span>
+<span class="c1"># DATABASE_URL=postgres://user:password@localhost:5432/winecellar</span>
+
+<span class="c1"># Admin User</span>
+<span class="nv">ADMIN_USER</span><span class="o">=</span>admin
+<span class="nv">ADMIN_USER_EMAIL</span><span class="o">=</span>your-email@example.com
+<span class="nv">ADMIN_USER_PASSWORD</span><span class="o">=</span>&lt;strong-password&gt;
+
+<span class="c1"># Django Settings Module</span>
+<span class="nv">DJANGO_SETTINGS_MODULE</span><span class="o">=</span>wine_cellar.conf.settings
+</code></pre></div>
+<h4 id="3-generate-secret-key">3. Generate Secret Key</h4>
+<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import secrets; print(secrets.token_hex(32))&quot;</span>
+</code></pre></div>
+<p>Copy the output to <code>SECRET_KEY</code> in <code>.env.prod.local</code>.</p>
+<h4 id="4-prepare-static-files">4. Prepare Static Files</h4>
+<div class="highlight"><pre><span></span><code><span class="nb">source</span><span class="w"> </span>venv/bin/activate
+python<span class="w"> </span>manage.py<span class="w"> </span>collectstatic<span class="w"> </span>--no-input
+</code></pre></div>
+<h4 id="5-start-production-server">5. Start Production Server</h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># Start server (requires sudo for port 80)</span>
+sudo<span class="w"> </span>./run_prod_local.sh<span class="w"> </span>start
+
+<span class="c1"># Check status</span>
+./run_prod_local.sh<span class="w"> </span>status
+
+<span class="c1"># View logs</span>
+./run_prod_local.sh<span class="w"> </span>logs
+
+<span class="c1"># Stop server</span>
+sudo<span class="w"> </span>./run_prod_local.sh<span class="w"> </span>stop
+</code></pre></div>
+<p><strong>Access:</strong>
+- Main site: http://your-server-ip (port 80)
+- Admin: http://your-server-ip/admin/</p>
+<h4 id="alternative-run-on-port-8000-no-sudo">Alternative: Run on Port 8000 (No Sudo)</h4>
+<p>Edit <code>run_prod_local.sh</code> and change <code>--bind 0.0.0.0:80</code> to <code>--bind 0.0.0.0:8000</code>:</p>
+<div class="highlight"><pre><span></span><code>./run_prod_local.sh<span class="w"> </span>start
+<span class="c1"># Access at http://your-ip:8000</span>
+</code></pre></div>
+<hr />
+<h2 id="https-configuration">HTTPS Configuration</h2>
+<p>Mobile browsers require HTTPS to access the camera for barcode scanning. Choose one of these options:</p>
+<h3 id="option-1-caddy-with-domain-name-recommended">Option 1: Caddy with Domain Name (Recommended)</h3>
+<p>Caddy automatically obtains and renews Let's Encrypt certificates.</p>
+<h4 id="install-caddy">Install Caddy</h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># Ubuntu/Debian</span>
+sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>debian-keyring<span class="w"> </span>debian-archive-keyring<span class="w"> </span>apt-transport-https<span class="w"> </span>curl
+curl<span class="w"> </span>-1sLf<span class="w"> </span><span class="s1">&#39;https://dl.cloudsmith.io/public/caddy/stable/gpg.key&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>gpg<span class="w"> </span>--dearmor<span class="w"> </span>-o<span class="w"> </span>/usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl<span class="w"> </span>-1sLf<span class="w"> </span><span class="s1">&#39;https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/apt/sources.list.d/caddy-stable.list
+sudo<span class="w"> </span>apt<span class="w"> </span>update
+sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>caddy
+</code></pre></div>
+<h4 id="configure-caddy">Configure Caddy</h4>
+<p>Create <code>/etc/caddy/Caddyfile</code>:</p>
+<div class="highlight"><pre><span></span><code>your-domain.com {
+    # Serve static files directly
+    handle /static/* {
+        root * /path/to/wine-cellar
+        file_server
+    }
+
+    handle /media/* {
+        root * /path/to/wine-cellar
+        file_server
+    }
+
+    # Proxy everything else to Gunicorn
+    handle {
+        reverse_proxy localhost:8000
+    }
+}
+</code></pre></div>
+<h4 id="update-django-settings">Update Django Settings</h4>
+<p>Edit <code>.env.prod.local</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">DJANGO_ALLOWED_HOSTS</span><span class="o">=</span><span class="s2">&quot;localhost,127.0.0.1,your-domain.com&quot;</span>
+<span class="nv">DJANGO_CSRF_TRUSTED_ORIGINS</span><span class="o">=</span><span class="s2">&quot;https://your-domain.com&quot;</span>
+<span class="nv">SITE_URL</span><span class="o">=</span>https://your-domain.com
+</code></pre></div>
+<h4 id="start-services">Start Services</h4>
+<div class="highlight"><pre><span></span><code><span class="c1"># Modify run_prod_local.sh: change --bind 0.0.0.0:80 to --bind 127.0.0.1:8000</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>caddy
+sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w"> </span>caddy
+./run_prod_local.sh<span class="w"> </span>start
+</code></pre></div>
+<h3 id="option-2-self-signed-certificate-ip-address-only">Option 2: Self-Signed Certificate (IP Address Only)</h3>
+<p>For testing without a domain name.</p>
+<h4 id="generate-certificate">Generate Certificate</h4>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>/etc/ssl/wine-cellar
+<span class="nb">cd</span><span class="w"> </span>/etc/ssl/wine-cellar
+
+<span class="c1"># Replace YOUR_IP with your server&#39;s external IP</span>
+sudo<span class="w"> </span>openssl<span class="w"> </span>req<span class="w"> </span>-x509<span class="w"> </span>-nodes<span class="w"> </span>-days<span class="w"> </span><span class="m">365</span><span class="w"> </span>-newkey<span class="w"> </span>rsa:2048<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-keyout<span class="w"> </span>private.key<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-out<span class="w"> </span>certificate.crt<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-subj<span class="w"> </span><span class="s2">&quot;/CN=YOUR_IP&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-addext<span class="w"> </span><span class="s2">&quot;subjectAltName=IP:YOUR_IP&quot;</span>
+
+sudo<span class="w"> </span>chmod<span class="w"> </span><span class="m">600</span><span class="w"> </span>private.key
+sudo<span class="w"> </span>chmod<span class="w"> </span><span class="m">644</span><span class="w"> </span>certificate.crt
+</code></pre></div>
+<h4 id="configure-caddy_1">Configure Caddy</h4>
+<p>Create <code>/etc/caddy/Caddyfile</code>:</p>
+<div class="highlight"><pre><span></span><code>{
+    auto_https off
+}
+
+:443 {
+    tls /etc/ssl/wine-cellar/certificate.crt /etc/ssl/wine-cellar/private.key
+
+    handle /static/* {
+        root * /path/to/wine-cellar
+        file_server
+    }
+
+    handle /media/* {
+        root * /path/to/wine-cellar
+        file_server
+    }
+
+    handle {
+        reverse_proxy localhost:8000
+    }
+}
+
+:80 {
+    redir https://{host}{uri} permanent
+}
+</code></pre></div>
+<h4 id="trust-certificate-on-mobile">Trust Certificate on Mobile</h4>
+<p><strong>iOS:</strong>
+1. Email or AirDrop <code>certificate.crt</code> to device
+2. Install the profile
+3. Go to Settings → General → About → Certificate Trust Settings
+4. Enable full trust</p>
+<p><strong>Android:</strong>
+1. Transfer <code>certificate.crt</code> to device
+2. Go to Settings → Security → Install from storage
+3. Select and install the certificate</p>
+<h3 id="option-3-nginx-with-lets-encrypt">Option 3: Nginx with Let's Encrypt</h3>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>nginx<span class="w"> </span>certbot<span class="w"> </span>python3-certbot-nginx
+</code></pre></div>
+<p>Create <code>/etc/nginx/sites-available/wine-cellar</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="k">server</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kn">listen</span><span class="w"> </span><span class="mi">80</span><span class="p">;</span>
+<span class="w">    </span><span class="kn">server_name</span><span class="w"> </span><span class="s">your-domain.com</span><span class="p">;</span>
+<span class="w">    </span><span class="kn">return</span><span class="w"> </span><span class="mi">301</span><span class="w"> </span><span class="s">https://</span><span class="nv">$server_name$request_uri</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">server</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kn">listen</span><span class="w"> </span><span class="mi">443</span><span class="w"> </span><span class="s">ssl</span><span class="w"> </span><span class="s">http2</span><span class="p">;</span>
+<span class="w">    </span><span class="kn">server_name</span><span class="w"> </span><span class="s">your-domain.com</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kn">ssl_certificate</span><span class="w"> </span><span class="s">/etc/letsencrypt/live/your-domain.com/fullchain.pem</span><span class="p">;</span>
+<span class="w">    </span><span class="kn">ssl_certificate_key</span><span class="w"> </span><span class="s">/etc/letsencrypt/live/your-domain.com/privkey.pem</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kn">location</span><span class="w"> </span><span class="s">/static/</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kn">alias</span><span class="w"> </span><span class="s">/path/to/wine-cellar/static/</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kn">location</span><span class="w"> </span><span class="s">/media/</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kn">alias</span><span class="w"> </span><span class="s">/path/to/wine-cellar/media/</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+
+<span class="w">    </span><span class="kn">location</span><span class="w"> </span><span class="s">/</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kn">proxy_pass</span><span class="w"> </span><span class="s">http://127.0.0.1:8000</span><span class="p">;</span>
+<span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">Host</span><span class="w"> </span><span class="nv">$host</span><span class="p">;</span>
+<span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Real-IP</span><span class="w"> </span><span class="nv">$remote_addr</span><span class="p">;</span>
+<span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Forwarded-For</span><span class="w"> </span><span class="nv">$proxy_add_x_forwarded_for</span><span class="p">;</span>
+<span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Forwarded-Proto</span><span class="w"> </span><span class="nv">$scheme</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Enable and get certificate:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>ln<span class="w"> </span>-s<span class="w"> </span>/etc/nginx/sites-available/wine-cellar<span class="w"> </span>/etc/nginx/sites-enabled/
+sudo<span class="w"> </span>rm<span class="w"> </span>/etc/nginx/sites-enabled/default
+sudo<span class="w"> </span>certbot<span class="w"> </span>--nginx<span class="w"> </span>-d<span class="w"> </span>your-domain.com
+sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>nginx
+</code></pre></div>
+<hr />
+<h2 id="email-configuration">Email Configuration</h2>
+<p>Wine Cellar can send notification emails, including drink-by reminders.</p>
+<p>Add to <code>.env.prod.local</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">DJANGO_EMAIL_HOST</span><span class="o">=</span>smtp.example.com
+<span class="nv">DJANGO_EMAIL_PORT</span><span class="o">=</span><span class="m">587</span>
+<span class="nv">DJANGO_EMAIL_HOST_USER</span><span class="o">=</span>your@email.com
+<span class="nv">DJANGO_EMAIL_HOST_PASSWORD</span><span class="o">=</span>yourpassword
+<span class="nv">DJANGO_EMAIL_USE_TLS</span><span class="o">=</span>True
+<span class="nv">DJANGO_DEFAULT_FROM_EMAIL</span><span class="o">=</span>Wine<span class="w"> </span>Cellar<span class="w"> </span>&lt;your@email.com&gt;
+</code></pre></div>
+<p><strong>Note:</strong> USE_TLS and USE_SSL are mutually exclusive.</p>
+<hr />
+<h2 id="drink-by-reminders-cron">Drink-By Reminders (Cron)</h2>
+<p>Drink-by reminder emails are sent by the <code>send_drink_reminders</code> management command. You need to schedule this with a host cron job — it is <strong>not</strong> run automatically by the application server.</p>
+<p>Email configuration (see above) must be set up before reminders will be delivered.</p>
+<h3 id="docker-deployments">Docker deployments</h3>
+<p>Add a cron entry on the host that runs the command inside the running container:</p>
+<div class="highlight"><pre><span></span><code>0 9 * * * docker compose -f /path/to/docker-compose.prod.yml exec -T wine-web python manage.py send_drink_reminders &gt;&gt; /var/log/drink_reminders.log 2&gt;&amp;1
+</code></pre></div>
+<h3 id="non-docker-bare-metal-virtualenv-deployments">Non-Docker (bare-metal / virtualenv) deployments</h3>
+<div class="highlight"><pre><span></span><code>0 9 * * * cd /path/to/wine-cellar &amp;&amp; venv/bin/python manage.py send_drink_reminders &gt;&gt; /var/log/drink_reminders.log 2&gt;&amp;1
+</code></pre></div>
+<p>Adjust the time (<code>0 9 * * *</code> = 09:00 daily) to suit your timezone. The command only sends emails to users who have notifications enabled and have wines in their final drinking year, so it is safe to run daily.</p>
+<hr />
+<h2 id="systemd-service-auto-start">Systemd Service (Auto-Start)</h2>
+<p>Create <code>/etc/systemd/system/wine-cellar.service</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="k">[Unit]</span>
+<span class="na">Description</span><span class="o">=</span><span class="s">Wine Cellar Gunicorn Server</span>
+<span class="na">After</span><span class="o">=</span><span class="s">network.target</span>
+
+<span class="k">[Service]</span>
+<span class="na">User</span><span class="o">=</span><span class="s">your-username</span>
+<span class="na">Group</span><span class="o">=</span><span class="s">your-username</span>
+<span class="na">WorkingDirectory</span><span class="o">=</span><span class="s">/path/to/wine-cellar</span>
+<span class="na">Environment</span><span class="o">=</span><span class="s">&quot;PATH=/path/to/wine-cellar/venv/bin&quot;</span>
+<span class="na">EnvironmentFile</span><span class="o">=</span><span class="s">/path/to/wine-cellar/.env.prod.local</span>
+<span class="na">ExecStart</span><span class="o">=</span><span class="s">/path/to/wine-cellar/venv/bin/gunicorn wine_cellar.conf.wsgi:application --bind 127.0.0.1:8000 --workers 3</span>
+<span class="na">Restart</span><span class="o">=</span><span class="s">always</span>
+
+<span class="k">[Install]</span>
+<span class="na">WantedBy</span><span class="o">=</span><span class="s">multi-user.target</span>
+</code></pre></div>
+<p>Enable and start:</p>
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span>daemon-reload
+sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>wine-cellar
+sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w"> </span>wine-cellar
+sudo<span class="w"> </span>systemctl<span class="w"> </span>status<span class="w"> </span>wine-cellar
+</code></pre></div>
+<hr />
+<h2 id="configuration-reference">Configuration Reference</h2>
+<h3 id="environment-variables">Environment Variables</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SECRET_KEY</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Django secret key (64+ chars)</td>
+</tr>
+<tr>
+<td><code>DJANGO_DEBUG</code></td>
+<td>No</td>
+<td>False</td>
+<td>Enable debug mode (never in prod!)</td>
+</tr>
+<tr>
+<td><code>DJANGO_ALLOWED_HOSTS</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Comma-separated list of allowed hosts</td>
+</tr>
+<tr>
+<td><code>DJANGO_CSRF_TRUSTED_ORIGINS</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Comma-separated list of trusted origins</td>
+</tr>
+<tr>
+<td><code>SITE_URL</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Full URL of your site</td>
+</tr>
+<tr>
+<td><code>DATABASE_URL</code></td>
+<td>No</td>
+<td>SQLite</td>
+<td>Database connection URL</td>
+</tr>
+<tr>
+<td><code>ADMIN_USER</code></td>
+<td>No</td>
+<td>admin</td>
+<td>Initial admin username</td>
+</tr>
+<tr>
+<td><code>ADMIN_USER_EMAIL</code></td>
+<td>No</td>
+<td>-</td>
+<td>Admin email address</td>
+</tr>
+<tr>
+<td><code>ADMIN_USER_PASSWORD</code></td>
+<td>Yes</td>
+<td>-</td>
+<td>Admin password</td>
+</tr>
+<tr>
+<td><code>DJANGO_ENABLE_SIGNUPS</code></td>
+<td>No</td>
+<td>False</td>
+<td>Allow new user registrations</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="security-checklist">Security Checklist</h2>
+<p>Before going live:</p>
+<ul>
+<li>[ ] Generate a new <code>SECRET_KEY</code> (minimum 64 characters)</li>
+<li>[ ] Set <code>DJANGO_DEBUG=False</code></li>
+<li>[ ] Use strong password for <code>ADMIN_USER_PASSWORD</code></li>
+<li>[ ] Configure <code>DJANGO_ALLOWED_HOSTS</code> with only your domain/IP</li>
+<li>[ ] Configure <code>DJANGO_CSRF_TRUSTED_ORIGINS</code> correctly</li>
+<li>[ ] Set up HTTPS (using Caddy/Nginx as reverse proxy)</li>
+<li>[ ] Configure firewall to allow only necessary ports</li>
+<li>[ ] Review and restrict <code>DJANGO_ENABLE_SIGNUPS</code></li>
+<li>[ ] Set up regular database backups</li>
+<li>[ ] Use PostgreSQL for production (not SQLite)</li>
+</ul>
+<hr />
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="connection-refused">Connection Refused</h3>
+<p><strong>Check firewall rules:</strong>
+<div class="highlight"><pre><span></span><code><span class="c1"># GCP example</span>
+gcloud<span class="w"> </span>compute<span class="w"> </span>firewall-rules<span class="w"> </span>create<span class="w"> </span>allow-https<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--allow<span class="w"> </span>tcp:443<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--target-tags<span class="o">=</span>http-server
+</code></pre></div></p>
+<p><strong>Check server is running:</strong>
+<div class="highlight"><pre><span></span><code>./run_prod_local.sh<span class="w"> </span>status
+sudo<span class="w"> </span>systemctl<span class="w"> </span>status<span class="w"> </span>wine-cellar
+</code></pre></div></p>
+<p><strong>Check logs:</strong>
+<div class="highlight"><pre><span></span><code>./run_prod_local.sh<span class="w"> </span>logs
+journalctl<span class="w"> </span>-u<span class="w"> </span>wine-cellar<span class="w"> </span>-f
+</code></pre></div></p>
+<h3 id="disallowedhost-error">DisallowedHost Error</h3>
+<p>Add your domain/IP to <code>DJANGO_ALLOWED_HOSTS</code> in <code>.env.prod.local</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="nv">DJANGO_ALLOWED_HOSTS</span><span class="o">=</span><span class="s2">&quot;localhost,127.0.0.1,your-domain.com,your-ip&quot;</span>
+</code></pre></div>
+<p>Restart server:
+<div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>./run_prod_local.sh<span class="w"> </span>restart
+<span class="c1"># or</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>wine-cellar
+</code></pre></div></p>
+<h3 id="csrf-verification-failed">CSRF Verification Failed</h3>
+<p>Add your URL to <code>DJANGO_CSRF_TRUSTED_ORIGINS</code> (include the protocol):</p>
+<div class="highlight"><pre><span></span><code><span class="nv">DJANGO_CSRF_TRUSTED_ORIGINS</span><span class="o">=</span><span class="s2">&quot;http://your-domain.com,https://your-domain.com&quot;</span>
+</code></pre></div>
+<h3 id="static-files-not-loading">Static Files Not Loading</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Collect static files</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>collectstatic<span class="w"> </span>--no-input
+
+<span class="c1"># Check Whitenoise is configured in settings</span>
+</code></pre></div>
+<h3 id="camera-not-working-mobile">Camera Not Working (Mobile)</h3>
+<ol>
+<li>Ensure you're using HTTPS (required for camera access)</li>
+<li>Check browser permissions for camera</li>
+<li>Try accessing via <code>./run_https.sh</code> for development</li>
+<li>For production, use Caddy or Nginx with SSL</li>
+</ol>
+<h3 id="useful-commands">Useful Commands</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Enter Django shell</span>
+<span class="nb">source</span><span class="w"> </span>venv/bin/activate
+python<span class="w"> </span>manage.py<span class="w"> </span>shell
+
+<span class="c1"># Create new superuser</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>createsuperuser
+
+<span class="c1"># Run migrations</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>migrate
+
+<span class="c1"># Check server listening port</span>
+sudo<span class="w"> </span>netstat<span class="w"> </span>-tlnp<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>:8000
+
+<span class="c1"># Test response times</span>
+curl<span class="w"> </span>-s<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;time: %{time_total}s\n&quot;</span><span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>http://localhost:8000/
+</code></pre></div>
+<hr />
+<h2 id="performance-tuning">Performance Tuning</h2>
+<p>For optimal performance:</p>
+<ol>
+<li><strong>Use PostgreSQL</strong> instead of SQLite in production</li>
+<li><strong>Enable caching</strong> with Redis</li>
+<li><strong>Use a CDN</strong> for static files</li>
+<li><strong>Increase Gunicorn workers</strong>: <code>--workers $(( 2 * $(nproc) + 1 ))</code></li>
+<li><strong>Enable compression</strong> (WhiteNoise handles this automatically)</li>
+</ol>
+<hr />
+<h2 id="notes">Notes</h2>
+<ul>
+<li><strong>Port 80 requires sudo</strong> - Running on port 80 requires root privileges</li>
+<li><strong>SQLite for simplicity</strong> - Fine for personal use, PostgreSQL recommended for production</li>
+<li><strong>Static files</strong> - Served by WhiteNoise middleware</li>
+<li><strong>Background tasks</strong> - Celery requires Redis configuration</li>
+</ul>
+<hr />
+<p>For more details, see:
+- <a href="../environment/">Environment Variables</a>
+- <a href="../setup/">Setup Guide</a>
+- <a href="../backup/">Backup &amp; Restore</a></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

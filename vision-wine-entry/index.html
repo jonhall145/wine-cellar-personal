@@ -1,0 +1,2236 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../storage/">
+      
+      
+        <link rel="next" href="../skills/ui-testing-playwright/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../logo.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Vision-Based Entry - Wine Cellar Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#vision-based-wine-entry" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Wine Cellar Documentation" class="md-header__button md-logo" aria-label="Wine Cellar Documentation" data-md-component="logo">
+      
+  <img src="../logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Wine Cellar Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Vision-Based Entry
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Wine Cellar Documentation" class="md-nav__button md-logo" aria-label="Wine Cellar Documentation" data-md-component="logo">
+      
+  <img src="../logo.svg" alt="logo">
+
+    </a>
+    Wine Cellar Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Database
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Features
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wine Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Storage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vision-Based Entry
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vision-Based Entry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How It Works">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-scan-the-label" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Scan the Label
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-review-extracted-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Review Extracted Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-verify-and-save" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Verify and Save
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extracted-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extracted Fields
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Extracted Fields">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Details
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#characteristics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Characteristics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#producer-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Producer Information
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-add-api-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Add API Key
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-install-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Install Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-https-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. HTTPS Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vision-extraction-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vision Extraction Service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fallback-mechanism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fallback Mechanism
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cost-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost Information
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cost Information">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#claude-vision-api-pricing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claude Vision API Pricing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cost-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost Optimization
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#camera-access-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Camera Access Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#extraction-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extraction Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#privacy-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Privacy &amp; Security
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Privacy &amp; Security">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Handling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#developer-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Developer Guide
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Developer Guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#customizing-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Customizing Extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#field-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field Mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-new-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding New Fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Limitations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#current-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Limitations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#future-enhancements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future Enhancements
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#high-confidence-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        High Confidence Extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#medium-confidence-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Medium Confidence Extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#low-confidence-fallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Low Confidence / Fallback
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#faq" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FAQ
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related Documentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Skills
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    AI Skills
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/ui-testing-playwright/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI Testing with Playwright
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/css-debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CSS Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/empty-state-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Empty State Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/django-test-users/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Django Test Users
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skills/fixing-console-errors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fixing Console Errors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How It Works">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-scan-the-label" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Scan the Label
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-review-extracted-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Review Extracted Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-verify-and-save" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Verify and Save
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extracted-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extracted Fields
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Extracted Fields">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Details
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#characteristics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Characteristics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#producer-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Producer Information
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-add-api-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Add API Key
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-install-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Install Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-https-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. HTTPS Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technical Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vision-extraction-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Vision Extraction Service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fallback-mechanism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fallback Mechanism
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cost-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost Information
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cost Information">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#claude-vision-api-pricing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claude Vision API Pricing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cost-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost Optimization
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#camera-access-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Camera Access Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#extraction-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extraction Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#privacy-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Privacy &amp; Security
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Privacy &amp; Security">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Handling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#developer-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Developer Guide
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Developer Guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#customizing-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Customizing Extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#field-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field Mapping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-new-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding New Fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Limitations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#current-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Limitations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#future-enhancements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future Enhancements
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#high-confidence-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        High Confidence Extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#medium-confidence-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Medium Confidence Extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#low-confidence-fallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Low Confidence / Fallback
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#faq" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FAQ
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related Documentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="vision-based-wine-entry">Vision-Based Wine Entry</h1>
+<h2 id="overview">Overview</h2>
+<p>Wine Cellar now supports <strong>zero-typing wine entry</strong> using AI-powered vision technology. Simply take a photo of a wine label, and the system automatically extracts wine information and pre-fills the form for you.</p>
+<p>This feature uses <strong>Claude AI Vision API</strong> by Anthropic to intelligently analyze wine labels and extract structured data.</p>
+<hr />
+<h2 id="how-it-works">How It Works</h2>
+<h3 id="step-1-scan-the-label">Step 1: Scan the Label</h3>
+<ol>
+<li>Navigate to <strong>"Add Wine"</strong> from the main menu</li>
+<li>Click on <strong>"Scan Label"</strong> (or go directly to <code>/label-scan/</code>)</li>
+<li>Allow camera access when prompted</li>
+<li>Position the wine label in the frame</li>
+<li>Tap <strong>"Capture Photo"</strong> when ready</li>
+<li>Review the captured image</li>
+<li>Tap <strong>"Use This Photo"</strong> to proceed</li>
+</ol>
+<p><strong>Tips for Best Results:</strong>
+- Use good lighting
+- Hold the camera steady
+- Fill the frame with the label
+- Ensure text is in focus
+- Avoid glare or reflections</p>
+<h3 id="step-2-review-extracted-data">Step 2: Review Extracted Data</h3>
+<p>After capturing the photo, you'll be redirected to the wine creation form with:</p>
+<ul>
+<li><strong>Label Preview</strong>: The captured image displayed at the top</li>
+<li><strong>Auto-filled Fields</strong>: Form fields populated with extracted data</li>
+<li><strong>Confidence Indicator</strong>: Badge showing extraction quality</li>
+<li>✓ <strong>High Confidence</strong> (green): Most fields accurately extracted</li>
+<li>⚠ <strong>Please Verify</strong> (yellow): Some fields may need review</li>
+<li>⚡ <strong>Low Confidence</strong> (blue): Manual verification recommended</li>
+</ul>
+<h3 id="step-3-verify-and-save">Step 3: Verify and Save</h3>
+<ol>
+<li>Review the pre-filled fields</li>
+<li>Correct any inaccuracies</li>
+<li>Fill in any missing fields</li>
+<li>Click <strong>"Save Wine"</strong> to add to your cellar</li>
+</ol>
+<p><strong>Note</strong>: You can always click <strong>"Re-scan Label"</strong> if the extraction wasn't satisfactory.</p>
+<hr />
+<h2 id="extracted-fields">Extracted Fields</h2>
+<p>The vision system can automatically extract the following information from wine labels:</p>
+<h3 id="core-details">Core Details</h3>
+<ul>
+<li><strong>Wine Name</strong>: Main label text</li>
+<li><strong>Wine Type</strong>: Red, White, Rosé, Sparkling, Dessert, Fortified, Orange</li>
+<li><strong>Vintage</strong>: Year of production</li>
+<li><strong>Country</strong>: Country of origin (as ISO code)</li>
+<li><strong>Region/Subregion</strong>: Geographic location</li>
+</ul>
+<h3 id="characteristics">Characteristics</h3>
+<ul>
+<li><strong>Grape Varieties</strong>: List of grapes used (e.g., "Cabernet Sauvignon, Merlot")</li>
+<li><strong>ABV</strong>: Alcohol by volume percentage</li>
+<li><strong>Bottle Size</strong>: Volume in ml, converted to size code (Piccolo, Standard, Magnum, etc.)</li>
+<li><strong>Sweetness</strong>: Dry, Semi-Dry, Sweet, etc.</li>
+</ul>
+<h3 id="producer-information">Producer Information</h3>
+<ul>
+<li><strong>Vineyard/Producer</strong>: Winery name</li>
+<li><strong>Barcode</strong>: If visible on label</li>
+</ul>
+<hr />
+<h2 id="configuration">Configuration</h2>
+<h3 id="requirements">Requirements</h3>
+<ol>
+<li><strong>Anthropic API Key</strong>: Required for AI vision processing</li>
+<li><strong>HTTPS</strong>: Camera access requires secure connection (or localhost)</li>
+<li><strong>Modern Browser</strong>: Supports camera API</li>
+</ol>
+<h3 id="setup">Setup</h3>
+<h4 id="1-add-api-key">1. Add API Key</h4>
+<p>Add your Anthropic API key to your environment:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># In .env file or environment variables</span>
+<span class="nv">ANTHROPIC_API_KEY</span><span class="o">=</span>your_api_key_here
+</code></pre></div>
+<h4 id="2-install-dependencies">2. Install Dependencies</h4>
+<p>The required packages are already in <code>requirements/base.txt</code>:</p>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements/base.txt
+</code></pre></div>
+<p>This includes:
+- <code>anthropic==0.40.0</code> - Claude AI API client
+- <code>pillow==12.0.0</code> - Image processing</p>
+<h4 id="3-https-configuration">3. HTTPS Configuration</h4>
+<p>For mobile camera access, you need HTTPS:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Development with HTTPS</span>
+./run_https.sh
+</code></pre></div>
+<p>See <a href="../HTTPS_SETUP.md">HTTPS_SETUP.md</a> for details.</p>
+<hr />
+<h2 id="technical-details">Technical Details</h2>
+<h3 id="architecture">Architecture</h3>
+<div class="highlight"><pre><span></span><code>Label Scanner (React)
+    ↓ (captures photo)
+Session Storage (base64 image)
+    ↓ (on redirect to wine-add)
+WineVisionExtractor Service
+    ↓ (calls Claude Vision API)
+Structured Data Extraction
+    ↓ (parses response)
+Form Pre-filling
+    ↓ (user reviews)
+Wine Creation
+</code></pre></div>
+<h3 id="vision-extraction-service">Vision Extraction Service</h3>
+<p><strong>Location</strong>: <code>wine_cellar/apps/wine/services/vision_extraction.py</code></p>
+<p>The <code>WineVisionExtractor</code> class:
+1. Accepts base64-encoded image
+2. Sends to Claude Vision API with structured prompt
+3. Parses AI response into wine fields
+4. Validates and maps to model fields
+5. Returns extracted data with confidence scores</p>
+<h3 id="fallback-mechanism">Fallback Mechanism</h3>
+<p>If the Anthropic API is unavailable:
+- Falls back to basic regex extraction
+- Extracts vintage, ABV, and volume using patterns
+- Returns lower confidence score
+- User can still manually enter data</p>
+<hr />
+<h2 id="cost-information">Cost Information</h2>
+<h3 id="claude-vision-api-pricing">Claude Vision API Pricing</h3>
+<p>Using <strong>Claude Haiku 4.5</strong> (optimized for speed and cost):</p>
+<ul>
+<li><strong>Cost per scan</strong>: ~$0.001-$0.003</li>
+<li><strong>50 scans/month</strong>: ~$0.05-$0.15</li>
+<li><strong>Annual cost</strong>: ~$0.60-$1.80</li>
+</ul>
+<p>Extremely affordable for personal use!</p>
+<h3 id="cost-optimization">Cost Optimization</h3>
+<p>The system automatically:
+- Compresses images before sending
+- Uses efficient prompts
+- Caches extraction results in session</p>
+<hr />
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="camera-access-issues">Camera Access Issues</h3>
+<p><strong>Problem</strong>: "Camera access denied"
+- <strong>Solution</strong>: Check browser permissions and allow camera access</p>
+<p><strong>Problem</strong>: "HTTPS required"
+- <strong>Solution</strong>: Use <code>./run_https.sh</code> or access via localhost</p>
+<p><strong>Problem</strong>: "No camera found"
+- <strong>Solution</strong>: Ensure device has working camera</p>
+<h3 id="extraction-issues">Extraction Issues</h3>
+<p><strong>Problem</strong>: No fields extracted / Low confidence
+- <strong>Cause</strong>: Poor image quality, complex label, non-English text
+- <strong>Solution</strong>: Re-scan with better lighting, or manually enter data</p>
+<p><strong>Problem</strong>: Wrong data extracted
+- <strong>Cause</strong>: Label ambiguity, unusual format
+- <strong>Solution</strong>: Simply correct the fields manually before saving</p>
+<p><strong>Problem</strong>: API errors in logs
+- <strong>Cause</strong>: Missing/invalid API key, network issues
+- <strong>Solution</strong>: Check <code>ANTHROPIC_API_KEY</code> in environment variables</p>
+<h3 id="api-configuration">API Configuration</h3>
+<p><strong>Problem</strong>: "AI vision disabled - API key not configured"
+- <strong>Solution</strong>: Add <code>ANTHROPIC_API_KEY</code> to your <code>.env</code> file</p>
+<p><strong>Problem</strong>: "API call failed: rate limit"
+- <strong>Solution</strong>: Wait a moment and try again, or use manual entry</p>
+<hr />
+<h2 id="privacy-security">Privacy &amp; Security</h2>
+<h3 id="data-handling">Data Handling</h3>
+<ul>
+<li><strong>Images</strong>: Stored temporarily in session, deleted after wine creation</li>
+<li><strong>API Calls</strong>: Sent securely to Anthropic's servers</li>
+<li><strong>No Storage</strong>: Label images are NOT permanently stored in database</li>
+<li><strong>Session Only</strong>: Extraction results cleared on form submission</li>
+</ul>
+<h3 id="best-practices">Best Practices</h3>
+<ol>
+<li>Don't scan labels with sensitive personal information</li>
+<li>Review extracted data before saving</li>
+<li>Regularly rotate your API keys</li>
+<li>Monitor API usage for anomalies</li>
+</ol>
+<hr />
+<h2 id="developer-guide">Developer Guide</h2>
+<h3 id="customizing-extraction">Customizing Extraction</h3>
+<p>To modify what fields are extracted, edit the prompt in:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># wine_cellar/apps/wine/services/vision_extraction.py</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_build_extraction_prompt</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="c1"># Modify this prompt to extract additional fields</span>
+</code></pre></div>
+<h3 id="field-mapping">Field Mapping</h3>
+<p>To change how extracted values map to model fields:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># wine_cellar/apps/wine/services/vision_extraction.py</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_process_field_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+    <span class="c1"># Add custom processing for new fields</span>
+</code></pre></div>
+<h3 id="adding-new-fields">Adding New Fields</h3>
+<ol>
+<li>Update extraction prompt to request new field</li>
+<li>Add parsing logic in <code>_parse_claude_response()</code></li>
+<li>Add processing in <code>_process_field_value()</code></li>
+<li>Update form initial data in <code>WineCreateView.get_initial()</code></li>
+</ol>
+<hr />
+<h2 id="limitations">Limitations</h2>
+<h3 id="current-limitations">Current Limitations</h3>
+<ul>
+<li><strong>API Dependent</strong>: Requires Anthropic API key (free tier available)</li>
+<li><strong>Image Quality</strong>: Poor photos may result in low accuracy</li>
+<li><strong>Language</strong>: Best results with English labels</li>
+<li><strong>Complex Labels</strong>: Artistic/minimal labels may be challenging</li>
+<li><strong>No OCR Fallback</strong>: Without API key, only basic regex extraction available</li>
+</ul>
+<h3 id="future-enhancements">Future Enhancements</h3>
+<p>Planned improvements:
+- [x] Multi-label scanning (front + back) - <strong>Implemented</strong>: Wine detail view now displays thumbnail, front, and back images
+- [ ] Batch scanning multiple bottles
+- [ ] Offline OCR support (Tesseract)
+- [ ] Barcode + vision hybrid approach
+- [ ] User correction feedback loop
+- [ ] Multi-language prompts</p>
+<hr />
+<h2 id="examples">Examples</h2>
+<h3 id="high-confidence-extraction">High Confidence Extraction</h3>
+<p><strong>Input</strong>: Clear photo of Bordeaux wine label</p>
+<p><strong>Extracted</strong>:
+- Name: "Château Example"
+- Type: Red (RE)
+- Vintage: 2018
+- Country: FR
+- Region: Bordeaux
+- Grapes: Cabernet Sauvignon, Merlot
+- ABV: 13.5
+- Confidence: ✓ High</p>
+<h3 id="medium-confidence-extraction">Medium Confidence Extraction</h3>
+<p><strong>Input</strong>: Photo with some glare</p>
+<p><strong>Extracted</strong>:
+- Name: "Example Winery"
+- Type: White (WH)
+- Vintage: 2020
+- (Other fields not found)
+- Confidence: ⚠ Please Verify</p>
+<h3 id="low-confidence-fallback">Low Confidence / Fallback</h3>
+<p><strong>Input</strong>: Blurry or API unavailable</p>
+<p><strong>Extracted</strong>:
+- Vintage: 2019 (regex)
+- ABV: 12.5 (regex)
+- Confidence: ⚡ Low</p>
+<hr />
+<h2 id="faq">FAQ</h2>
+<p><strong>Q: Do I need to pay for API usage?</strong>
+A: Anthropic offers free tier credits. Typical usage is ~$2-3/year for personal wine collections.</p>
+<p><strong>Q: Can I use this offline?</strong>
+A: Not currently. The AI vision requires API access. Basic regex extraction works without API.</p>
+<p><strong>Q: What if extraction is wrong?</strong>
+A: Simply edit the fields manually before saving. All fields are editable.</p>
+<p><strong>Q: Does it support non-English labels?</strong>
+A: Yes, Claude AI supports multiple languages, though accuracy may vary.</p>
+<p><strong>Q: Is my wine data sent to Anthropic?</strong>
+A: Only the label image is sent. The extracted data stays in your Wine Cellar instance.</p>
+<p><strong>Q: Can I scan the back label too?</strong>
+A: Yes! The wine detail view displays thumbnail, front label, and back label images. You can upload multiple images when adding or editing a wine.</p>
+<hr />
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="../CLAUDE.md#ui-testing--browser-automation">Label Scanner UI</a> - Camera component details</li>
+<li><a href="../HTTPS_SETUP.md">HTTPS Setup</a> - Camera access configuration</li>
+<li><a href="../models/">Wine Models</a> - Database schema for wines</li>
+<li><a href="https://docs.anthropic.com/claude/reference">API Reference</a> - Anthropic Claude Vision</li>
+</ul>
+<hr />
+<p><em>Last updated: 2026-01-14</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
