@@ -620,6 +620,48 @@ class TestStorageItemCRUD:
         assert resp.status_code == 201
         assert StorageItem.objects.filter(wine=wine, storage=storage).exists()
 
+    def test_grid_storage_requires_row_and_column(
+        self, api_client, api_key_write, user, household, wine
+    ):
+        storage = Storage.objects.create(
+            name="Grid Rack",
+            location="Cellar",
+            rows=5,
+            columns=5,
+            user=user,
+            household=household,
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
+
+        resp = api_client.post(
+            "/rest/wine-bottles/",
+            {"storage": storage.pk, "wine": wine.pk},
+        )
+
+        assert resp.status_code == 400
+        assert str(resp.data["row"]) == "Row and column are required for grid storages."
+
+    def test_grid_storage_rejects_zero_row(
+        self, api_client, api_key_write, user, household, wine
+    ):
+        storage = Storage.objects.create(
+            name="Grid Rack",
+            location="Cellar",
+            rows=5,
+            columns=5,
+            user=user,
+            household=household,
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
+
+        resp = api_client.post(
+            "/rest/wine-bottles/",
+            {"storage": storage.pk, "wine": wine.pk, "row": 0, "column": 1},
+        )
+
+        assert resp.status_code == 400
+        assert str(resp.data["row"]) == "Row must be between 1 and 5."
+
     def test_list_storage_items(
         self, api_client, api_key_read, user, household, storage, wine
     ):

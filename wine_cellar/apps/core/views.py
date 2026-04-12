@@ -14,6 +14,7 @@ from django.forms import model_to_dict
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.utils.formats import number_format
 from django.views.generic import DeleteView, DetailView, FormView, TemplateView, View
 
@@ -468,11 +469,9 @@ class BaseDrinkRecordCreateView(RequireMemberMixin, FormView):
 
     def handle_bottle_update(self, form, storage_item):
         """Default: mark bottle as consumed. Override for custom behavior."""
-        from datetime import date
-
         storage_item.deleted = True
         storage_item.finished_date = (
-            form.cleaned_data.get("date_consumed") or date.today()
+            form.cleaned_data.get("date_consumed") or timezone.localdate()
         )
         storage_item.save(update_fields=["deleted", "finished_date"])
 

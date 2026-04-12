@@ -26,14 +26,14 @@ def _validate_storage_position(storage, row, column, exclude_item=None):
 
     if not is_grid:
         # Non-grid storages don't use row/column positioning
-        if row or column:
+        if row is not None or column is not None:
             raise drf_serializers.ValidationError(
                 {"row": "This storage does not use grid positions."}
             )
         return
 
     # Grid storage: row and column are required
-    if not row or not column:
+    if row is None or column is None:
         raise drf_serializers.ValidationError(
             {"row": "Row and column are required for grid storages."}
         )
@@ -85,23 +85,37 @@ class StorageItemViewSet(HouseholdScopedModelViewSet):
         storage = serializer.validated_data.get("storage")
         row = serializer.validated_data.get("row")
         column = serializer.validated_data.get("column")
-        if storage and row is not None and column is not None:
+        if storage:
             _validate_storage_position(storage, row, column)
         super().perform_create(serializer)
 
     def perform_update(self, serializer):
         item = self.get_object()
-        old_storage = item.storage
-        old_row = item.row
-        old_column = item.column
+        has_storage = "storage" in serializer.validated_data
+        has_row = "row" in serializer.validated_data
+        has_column = "column" in serializer.validated_data
 
         with transaction.atomic():
-            # Lock item to prevent concurrent moves
-            StorageItem.objects.select_for_update().filter(pk=item.pk).first()
+            item = (
+                StorageItem.objects.select_for_update()
+                .select_related("storage")
+                .get(pk=item.pk)
+            )
+            old_storage = item.storage
+            old_row = item.row
+            old_column = item.column
+            storage = (
+                serializer.validated_data["storage"] if has_storage else old_storage
+            )
+            row = serializer.validated_data["row"] if has_row else old_row
+            column = serializer.validated_data["column"] if has_column else old_column
+            storage_ids = {old_storage.pk, storage.pk}
+            list(
+                Storage.objects.select_for_update()
+                .filter(pk__in=storage_ids)
+                .order_by("pk")
+            )
 
-            storage = serializer.validated_data.get("storage", old_storage)
-            row = serializer.validated_data.get("row", old_row)
-            column = serializer.validated_data.get("column", old_column)
             _validate_storage_position(storage, row, column, exclude_item=item)
 
             instance = serializer.save()
@@ -143,23 +157,37 @@ class WhiskyStorageItemViewSet(HouseholdScopedModelViewSet):
         storage = serializer.validated_data.get("storage")
         row = serializer.validated_data.get("row")
         column = serializer.validated_data.get("column")
-        if storage and row is not None and column is not None:
+        if storage:
             _validate_storage_position(storage, row, column)
         super().perform_create(serializer)
 
     def perform_update(self, serializer):
         item = self.get_object()
-        old_storage = item.storage
-        old_row = item.row
-        old_column = item.column
+        has_storage = "storage" in serializer.validated_data
+        has_row = "row" in serializer.validated_data
+        has_column = "column" in serializer.validated_data
 
         with transaction.atomic():
-            # Lock item to prevent concurrent moves
-            WhiskyStorageItem.objects.select_for_update().filter(pk=item.pk).first()
+            item = (
+                WhiskyStorageItem.objects.select_for_update()
+                .select_related("storage")
+                .get(pk=item.pk)
+            )
+            old_storage = item.storage
+            old_row = item.row
+            old_column = item.column
+            storage = (
+                serializer.validated_data["storage"] if has_storage else old_storage
+            )
+            row = serializer.validated_data["row"] if has_row else old_row
+            column = serializer.validated_data["column"] if has_column else old_column
+            storage_ids = {old_storage.pk, storage.pk}
+            list(
+                Storage.objects.select_for_update()
+                .filter(pk__in=storage_ids)
+                .order_by("pk")
+            )
 
-            storage = serializer.validated_data.get("storage", old_storage)
-            row = serializer.validated_data.get("row", old_row)
-            column = serializer.validated_data.get("column", old_column)
             _validate_storage_position(storage, row, column, exclude_item=item)
 
             instance = serializer.save()

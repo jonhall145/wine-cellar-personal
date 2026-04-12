@@ -8,6 +8,7 @@ from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.generic import DeleteView, DetailView, FormView, ListView
 from django.views.generic.list import MultipleObjectMixin
@@ -325,11 +326,9 @@ class StorageItemDeleteView(DeleteView):
         return qs.filter(household=household, deleted=False)
 
     def form_valid(self, form):
-        from datetime import date
-
         self.object = self.get_object()
         self.object.deleted = True
-        self.object.finished_date = date.today()
+        self.object.finished_date = timezone.localdate()
         self.object.save(update_fields=["deleted", "finished_date"])
         return redirect(self.get_success_url())
 
@@ -586,7 +585,10 @@ def move_bottle(request):
         target_column = data.get("target_column")
 
         # Validate inputs
-        if not all([item_id, target_storage_id, target_row, target_column]):
+        if any(
+            value is None
+            for value in (item_id, target_storage_id, target_row, target_column)
+        ):
             return JsonResponse({"error": "Missing required fields"}, status=400)
 
         household = get_active_household(request.user)
@@ -616,36 +618,47 @@ def move_bottle(request):
         if not target_storage.is_cell_active(target_row, target_column):
             return JsonResponse({"error": "Target cell is not active"}, status=400)
 
-        # Check if target position is occupied
-        if target_storage.is_slot_occupied(target_row, target_column):
-            # Check if it's the same item (no-op)
+        with transaction.atomic():
+            item = (
+                ItemModel.objects.select_for_update()
+                .select_related("storage")
+                .get(pk=item.pk, household=household, deleted=False)
+            )
+            storage_ids = {target_storage.pk}
+            if item.storage_id is not None:
+                storage_ids.add(item.storage_id)
+            locked_storages = {
+                storage.pk: storage
+                for storage in Storage.objects.select_for_update()
+                .filter(pk__in=storage_ids)
+                .order_by("pk")
+            }
+            target_storage = locked_storages[target_storage.pk]
+
             if (
                 item.storage_id == target_storage_id
                 and item.row == target_row
                 and item.column == target_column
             ):
                 return JsonResponse({"success": True, "message": "No change needed"})
-            return JsonResponse({"error": "Target position is occupied"}, status=400)
 
-        # Record move history + update in a single transaction
-        old_storage = item.storage
-        old_row = item.row
-        old_column = item.column
+            if (
+                ItemModel.objects.filter(
+                    storage=target_storage,
+                    row=target_row,
+                    column=target_column,
+                    deleted=False,
+                )
+                .exclude(pk=item.pk)
+                .exists()
+            ):
+                return JsonResponse(
+                    {"error": "Target position is occupied"}, status=400
+                )
 
-        with transaction.atomic():
-            # Lock the item row to prevent concurrent moves to the same slot
-            ItemModel.objects.select_for_update().filter(pk=item.pk).first()
-
-            # Re-check occupancy under lock
-            if target_storage.is_slot_occupied(target_row, target_column):
-                if not (
-                    item.storage_id == target_storage_id
-                    and item.row == target_row
-                    and item.column == target_column
-                ):
-                    return JsonResponse(
-                        {"error": "Target position is occupied"}, status=400
-                    )
+            old_storage = item.storage
+            old_row = item.row
+            old_column = item.column
 
             item.storage = target_storage
             item.row = target_row

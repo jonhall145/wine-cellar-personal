@@ -10,6 +10,7 @@ from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import (
@@ -1139,11 +1140,9 @@ class StorageItemDeleteView(RequireMemberMixin, DeleteView):
         return reverse_lazy("whisky-detail", kwargs={"pk": self.object.whisky.pk})
 
     def form_valid(self, form):
-        import datetime
-
         self.object = self.get_object()
         self.object.deleted = True
-        self.object.finished_date = datetime.date.today()
+        self.object.finished_date = timezone.localdate()
         self.object.save(update_fields=["deleted", "finished_date"])
         return redirect(self.get_success_url())
 
