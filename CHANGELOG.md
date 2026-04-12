@@ -3,6 +3,9 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.3.6 (2026-04-12)
+
+
 ## 0.3.5 (2026-03-29)
 
 
@@ -40,6 +43,155 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 
 ## 0.3.3 (2026-03-22)
+
+### feat
+
+- add REST API with DRF, API key auth, and move history tracking
+
+- full REST API with DRF and API key auth (#160)
+    
+    * feat: add full REST API with DRF and API key auth (closes #100)
+    
+    * fix: address pr review comments
+    
+    - scope write serializer FK/M2M querysets to household (prevent cross-household refs)
+    
+    - add missing prefetch_related for barcodes, cask_history, and collection nested data
+    
+    - strip whitespace from auth token
+    
+    - rate-limit last_used updates (5min threshold)
+    
+    - set finished_date on soft-delete of storage items
+    
+    - remove unused PAGE_SIZE from REST_FRAMEWORK config
+    
+    * fix: address PR review - bugs, filtering, tests, slim serializers
+    
+    - remove stray class Meta from WineViewSet
+    - fix N+1 on StorageSerializer (split list/detail)
+    - fix BottleMoveHistorySerializer to exclude user field
+    - require --all flag on revoke_api_key for multiple matches
+    - simplify create_api_key date parsing, remove unused import
+    - add django-filter backend with filtering/search/ordering on wines and whiskies
+    - use slim summary serializers for collection membership
+    - add 14 new tests: whisky CRUD, storage item CRUD, FK scoping, pagination, global refs, revoke --all
+    
+    * fix: use objects.none() as default queryset on all write serializers
+    
+    Defense-in-depth: if request context is missing, FK/M2M querysets
+    default to empty rather than allowing all objects. Addresses Copilot
+    review comments about cross-household reference prevention.
+    
+    ---------
+    
+    Co-authored-by: jonhall145 <jonhall145@users.noreply.github.com>
+
+- add full REST API with DRF and API key auth (closes #100)
+
+- add owner filter to whisky bottles and whisky list (#157) (#159)
+    
+    * feat: add owner filter to whisky bottles and whisky list (closes #157)
+    
+    * fix: only show owner filter when owner values exist
+    
+    * fix: address pr review comments
+    
+    - fix show_used filter: use explicit '0' value with injected default so deleted bottles are correctly excluded without query params
+    - add RequireHouseholdMixin to StorageItemListView, BottleHistoryView, WhiskyBottleHistoryView
+    - fix finished_date to use date_consumed from form instead of date.today()
+    - add tests for show_used default/explicit and owner filter
+    
+    ---------
+    
+    Co-authored-by: jonhall145 <jonhall145@users.noreply.github.com>
+
+- bottle tracking history (#156) (#158)
+    
+    * feat: add bottle tracking history (issue #156)
+    
+    - Add finished_date to StorageItem and WhiskyStorageItem
+    - Add BottleMoveHistory and WhiskyBottleMoveHistory models to track storage moves
+    - Set finished_date when bottles are deleted or consumed
+    - Fix whisky StorageItemDeleteView hard-delete bug (was not soft-deleting)
+    - Record move history when bottle position changes in StorageItemUpdateView
+    - Add BottleHistoryView and WhiskyBottleHistoryView with timeline of events
+    - New bottle_history.html template showing added/move/drink/opened/dreg/finished
+    - Add history button to wine_detail, whisky_detail, and both bottle_list tables
+    - Add show_used filter to bottle list filtersets (default: in-stock only)
+    
+    * fix: isort import formatting in whisky views
+    
+    * fix: hide edit/remove buttons for finished bottles in list view
+    
+    * fix: flake8 line length and formatting
+    
+    ---------
+    
+    Co-authored-by: jonhall145 <jonhall145@users.noreply.github.com>
+
+
+### fix
+
+- remove blurry scroll hint gradient from grid view (#163) (#164)
+    
+    Co-authored-by: jonhall145 <jonhall145@users.noreply.github.com>
+
+- address review round 2 - app_type filtering, validation, race conditions
+
+- address PR review - transactions, validation, date parsing, tests
+
+- record move history when moving bottles via grid view and API
+
+- use objects.none() as default queryset on all write serializers
+    
+    Defense-in-depth: if request context is missing, FK/M2M querysets
+    default to empty rather than allowing all objects. Addresses Copilot
+    review comments about cross-household reference prevention.
+
+- address PR review - bugs, filtering, tests, slim serializers
+    
+    - remove stray class Meta from WineViewSet
+    - fix N+1 on StorageSerializer (split list/detail)
+    - fix BottleMoveHistorySerializer to exclude user field
+    - require --all flag on revoke_api_key for multiple matches
+    - simplify create_api_key date parsing, remove unused import
+    - add django-filter backend with filtering/search/ordering on wines and whiskies
+    - use slim summary serializers for collection membership
+    - add 14 new tests: whisky CRUD, storage item CRUD, FK scoping, pagination, global refs, revoke --all
+
+- address pr review comments
+    
+    - scope write serializer FK/M2M querysets to household (prevent cross-household refs)
+    
+    - add missing prefetch_related for barcodes, cask_history, and collection nested data
+    
+    - strip whitespace from auth token
+    
+    - rate-limit last_used updates (5min threshold)
+    
+    - set finished_date on soft-delete of storage items
+    
+    - remove unused PAGE_SIZE from REST_FRAMEWORK config
+
+- tighten iOS install banner / update-banner coordination (#155)
+    
+    * Initial plan
+    
+    * fix: improve install banner/update-banner coordination per review feedback
+    
+    Co-authored-by: jonhall145 <105321987+jonhall145@users.noreply.github.com>
+    Agent-Logs-Url: https://github.com/jonhall145/wine-cellar-personal/sessions/7237621d-17dd-469b-ae6c-d6db821b6451
+    
+    ---------
+    
+    Co-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>
+    Co-authored-by: jonhall145 <105321987+jonhall145@users.noreply.github.com>
+
+- address pr review comments on ios install banner
+
+- ios pwa install banner with ipadOS 13+ and chrome detection
+
 
 
 ## 0.3.2 (2026-03-21)
