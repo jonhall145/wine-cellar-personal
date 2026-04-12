@@ -620,6 +620,48 @@ class TestStorageItemCRUD:
         assert resp.status_code == 201
         assert StorageItem.objects.filter(wine=wine, storage=storage).exists()
 
+    def test_grid_storage_requires_row_and_column(
+        self, api_client, api_key_write, user, household, wine
+    ):
+        storage = Storage.objects.create(
+            name="Grid Rack",
+            location="Cellar",
+            rows=5,
+            columns=5,
+            user=user,
+            household=household,
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
+
+        resp = api_client.post(
+            "/rest/wine-bottles/",
+            {"storage": storage.pk, "wine": wine.pk},
+        )
+
+        assert resp.status_code == 400
+        assert str(resp.data["row"]) == "Row and column are required for grid storages."
+
+    def test_grid_storage_rejects_zero_row(
+        self, api_client, api_key_write, user, household, wine
+    ):
+        storage = Storage.objects.create(
+            name="Grid Rack",
+            location="Cellar",
+            rows=5,
+            columns=5,
+            user=user,
+            household=household,
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
+
+        resp = api_client.post(
+            "/rest/wine-bottles/",
+            {"storage": storage.pk, "wine": wine.pk, "row": 0, "column": 1},
+        )
+
+        assert resp.status_code == 400
+        assert str(resp.data["row"]) == "Row must be between 1 and 5."
+
     def test_list_storage_items(
         self, api_client, api_key_read, user, household, storage, wine
     ):
@@ -671,6 +713,147 @@ class TestStorageItemCRUD:
         resp = api_client.post(
             "/rest/wine-bottles/",
             {"storage": other_storage.pk, "wine": wine.pk},
+        )
+        assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------
+# Storage item move history via API
+# ---------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestStorageItemMoveHistoryAPI:
+    @pytest.fixture
+    def storage(self, user, household):
+        return Storage.objects.create(
+            name="Rack A",
+            location="Cellar",
+            rows=5,
+            columns=5,
+            user=user,
+            household=household,
+        )
+
+    @pytest.fixture
+    def storage_b(self, user, household):
+        return Storage.objects.create(
+            name="Rack B",
+            location="Kitchen",
+            rows=5,
+            columns=5,
+            user=user,
+            household=household,
+        )
+
+    @pytest.fixture
+    def wine(self, user, household):
+        return Wine.objects.create(
+            name="Move Wine",
+            wine_type=WineType.RED,
+            country="FR",
+            user=user,
+            household=household,
+        )
+
+    def test_patch_move_creates_history(
+        self, api_client, api_key_write, user, household, storage, storage_b, wine
+    ):
+        from wine_cellar.apps.storage.models import BottleMoveHistory
+
+        item = StorageItem.objects.create(
+            storage=storage,
+            wine=wine,
+            row=1,
+            column=1,
+            user=user,
+            household=household,
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
+        resp = api_client.patch(
+            f"/rest/wine-bottles/{item.pk}/",
+            {"storage": storage_b.pk, "row": 3, "column": 2},
+        )
+        assert resp.status_code == 200
+        history = BottleMoveHistory.objects.filter(storage_item=item)
+        assert history.count() == 1
+        entry = history.first()
+        assert entry.from_storage == storage
+        assert entry.from_row == 1
+        assert entry.from_column == 1
+        assert entry.to_storage == storage_b
+        assert entry.to_row == 3
+        assert entry.to_column == 2
+
+    def test_patch_non_move_no_history(
+        self, api_client, api_key_write, user, household, storage, wine
+    ):
+        from wine_cellar.apps.storage.models import BottleMoveHistory
+
+        item = StorageItem.objects.create(
+            storage=storage,
+            wine=wine,
+            row=1,
+            column=1,
+            user=user,
+            household=household,
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
+        resp = api_client.patch(
+            f"/rest/wine-bottles/{item.pk}/",
+            {"price": "19.99"},
+        )
+        assert resp.status_code == 200
+        assert BottleMoveHistory.objects.filter(storage_item=item).count() == 0
+
+    def test_patch_rejects_occupied_position(
+        self, api_client, api_key_write, user, household, storage, wine
+    ):
+        StorageItem.objects.create(
+            storage=storage,
+            wine=wine,
+            row=1,
+            column=1,
+            user=user,
+            household=household,
+        )
+        wine2 = Wine.objects.create(
+            name="Other Wine",
+            wine_type=WineType.WHITE,
+            country="DE",
+            user=user,
+            household=household,
+        )
+        item2 = StorageItem.objects.create(
+            storage=storage,
+            wine=wine2,
+            row=2,
+            column=2,
+            user=user,
+            household=household,
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
+        resp = api_client.patch(
+            f"/rest/wine-bottles/{item2.pk}/",
+            {"row": 1, "column": 1},
+        )
+        assert resp.status_code == 400
+
+    def test_patch_rejects_out_of_bounds(
+        self, api_client, api_key_write, user, household, storage, wine
+    ):
+        item = StorageItem.objects.create(
+            storage=storage,
+            wine=wine,
+            row=1,
+            column=1,
+            user=user,
+            household=household,
+        )
+        api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {api_key_write}")
+        resp = api_client.patch(
+            f"/rest/wine-bottles/{item.pk}/",
+            {"row": 99, "column": 1},
         )
         assert resp.status_code == 400
 

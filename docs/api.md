@@ -6,6 +6,22 @@ This document describes the internal API endpoints used by Wine Cellar.
 
 Most endpoints require authentication via Django session cookies. Hardware API endpoints use token-based authentication via the `X-Api-Token` header.
 
+### REST API (Bearer Token)
+
+The REST API at `/rest/` uses Bearer token authentication. An admin-scoped API key is stored in `.env.prod` (gitignored) as `WINE_CELLAR_API_TOKEN`.
+
+```bash
+source .env.prod
+curl -H "Authorization: Bearer $WINE_CELLAR_API_TOKEN" http://localhost:80/rest/wines/
+```
+
+Manage keys with Django management commands:
+- **Create:** `python manage.py create_api_key --name "Name" --user admin --household 1 --scope admin`
+- **List:** `python manage.py list_api_keys`
+- **Revoke:** `python manage.py revoke_api_key <prefix_or_name> [--delete]`
+
+Scopes: `read` (GET only), `write` (read + POST/PUT/PATCH/DELETE), `admin` (full access).
+
 ---
 
 ## Wine Endpoints

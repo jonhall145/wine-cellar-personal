@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
-from django.utils.dateparse import parse_datetime
+from django.utils import timezone as tz
+from django.utils.dateparse import parse_date, parse_datetime
 
 from wine_cellar.apps.api.models import APIKey, APIKeyScope
 from wine_cellar.apps.household.models import Household, HouseholdMembership
@@ -56,9 +57,18 @@ class Command(BaseCommand):
         if options["expires"]:
             expires = parse_datetime(options["expires"])
             if expires is None:
+                # Try date-only format (e.g. 2026-12-31) → end of day
+                date_val = parse_date(options["expires"])
+                if date_val is not None:
+                    from datetime import datetime, time
+
+                    expires = datetime.combine(date_val, time.max)
+            if expires is not None and tz.is_naive(expires):
+                expires = tz.make_aware(expires)
+            if expires is None:
                 raise CommandError(
                     f"Invalid date format: {options['expires']}."
-                    " Use ISO format (e.g. 2026-12-31T23:59:59)"
+                    " Use ISO format (e.g. 2026-12-31 or 2026-12-31T23:59:59)"
                 )
 
         raw_key, prefix, hashed_key = APIKey.generate_key()

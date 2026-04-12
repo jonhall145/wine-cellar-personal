@@ -400,6 +400,23 @@ class WineDetailView(BaseDetailView):
         )
         if extraction_log:
             context["extraction_log"] = extraction_log
+
+        consumed_bottles = (
+            self.object.storageitem_set.filter(deleted=True)
+            .select_related("storage")
+            .prefetch_related("notes")
+            .order_by("-finished_date", "-created", "-pk")
+        )
+        context["consumed_bottle_count"] = consumed_bottles.count()
+        context["show_consumed_bottles"] = (
+            self.request.GET.get("show_consumed") == "1"
+            and context["consumed_bottle_count"] > 0
+        )
+        context["consumed_bottles"] = (
+            consumed_bottles
+            if context["show_consumed_bottles"]
+            else self.object.storageitem_set.none()
+        )
         return context
 
 

@@ -3,11 +3,12 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.db import models
+from django.db import models, transaction
 from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.generic import DeleteView, DetailView, FormView, ListView
 from django.views.generic.list import MultipleObjectMixin
@@ -26,6 +27,7 @@ from wine_cellar.apps.storage.models import (
     StorageItem,
     get_app_type,
 )
+from wine_cellar.apps.storage.utils import format_bottle_location, format_move_detail
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.utils import classify_cask_type
 from wine_cellar.apps.wine.models import Wine
@@ -324,11 +326,9 @@ class StorageItemDeleteView(DeleteView):
         return qs.filter(household=household, deleted=False)
 
     def form_valid(self, form):
-        from datetime import date
-
         self.object = self.get_object()
         self.object.deleted = True
-        self.object.finished_date = date.today()
+        self.object.finished_date = timezone.localdate()
         self.object.save(update_fields=["deleted", "finished_date"])
         return redirect(self.get_success_url())
 
@@ -585,7 +585,10 @@ def move_bottle(request):
         target_column = data.get("target_column")
 
         # Validate inputs
-        if not all([item_id, target_storage_id, target_row, target_column]):
+        if any(
+            value is None
+            for value in (item_id, target_storage_id, target_row, target_column)
+        ):
             return JsonResponse({"error": "Missing required fields"}, status=400)
 
         household = get_active_household(request.user)
@@ -615,22 +618,77 @@ def move_bottle(request):
         if not target_storage.is_cell_active(target_row, target_column):
             return JsonResponse({"error": "Target cell is not active"}, status=400)
 
-        # Check if target position is occupied
-        if target_storage.is_slot_occupied(target_row, target_column):
-            # Check if it's the same item (no-op)
+        with transaction.atomic():
+            item = (
+                ItemModel.objects.select_for_update()
+                .select_related("storage")
+                .get(pk=item.pk, household=household, deleted=False)
+            )
+            storage_ids = {target_storage.pk}
+            if item.storage_id is not None:
+                storage_ids.add(item.storage_id)
+            locked_storages = {
+                storage.pk: storage
+                for storage in Storage.objects.select_for_update()
+                .filter(pk__in=storage_ids)
+                .order_by("pk")
+            }
+            target_storage = locked_storages[target_storage.pk]
+
             if (
                 item.storage_id == target_storage_id
                 and item.row == target_row
                 and item.column == target_column
             ):
                 return JsonResponse({"success": True, "message": "No change needed"})
-            return JsonResponse({"error": "Target position is occupied"}, status=400)
 
-        # Move the bottle
-        item.storage = target_storage
-        item.row = target_row
-        item.column = target_column
-        item.save(update_fields=["storage", "row", "column"])
+            if (
+                ItemModel.objects.filter(
+                    storage=target_storage,
+                    row=target_row,
+                    column=target_column,
+                    deleted=False,
+                )
+                .exclude(pk=item.pk)
+                .exists()
+            ):
+                return JsonResponse(
+                    {"error": "Target position is occupied"}, status=400
+                )
+
+            old_storage = item.storage
+            old_row = item.row
+            old_column = item.column
+
+            item.storage = target_storage
+            item.row = target_row
+            item.column = target_column
+            item.save(update_fields=["storage", "row", "column"])
+
+            if _is_whisky_mode():
+                from wine_cellar.apps.whisky.models import WhiskyBottleMoveHistory
+
+                WhiskyBottleMoveHistory.objects.create(
+                    storage_item=item,
+                    from_storage=old_storage,
+                    from_row=old_row,
+                    from_column=old_column,
+                    to_storage=target_storage,
+                    to_row=target_row,
+                    to_column=target_column,
+                    user=request.user,
+                )
+            else:
+                BottleMoveHistory.objects.create(
+                    storage_item=item,
+                    from_storage=old_storage,
+                    from_row=old_row,
+                    from_column=old_column,
+                    to_storage=target_storage,
+                    to_row=target_row,
+                    to_column=target_column,
+                    user=request.user,
+                )
 
         return JsonResponse(
             {
@@ -693,20 +751,25 @@ class BottleHistoryView(RequireHouseholdMixin, DetailView):
                 "type": "added",
                 "date": item.created.date(),
                 "label": "Added to cellar",
-                "detail": item.storage.name,
+                "detail": format_bottle_location(item.storage, item.row, item.column),
             }
         )
 
         moves = item.move_history.select_related("from_storage", "to_storage").all()
         for move in moves:
-            from_loc = move.from_storage.name if move.from_storage else "?"
-            to_loc = move.to_storage.name if move.to_storage else "?"
             events.append(
                 {
                     "type": "move",
                     "date": move.moved_at.date(),
                     "label": "Moved",
-                    "detail": f"{from_loc} → {to_loc}",
+                    "detail": format_move_detail(
+                        move.from_storage,
+                        move.from_row,
+                        move.from_column,
+                        move.to_storage,
+                        move.to_row,
+                        move.to_column,
+                    ),
                 }
             )
 
@@ -732,6 +795,11 @@ class BottleHistoryView(RequireHouseholdMixin, DetailView):
 
         context["events"] = sorted(events, key=lambda e: e["date"])
         context["beverage"] = item.wine
+        context["beverage_detail_url"] = reverse(
+            "wine-detail", kwargs={"pk": item.wine.pk}
+        )
+        if item.deleted:
+            context["beverage_detail_url"] += "?show_consumed=1#consumed-bottles"
         return context
 
 

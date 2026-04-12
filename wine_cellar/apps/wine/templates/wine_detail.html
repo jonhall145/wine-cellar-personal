@@ -207,7 +207,7 @@
                     </div>
                 {% endif %}
             </div>
-            <div class="pure-u-1 pure-u-md-1 text-align-center">
+            <div class="pure-u-1 pure-u-md-1 text-align-center" id="wine-stock">
                 <h2 class="header__title">Stock</h2>
             </div>
             <div class="pure-u-1 pure-u-md-3-8 m-auto">
@@ -226,6 +226,21 @@
                            class="pure-button button__neutral"><i class="fa-solid fa-bell"></i> <span>Reorder Alert</span></a>
                     </div>
                 </div>
+                {% if consumed_bottle_count %}
+                    <div class="mb-12">
+                        {% if show_consumed_bottles %}
+                            <a href="{% url 'wine-detail' wine.pk %}#wine-stock"
+                               class="pure-button button__neutral button--sm">
+                                <i class="fa-solid fa-eye-slash"></i> Hide consumed bottles
+                            </a>
+                        {% else %}
+                            <a href="{% url 'wine-detail' wine.pk %}?show_consumed=1#consumed-bottles"
+                               class="pure-button button__neutral button--sm">
+                                <i class="fa-regular fa-clock-rotate-left"></i> Show consumed bottles ({{ consumed_bottle_count }})
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
                 <div class="pure-u-1 pure-u-md-1">
                     {% if wine.get_stock %}
                         <div class="table-responsive">
@@ -280,6 +295,51 @@
                         </div>
                     {% endif %}
                 </div>
+                {% if show_consumed_bottles %}
+                    <div class="pure-u-1 pure-u-md-1 mt-12" id="consumed-bottles">
+                        <h3>Consumed Bottles</h3>
+                        <div class="table-responsive">
+                            <table class="pure-table pure-table-horizontal pure-table-striped wine-detail__stock-table">
+                                <thead>
+                                    <tr>
+                                        <th>Location</th>
+                                        <th>Row</th>
+                                        <th>Cell</th>
+                                        <th>Finished</th>
+                                        <th>Gift</th>
+                                        <th>Occasion</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                {% for item in consumed_bottles %}
+                                    <tr>
+                                        <td>{{ item.storage }}</td>
+                                        <td>{{ item.row|default_if_none:"" }}</td>
+                                        <td>{{ item.column|default_if_none:"" }}</td>
+                                        <td>{{ item.finished_date|default_if_none:"" }}</td>
+                                        <td>{% if item.is_gift %}<i class="fa-solid fa-gift" title="{{ item.gift_from|default:'' }}"></i>{% if item.gift_from %} {{ item.gift_from }}{% endif %}{% endif %}</td>
+                                        <td>{{ item.occasion|default_if_none:"" }}</td>
+                                        <td>
+                                            <a class="pure-button" href="{% url 'bottle-history' item.pk %}" title="History"><i class="fa-regular fa-clock-rotate-left"></i></a>
+                                        </td>
+                                    </tr>
+                                    {% if item.notes.all %}
+                                        <tr>
+                                            <td colspan="7" class="bottle-notes">
+                                                <strong>Notes:</strong>
+                                                <ul>
+                                                    {% for note in item.notes.all %}
+                                                        <li><em>{{ note.note_date }}</em>: {{ note.note }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </table>
+                        </div>
+                    </div>
+                {% endif %}
             </div>
             {% if duplicates %}
             <div class="pure-u-1 pure-u-md-1 text-align-center">

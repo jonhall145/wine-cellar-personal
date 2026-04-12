@@ -1,8 +1,10 @@
 import datetime
 import json
 from http import HTTPStatus
+from unittest.mock import MagicMock, patch
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from pytest_django.asserts import assertRedirects, assertTemplateUsed
 
@@ -210,6 +212,84 @@ def test_drink_record_form_invites_bottle_status_selection(
 
 
 @pytest.mark.django_db
+def test_drink_record_form_defaults_bottle_status_to_opened(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.UNOPENED,
+    )
+
+    client.force_login(user)
+    response = client.get(reverse("drink-record-add", kwargs={"pk": bottle.whisky.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.context["form"]["post_drink_status"].value() == FillLevel.OPENED
+
+
+@pytest.mark.django_db
+def test_drink_record_form_exposes_fill_level_defaults_for_whisky(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.DREG,
+    )
+
+    client.force_login(user)
+    response = client.get(reverse("drink-record-add", kwargs={"pk": bottle.whisky.pk}))
+    html = response.content.decode()
+
+    assert response.status_code == HTTPStatus.OK
+    assert f'data-default-status="{FillLevel.OPENED}"' in html
+    assert f'data-dreg-status="{FillLevel.DREG}"' in html
+    assert f'data-fill-level="{FillLevel.DREG}"' in html
+
+
+@pytest.mark.django_db
+def test_drink_record_form_bound_post_disables_auto_status_updates(
+    client, user, whisky_storage_item_factory
+):
+    from wine_cellar.apps.whisky.forms import POST_DRINK_STATUS_CONSUMED
+
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.UNOPENED,
+    )
+
+    client.force_login(user)
+    response = client.post(
+        reverse("drink-record-add", kwargs={"pk": bottle.whisky.pk}),
+        {
+            "storage_item": bottle.pk,
+            "post_drink_status": POST_DRINK_STATUS_CONSUMED,
+            "date_consumed": "",
+        },
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert "let isAutoManaged = false;" in response.content.decode()
+
+
+@pytest.mark.django_db
 def test_drink_record_with_selected_bottle_can_mark_consumed(
     client, user, whisky_storage_item_factory
 ):
@@ -339,6 +419,137 @@ def test_whisky_create_get(client, user):
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="whisky/whisky_create.html")
     assert "form" in r.context
+
+
+@pytest.mark.django_db
+def test_whisky_create_prefills_distillery_when_scan_returns_full_whisky_name(
+    client, user, distillery_factory
+):
+    """Scan prefill should still resolve an existing distillery from the whisky name."""
+    distillery = distillery_factory(name="Lagavulin")
+    client.force_login(user)
+
+    session = client.session
+    session["extraction_result"] = {
+        "confidence": "medium",
+        "extracted_fields": ["name", "distillery"],
+        "errors": [],
+        "scanned_image": "dGVzdA==",
+        "extracted_data": {
+            "name": "Lagavulin 16",
+            "distillery": "Lagavulin 16",
+        },
+    }
+    session.save()
+
+    response = client.get(reverse("whisky-add"))
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.context["form"].initial["distillery"] == distillery.pk
+
+
+@pytest.mark.django_db
+def test_whisky_extract_vision_infers_distillery_from_whisky_name(
+    client, user, distillery_factory
+):
+    """AJAX auto-fill should infer a known distillery from the whisky name."""
+    distillery = distillery_factory(name="Lagavulin")
+    client.force_login(user)
+    image = SimpleUploadedFile(
+        "label.jpg", b"fake-image-bytes", content_type="image/jpeg"
+    )
+
+    with (
+        patch(
+            "wine_cellar.apps.whisky.services.barcode_service.WhiskyBarcodeScanner"
+        ) as mock_scanner_cls,
+        patch(
+            "wine_cellar.apps.whisky.services.vision_extraction.WhiskyVisionExtractor"
+        ) as mock_vision_cls,
+    ):
+        mock_scanner = MagicMock()
+        mock_scanner.scan_and_match.return_value = {
+            "matched": False,
+            "barcode": None,
+            "whisky_data": None,
+            "all_barcodes": [],
+        }
+        mock_scanner_cls.return_value = mock_scanner
+
+        mock_vision = MagicMock()
+        mock_vision.extract_from_images.return_value = {
+            "data": {"name": "Lagavulin 16"},
+            "confidence": "medium",
+            "extracted_fields": ["name"],
+            "errors": [],
+            "field_confidence": {"name": "high"},
+        }
+        mock_vision_cls.return_value = mock_vision
+
+        response = client.post(
+            reverse("whisky-extract-vision"),
+            {"image_front_label": image},
+        )
+
+    assert response.status_code == HTTPStatus.OK
+    data = response.json()
+    assert data["success"] is True
+    assert data["match_type"] == "vision"
+    assert data["data"]["distillery"] == distillery.pk
+    assert "distillery_name" not in data["data"]
+
+
+@pytest.mark.django_db
+def test_whisky_extract_vision_trims_unresolved_fk_names(client, user):
+    """AJAX auto-fill trims unresolved FK names and drops blank values."""
+    client.force_login(user)
+    image = SimpleUploadedFile(
+        "label.jpg", b"fake-image-bytes", content_type="image/jpeg"
+    )
+
+    with (
+        patch(
+            "wine_cellar.apps.whisky.services.barcode_service.WhiskyBarcodeScanner"
+        ) as mock_scanner_cls,
+        patch(
+            "wine_cellar.apps.whisky.services.vision_extraction.WhiskyVisionExtractor"
+        ) as mock_vision_cls,
+    ):
+        mock_scanner = MagicMock()
+        mock_scanner.scan_and_match.return_value = {
+            "matched": False,
+            "barcode": None,
+            "whisky_data": None,
+            "all_barcodes": [],
+        }
+        mock_scanner_cls.return_value = mock_scanner
+
+        mock_vision = MagicMock()
+        mock_vision.extract_from_images.return_value = {
+            "data": {
+                "name": "Mystery Dram",
+                "distillery": "  Unknown Distillery  ",
+                "region": "   ",
+                "bottler": "  Indie Bottler  ",
+            },
+            "confidence": "medium",
+            "extracted_fields": ["name", "distillery", "region", "bottler"],
+            "errors": [],
+            "field_confidence": {"name": "high"},
+        }
+        mock_vision_cls.return_value = mock_vision
+
+        response = client.post(
+            reverse("whisky-extract-vision"),
+            {"image_front_label": image},
+        )
+
+    assert response.status_code == HTTPStatus.OK
+    data = response.json()
+    assert data["success"] is True
+    assert data["data"]["distillery_name"] == "Unknown Distillery"
+    assert data["data"]["bottler_name"] == "Indie Bottler"
+    assert "region_name" not in data["data"]
 
 
 @pytest.mark.django_db

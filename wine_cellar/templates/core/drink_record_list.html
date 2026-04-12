@@ -28,7 +28,25 @@
                                 {% with bev=record|getbeverage:beverage_fk_name %}
                                 <tr>
                                     <td>{{ record.date_consumed }}</td>
-                                    <td><a href="{% bev_url 'detail' bev.pk %}">{{ bev.name }}</a></td>
+                                    <td>
+                                        {% if record.storage_item_id %}
+                                            <a href="{% url 'bottle-history' record.storage_item.pk %}">{{ bev.name }}</a>
+                                            <div class="text--gray text--small">
+                                                {% if record.storage_item.storage %}
+                                                    {{ record.storage_item.storage.name }}
+                                                {% endif %}
+                                                {% if record.storage_item.row is not None and record.storage_item.column is not None %}
+                                                    {% if record.storage_item.storage %} · {% endif %}
+                                                    Row {{ record.storage_item.row }}, Cell {{ record.storage_item.column }}
+                                                {% endif %}
+                                            </div>
+                                            <div class="text--small">
+                                                <a href="{% bev_url 'detail' bev.pk %}">View {{ APP_ITEM_NAME }}</a>
+                                            </div>
+                                        {% else %}
+                                            <a href="{% bev_url 'detail' bev.pk %}">{{ bev.name }}</a>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ record.rating|default_if_none:"-" }}</td>
                                     <td>{{ record.shared_with|default_if_none:"-" }}</td>
                                     <td>{{ record.occasion|default_if_none:"-" }}</td>
