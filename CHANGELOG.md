@@ -3,7 +3,43 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+
+## 0.3.6 (2026-04-12)
+
+### fix
+
+- tighten REST API bottle move history, validation, and race handling after review (#166)
+
+- fix whisky scan field resolution (#168)
+
+- correct drink record defaults (#170)
+
+- restore bottle history links and consumed bottle visibility, including exact bottle links from drink history (#173)
+
+- address the release review follow-up with locked bottle reloads, explicit grid-coordinate validation, and `timezone.localdate()` fallbacks (#174)
+
+
+### docs
+
+- document REST API access
+
+
 ## 0.3.5 (2026-03-29)
+
+### feat
+
+- add bottle tracking history for wine and whisky bottles, including finished dates and per-bottle timelines (#156, #158)
+
+- add owner filtering for whisky bottle and list views (#157, #159)
+
+- add the first full REST API release with DRF, API key auth, household scoping, filtering, and bottle move history endpoints (#160)
+
+
+### fix
+
+- remove the blurry grid scroll hint gradient (#163, #164)
 
 
 ## 0.3.4 (2026-03-24)
@@ -40,6 +76,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 
 ## 0.3.3 (2026-03-22)
+
 
 
 ## 0.3.2 (2026-03-21)
@@ -1125,5 +1162,3 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     - Maintain all functionality while improving maintainability
     
     Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
-
-
