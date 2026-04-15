@@ -7,7 +7,7 @@ import { RecursivePartial, TomCreateCallback} from 'tom-select/dist/esm/types/co
 const tsInstances: Record<string, TomSelect> = {}
 
 function initTomSelect (): void {
-  document.querySelectorAll('select').forEach((el) => {
+  document.querySelectorAll('select:not([data-native-select="true"])').forEach((el) => {
     const rawConfig : string | undefined = el.dataset.tom_config
     const clear : boolean = Boolean(JSON.parse(el.dataset.clear ?? "false"))
     const clearOpts : boolean = Boolean(JSON.parse(el.dataset.clearOpts ?? "false"))

@@ -2,6 +2,7 @@ import pytest
 from django.urls import reverse
 
 from wine_cellar.apps.storage.models import StorageItem
+from wine_cellar.apps.wine.forms import WineForm
 from wine_cellar.apps.wine.models import Wine, WineBarcode
 
 
@@ -15,6 +16,27 @@ def _minimal_wine_data(**overrides):
     }
     data.update(overrides)
     return data
+
+
+@pytest.mark.django_db
+def test_wine_form_storage_fields_use_native_select_widgets(user):
+    form = WineForm(user=user)
+
+    assert form.fields["row"].widget.attrs["data-native-select"] == "true"
+    assert form.fields["column"].widget.attrs["data-native-select"] == "true"
+
+
+@pytest.mark.django_db
+def test_wine_edit_view_storage_fields_use_native_select_widgets(
+    client, user, wine_factory
+):
+    wine = wine_factory(user=user)
+    client.force_login(user)
+    response = client.get(reverse("wine-edit", kwargs={"pk": wine.pk}))
+    form = response.context["form"]
+
+    assert form.fields["row"].widget.attrs["data-native-select"] == "true"
+    assert form.fields["column"].widget.attrs["data-native-select"] == "true"
 
 
 @pytest.mark.django_db

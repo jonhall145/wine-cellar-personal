@@ -42,6 +42,12 @@ class TomSelectMixin:
         )
 
 
+def native_select_widget(**attrs):
+    select_attrs = {**attrs}
+    select_attrs["data-native-select"] = "true"
+    return forms.Select(attrs=select_attrs)
+
+
 class BeverageBaseFormMixin:
     """Shared __init__ logic for WineBaseForm and WhiskyBaseForm.
 
