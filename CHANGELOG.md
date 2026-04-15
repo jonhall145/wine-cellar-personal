@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Unreleased
 
+## 0.4.0 (2026-04-15)
+
 ### fix
 
 - keep whisky owner filter dropdowns complete on the whisky and bottle list pages (#176)
