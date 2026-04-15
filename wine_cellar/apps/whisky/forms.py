@@ -680,6 +680,36 @@ class WhiskyEditForm(WhiskyBaseForm):
         )
 
 
+class WhiskyFilterForm(TomSelectMixin, forms.Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name in ("distillery", "region", "country", "collection", "owner"):
+            if field_name in self.fields:
+                self.set_tom_config(
+                    name=field_name,
+                    create=False,
+                    max_options=-1,
+                    clear=False,
+                    placeholder="",
+                    search=True,
+                )
+
+
+class WhiskyStorageItemFilterForm(TomSelectMixin, forms.Form):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name in ("storage", "owner"):
+            if field_name in self.fields:
+                self.set_tom_config(
+                    name=field_name,
+                    create=False,
+                    max_options=-1,
+                    clear=False,
+                    placeholder="",
+                    search=True,
+                )
+
+
 class WhiskyStockAddForm(TomSelectMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user")

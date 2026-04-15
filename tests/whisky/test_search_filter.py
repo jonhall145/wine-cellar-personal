@@ -1,3 +1,4 @@
+import json
 import os
 
 import pytest
@@ -109,6 +110,18 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
             filt = self._filter(user, search="smoky")
             assert list(filt.qs).count(whisky) == 1
 
+        def test_owner_dropdown_uses_unlimited_tomselect_options(
+            self, user, whisky_factory
+        ):
+            whisky_factory(user=user, owner="Alice")
+
+            filt = self._filter(user)
+            tom_config = json.loads(
+                filt.form.fields["owner"].widget.attrs["data-tom_config"]
+            )
+
+            assert tom_config["maxOptions"] is None
+
     @pytest.mark.django_db
     class TestWhiskyStorageItemFilter:
         def _create_storage_item(self, user, whisky_storage_item_factory, **kwargs):
@@ -141,6 +154,18 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
             filt = self._filter(user, owner="Alice")
             assert filt.qs.count() == 1
             assert filt.qs.first().owner == "Alice"
+
+        def test_owner_dropdown_uses_unlimited_tomselect_options(
+            self, user, whisky_storage_item_factory
+        ):
+            self._create_storage_item(user, whisky_storage_item_factory, owner="Alice")
+
+            filt = self._filter(user)
+            tom_config = json.loads(
+                filt.form.fields["owner"].widget.attrs["data-tom_config"]
+            )
+
+            assert tom_config["maxOptions"] is None
 
         def test_show_used_default_excludes_deleted(
             self, user, whisky_storage_item_factory
