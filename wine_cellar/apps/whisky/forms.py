@@ -10,6 +10,7 @@ from wine_cellar.apps.core.forms import (
     BaseDrinkRecordForm,
     BeverageBaseFormMixin,
     TomSelectMixin,
+    native_select_widget,
 )
 from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household
@@ -341,14 +342,14 @@ class WhiskyBaseForm(
         min_value=1,
         label="Row",
         help_text="Select the row in the storage.",
-        widget=forms.Select(),
+        widget=native_select_widget(),
     )
     column = forms.IntegerField(
         required=False,
         min_value=1,
         label="Column",
         help_text="Select the column in the storage.",
-        widget=forms.Select(),
+        widget=native_select_widget(),
     )
     bottle_price = forms.DecimalField(
         required=False,
@@ -765,13 +766,13 @@ class WhiskyStockAddForm(TomSelectMixin, forms.Form):
         required=False,
         min_value=1,
         label="Row",
-        widget=forms.Select(),
+        widget=native_select_widget(),
     )
     column = forms.IntegerField(
         required=False,
         min_value=1,
         label="Column",
-        widget=forms.Select(),
+        widget=native_select_widget(),
     )
     price = forms.DecimalField(
         required=False,

@@ -4,6 +4,7 @@ from django import forms
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 
+from wine_cellar.apps.core.forms import native_select_widget
 from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 
@@ -137,13 +138,13 @@ class StockAddForm(forms.Form):
         required=False,
         min_value=0,
         help_text="Enter the number of rows in the storage.",
-        widget=forms.Select(),
+        widget=native_select_widget(),
     )
     column = forms.IntegerField(
         required=False,
         min_value=0,
         help_text="Enter the number of columns in the storage.",
-        widget=forms.Select(),
+        widget=native_select_widget(),
     )
     price = forms.DecimalField(
         required=False,
@@ -257,13 +258,13 @@ class StorageItemEditForm(forms.Form):
         required=False,
         min_value=0,
         help_text="Enter the row number.",
-        widget=forms.Select(),
+        widget=native_select_widget(),
     )
     column = forms.IntegerField(
         required=False,
         min_value=0,
         help_text="Enter the column number.",
-        widget=forms.Select(),
+        widget=native_select_widget(),
     )
     price = forms.DecimalField(
         required=False,

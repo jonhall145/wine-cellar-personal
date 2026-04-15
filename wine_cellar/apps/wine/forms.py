@@ -12,6 +12,7 @@ from wine_cellar.apps.core.forms import (
     BaseDrinkRecordForm,
     BeverageBaseFormMixin,
     TomSelectMixin,
+    native_select_widget,
 )
 from wine_cellar.apps.storage.models import Storage, StorageItem
 from wine_cellar.apps.wine.fields import OpenMultipleChoiceField
@@ -341,14 +342,14 @@ class WineBaseForm(
         min_value=1,
         label="Row",
         help_text="Select the row in the storage.",
-        widget=forms.Select(),
+        widget=native_select_widget(),
     )
     column = forms.IntegerField(
         required=False,
         min_value=1,
         label="Column",
         help_text="Select the column in the storage.",
-        widget=forms.Select(),
+        widget=native_select_widget(),
     )
     bottle_price = forms.DecimalField(
         required=False,
