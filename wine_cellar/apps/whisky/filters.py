@@ -10,6 +10,7 @@ from wine_cellar.apps.core.filters import (
 )
 from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household
+from wine_cellar.apps.whisky.forms import WhiskyFilterForm, WhiskyStorageItemFilterForm
 from wine_cellar.apps.whisky.models import (
     WHISKY_COUNTRIES,
     Collection,
@@ -207,6 +208,7 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
         return queryset
 
     class Meta:
+        form = WhiskyFilterForm
         model = Whisky
         fields = [
             "search",
@@ -329,6 +331,7 @@ class WhiskyStorageItemFilter(django_filters.FilterSet):
         return queryset
 
     class Meta:
+        form = WhiskyStorageItemFilterForm
         model = WhiskyStorageItem
         fields = [
             "whisky_name",

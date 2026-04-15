@@ -176,6 +176,13 @@ class TestStockAddForm:
         )
         assert form.is_valid(), form.errors
 
+    def test_row_and_column_use_native_select_widgets(self, user, storage_factory):
+        storage_factory(user=user, rows=5, columns=10)
+        form = StockAddForm(user=user)
+
+        assert form.fields["row"].widget.attrs["data-native-select"] == "true"
+        assert form.fields["column"].widget.attrs["data-native-select"] == "true"
+
     def test_missing_row_for_grid_storage(self, user, storage_factory):
         storage = storage_factory(user=user, rows=5, columns=10)
         form = StockAddForm(
@@ -307,6 +314,18 @@ class TestStockAddForm:
 
 @pytest.mark.django_db
 class TestStorageItemEditForm:
+    def test_row_and_column_use_native_select_widgets(
+        self, user, wine_factory, storage_factory, storage_item_factory
+    ):
+        storage = storage_factory(user=user, rows=5, columns=5)
+        wine = wine_factory(user=user)
+        item = storage_item_factory(storage=storage, wine=wine, row=2, column=3)
+
+        form = StorageItemEditForm(user=user, instance=item)
+
+        assert form.fields["row"].widget.attrs["data-native-select"] == "true"
+        assert form.fields["column"].widget.attrs["data-native-select"] == "true"
+
     def test_can_stay_in_same_position(
         self, user, wine_factory, storage_factory, storage_item_factory
     ):

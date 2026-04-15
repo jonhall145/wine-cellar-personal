@@ -12,6 +12,7 @@ from wine_cellar.apps.core.forms import (
     BottleNoteForm,
     ReorderReminderForm,
     TomSelectMixin,
+    native_select_widget,
 )
 from wine_cellar.apps.core.templatetags.core_tags import _badge_impl, _rating_stars_impl
 from wine_cellar.apps.core.utils import base64_to_uploaded_file
@@ -76,6 +77,16 @@ def test_tomselect_mixin_max_options_unlimited():
     form.set_tom_config("colour", max_options=-1)
     config = json.loads(form.fields["colour"].widget.attrs["data-tom_config"])
     assert config["maxOptions"] is None
+
+
+def test_native_select_widget_marks_select_to_skip_tomselect():
+    widget = native_select_widget()
+    assert widget.attrs["data-native-select"] == "true"
+
+
+def test_native_select_widget_enforces_native_marker():
+    widget = native_select_widget(**{"data-native-select": "false"})
+    assert widget.attrs["data-native-select"] == "true"
 
 
 # -- BottleNoteForm / ReorderReminderForm tests --
