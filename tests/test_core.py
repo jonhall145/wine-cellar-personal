@@ -84,6 +84,11 @@ def test_native_select_widget_marks_select_to_skip_tomselect():
     assert widget.attrs["data-native-select"] == "true"
 
 
+def test_native_select_widget_enforces_native_marker():
+    widget = native_select_widget(**{"data-native-select": "false"})
+    assert widget.attrs["data-native-select"] == "true"
+
+
 # -- BottleNoteForm / ReorderReminderForm tests --
 
 
