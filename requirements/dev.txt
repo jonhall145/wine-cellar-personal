@@ -11,6 +11,6 @@ mkdocs-material==9.7.4
 pytest-cov==7.0.0
 pytest-django==4.12.0
 pytest-factoryboy==2.8.1
-pytest==9.0.2
+pytest==9.0.3
 commitizen==4.13.9
 pytest-playwright==0.7.2
