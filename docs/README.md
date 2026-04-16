@@ -8,6 +8,7 @@ Welcome to the Wine Cellar documentation. This guide will help you install, conf
 - **[Deployment](deployment.md)** - Production deployment options
 - **[Environment Variables](environment.md)** - Configuration reference
 - **[Architecture](architecture.md)** - System design and structure
+- **[Deduplication Refactor Plan](deduplication-refactor-plan.md)** - Prioritized plan for reducing wine/whisky duplication
 - **[API Reference](api.md)** - API endpoints and usage
 - **[Testing](testing.md)** - Running tests and coverage
 - **[Backup & Restore](backup.md)** - Data backup procedures
