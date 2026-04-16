@@ -120,6 +120,11 @@ class StorageItemQuerySet(HouseholdQuerySet):
 
 
 class StorageItem(UserContentModel):
+    class RemovalReason(models.TextChoices):
+        CONSUMED = "consumed", "Consumed"
+        GIVEN = "given", "Given Away"
+        REMOVED = "removed", "Removed"
+
     objects = StorageItemQuerySet.as_manager()
 
     storage = models.ForeignKey(Storage, on_delete=models.CASCADE, related_name="items")
@@ -149,6 +154,30 @@ class StorageItem(UserContentModel):
         blank=True,
         verbose_name="Date Finished",
     )
+    recipient = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name="Recipient",
+    )
+    given_occasion = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name="Given Occasion",
+    )
+    given_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Date Given",
+    )
+    removal_reason = models.CharField(
+        max_length=20,
+        choices=RemovalReason.choices,
+        blank=True,
+        default="",
+        verbose_name="Removal Reason",
+    )
 
     class Meta:
         verbose_name = "Storage Item"
@@ -168,6 +197,10 @@ class StorageItem(UserContentModel):
             else "Unassigned"
         )
         return f"{self.wine.name} - {self.storage.name} ({location})"
+
+    @property
+    def removal_date(self):
+        return self.given_date or self.finished_date
 
 
 class BottleMoveHistory(models.Model):

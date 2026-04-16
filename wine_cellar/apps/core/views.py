@@ -473,7 +473,80 @@ class BaseDrinkRecordCreateView(RequireMemberMixin, FormView):
         storage_item.finished_date = (
             form.cleaned_data.get("date_consumed") or timezone.localdate()
         )
-        storage_item.save(update_fields=["deleted", "finished_date"])
+        storage_item.removal_reason = storage_item.RemovalReason.CONSUMED
+        storage_item.given_date = None
+        storage_item.recipient = ""
+        storage_item.given_occasion = ""
+        storage_item.save(
+            update_fields=[
+                "deleted",
+                "finished_date",
+                "removal_reason",
+                "given_date",
+                "recipient",
+                "given_occasion",
+            ]
+        )
+
+
+class BaseMarkBottleGivenView(RequireMemberMixin, FormView):
+    template_name = "core/bottle_mark_given.html"
+    storage_item_model = None
+    beverage_fk_name = None
+    detail_url_name = None
+    list_url_name = None
+
+    def get_form_class(self):
+        from wine_cellar.apps.core.forms import MarkBottleGivenForm
+
+        return MarkBottleGivenForm
+
+    def get_object(self):
+        household = get_active_household(self.request.user)
+        return get_object_or_404(
+            self.storage_item_model,
+            pk=self.kwargs["pk"],
+            household=household,
+            deleted=False,
+        )
+
+    def get_success_url(self):
+        if self.request.GET.get("next") == "list" and self.list_url_name:
+            return reverse_lazy(self.list_url_name)
+        storage_item = getattr(self, "object", None) or self.get_object()
+        beverage = getattr(storage_item, self.beverage_fk_name)
+        return reverse_lazy(self.detail_url_name, kwargs={"pk": beverage.pk})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        storage_item = self.get_object()
+        beverage = getattr(storage_item, self.beverage_fk_name)
+        context["storage_item"] = storage_item
+        context["beverage"] = beverage
+        context[self.beverage_fk_name] = beverage
+        context["cancel_url"] = self.get_success_url()
+        return context
+
+    def form_valid(self, form):
+        storage_item = self.get_object()
+        self.object = storage_item
+        storage_item.deleted = True
+        storage_item.removal_reason = storage_item.RemovalReason.GIVEN
+        storage_item.recipient = form.cleaned_data["recipient"]
+        storage_item.given_date = form.cleaned_data["given_date"]
+        storage_item.given_occasion = form.cleaned_data.get("given_occasion", "")
+        storage_item.finished_date = None
+        storage_item.save(
+            update_fields=[
+                "deleted",
+                "removal_reason",
+                "recipient",
+                "given_date",
+                "given_occasion",
+                "finished_date",
+            ]
+        )
+        return redirect(self.get_success_url())
 
 
 class BaseReorderReminderDeleteView(RequireMemberMixin, DeleteView):
@@ -613,6 +686,7 @@ class BaseListView(RequireHouseholdMixin):
     card_template = None  # e.g. "wine_card.html"
     filter_field_template = None  # e.g. "wine_filter_field.html"
     beverage_icon = None  # e.g. "wine-glass"
+    default_filter_data = {}
 
     def get_paginate_by(self, queryset):
         """Allow user to select number of items per page via URL parameter."""
@@ -635,6 +709,21 @@ class BaseListView(RequireHouseholdMixin):
         context["filter_field_template"] = self.filter_field_template
         context["beverage_icon"] = self.beverage_icon
         return context
+
+    def get_filterset_kwargs(self, filterset_class):
+        kwargs = super().get_filterset_kwargs(filterset_class)
+        if not self.default_filter_data:
+            return kwargs
+        data = kwargs.get("data")
+        if data is None:
+            data = self.request.GET.copy()
+        else:
+            data = data.copy()
+        missing_keys = [key for key in self.default_filter_data if key not in data]
+        for key in missing_keys:
+            data[key] = self.default_filter_data[key]
+        kwargs["data"] = data
+        return kwargs
 
     def get_queryset(self):
         price_path = f"{self.storage_item_reverse}__price"

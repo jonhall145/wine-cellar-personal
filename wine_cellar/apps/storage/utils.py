@@ -27,3 +27,12 @@ def format_move_detail(
         f"{format_bottle_location(from_storage, from_row, from_column)}"
         f" -> {format_bottle_location(to_storage, to_row, to_column)}"
     )
+
+
+def format_given_detail(recipient, occasion=""):
+    parts = []
+    if recipient:
+        parts.append(f"Recipient: {recipient}")
+    if occasion:
+        parts.append(f"Occasion: {occasion}")
+    return "\n".join(parts)

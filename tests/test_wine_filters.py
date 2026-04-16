@@ -34,7 +34,7 @@ def test_filter_ready_to_drink_includes_current(user, wine_factory):
     wine_future = wine_factory(user=user, drink_from=3000, drink_to=None)
 
     filt = WineFilter(
-        data={"ready_to_drink": "1"},
+        data={"ready_to_drink": "1", "stock": "0", "order": "created"},
         queryset=Wine.objects.filter(user=user),
         request=request,
     )
@@ -52,10 +52,29 @@ def test_filter_has_window(user, wine_factory):
     wine_no_window = wine_factory(user=user, drink_from=None, drink_to=None)
 
     filt = WineFilter(
-        data={"has_window": "1"},
+        data={"has_window": "1", "stock": "0", "order": "created"},
         queryset=Wine.objects.filter(user=user),
         request=request,
     )
 
     assert wine_window in filt.qs
     assert wine_no_window not in filt.qs
+
+
+@pytest.mark.django_db
+def test_filter_rating_supports_multiple_selected_ratings(user, wine_factory):
+    request = RequestFactory().get("/")
+    request.user = user
+
+    zero_star = wine_factory(user=user, rating=0)
+    one_star = wine_factory(user=user, rating=1)
+    two_star = wine_factory(user=user, rating=2)
+
+    filt = WineFilter(
+        data={"rating": ["0", "1"], "stock": "0", "order": "created"},
+        queryset=Wine.objects.filter(user=user),
+        request=request,
+    )
+
+    assert list(filt.qs) == [zero_star, one_star]
+    assert two_star not in filt.qs

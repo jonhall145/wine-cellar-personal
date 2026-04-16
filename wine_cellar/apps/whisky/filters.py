@@ -1,6 +1,6 @@
 import django_filters
 from django.db.models import Q
-from django_filters import ChoiceFilter, OrderingFilter
+from django_filters import ChoiceFilter, MultipleChoiceFilter, OrderingFilter
 
 from wine_cellar.apps.core.filters import (
     BeverageFilterMixin,
@@ -145,7 +145,7 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
         label="Owner",
     )
 
-    rating = ChoiceFilter(
+    rating = MultipleChoiceFilter(
         method="filter_rating",
         label="Rating",
         choices=(

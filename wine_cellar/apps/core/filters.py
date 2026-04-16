@@ -22,10 +22,12 @@ class BeverageFilterMixin:
     search_fields = ()
 
     def filter_rating(self, queryset, name, value):
-        if value == "0":
-            return queryset.filter(Q(rating=0) | Q(rating__isnull=True))
-        if value:
-            return queryset.filter(rating=int(value))
+        if not value:
+            return queryset
+        values = value if isinstance(value, (list, tuple, set)) else [value]
+        ratings = [int(v) for v in values if v not in ("", None)]
+        if ratings:
+            return queryset.filter(rating__in=ratings)
         return queryset
 
     def filter_order(self, queryset, name, value):

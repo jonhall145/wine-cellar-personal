@@ -786,6 +786,11 @@ def test_wine_filter_in_stock(client, user, wine_factory, storage_item_factory):
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="base.html")
     assertTemplateUsed(response=r, template_name="core/beverage_list.html")
+    assert list(r.context_data["wines"]) == [wine_in_stock]
+    r = client.get(reverse("wine-list") + "?stock=0")
+    assert r.status_code == HTTPStatus.OK
+    assertTemplateUsed(response=r, template_name="base.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_list.html")
     assert set(r.context_data["wines"]) == {
         wine_in_stock,
         wine_not_in_stock,
@@ -818,7 +823,9 @@ def test_wine_filter_price(client, user, wine_factory, storage_item_factory):
         deleted=True,
     )
     client.force_login(user)
-    r = client.get(reverse("wine-list") + "?order=-effective_price", follow=True)
+    r = client.get(
+        reverse("wine-list") + "?order=-effective_price&stock=0", follow=True
+    )
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="base.html")
     assertTemplateUsed(response=r, template_name="core/beverage_list.html")
@@ -830,7 +837,7 @@ def test_wine_filter_price(client, user, wine_factory, storage_item_factory):
         wine_in_stock_cheap,
         wine_no_price,
     ]
-    r = client.get(reverse("wine-list") + "?order=effective_price", follow=True)
+    r = client.get(reverse("wine-list") + "?order=effective_price&stock=0", follow=True)
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="base.html")
     assertTemplateUsed(response=r, template_name="core/beverage_list.html")
@@ -845,9 +852,11 @@ def test_wine_filter_price(client, user, wine_factory, storage_item_factory):
 
 
 @pytest.mark.django_db
-def test_wine_filter_by_collection(client, user, wine_factory):
+def test_wine_filter_by_collection(client, user, wine_factory, storage_item_factory):
     wine_in_collection = wine_factory(user=user)
     wine_outside_collection = wine_factory(user=user)
+    storage_item_factory(wine=wine_in_collection, user=user)
+    storage_item_factory(wine=wine_outside_collection, user=user)
     collection = Collection.objects.create(
         name="Dinner Party",
         user=user,

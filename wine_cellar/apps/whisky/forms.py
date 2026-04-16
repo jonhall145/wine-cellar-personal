@@ -684,7 +684,14 @@ class WhiskyEditForm(WhiskyBaseForm):
 class WhiskyFilterForm(TomSelectMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field_name in ("distillery", "region", "country", "collection", "owner"):
+        for field_name in (
+            "distillery",
+            "region",
+            "country",
+            "collection",
+            "owner",
+            "rating",
+        ):
             if field_name in self.fields:
                 self.set_tom_config(
                     name=field_name,

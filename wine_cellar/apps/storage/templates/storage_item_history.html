@@ -15,6 +15,9 @@
                             <th>Row</th>
                             <th>Cell</th>
                             <th>Removed</th>
+                            <th>Reason</th>
+                            <th>Recipient</th>
+                            <th>Occasion</th>
                             <th></th>
                         </tr>
                         {% for item in storage_items %}
@@ -29,7 +32,25 @@
                                 <td>{{ item.storage.name }}</td>
                                 <td>{{ item.row|default_if_none:"" }}</td>
                                 <td>{{ item.column|default_if_none:"" }}</td>
-                                <td>{{ item.modified | date }}</td>
+                                <td>{{ item.removal_date|default_if_none:""|date }}</td>
+                                <td>
+                                    {% if item.removal_reason == "given" %}
+                                        Given away
+                                    {% elif item.removal_reason == "removed" %}
+                                        Removed
+                                    {% else %}
+                                        Consumed
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.recipient }}</td>
+                                <td>{% firstof item.given_occasion item.occasion %}</td>
+                                <td>
+                                    <a class="pure-button"
+                                       href="{% url 'bottle-history' item.pk %}"
+                                       title="History">
+                                        <i class="fa-regular fa-clock-rotate-left"></i>
+                                    </a>
+                                </td>
                             </tr>
                         {% endfor %}
                     </table>

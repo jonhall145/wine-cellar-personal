@@ -115,6 +115,15 @@ class WineFormPostCleanMixin:
                     max_options=-1,
                     clear=False,
                 )
+            rating = self.cleaned_data.get("rating")
+            if rating and "rating" in self.fields:
+                rating_items = rating if isinstance(rating, list) else [rating]
+                self.set_tom_config(
+                    name="rating",
+                    items=[str(item) for item in rating_items],
+                    create=False,
+                    clear=False,
+                )
 
 
 class WineBaseForm(
@@ -539,6 +548,7 @@ class WineFilterForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         self.set_tom_config(name="source", create=False)
         self.set_tom_config(name="vineyard", create=False)
         self.set_tom_config(name="attributes", create=False)
+        self.set_tom_config(name="rating", create=False, clear=False)
         self.set_tom_config(
             name="country", create=False, max_options=-1, placeholder="", search=True
         )

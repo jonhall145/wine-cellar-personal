@@ -401,19 +401,32 @@ class WineDetailView(BaseDetailView):
         if extraction_log:
             context["extraction_log"] = extraction_log
 
-        consumed_bottles = (
+        removed_bottles = (
             self.object.storageitem_set.filter(deleted=True)
             .select_related("storage")
             .prefetch_related("notes")
-            .order_by("-finished_date", "-created", "-pk")
+            .order_by("-given_date", "-finished_date", "-created", "-pk")
+        )
+        consumed_bottles = removed_bottles.exclude(
+            removal_reason=StorageItem.RemovalReason.GIVEN
+        )
+        gifted_bottles = removed_bottles.filter(
+            removal_reason=StorageItem.RemovalReason.GIVEN
         )
         context["consumed_bottle_count"] = consumed_bottles.count()
-        context["show_consumed_bottles"] = (
-            self.request.GET.get("show_consumed") == "1"
-            and context["consumed_bottle_count"] > 0
+        context["gifted_bottle_count"] = gifted_bottles.count()
+        context["show_consumed_bottles"] = self.request.GET.get(
+            "show_consumed"
+        ) == "1" and (
+            context["consumed_bottle_count"] > 0 or context["gifted_bottle_count"] > 0
         )
         context["consumed_bottles"] = (
             consumed_bottles
+            if context["show_consumed_bottles"]
+            else self.object.storageitem_set.none()
+        )
+        context["gifted_bottles"] = (
+            gifted_bottles
             if context["show_consumed_bottles"]
             else self.object.storageitem_set.none()
         )
@@ -433,6 +446,7 @@ class WineListView(BaseListView, FilterView):
     template_name = "core/beverage_list.html"
     context_object_name = "wines"
     filterset_class = WineFilter
+    default_filter_data = {"stock": "1", "order": "created"}
     storage_item_reverse = "storageitem"
     select_related_fields = ("size", "appellation")
     prefetch_related_fields = ("grapes", "attributes", "food_pairings", "wineimage_set")

@@ -226,17 +226,31 @@
                            class="pure-button button__neutral"><i class="fa-solid fa-bell"></i> <span>Reorder Alert</span></a>
                     </div>
                 </div>
-                {% if consumed_bottle_count %}
+                {% if consumed_bottle_count or gifted_bottle_count %}
                     <div class="mb-12">
                         {% if show_consumed_bottles %}
                             <a href="{% url 'wine-detail' wine.pk %}#wine-stock"
                                class="pure-button button__neutral button--sm">
-                                <i class="fa-solid fa-eye-slash"></i> Hide consumed bottles
+                                <i class="fa-solid fa-eye-slash"></i>
+                                {% if gifted_bottle_count and not consumed_bottle_count %}
+                                    Hide given bottles
+                                {% elif consumed_bottle_count and not gifted_bottle_count %}
+                                    Hide consumed bottles
+                                {% else %}
+                                    Hide removed bottles
+                                {% endif %}
                             </a>
                         {% else %}
                             <a href="{% url 'wine-detail' wine.pk %}?show_consumed=1#consumed-bottles"
                                class="pure-button button__neutral button--sm">
-                                <i class="fa-regular fa-clock-rotate-left"></i> Show consumed bottles ({{ consumed_bottle_count }})
+                                <i class="fa-regular fa-clock-rotate-left"></i>
+                                {% if gifted_bottle_count and not consumed_bottle_count %}
+                                    Show given bottles ({{ gifted_bottle_count }})
+                                {% elif consumed_bottle_count and not gifted_bottle_count %}
+                                    Show consumed bottles ({{ consumed_bottle_count }})
+                                {% else %}
+                                    Show removed bottles ({{ consumed_bottle_count|add:gifted_bottle_count }})
+                                {% endif %}
                             </a>
                         {% endif %}
                     </div>
@@ -266,6 +280,7 @@
                                         <a class="pure-button" href="{% url 'bottle-note-add' item.pk %}" title="Add note"><i class="fa-regular fa-note-sticky"></i></a>
                                         <a class="pure-button" href="{% url 'bottle-history' item.pk %}" title="History"><i class="fa-regular fa-clock-rotate-left"></i></a>
                                         <a class="pure-button" href="{% url 'bottle-edit' item.pk %}" title="Edit bottle"><i class="fa-regular fa-pen-to-square"></i></a>
+                                        <a class="pure-button" href="{% url 'stock-give' item.pk %}" title="Mark as given"><i class="fa-solid fa-gift"></i></a>
                                         <a class="pure-button" href="{% url 'stock-delete' item.pk %}" title="Remove bottle"><i class="fa-regular fa-trash-can"></i></a>
                                     </td>
                                 </tr>
@@ -319,6 +334,51 @@
                                         <td>{{ item.finished_date|default_if_none:"" }}</td>
                                         <td>{% if item.is_gift %}<i class="fa-solid fa-gift" title="{{ item.gift_from|default:'' }}"></i>{% if item.gift_from %} {{ item.gift_from }}{% endif %}{% endif %}</td>
                                         <td>{{ item.occasion|default_if_none:"" }}</td>
+                                        <td>
+                                            <a class="pure-button" href="{% url 'bottle-history' item.pk %}" title="History"><i class="fa-regular fa-clock-rotate-left"></i></a>
+                                        </td>
+                                    </tr>
+                                    {% if item.notes.all %}
+                                        <tr>
+                                            <td colspan="7" class="bottle-notes">
+                                                <strong>Notes:</strong>
+                                                <ul>
+                                                    {% for note in item.notes.all %}
+                                                        <li><em>{{ note.note_date }}</em>: {{ note.note }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </table>
+                        </div>
+                    </div>
+                {% endif %}
+                {% if show_consumed_bottles and gifted_bottles %}
+                    <div class="pure-u-1 pure-u-md-1 mt-12" id="gifted-bottles">
+                        <h3>Given Bottles</h3>
+                        <div class="table-responsive">
+                            <table class="pure-table pure-table-horizontal pure-table-striped wine-detail__stock-table">
+                                <thead>
+                                    <tr>
+                                        <th>Location</th>
+                                        <th>Row</th>
+                                        <th>Cell</th>
+                                        <th>Given</th>
+                                        <th>Recipient</th>
+                                        <th>Occasion</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                {% for item in gifted_bottles %}
+                                    <tr>
+                                        <td>{{ item.storage }}</td>
+                                        <td>{{ item.row|default_if_none:"" }}</td>
+                                        <td>{{ item.column|default_if_none:"" }}</td>
+                                        <td>{{ item.given_date|default_if_none:"" }}</td>
+                                        <td>{{ item.recipient }}</td>
+                                        <td>{{ item.given_occasion }}</td>
                                         <td>
                                             <a class="pure-button" href="{% url 'bottle-history' item.pk %}" title="History"><i class="fa-regular fa-clock-rotate-left"></i></a>
                                         </td>

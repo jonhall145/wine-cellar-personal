@@ -206,6 +206,24 @@ class BaseDrinkRecordForm(forms.Form):
         return bottle
 
 
+class MarkBottleGivenForm(forms.Form):
+    recipient = forms.CharField(
+        max_length=100,
+        help_text="Who did you give this bottle to?",
+    )
+    given_date = forms.DateField(
+        initial=timezone.localdate,
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+        help_text="When did you give this bottle away?",
+    )
+    given_occasion = forms.CharField(
+        max_length=100,
+        required=False,
+        label="Occasion",
+        help_text="Optional occasion for giving this bottle.",
+    )
+
+
 class BottleNoteForm(forms.Form):
     note_date = forms.DateField(
         widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),

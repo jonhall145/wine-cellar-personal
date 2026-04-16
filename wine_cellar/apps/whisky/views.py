@@ -41,6 +41,7 @@ from wine_cellar.apps.core.views import (
     BaseJourneyTimelineView,
     BaseLabelScanView,
     BaseListView,
+    BaseMarkBottleGivenView,
     BaseMergeConfirmView,
     BaseQRCodeView,
     BaseRandomBottleView,
@@ -63,7 +64,11 @@ from wine_cellar.apps.household.mixins import (
     require_member,
 )
 from wine_cellar.apps.storage.models import Storage, get_app_type
-from wine_cellar.apps.storage.utils import format_bottle_location, format_move_detail
+from wine_cellar.apps.storage.utils import (
+    format_bottle_location,
+    format_given_detail,
+    format_move_detail,
+)
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.filters import WhiskyFilter, WhiskyStorageItemFilter
 from wine_cellar.apps.whisky.forms import (
@@ -641,6 +646,7 @@ class WhiskyListView(BaseListView, FilterView):
     template_name = "core/beverage_list.html"
     context_object_name = "whiskies"
     filterset_class = WhiskyFilter
+    default_filter_data = {"has_stock": "1", "order": "created"}
     storage_item_reverse = "whiskystorageitem"
     select_related_fields = ("distillery", "region", "bottler")
     prefetch_related_fields = ("images",)
@@ -855,7 +861,20 @@ class DrinkRecordCreateView(BaseDrinkRecordCreateView):
         if post_drink_status == POST_DRINK_STATUS_CONSUMED:
             storage_item.deleted = True
             storage_item.finished_date = date_consumed
-            storage_item.save(update_fields=["deleted", "finished_date"])
+            storage_item.removal_reason = WhiskyStorageItem.RemovalReason.CONSUMED
+            storage_item.given_date = None
+            storage_item.recipient = ""
+            storage_item.given_occasion = ""
+            storage_item.save(
+                update_fields=[
+                    "deleted",
+                    "finished_date",
+                    "removal_reason",
+                    "given_date",
+                    "recipient",
+                    "given_occasion",
+                ]
+            )
         elif post_drink_status in (FillLevel.OPENED, FillLevel.DREG):
             old_fill_level = storage_item.fill_level
             storage_item.fill_level = post_drink_status
@@ -1143,8 +1162,28 @@ class StorageItemDeleteView(RequireMemberMixin, DeleteView):
         self.object = self.get_object()
         self.object.deleted = True
         self.object.finished_date = timezone.localdate()
-        self.object.save(update_fields=["deleted", "finished_date"])
+        self.object.removal_reason = WhiskyStorageItem.RemovalReason.REMOVED
+        self.object.given_date = None
+        self.object.recipient = ""
+        self.object.given_occasion = ""
+        self.object.save(
+            update_fields=[
+                "deleted",
+                "finished_date",
+                "removal_reason",
+                "given_date",
+                "recipient",
+                "given_occasion",
+            ]
+        )
         return redirect(self.get_success_url())
+
+
+class StorageItemMarkGivenView(BaseMarkBottleGivenView):
+    storage_item_model = WhiskyStorageItem
+    beverage_fk_name = "whisky"
+    detail_url_name = "whisky-detail"
+    list_url_name = "bottle-list"
 
 
 class StorageItemListView(RequireHouseholdMixin, FilterView):
@@ -1277,7 +1316,7 @@ class StorageItemHistoryView(RequireHouseholdMixin, ListView):
         return (
             WhiskyStorageItem.objects.filter(household=household, deleted=True)
             .select_related("whisky", "storage")
-            .order_by("-created")
+            .order_by("-given_date", "-finished_date", "-created")
         )
 
 
@@ -1396,12 +1435,27 @@ class WhiskyBottleHistoryView(RequireHouseholdMixin, DetailView):
                 }
             )
 
-        if item.finished_date:
+        if (
+            item.removal_reason == WhiskyStorageItem.RemovalReason.GIVEN
+            and item.given_date
+        ):
+            events.append(
+                {
+                    "type": "given",
+                    "date": item.given_date,
+                    "label": "Given away",
+                    "detail": format_given_detail(item.recipient, item.given_occasion),
+                }
+            )
+        elif item.finished_date:
+            label = "Removed from inventory"
+            if item.removal_reason in ("", WhiskyStorageItem.RemovalReason.CONSUMED):
+                label = "Finished"
             events.append(
                 {
                     "type": "finished",
                     "date": item.finished_date,
-                    "label": "Finished",
+                    "label": label,
                     "detail": "",
                 }
             )

@@ -125,6 +125,11 @@
                                                 <i class="fa-regular fa-pen-to-square"></i>
                                             </a>
                                             <a class="pure-button"
+                                               href="{% url 'stock-give' bottle.pk %}?next=list"
+                                               title="Mark as given">
+                                                <i class="fa-solid fa-gift"></i>
+                                            </a>
+                                            <a class="pure-button"
                                                href="{% url 'stock-delete' bottle.pk %}"
                                                title="Remove bottle">
                                                 <i class="fa-regular fa-trash-can"></i>
