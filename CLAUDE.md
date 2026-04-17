@@ -290,6 +290,7 @@ For production deployment:
 - **Commit style**: Short, lowercase messages describing the change
 - **Stage-commit-push**: User often requests these as a single action
 - **Lint before commit**: Always run `make lint` and fix issues before committing
+- **No local leftovers**: After completing requested work, do not leave local-only changes in the worktree. Commit and push requested changes, or explicitly clean up/revert anything that should not remain.
 - **No heredocs in git commits**: Never use `cat <<'EOF'` or heredoc syntax for commit messages. Just pass the message directly with `git commit -m "message"`. For multi-line messages use multiple `-m` flags (e.g. `git commit -m "subject" -m "body"`).
 - **No co-author tags**: Never add `Co-Authored-By` lines to commit messages. This is the user's code.
 - **Save conversations**: Always save a copy of the conversation to `.claude/logs/` for later review

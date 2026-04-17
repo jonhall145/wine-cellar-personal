@@ -1,7 +1,9 @@
 import json
+from datetime import timedelta
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from wine_cellar.apps.storage.models import BottleMoveHistory, Storage, StorageItem
 
@@ -292,6 +294,57 @@ class TestStorageItemHistory:
         client.force_login(user)
         r = client.get(reverse("stock-history"))
         assert r.status_code == 200
+
+    def test_orders_removed_bottles_by_removal_date(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        storage = user.storage_set.first()
+        older_consumed = storage_item_factory(
+            wine=wine_factory(user=user, name="Older Consumed"),
+            storage=storage,
+            user=user,
+            deleted=True,
+            finished_date=timezone.localdate() - timedelta(days=10),
+        )
+        newest_given = storage_item_factory(
+            wine=wine_factory(user=user, name="Newest Given"),
+            storage=storage,
+            user=user,
+            deleted=True,
+            removal_reason=StorageItem.RemovalReason.GIVEN,
+            recipient="Alex",
+            given_date=timezone.localdate() - timedelta(days=1),
+        )
+        middle_removed = storage_item_factory(
+            wine=wine_factory(user=user, name="Middle Removed"),
+            storage=storage,
+            user=user,
+            deleted=True,
+            removal_reason=StorageItem.RemovalReason.REMOVED,
+            finished_date=timezone.localdate() - timedelta(days=5),
+        )
+        undated_removed = storage_item_factory(
+            wine=wine_factory(user=user, name="Undated Removed"),
+            storage=storage,
+            user=user,
+            deleted=True,
+            removal_reason=StorageItem.RemovalReason.REMOVED,
+        )
+        StorageItem.objects.filter(pk=undated_removed.pk).update(
+            created=timezone.now() - timedelta(days=20)
+        )
+        undated_removed.refresh_from_db()
+
+        client.force_login(user)
+        r = client.get(reverse("stock-history"))
+
+        assert r.status_code == 200
+        assert list(r.context["storage_items"])[:4] == [
+            newest_given,
+            middle_removed,
+            older_consumed,
+            undated_removed,
+        ]
 
 
 # ---------------------------------------------------------------------------

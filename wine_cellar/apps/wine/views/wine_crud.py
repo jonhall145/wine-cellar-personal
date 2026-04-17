@@ -21,6 +21,7 @@ from wine_cellar.apps.core.views import (
 )
 from wine_cellar.apps.household.mixins import require_member
 from wine_cellar.apps.storage.models import StorageItem
+from wine_cellar.apps.storage.utils import with_removal_sort_date
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.filters import WineFilter
 from wine_cellar.apps.wine.forms import WineBaseForm, WineEditForm, WineForm
@@ -401,12 +402,11 @@ class WineDetailView(BaseDetailView):
         if extraction_log:
             context["extraction_log"] = extraction_log
 
-        removed_bottles = (
+        removed_bottles = with_removal_sort_date(
             self.object.storageitem_set.filter(deleted=True)
             .select_related("storage")
             .prefetch_related("notes")
-            .order_by("-given_date", "-finished_date", "-created", "-pk")
-        )
+        ).order_by("-removal_sort_date", "-created", "-pk")
         consumed_bottles = removed_bottles.exclude(
             removal_reason=StorageItem.RemovalReason.GIVEN
         )

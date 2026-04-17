@@ -169,7 +169,8 @@ Run `make help` for the full list. Key targets:
 | `make lint` | Run all linters (Black, isort, flake8, ESLint) |
 | `make lint-quick` | Quick lint (staged JS + migrations) |
 | **Deployment** | |
-| `make ghcr-deploy` | Pull and deploy from GitHub Container Registry |
+| `make ghcr-deploy` | Pull and deploy the GHCR `latest` image |
+| `make ghcr-deploy-next` | Pull and deploy the GHCR `next` image |
 | `make deploy` | Rebuild and redeploy full production stack |
 | **Versioning** | |
 | `make version` | Print current version |
@@ -206,8 +207,11 @@ Tests use pytest with pytest-django. End-to-end tests use Playwright and auto-sk
 Production deployment uses Docker with images published to GitHub Container Registry.
 
 ```bash
-# Pull latest image and redeploy all containers
+# Pull latest release image and redeploy all containers
 make ghcr-deploy
+
+# Pull the next-branch image and redeploy all containers
+make ghcr-deploy-next
 ```
 
 The production stack includes:
