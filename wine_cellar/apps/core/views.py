@@ -13,7 +13,7 @@ from django.db.models.functions import Coalesce, TruncMonth
 from django.forms import model_to_dict
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.formats import number_format
 from django.views.generic import DeleteView, DetailView, FormView, TemplateView, View
@@ -1176,6 +1176,23 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
     vision_extractor_path = None  # dotted path for lazy import
     add_url_name = None  # e.g. "wine-add" or "whisky-add"
     beverage_label = None  # "wine" or "whisky"
+    page_title = None
+    scan_url_name = None
+    rescan_url_name = None
+    duplicate_check_url_name = None
+    extract_vision_url_name = None
+    quick_add_description = None
+    image_autofill_hint = None
+    image_extract_hint = None
+    scanned_label_alt = None
+    save_button_label = None
+    field_section_definitions = ()
+    cellar_extra_field_names = ()
+    confidence_badge_labels = None
+    vision_field_map = {}
+    vision_confidence_field_map = {}
+    vision_create_fields = ()
+    vision_fk_name_fields = {}
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -1260,14 +1277,65 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
         """Resolve FK fields in extracted data. Override per app."""
         pass
 
+    def _bind_form_fields(self, form, field_names):
+        return [form[field_name] for field_name in field_names]
+
+    def get_create_sections(self, form):
+        return [
+            {
+                "title": section["title"],
+                "fields": self._bind_form_fields(form, section["fields"]),
+            }
+            for section in self.field_section_definitions
+        ]
+
+    def get_vision_extraction_config(self):
+        return {
+            "endpointUrl": reverse(self.extract_vision_url_name),
+            "beverageLabel": self.beverage_label,
+            "fieldMap": self.vision_field_map,
+            "confidenceFieldMap": self.vision_confidence_field_map,
+            "createFields": list(self.vision_create_fields),
+            "fkNameFields": self.vision_fk_name_fields,
+        }
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        form = context["form"]
         household = get_active_household(self.request.user)
         user_storages = Storage.objects.filter(
             household=household, app_type=get_app_type()
         )
         free_cells_by_storage = {s.pk: s.get_free_cells_by_row() for s in user_storages}
         context["free_cells_by_storage"] = free_cells_by_storage
+        context.update(
+            {
+                "create_page_title": self.page_title
+                or f"Add {self.beverage_label.title()}",
+                "beverage_label": self.beverage_label,
+                "create_scan_url": reverse(self.scan_url_name),
+                "create_scan_button_label": f"Scan {self.beverage_label.title()}",
+                "create_rescan_url": reverse(self.rescan_url_name),
+                "create_duplicate_check_url": reverse(self.duplicate_check_url_name),
+                "create_quick_add_description": self.quick_add_description,
+                "create_image_autofill_hint": self.image_autofill_hint,
+                "create_image_extract_hint": self.image_extract_hint,
+                "create_scanned_label_alt": self.scanned_label_alt,
+                "create_save_button_label": self.save_button_label
+                or f"Save {self.beverage_label.title()}",
+                "create_form_sections": self.get_create_sections(form),
+                "create_cellar_extra_fields": self._bind_form_fields(
+                    form, self.cellar_extra_field_names
+                ),
+                "create_confidence_badges": self.confidence_badge_labels
+                or {
+                    "high": "High Confidence",
+                    "medium": "Please Verify",
+                    "low": "Low Confidence",
+                },
+                "vision_extraction_config": self.get_vision_extraction_config(),
+            }
+        )
 
         extraction_result = self.request.session.get("extraction_result")
         if extraction_result:
@@ -1413,6 +1481,277 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
                     ),
                 }
         return corrections
+
+
+class StorageItemFormLayoutMixin:
+    extra_stock_field_names = ()
+
+    def get_free_cells_by_storage(self, *, exclude_item=None):
+        household = get_active_household(self.request.user)
+        user_storages = Storage.objects.filter(
+            household=household, app_type=get_app_type()
+        )
+        return {
+            storage.pk: storage.get_free_cells_by_row(exclude_item=exclude_item)
+            for storage in user_storages
+        }
+
+    def get_stock_extra_fields(self, form):
+        return [form[field_name] for field_name in self.extra_stock_field_names]
+
+
+class BaseStorageItemAddView(StorageItemFormLayoutMixin, RequireMemberMixin, FormView):
+    beverage_model = None
+    storage_item_model = None
+    beverage_fk_name = None
+    beverage_context_name = None
+    beverage_label = None
+    detail_url_name = None
+    show_storage_suggestions = False
+
+    def get_beverage(self):
+        if not hasattr(self, "_beverage"):
+            household = get_active_household(self.request.user)
+            self._beverage = get_object_or_404(
+                self.beverage_model, pk=self.kwargs["pk"], household=household
+            )
+        return self._beverage
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        kwargs.update(self.get_add_form_kwargs(self.get_beverage()))
+        return kwargs
+
+    def get_add_form_kwargs(self, beverage):
+        return {}
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial.update(self.get_add_initial(self.get_beverage()))
+        return initial
+
+    def get_add_initial(self, beverage):
+        return {}
+
+    def get_storage_suggestions(self):
+        if not self.show_storage_suggestions:
+            return []
+
+        beverage = self.get_beverage()
+        household = get_active_household(self.request.user)
+        storage_related_name = self.storage_item_model._meta.get_field(
+            "storage"
+        ).remote_field.related_name
+        storage_item_pk = f"{storage_related_name}__pk"
+        beverage_filter = Q(
+            **{
+                f"{storage_related_name}__household": household,
+                f"{storage_related_name}__deleted": False,
+                f"{storage_related_name}__{self.beverage_fk_name}": beverage,
+            }
+        )
+        used_slots_filter = Q(
+            **{
+                f"{storage_related_name}__household": household,
+                f"{storage_related_name}__deleted": False,
+            }
+        )
+        suggested_storages = (
+            Storage.objects.filter(household=household, app_type=get_app_type())
+            .annotate(
+                bottle_count=Count(
+                    storage_item_pk,
+                    filter=beverage_filter,
+                    distinct=True,
+                ),
+                occupied_slots=Count(
+                    storage_item_pk,
+                    filter=used_slots_filter,
+                    distinct=True,
+                ),
+            )
+            .filter(bottle_count__gt=0)
+            .order_by("name", "pk")
+        )
+
+        suggestions = []
+        for storage in suggested_storages:
+            total_slots = storage.total_slots
+            if total_slots == 0:
+                free_slots = None
+            else:
+                free_slots = total_slots - storage.occupied_slots
+
+            suggestions.append(
+                {
+                    "storage_id": storage.pk,
+                    "storage_name": storage.name,
+                    "bottle_count": storage.bottle_count,
+                    "free_slots": free_slots,
+                }
+            )
+
+        return suggestions
+
+    def get_common_create_kwargs(self, cleaned_data):
+        return {
+            "storage": cleaned_data["storage"],
+            "row": cleaned_data.get("row"),
+            "column": cleaned_data.get("column"),
+            "price": cleaned_data.get("price"),
+            "is_gift": cleaned_data.get("is_gift", False),
+            "gift_from": cleaned_data.get("gift_from"),
+            "occasion": cleaned_data.get("occasion"),
+            "rating": cleaned_data.get("rating"),
+        }
+
+    def get_extra_create_kwargs(self, cleaned_data):
+        return {}
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        beverage = self.get_beverage()
+        context[self.beverage_context_name] = beverage
+        context["free_cells_by_storage"] = self.get_free_cells_by_storage()
+        context["storage_suggestions"] = self.get_storage_suggestions()
+        context["stock_suggestions_title"] = (
+            f"This {self.beverage_label} is already in:"
+        )
+        context["stock_extra_fields"] = self.get_stock_extra_fields(context["form"])
+        return context
+
+    def form_valid(self, form):
+        beverage = self.get_beverage()
+        household = get_active_household(self.request.user)
+        create_kwargs = self.get_common_create_kwargs(form.cleaned_data)
+        create_kwargs.update(
+            {
+                self.beverage_fk_name: beverage,
+                "user": self.request.user,
+                "household": household,
+            }
+        )
+        create_kwargs.update(self.get_extra_create_kwargs(form.cleaned_data))
+        self.storage_item_model.objects.create(**create_kwargs)
+        self.success_url = reverse_lazy(
+            self.detail_url_name, kwargs={"pk": beverage.pk}
+        )
+        return super().form_valid(form)
+
+
+class BaseStorageItemUpdateView(
+    StorageItemFormLayoutMixin, RequireMemberMixin, FormView
+):
+    storage_item_model = None
+    beverage_fk_name = None
+    beverage_context_name = None
+    detail_url_name = None
+    list_url_name = "bottle-list"
+    move_history_model = None
+    extra_initial_field_names = ()
+    common_edit_field_names = (
+        "storage",
+        "row",
+        "column",
+        "price",
+        "is_gift",
+        "gift_from",
+        "occasion",
+        "rating",
+    )
+
+    def get_object(self):
+        if not hasattr(self, "_object"):
+            household = get_active_household(self.request.user)
+            self._object = get_object_or_404(
+                self.storage_item_model,
+                pk=self.kwargs["pk"],
+                household=household,
+                deleted=False,
+            )
+        return self._object
+
+    def get_beverage(self):
+        return getattr(self.get_object(), self.beverage_fk_name)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        kwargs.update(self.get_update_form_kwargs(self.get_object()))
+        return kwargs
+
+    def get_update_form_kwargs(self, item):
+        return {}
+
+    def get_initial(self):
+        initial = super().get_initial()
+        item = self.get_object()
+        for field_name in self.common_edit_field_names + self.extra_initial_field_names:
+            initial[field_name] = getattr(item, field_name)
+        return initial
+
+    def get_cancel_url(self, item):
+        if self.request.GET.get("next") == "list":
+            return reverse_lazy(self.list_url_name)
+        beverage = getattr(item, self.beverage_fk_name)
+        return reverse_lazy(self.detail_url_name, kwargs={"pk": beverage.pk})
+
+    def get_success_url_for_item(self, item):
+        return self.get_cancel_url(item)
+
+    def item_has_moved(self, item, cleaned_data):
+        new_storage = cleaned_data["storage"]
+        new_row = cleaned_data.get("row")
+        new_column = cleaned_data.get("column")
+        return (
+            item.storage_id != new_storage.pk
+            or item.row != new_row
+            or item.column != new_column
+        )
+
+    def create_move_history(self, item, cleaned_data):
+        self.move_history_model.objects.create(
+            storage_item=item,
+            from_storage=item.storage,
+            from_row=item.row,
+            from_column=item.column,
+            to_storage=cleaned_data["storage"],
+            to_row=cleaned_data.get("row"),
+            to_column=cleaned_data.get("column"),
+            user=self.request.user,
+        )
+
+    def apply_common_updates(self, item, cleaned_data):
+        for field_name in self.common_edit_field_names:
+            setattr(item, field_name, cleaned_data.get(field_name))
+
+    def apply_extra_updates(self, item, cleaned_data):
+        return None
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        item = self.get_object()
+        context[self.beverage_context_name] = self.get_beverage()
+        context["item"] = item
+        context["storage_item"] = item
+        context["free_cells_by_storage"] = self.get_free_cells_by_storage(
+            exclude_item=item
+        )
+        context["cancel_url"] = self.get_cancel_url(item)
+        return context
+
+    def form_valid(self, form):
+        item = self.get_object()
+        if self.item_has_moved(item, form.cleaned_data):
+            self.create_move_history(item, form.cleaned_data)
+
+        self.apply_common_updates(item, form.cleaned_data)
+        self.apply_extra_updates(item, form.cleaned_data)
+        item.save()
+
+        self.success_url = self.get_success_url_for_item(item)
+        return super().form_valid(form)
 
 
 # --- Shared duplicate check AJAX ---

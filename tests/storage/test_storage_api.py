@@ -4,6 +4,7 @@ from datetime import timedelta
 import pytest
 from django.urls import reverse
 from django.utils import timezone
+from pytest_django.asserts import assertTemplateUsed
 
 from wine_cellar.apps.storage.models import BottleMoveHistory, Storage, StorageItem
 
@@ -528,6 +529,8 @@ class TestStorageItemAddView:
         client.force_login(user)
         r = client.get(reverse("stock-add", kwargs={"pk": wine.pk}))
         assert r.status_code == 200
+        assertTemplateUsed(r, "stock_add.html")
+        assertTemplateUsed(r, "core/stock_add.html")
         assert r.context["wine"].pk == wine.pk
         assert "free_cells_by_storage" in r.context
 
@@ -574,6 +577,48 @@ class TestStorageItemAddView:
         r = client.get(reverse("stock-add", kwargs={"pk": wine.pk}))
         assert r.status_code == 404
 
+    def test_storage_suggestions_respect_masks_and_used_slots(
+        self, client, user, wine_factory, storage_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user)
+        other_wine = wine_factory(user=user, name="Other Wine")
+        storage = storage_factory(
+            user=user,
+            name="Masked Rack",
+            rows=3,
+            columns=3,
+            cell_mask=[[1, 1], [1, 2]],
+        )
+        storage_item_factory(wine=wine, storage=storage, row=1, column=1, user=user)
+        storage_item_factory(
+            wine=other_wine,
+            storage=storage,
+            row=1,
+            column=2,
+            user=user,
+        )
+        storage_item_factory(
+            wine=wine,
+            storage=storage,
+            row=2,
+            column=2,
+            user=user,
+            deleted=True,
+        )
+
+        client.force_login(user)
+        r = client.get(reverse("stock-add", kwargs={"pk": wine.pk}))
+
+        assert r.status_code == 200
+        assert r.context["storage_suggestions"] == [
+            {
+                "storage_id": storage.pk,
+                "storage_name": "Masked Rack",
+                "bottle_count": 1,
+                "free_slots": 0,
+            }
+        ]
+
 
 @pytest.mark.django_db
 class TestStorageItemUpdateView:
@@ -587,9 +632,11 @@ class TestStorageItemUpdateView:
         assert r.context["item"].pk == item.pk
         assert r.context["wine"].pk == wine.pk
 
-    def test_post_updates_item(self, client, user, wine_factory, storage_item_factory):
+    def test_post_updates_item(
+        self, client, user, wine_factory, storage_item_factory, storage_factory
+    ):
         wine = wine_factory(user=user)
-        storage = user.storage_set.first()
+        storage = storage_factory(user=user, rows=3, columns=3)
         item = storage_item_factory(wine=wine, storage=storage, row=1, column=1)
         client.force_login(user)
         r = client.post(
@@ -604,10 +651,16 @@ class TestStorageItemUpdateView:
             follow=True,
         )
         assert r.status_code == 200
+        item.refresh_from_db()
+        assert item.row == 2
+        assert item.column == 2
+        assert str(item.price) == "15.00"
 
-    def test_next_list_redirect(self, client, user, wine_factory, storage_item_factory):
+    def test_next_list_redirect(
+        self, client, user, wine_factory, storage_item_factory, storage_factory
+    ):
         wine = wine_factory(user=user)
-        storage = user.storage_set.first()
+        storage = storage_factory(user=user, rows=3, columns=3)
         item = storage_item_factory(wine=wine, storage=storage, row=1, column=1)
         client.force_login(user)
         r = client.post(
@@ -616,11 +669,15 @@ class TestStorageItemUpdateView:
                 "storage": storage.pk,
                 "row": 1,
                 "column": 1,
+                "price": "",
+                "is_gift": "",
+                "gift_from": "",
+                "occasion": "",
                 "rating": "",
             },
-            follow=True,
         )
-        assert r.status_code == 200
+        assert r.status_code == 302
+        assert r.url.endswith(reverse("bottle-list"))
 
     def test_scoped_to_household(
         self, client, user_factory, wine_factory, storage_item_factory

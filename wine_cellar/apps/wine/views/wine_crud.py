@@ -45,6 +45,88 @@ class WineCreateView(BaseBeverageCreateView):
     vision_extractor_path = "wine_cellar.apps.wine.services.WineVisionExtractor"
     add_url_name = "wine-add"
     beverage_label = "wine"
+    page_title = "Add Wine"
+    scan_url_name = "wine-scan"
+    rescan_url_name = "label-scan"
+    duplicate_check_url_name = "wine-check-duplicate"
+    extract_vision_url_name = "wine-extract-vision"
+    quick_add_description = "Use your camera to scan the wine label and barcode:"
+    image_autofill_hint = (
+        "Upload images and click 'Auto-fill from Images' to extract wine details "
+        "using AI vision."
+    )
+    image_extract_hint = "Extract wine details from uploaded images"
+    scanned_label_alt = "Scanned wine label"
+    save_button_label = "Save Wine"
+    field_section_definitions = (
+        {
+            "title": "Details",
+            "fields": (
+                "name",
+                "wine_type",
+                "country",
+                "subregion",
+                "appellation",
+                "size",
+            ),
+        },
+        {
+            "title": "Characteristics",
+            "fields": (
+                "attributes",
+                "grapes",
+                "vintage",
+                "abv",
+                "category",
+            ),
+        },
+        {
+            "title": "Origin & Price",
+            "fields": ("vineyard", "source", "price", "barcode"),
+        },
+        {
+            "title": "Personal Notes",
+            "fields": ("food_pairings", "rating", "comment"),
+        },
+    )
+    cellar_extra_field_names = ()
+    confidence_badge_labels = {
+        "high": "✓ High Confidence",
+        "medium": "⚠ Please Verify",
+        "low": "⚡ Low Confidence",
+    }
+    vision_field_map = {
+        "name": "name",
+        "wine_type": "wine_type",
+        "vintage": "vintage",
+        "country": "country",
+        "subregion": "subregion",
+        "grapes": "grapes",
+        "vineyard": "vineyard",
+        "abv": "abv",
+        "size": "size",
+        "category": "category",
+        "barcode": "barcode",
+    }
+    vision_confidence_field_map = {
+        "name": "name",
+        "wine_type": "wine_type",
+        "type": "wine_type",
+        "vintage": "vintage",
+        "country": "country",
+        "subregion": "subregion",
+        "region": "subregion",
+        "grapes": "grapes",
+        "vineyard": "vineyard",
+        "abv": "abv",
+        "size": "size",
+        "volume": "size",
+        "category": "category",
+        "sweetness": "category",
+        "barcode": "barcode",
+        "appellation": "appellation",
+    }
+    vision_create_fields = ("grapes", "vineyard")
 
     def resolve_extracted_data(self, result_data, initial):
         # Vineyard: wrap string in list for form

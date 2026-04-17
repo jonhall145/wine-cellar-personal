@@ -1,14 +1,14 @@
 import django_filters
-from django.db.models import Q
 from django_filters import ChoiceFilter, MultipleChoiceFilter, OrderingFilter
 
 from wine_cellar.apps.core.filters import (
+    BaseStockItemFilter,
     BeverageFilterMixin,
     get_collection_choices,
     get_country_choices_cached,
     get_related_model_choices_cached,
+    get_stock_ordering_choices,
 )
-from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.forms import WhiskyFilterForm, WhiskyStorageItemFilterForm
 from wine_cellar.apps.whisky.models import (
@@ -261,17 +261,13 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
                     ]
 
 
-class WhiskyStorageItemFilter(django_filters.FilterSet):
+class WhiskyStorageItemFilter(BaseStockItemFilter):
     """Filter for the whisky bottles list page."""
 
     whisky_name = django_filters.CharFilter(
         field_name="whisky__name",
         lookup_expr="icontains",
         label="Whisky Name",
-    )
-    storage = django_filters.ModelChoiceFilter(
-        queryset=Storage.objects.none(),
-        label="Storage",
     )
     fill_level = ChoiceFilter(
         choices=[("", "All")] + list(FillLevel.choices),
@@ -282,52 +278,21 @@ class WhiskyStorageItemFilter(django_filters.FilterSet):
         choices=(("", "All"), ("1", "Yes"), ("0", "No")),
         label="Is Gift",
     )
-    has_occasion = ChoiceFilter(
-        method="filter_has_occasion",
-        choices=(("", "All"), ("1", "Yes"), ("0", "No")),
-        label="Has Occasion",
-    )
     owner = ChoiceFilter(
         choices=[],
         label="Owner",
     )
-    show_used = ChoiceFilter(
-        method="filter_show_used",
-        choices=(("0", "In stock only"), ("1", "Show all (incl. finished)")),
-        label="Show used",
-        empty_label=None,
-    )
     order = OrderingFilter(
-        choices=(
-            ("-created", "Recently Added"),
-            ("created", "Oldest First"),
-            ("whisky__name", "Whisky Name A-Z"),
-            ("-whisky__name", "Whisky Name Z-A"),
-            ("storage__name", "Storage A-Z"),
-            ("-price", "Highest Price"),
-            ("price", "Lowest Price"),
-        ),
+        choices=get_stock_ordering_choices("whisky__name", "Whisky"),
         label="Sort By",
         empty_label=None,
     )
-
-    def filter_show_used(self, queryset, name, value):
-        if value == "1":
-            return queryset
-        return queryset.filter(deleted=False)
 
     def filter_is_gift(self, queryset, name, value):
         if value == "1":
             return queryset.filter(is_gift=True)
         if value == "0":
             return queryset.filter(is_gift=False)
-        return queryset
-
-    def filter_has_occasion(self, queryset, name, value):
-        if value == "1":
-            return queryset.exclude(occasion__isnull=True).exclude(occasion="")
-        if value == "0":
-            return queryset.filter(Q(occasion__isnull=True) | Q(occasion=""))
         return queryset
 
     class Meta:
@@ -343,17 +308,10 @@ class WhiskyStorageItemFilter(django_filters.FilterSet):
         ]
 
     def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
-        if data is not None and "show_used" not in data:
-            data = data.copy()
-            data["show_used"] = "0"
         super().__init__(data, queryset, request=request, prefix=prefix)
         if request and request.user.is_authenticated:
             household = get_active_household(request.user)
             if household:
-                self.filters["storage"].queryset = Storage.objects.filter(
-                    household=household,
-                    app_type=get_app_type(),
-                ).order_by("order", "created")
                 owner_values = list(
                     WhiskyStorageItem.objects.filter(household=household)
                     .exclude(owner="")
