@@ -68,6 +68,7 @@ from wine_cellar.apps.storage.utils import (
     format_bottle_location,
     format_given_detail,
     format_move_detail,
+    with_removal_sort_date,
 )
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.filters import WhiskyFilter, WhiskyStorageItemFilter
@@ -1313,11 +1314,11 @@ class StorageItemHistoryView(RequireHouseholdMixin, ListView):
 
     def get_queryset(self):
         household = get_active_household(self.request.user)
-        return (
-            WhiskyStorageItem.objects.filter(household=household, deleted=True)
-            .select_related("whisky", "storage")
-            .order_by("-given_date", "-finished_date", "-created")
-        )
+        return with_removal_sort_date(
+            WhiskyStorageItem.objects.filter(
+                household=household, deleted=True
+            ).select_related("whisky", "storage")
+        ).order_by("-removal_sort_date", "-created", "-pk")
 
 
 class WhiskyMergeConfirmView(BaseMergeConfirmView):

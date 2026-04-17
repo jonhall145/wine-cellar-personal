@@ -1,3 +1,6 @@
+from django.db.models.functions import Coalesce
+
+
 def format_bottle_location(storage, row, column):
     parts = []
     if storage:
@@ -36,3 +39,7 @@ def format_given_detail(recipient, occasion=""):
     if occasion:
         parts.append(f"Occasion: {occasion}")
     return "\n".join(parts)
+
+
+def with_removal_sort_date(queryset):
+    return queryset.annotate(removal_sort_date=Coalesce("given_date", "finished_date"))

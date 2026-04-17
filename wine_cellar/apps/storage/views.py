@@ -32,6 +32,7 @@ from wine_cellar.apps.storage.utils import (
     format_bottle_location,
     format_given_detail,
     format_move_detail,
+    with_removal_sort_date,
 )
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.utils import classify_cask_type
@@ -365,12 +366,9 @@ class StorageItemHistoryView(ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        qs = (
-            super()
-            .get_queryset()
-            .select_related("wine", "storage")
-            .order_by("-given_date", "-finished_date", "-created")
-        )
+        qs = with_removal_sort_date(
+            super().get_queryset().select_related("wine", "storage")
+        ).order_by("-removal_sort_date", "-created", "-pk")
         household = get_active_household(self.request.user)
         return qs.filter(household=household, deleted=True)
 

@@ -318,6 +318,31 @@ class TestWineDetailView:
         assert "Given Bottles" in content
         assert "Dana" in content
 
+    def test_given_bottles_toggle_links_to_gifted_section(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user)
+        storage = user.storage_set.first()
+        storage_item_factory(
+            wine=wine,
+            storage=storage,
+            user=user,
+            deleted=True,
+            removal_reason=StorageItem.RemovalReason.GIVEN,
+            recipient="Dana",
+            given_date=timezone.localdate(),
+        )
+        client.force_login(user)
+
+        r = client.get(reverse("wine-detail", kwargs={"pk": wine.pk}))
+        content = r.content.decode()
+
+        assert r.status_code == HTTPStatus.OK
+        assert (
+            f'href="{reverse("wine-detail", kwargs={"pk": wine.pk})}'
+            "?show_consumed=1#gifted-bottles"
+        ) in content
+
 
 # ---------------------------------------------------------------------------
 # Wine list view

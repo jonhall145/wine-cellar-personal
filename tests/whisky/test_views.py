@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from django.utils import timezone
 from pytest_django.asserts import assertRedirects, assertTemplateUsed
 
 from wine_cellar.apps.whisky.models import (
@@ -225,8 +226,8 @@ def test_whisky_list_defaults_to_in_stock_and_oldest_first(
     oldest = whisky_factory(user=user, name="Oldest")
     newest = whisky_factory(user=user, name="Newest")
     out_of_stock = whisky_factory(user=user, name="Out of Stock")
-    old_created = datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=30)
-    new_created = datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
+    old_created = timezone.now() - datetime.timedelta(days=30)
+    new_created = timezone.now() - datetime.timedelta(days=1)
     Whisky.objects.filter(pk=oldest.pk).update(created=old_created)
     Whisky.objects.filter(pk=newest.pk).update(created=new_created)
 
@@ -318,6 +319,53 @@ def test_given_whisky_bottle_history_shows_recipient_and_occasion(
     assert "Given away" in content
     assert "Jamie" in content
     assert "Thank you" in content
+
+
+@pytest.mark.django_db
+def test_whisky_stock_history_orders_by_removal_date(
+    client, user, whisky_factory, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    older_consumed = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky=whisky_factory(user=user, name="Older Consumed"),
+        deleted=True,
+        finished_date=timezone.localdate() - datetime.timedelta(days=10),
+    )
+    newest_given = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky=whisky_factory(user=user, name="Newest Given"),
+        deleted=True,
+        removal_reason=WhiskyStorageItem.RemovalReason.GIVEN,
+        recipient="Jamie",
+        given_date=timezone.localdate() - datetime.timedelta(days=1),
+    )
+    middle_removed = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky=whisky_factory(user=user, name="Middle Removed"),
+        deleted=True,
+        removal_reason=WhiskyStorageItem.RemovalReason.REMOVED,
+        finished_date=timezone.localdate() - datetime.timedelta(days=5),
+    )
+
+    client.force_login(user)
+    response = client.get(reverse("stock-history"))
+
+    assert response.status_code == HTTPStatus.OK
+    assert list(response.context["storage_items"])[:3] == [
+        newest_given,
+        middle_removed,
+        older_consumed,
+    ]
 
 
 @pytest.mark.django_db

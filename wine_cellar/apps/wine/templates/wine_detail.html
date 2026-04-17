@@ -241,8 +241,8 @@
                                 {% endif %}
                             </a>
                         {% else %}
-                            <a href="{% url 'wine-detail' wine.pk %}?show_consumed=1#consumed-bottles"
-                               class="pure-button button__neutral button--sm">
+                            <a href="{% url 'wine-detail' wine.pk %}?show_consumed=1#{% if gifted_bottle_count and not consumed_bottle_count %}gifted-bottles{% else %}consumed-bottles{% endif %}"
+                                class="pure-button button__neutral button--sm">
                                 <i class="fa-regular fa-clock-rotate-left"></i>
                                 {% if gifted_bottle_count and not consumed_bottle_count %}
                                     Show given bottles ({{ gifted_bottle_count }})
