@@ -77,6 +77,7 @@ def test_wine_create(client, user):
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="base.html")
     assertTemplateUsed(response=r, template_name="wine_create.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_create.html")
 
 
 @pytest.mark.django_db

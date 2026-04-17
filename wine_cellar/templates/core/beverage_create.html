@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% load static storage_tags %}
+{% block extra_js %}
+    {{ block.super }}
+    <script src="{% static 'tom_select.js' %}" type="module" defer></script>
+    <script src="{% static 'image_preview.js' %}" type="module" defer></script>
+    <script src="{% static 'stock_add.js' %}" defer></script>
+    <script src="{% static 'beverage_vision_extraction.js' %}" defer></script>
+    <script src="{% static 'duplicate_check.js' %}" defer></script>
+{% endblock extra_js %}
+{% block extra_head %}
+    {{ block.super }}
+    {% if scanned_image %}
+        {% include 'extraction_badges.html' %}
+    {% endif %}
+{% endblock extra_head %}
+{% block title %}
+    {{ create_page_title }}
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">{{ create_page_title }}</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1 pure-u-lg-1-2 m-auto">
+            {% if not scanned_image %}
+                <div class="quick-add-section">
+                    <div class="card quick-add-card">
+                        <h2 class="card__title">
+                            <i class="fa-solid fa-bolt"></i> Quick Add
+                        </h2>
+                        <p class="form-hint mb-12">{{ create_quick_add_description }}</p>
+                        <div class="quick-add-buttons">
+                            <a href="{{ create_scan_url }}" class="pure-button button__primary quick-add-btn">
+                                <i class="fa-solid fa-camera"></i>
+                                {{ create_scan_button_label }}
+                            </a>
+                        </div>
+                        <div class="or-divider">
+                            <span>or fill in the form manually</span>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            {% if scanned_image %}
+                <div class="scanned-label-preview mb-12">
+                    <div class="pure-g">
+                        <div class="pure-u-1 pure-u-md-1-3">
+                            <img src="data:image/jpeg;base64,{{ scanned_image }}"
+                                 alt="{{ create_scanned_label_alt }}"
+                                 class="scanned-label-img"
+                                 width="200"
+                                 height="300">
+                        </div>
+                        <div class="pure-u-1 pure-u-md-2-3 extraction-info-container">
+                            <div class="extraction-info">
+                                <h3>
+                                    Auto-filled from Label
+                                    {% if confidence == 'high' %}
+                                        <span class="badge badge-success">{{ create_confidence_badges.high }}</span>
+                                    {% elif confidence == 'medium' %}
+                                        <span class="badge badge-warning">{{ create_confidence_badges.medium }}</span>
+                                    {% else %}
+                                        <span class="badge badge-info">{{ create_confidence_badges.low }}</span>
+                                    {% endif %}
+                                </h3>
+                                {% if extracted_fields %}
+                                    <p class="form-hint">
+                                        Extracted fields:
+                                        {% for field in extracted_fields %}{{ field }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                    </p>
+                                {% endif %}
+                                {% if extraction_result.errors %}
+                                    <p class="text--warning">
+                                        {% for error in extraction_result.errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                                    </p>
+                                {% endif %}
+                                <a href="{{ create_rescan_url }}" class="pure-button button__tertiary">
+                                    <i class="fa fa-camera"></i>
+                                    Re-scan Label
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            {% storage_cells free_cells_by_storage %}
+            <input type="hidden"
+                   id="duplicate-check-url"
+                   value="{{ create_duplicate_check_url }}"
+                   data-beverage-type="{{ beverage_label }}">
+            {{ vision_extraction_config|json_script:"vision-extraction-config" }}
+            {% if field_confidence %}
+                {{ field_confidence|json_script:"field-confidence-data" }}
+            {% endif %}
+            <form method="post"
+                  enctype="multipart/form-data"
+                  class="pure-form pure-form-stacked wine-form"
+                  data-loading
+                  novalidate>
+                {% csrf_token %}
+                <fieldset>
+                    <legend>
+                        <h2 class="form-subhead text--gray">
+                            <i class="fa-solid fa-image text--primary"></i>
+                            Images & Auto-fill
+                        </h2>
+                    </legend>
+                    <div class="form-hint mb-12">
+                        {{ create_image_autofill_hint }}
+                    </div>
+                    {% include 'forms/form_field.html' with field=form.image_front_label %}
+                    {% if scanned_front_image %}
+                        <div class="scanned-image-notice" id="scanned-front-notice">
+                            <div class="scanned-image-preview">
+                                <img src="data:image/jpeg;base64,{{ scanned_front_image }}"
+                                     alt="Scanned front label"
+                                     class="scanned-preview-thumb"
+                                     width="60"
+                                     height="60">
+                                <div class="scanned-image-info">
+                                    <span class="badge badge-info">
+                                        <i class="fa-solid fa-camera"></i>
+                                        Using scanned image
+                                    </span>
+                                    <button type="button"
+                                            class="pure-button button__tertiary btn-sm clear-scanned-image"
+                                            data-target="front">
+                                        <i class="fa-solid fa-times"></i> Clear
+                                    </button>
+                                </div>
+                            </div>
+                            <input type="hidden" name="use_scanned_front" id="use_scanned_front" value="1">
+                        </div>
+                    {% endif %}
+
+                    {% include 'forms/form_field.html' with field=form.image_back_label %}
+                    {% if scanned_back_image %}
+                        <div class="scanned-image-notice" id="scanned-back-notice">
+                            <div class="scanned-image-preview">
+                                <img src="data:image/jpeg;base64,{{ scanned_back_image }}"
+                                     alt="Scanned back label"
+                                     class="scanned-preview-thumb"
+                                     width="60"
+                                     height="60">
+                                <div class="scanned-image-info">
+                                    <span class="badge badge-info">
+                                        <i class="fa-solid fa-camera"></i>
+                                        Using scanned image
+                                    </span>
+                                    <button type="button"
+                                            class="pure-button button__tertiary btn-sm clear-scanned-image"
+                                            data-target="back">
+                                        <i class="fa-solid fa-times"></i> Clear
+                                    </button>
+                                </div>
+                            </div>
+                            <input type="hidden" name="use_scanned_back" id="use_scanned_back" value="1">
+                        </div>
+                    {% endif %}
+
+                    <div class="pure-controls pure-controls--spaced">
+                        <button type="button" name="extract_vision" class="pure-button button__secondary">
+                            <i class="fa fa-magic" aria-hidden="true"></i>
+                            Auto-fill from Images
+                        </button>
+                        <span class="form-hint form-hint--inline">
+                            {{ create_image_extract_hint }}
+                        </span>
+                    </div>
+                </fieldset>
+
+                {% for section in create_form_sections %}
+                    <fieldset>
+                        <legend>
+                            <h2 class="form-subhead text--gray">{{ section.title }}</h2>
+                        </legend>
+                        {% for field in section.fields %}
+                            {% include 'forms/form_field.html' with field=field %}
+                        {% endfor %}
+                    </fieldset>
+                {% endfor %}
+
+                <fieldset>
+                    <legend>
+                        <h2 class="form-subhead text--gray">Add to Cellar <span class="text--small">(optional)</span></h2>
+                    </legend>
+                    {% include 'forms/form_field.html' with field=form.storage %}
+                    {% include 'forms/form_field.html' with field=form.row %}
+                    <ul id="storage__error-full"
+                        class="form-errorlist hidden"
+                        aria-live="assertive"
+                        aria-atomic="true">
+                        <li>
+                            <span>This row of the shelf is full. Please choose another one.</span>
+                        </li>
+                    </ul>
+                    {% include 'forms/form_field.html' with field=form.column %}
+                    {% include 'forms/form_field.html' with field=form.bottle_price %}
+                    {% include 'forms/form_field.html' with field=form.is_gift %}
+                    {% include 'forms/form_field.html' with field=form.gift_from %}
+                    {% include 'forms/form_field.html' with field=form.occasion %}
+                    {% for field in create_cellar_extra_fields %}
+                        {% include 'forms/form_field.html' with field=field %}
+                    {% endfor %}
+                </fieldset>
+                {{ form.form_step }}
+                <div class="pure-controls">
+                    <div class="pure-g">
+                        <div id="save_button_container" class="pure-u-1">
+                            <button type="submit" name="save_finish" class="pure-button button__primary">
+                                {{ create_save_button_label }}
+                            </button>
+                            <button type="submit"
+                                    name="save_scan_another"
+                                    class="pure-button button__secondary"
+                                    title="Save and scan the next bottle">
+                                <i class="fa-solid fa-camera"></i>
+                                Save & Scan Another
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock content %}

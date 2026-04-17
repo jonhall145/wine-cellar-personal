@@ -3,7 +3,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.db import models, transaction
+from django.db import transaction
 from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
@@ -14,7 +14,11 @@ from django.views.generic import DeleteView, DetailView, FormView, ListView
 from django.views.generic.list import MultipleObjectMixin
 from django_filters.views import FilterView
 
-from wine_cellar.apps.core.views import BaseMarkBottleGivenView
+from wine_cellar.apps.core.views import (
+    BaseMarkBottleGivenView,
+    BaseStorageItemAddView,
+    BaseStorageItemUpdateView,
+)
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin
 from wine_cellar.apps.storage.filters import StorageItemFilter
 from wine_cellar.apps.storage.forms import (
@@ -211,109 +215,21 @@ class StorageDeleteView(DeleteView):
         return qs.filter(household=household, app_type=get_app_type())
 
 
-class StorageItemAddView(FormView):
+class StorageItemAddView(BaseStorageItemAddView):
     template_name = "stock_add.html"
     form_class = StockAddForm
+    beverage_model = Wine
+    storage_item_model = StorageItem
+    beverage_fk_name = "wine"
+    beverage_context_name = "wine"
+    beverage_label = "wine"
+    detail_url_name = "wine-detail"
+    show_storage_suggestions = True
 
-    def get_wine(self):
-        if not hasattr(self, "_wine"):
-            household = get_active_household(self.request.user)
-            self._wine = get_object_or_404(
-                Wine, pk=self.kwargs["pk"], household=household
-            )
-        return self._wine
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        if "user" not in kwargs:
-            kwargs["user"] = self.request.user
-        return kwargs
-
-    def get_initial(self):
-        initial = super().get_initial()
-        wine = self.get_wine()
-        # Pre-populate rating from wine's default rating
-        if wine.rating is not None:
-            initial["rating"] = wine.rating
-        return initial
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        wine = self.get_wine()
-        context["wine"] = wine
-        household = get_active_household(self.request.user)
-        user_storages = Storage.objects.filter(
-            household=household, app_type=get_app_type()
-        )
-        free_cells_by_storage = {
-            storage.pk: storage.get_free_cells_by_row() for storage in user_storages
-        }
-        context["free_cells_by_storage"] = free_cells_by_storage
-
-        # Storage suggestions: find where this wine already has bottles
-        existing_bottles = (
-            StorageItem.objects.filter(wine=wine, household=household, deleted=False)
-            .select_related("storage")
-            .values("storage__pk", "storage__name", "storage__rows", "storage__columns")
-            .annotate(bottle_count=models.Count("pk"))
-        )
-
-        storage_suggestions = []
-        for item in existing_bottles:
-            storage_pk = item["storage__pk"]
-            total_slots = item["storage__rows"] * item["storage__columns"]
-            # For unlimited shelves (rows=0), show as "unlimited"
-            if total_slots == 0:
-                free_slots = None  # Unlimited
-            else:
-                used_slots = StorageItem.objects.filter(
-                    storage_id=storage_pk, household=household, deleted=False
-                ).count()
-                free_slots = total_slots - used_slots
-
-            storage_suggestions.append(
-                {
-                    "storage_id": storage_pk,
-                    "storage_name": item["storage__name"],
-                    "bottle_count": item["bottle_count"],
-                    "free_slots": free_slots,
-                }
-            )
-
-        context["storage_suggestions"] = storage_suggestions
-        return context
-
-    def form_valid(self, form):
-        wine = self.get_wine()
-        household = get_active_household(self.request.user)
-        self.process_form_data(wine, self.request.user, household, form.cleaned_data)
-        self.success_url = reverse_lazy("wine-detail", kwargs={"pk": wine.pk})
-        return super().form_valid(form)
-
-    @staticmethod
-    def process_form_data(wine, user, household, cleaned_data):
-        storage = cleaned_data["storage"]
-        row = cleaned_data["row"]
-        column = cleaned_data["column"]
-        price = cleaned_data.get("price")
-        is_gift = cleaned_data.get("is_gift", False)
-        gift_from = cleaned_data.get("gift_from")
-        occasion = cleaned_data.get("occasion")
-        rating = cleaned_data.get("rating")
-
-        StorageItem.objects.create(
-            storage=storage,
-            wine=wine,
-            row=row,
-            column=column,
-            user=user,
-            household=household,
-            price=price,
-            is_gift=is_gift,
-            gift_from=gift_from,
-            occasion=occasion,
-            rating=rating,
-        )
+    def get_add_initial(self, wine):
+        if wine.rating is None:
+            return {}
+        return {"rating": wine.rating}
 
 
 class StorageItemDeleteView(DeleteView):
@@ -391,115 +307,19 @@ class StorageItemListView(RequireHouseholdMixin, FilterView):
         )
 
 
-class StorageItemUpdateView(FormView):
+class StorageItemUpdateView(BaseStorageItemUpdateView):
     """Edit an existing bottle (StorageItem)."""
 
     template_name = "bottle_edit.html"
     form_class = StorageItemEditForm
+    storage_item_model = StorageItem
+    beverage_fk_name = "wine"
+    beverage_context_name = "wine"
+    detail_url_name = "wine-detail"
+    move_history_model = BottleMoveHistory
 
-    def get_object(self):
-        if not hasattr(self, "_object"):
-            household = get_active_household(self.request.user)
-            self._object = get_object_or_404(
-                StorageItem,
-                pk=self.kwargs["pk"],
-                household=household,
-                deleted=False,
-            )
-        return self._object
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs["user"] = self.request.user
-        kwargs["instance"] = self.get_object()
-        return kwargs
-
-    def get_initial(self):
-        initial = super().get_initial()
-        item = self.get_object()
-        initial.update(
-            {
-                "storage": item.storage,
-                "row": item.row,
-                "column": item.column,
-                "price": item.price,
-                "is_gift": item.is_gift,
-                "gift_from": item.gift_from,
-                "occasion": item.occasion,
-                "rating": item.rating,
-            }
-        )
-        return initial
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        item = self.get_object()
-        context["wine"] = item.wine
-        context["item"] = item
-
-        # Free cells calculation - exclude current item so it can be moved
-        household = get_active_household(self.request.user)
-        user_storages = Storage.objects.filter(
-            household=household, app_type=get_app_type()
-        )
-        free_cells_by_storage = {
-            storage.pk: storage.get_free_cells_by_row(exclude_item=item)
-            for storage in user_storages
-        }
-        context["free_cells_by_storage"] = free_cells_by_storage
-
-        # Cancel URL - return to wine detail or bottle list
-        next_url = self.request.GET.get("next")
-        if next_url == "list":
-            context["cancel_url"] = reverse_lazy("bottle-list")
-        else:
-            context["cancel_url"] = reverse_lazy(
-                "wine-detail", kwargs={"pk": item.wine.pk}
-            )
-
-        return context
-
-    def form_valid(self, form):
-        item = self.get_object()
-        new_storage = form.cleaned_data["storage"]
-        new_row = form.cleaned_data["row"]
-        new_column = form.cleaned_data["column"]
-
-        moved = (
-            item.storage_id != new_storage.pk
-            or item.row != new_row
-            or item.column != new_column
-        )
-
-        if moved:
-            BottleMoveHistory.objects.create(
-                storage_item=item,
-                from_storage=item.storage,
-                from_row=item.row,
-                from_column=item.column,
-                to_storage=new_storage,
-                to_row=new_row,
-                to_column=new_column,
-                user=self.request.user,
-            )
-
-        item.storage = new_storage
-        item.row = new_row
-        item.column = new_column
-        item.price = form.cleaned_data["price"]
-        item.is_gift = form.cleaned_data["is_gift"]
-        item.gift_from = form.cleaned_data["gift_from"]
-        item.occasion = form.cleaned_data["occasion"]
-        item.rating = form.cleaned_data["rating"]
-        item.save()
-
-        next_url = self.request.GET.get("next")
-        if next_url == "list":
-            self.success_url = reverse_lazy("bottle-list")
-        else:
-            self.success_url = reverse_lazy("wine-detail", kwargs={"pk": item.wine.pk})
-
-        return super().form_valid(form)
+    def get_update_form_kwargs(self, item):
+        return {"instance": item}
 
 
 @login_required

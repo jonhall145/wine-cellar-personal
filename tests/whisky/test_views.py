@@ -611,6 +611,7 @@ def test_whisky_create_get(client, user):
     r = client.get(reverse("whisky-add"))
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="whisky/whisky_create.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_create.html")
     assert "form" in r.context
 
 
@@ -857,6 +858,53 @@ def test_whisky_create_post_with_distillery(client, user, distillery_factory):
     whisky = Whisky.objects.get(user=user, name="Laphroaig 10")
     assert whisky.distillery == distillery
     assert whisky.age_statement == 10
+
+
+@pytest.mark.django_db
+def test_whisky_stock_add_uses_shared_template(client, user, whisky_factory):
+    whisky = whisky_factory(user=user)
+    client.force_login(user)
+
+    response = client.get(reverse("stock-add", kwargs={"pk": whisky.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assertTemplateUsed(response, "whisky/stock_add.html")
+    assertTemplateUsed(response, "core/stock_add.html")
+    assert response.context["whisky"].pk == whisky.pk
+
+
+@pytest.mark.django_db
+def test_whisky_bottle_edit_next_list_redirects_to_bottle_list(
+    client, user, whisky_storage_item_factory
+):
+    storage_item = whisky_storage_item_factory(
+        user=user,
+        household=user.user_settings.active_household,
+        storage__user=user,
+        storage__household=user.user_settings.active_household,
+        whisky__user=user,
+        whisky__household=user.user_settings.active_household,
+        row=1,
+        column=1,
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse("bottle-edit", kwargs={"pk": storage_item.pk}) + "?next=list",
+        {
+            "storage": storage_item.storage.pk,
+            "row": 1,
+            "column": 1,
+            "price": "",
+            "rating": "",
+            "fill_level": storage_item.fill_level,
+            "owner": storage_item.owner,
+        },
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.redirect_chain[-1][0].endswith(reverse("bottle-list"))
 
 
 # ---------------------------------------------------------------------------

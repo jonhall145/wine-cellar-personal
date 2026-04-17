@@ -62,11 +62,8 @@ module.exports = {
     image_preview: {
       import: ['./wine_cellar/assets/js/image_preview.ts'],
     },
-    vision_extraction: {
-      import: ['./wine_cellar/assets/js/vision_extraction.js'],
-    },
-    whisky_vision_extraction: {
-      import: ['./wine_cellar/assets/js/whisky_vision_extraction.js'],
+    beverage_vision_extraction: {
+      import: ['./wine_cellar/assets/js/beverage_vision_extraction.js'],
     },
     storage_grid: {
       import: ['./wine_cellar/react/storage_grid.tsx'],
