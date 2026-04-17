@@ -356,15 +356,29 @@ def test_whisky_stock_history_orders_by_removal_date(
         removal_reason=WhiskyStorageItem.RemovalReason.REMOVED,
         finished_date=timezone.localdate() - datetime.timedelta(days=5),
     )
+    undated_removed = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky=whisky_factory(user=user, name="Undated Removed"),
+        deleted=True,
+        removal_reason=WhiskyStorageItem.RemovalReason.REMOVED,
+    )
+    WhiskyStorageItem.objects.filter(pk=undated_removed.pk).update(
+        created=timezone.now() - datetime.timedelta(days=20)
+    )
+    undated_removed.refresh_from_db()
 
     client.force_login(user)
     response = client.get(reverse("stock-history"))
 
     assert response.status_code == HTTPStatus.OK
-    assert list(response.context["storage_items"])[:3] == [
+    assert list(response.context["storage_items"])[:4] == [
         newest_given,
         middle_removed,
         older_consumed,
+        undated_removed,
     ]
 
 

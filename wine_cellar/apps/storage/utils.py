@@ -1,4 +1,4 @@
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, TruncDate
 
 
 def format_bottle_location(storage, row, column):
@@ -42,4 +42,10 @@ def format_given_detail(recipient, occasion=""):
 
 
 def with_removal_sort_date(queryset):
-    return queryset.annotate(removal_sort_date=Coalesce("given_date", "finished_date"))
+    return queryset.annotate(
+        removal_sort_date=Coalesce(
+            "given_date",
+            "finished_date",
+            TruncDate("created"),
+        )
+    )

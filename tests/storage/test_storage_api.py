@@ -323,15 +323,27 @@ class TestStorageItemHistory:
             removal_reason=StorageItem.RemovalReason.REMOVED,
             finished_date=timezone.localdate() - timedelta(days=5),
         )
+        undated_removed = storage_item_factory(
+            wine=wine_factory(user=user, name="Undated Removed"),
+            storage=storage,
+            user=user,
+            deleted=True,
+            removal_reason=StorageItem.RemovalReason.REMOVED,
+        )
+        StorageItem.objects.filter(pk=undated_removed.pk).update(
+            created=timezone.now() - timedelta(days=20)
+        )
+        undated_removed.refresh_from_db()
 
         client.force_login(user)
         r = client.get(reverse("stock-history"))
 
         assert r.status_code == 200
-        assert list(r.context["storage_items"])[:3] == [
+        assert list(r.context["storage_items"])[:4] == [
             newest_given,
             middle_removed,
             older_consumed,
+            undated_removed,
         ]
 
 
