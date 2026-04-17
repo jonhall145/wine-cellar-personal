@@ -577,6 +577,48 @@ class TestStorageItemAddView:
         r = client.get(reverse("stock-add", kwargs={"pk": wine.pk}))
         assert r.status_code == 404
 
+    def test_storage_suggestions_respect_masks_and_used_slots(
+        self, client, user, wine_factory, storage_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user)
+        other_wine = wine_factory(user=user, name="Other Wine")
+        storage = storage_factory(
+            user=user,
+            name="Masked Rack",
+            rows=3,
+            columns=3,
+            cell_mask=[[1, 1], [1, 2]],
+        )
+        storage_item_factory(wine=wine, storage=storage, row=1, column=1, user=user)
+        storage_item_factory(
+            wine=other_wine,
+            storage=storage,
+            row=1,
+            column=2,
+            user=user,
+        )
+        storage_item_factory(
+            wine=wine,
+            storage=storage,
+            row=2,
+            column=2,
+            user=user,
+            deleted=True,
+        )
+
+        client.force_login(user)
+        r = client.get(reverse("stock-add", kwargs={"pk": wine.pk}))
+
+        assert r.status_code == 200
+        assert r.context["storage_suggestions"] == [
+            {
+                "storage_id": storage.pk,
+                "storage_name": "Masked Rack",
+                "bottle_count": 1,
+                "free_slots": 0,
+            }
+        ]
+
 
 @pytest.mark.django_db
 class TestStorageItemUpdateView:

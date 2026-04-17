@@ -72,6 +72,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
+                if (data.match_type === 'barcode' && data.multiple_matches) {
+                    showMessage(
+                        'warning',
+                        data.message ||
+                            `Found multiple matching ${config.beverageLabel}s for this barcode.`
+                    );
+                    return;
+                }
+
+                const extractedFields = data.extracted_fields || [];
+
                 fillFormFields(data.data || {});
 
                 if (data.field_confidence) {
@@ -81,12 +92,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.match_type === 'barcode') {
                     showMessage(
                         'barcode',
-                        `Found existing ${config.beverageLabel} via barcode (${data.matched_barcode}). Filled ${data.extracted_fields.length} fields.`
+                        `Found existing ${config.beverageLabel} via barcode (${data.matched_barcode}). Filled ${extractedFields.length} fields.`
                     );
                 } else {
                     showMessage(
                         'success',
-                        `Extracted ${data.extracted_fields.length} fields with ${data.confidence} confidence`
+                        `Extracted ${extractedFields.length} fields with ${data.confidence} confidence`
                     );
                 }
 

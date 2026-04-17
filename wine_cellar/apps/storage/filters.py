@@ -8,7 +8,7 @@ from wine_cellar.apps.core.filters import (
 from wine_cellar.apps.storage.models import StorageItem
 
 
-class StorageItemFilter(BaseStockItemFilter, django_filters.FilterSet):
+class StorageItemFilter(BaseStockItemFilter):
     """Filter for the bottles list page."""
 
     wine_name = django_filters.CharFilter(

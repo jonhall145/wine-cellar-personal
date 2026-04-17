@@ -1540,36 +1540,54 @@ class BaseStorageItemAddView(StorageItemFormLayoutMixin, RequireMemberMixin, For
 
         beverage = self.get_beverage()
         household = get_active_household(self.request.user)
-        existing_bottles = (
-            self.storage_item_model.objects.filter(
-                household=household,
-                deleted=False,
-                **{self.beverage_fk_name: beverage},
+        storage_related_name = self.storage_item_model._meta.get_field(
+            "storage"
+        ).remote_field.related_name
+        storage_item_pk = f"{storage_related_name}__pk"
+        beverage_filter = Q(
+            **{
+                f"{storage_related_name}__household": household,
+                f"{storage_related_name}__deleted": False,
+                f"{storage_related_name}__{self.beverage_fk_name}": beverage,
+            }
+        )
+        used_slots_filter = Q(
+            **{
+                f"{storage_related_name}__household": household,
+                f"{storage_related_name}__deleted": False,
+            }
+        )
+        suggested_storages = (
+            Storage.objects.filter(household=household, app_type=get_app_type())
+            .annotate(
+                bottle_count=Count(
+                    storage_item_pk,
+                    filter=beverage_filter,
+                    distinct=True,
+                ),
+                occupied_slots=Count(
+                    storage_item_pk,
+                    filter=used_slots_filter,
+                    distinct=True,
+                ),
             )
-            .select_related("storage")
-            .values("storage__pk", "storage__name", "storage__rows", "storage__columns")
-            .annotate(bottle_count=Count("pk"))
+            .filter(bottle_count__gt=0)
+            .order_by("name", "pk")
         )
 
         suggestions = []
-        for item in existing_bottles:
-            storage_pk = item["storage__pk"]
-            total_slots = item["storage__rows"] * item["storage__columns"]
+        for storage in suggested_storages:
+            total_slots = storage.total_slots
             if total_slots == 0:
                 free_slots = None
             else:
-                used_slots = self.storage_item_model.objects.filter(
-                    storage_id=storage_pk,
-                    household=household,
-                    deleted=False,
-                ).count()
-                free_slots = total_slots - used_slots
+                free_slots = total_slots - storage.occupied_slots
 
             suggestions.append(
                 {
-                    "storage_id": storage_pk,
-                    "storage_name": item["storage__name"],
-                    "bottle_count": item["bottle_count"],
+                    "storage_id": storage.pk,
+                    "storage_name": storage.name,
+                    "bottle_count": storage.bottle_count,
                     "free_slots": free_slots,
                 }
             )

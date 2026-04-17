@@ -261,7 +261,7 @@ class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
                     ]
 
 
-class WhiskyStorageItemFilter(BaseStockItemFilter, django_filters.FilterSet):
+class WhiskyStorageItemFilter(BaseStockItemFilter):
     """Filter for the whisky bottles list page."""
 
     whisky_name = django_filters.CharFilter(
