@@ -14,6 +14,7 @@ from django.views.generic import DeleteView, DetailView, FormView, ListView
 from django.views.generic.list import MultipleObjectMixin
 from django_filters.views import FilterView
 
+from wine_cellar.apps.core.views import BaseMarkBottleGivenView
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin
 from wine_cellar.apps.storage.filters import StorageItemFilter
 from wine_cellar.apps.storage.forms import (
@@ -27,7 +28,11 @@ from wine_cellar.apps.storage.models import (
     StorageItem,
     get_app_type,
 )
-from wine_cellar.apps.storage.utils import format_bottle_location, format_move_detail
+from wine_cellar.apps.storage.utils import (
+    format_bottle_location,
+    format_given_detail,
+    format_move_detail,
+)
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.utils import classify_cask_type
 from wine_cellar.apps.wine.models import Wine
@@ -329,8 +334,28 @@ class StorageItemDeleteView(DeleteView):
         self.object = self.get_object()
         self.object.deleted = True
         self.object.finished_date = timezone.localdate()
-        self.object.save(update_fields=["deleted", "finished_date"])
+        self.object.removal_reason = StorageItem.RemovalReason.REMOVED
+        self.object.given_date = None
+        self.object.recipient = ""
+        self.object.given_occasion = ""
+        self.object.save(
+            update_fields=[
+                "deleted",
+                "finished_date",
+                "removal_reason",
+                "given_date",
+                "recipient",
+                "given_occasion",
+            ]
+        )
         return redirect(self.get_success_url())
+
+
+class StorageItemMarkGivenView(BaseMarkBottleGivenView):
+    storage_item_model = StorageItem
+    beverage_fk_name = "wine"
+    detail_url_name = "wine-detail"
+    list_url_name = "bottle-list"
 
 
 class StorageItemHistoryView(ListView):
@@ -344,7 +369,7 @@ class StorageItemHistoryView(ListView):
             super()
             .get_queryset()
             .select_related("wine", "storage")
-            .order_by("-created")
+            .order_by("-given_date", "-finished_date", "-created")
         )
         household = get_active_household(self.request.user)
         return qs.filter(household=household, deleted=True)
@@ -783,12 +808,24 @@ class BottleHistoryView(RequireHouseholdMixin, DetailView):
                 }
             )
 
-        if item.finished_date:
+        if item.removal_reason == StorageItem.RemovalReason.GIVEN and item.given_date:
+            events.append(
+                {
+                    "type": "given",
+                    "date": item.given_date,
+                    "label": "Given away",
+                    "detail": format_given_detail(item.recipient, item.given_occasion),
+                }
+            )
+        elif item.finished_date:
+            label = "Removed from inventory"
+            if item.removal_reason in ("", StorageItem.RemovalReason.CONSUMED):
+                label = "Finished"
             events.append(
                 {
                     "type": "finished",
                     "date": item.finished_date,
-                    "label": "Finished",
+                    "label": label,
                     "detail": "",
                 }
             )
@@ -799,7 +836,10 @@ class BottleHistoryView(RequireHouseholdMixin, DetailView):
             "wine-detail", kwargs={"pk": item.wine.pk}
         )
         if item.deleted:
-            context["beverage_detail_url"] += "?show_consumed=1#consumed-bottles"
+            if item.removal_reason == StorageItem.RemovalReason.GIVEN:
+                context["beverage_detail_url"] += "?show_consumed=1#gifted-bottles"
+            else:
+                context["beverage_detail_url"] += "?show_consumed=1#consumed-bottles"
         return context
 
 

@@ -743,6 +743,11 @@ class WhiskyStorageItemQuerySet(HouseholdQuerySet):
 
 
 class WhiskyStorageItem(UserContentModel):
+    class RemovalReason(models.TextChoices):
+        CONSUMED = "consumed", "Consumed"
+        GIVEN = "given", "Given Away"
+        REMOVED = "removed", "Removed"
+
     objects = WhiskyStorageItemQuerySet.as_manager()
 
     storage = models.ForeignKey(
@@ -801,6 +806,30 @@ class WhiskyStorageItem(UserContentModel):
         blank=True,
         verbose_name="Date Finished",
     )
+    recipient = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name="Recipient",
+    )
+    given_occasion = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name="Given Occasion",
+    )
+    given_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Date Given",
+    )
+    removal_reason = models.CharField(
+        max_length=20,
+        choices=RemovalReason.choices,
+        blank=True,
+        default="",
+        verbose_name="Removal Reason",
+    )
 
     class Meta:
         verbose_name = "Whisky Bottle"
@@ -836,6 +865,10 @@ class WhiskyStorageItem(UserContentModel):
         if self.fill_level != FillLevel.DREG or not self.dreg_date:
             return False
         return (datetime.date.today() - self.dreg_date).days > 365
+
+    @property
+    def removal_date(self):
+        return self.given_date or self.finished_date
 
 
 # ---------------------------------------------------------------------------

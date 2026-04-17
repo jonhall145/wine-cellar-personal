@@ -89,6 +89,11 @@ urlpatterns = [
         name="stock-delete",
     ),
     path(
+        "stock/<int:pk>/give/",
+        views.StorageItemMarkGivenView.as_view(),
+        name="stock-give",
+    ),
+    path(
         "stock/<int:pk>/edit/",
         views.StorageItemUpdateView.as_view(),
         name="bottle-edit",

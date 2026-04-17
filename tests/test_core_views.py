@@ -8,6 +8,7 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 
+from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.wine.models import Wine, WineType
 
 # ---------------------------------------------------------------------------
@@ -287,6 +288,36 @@ class TestWineDetailView:
         assert "Hide consumed bottles" in content
         assert reverse("bottle-history", kwargs={"pk": consumed_bottle.pk}) in content
 
+    def test_given_bottles_are_shown_separately(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user)
+        storage = user.storage_set.first()
+        gifted_bottle = storage_item_factory(
+            wine=wine,
+            storage=storage,
+            user=user,
+            row=1,
+            column=2,
+            deleted=True,
+            removal_reason=StorageItem.RemovalReason.GIVEN,
+            recipient="Dana",
+            given_occasion="Wedding",
+            given_date=timezone.localdate(),
+        )
+        client.force_login(user)
+
+        r = client.get(
+            f"{reverse('wine-detail', kwargs={'pk': wine.pk})}?show_consumed=1"
+        )
+        content = r.content.decode()
+
+        assert r.status_code == HTTPStatus.OK
+        assert r.context["gifted_bottle_count"] == 1
+        assert gifted_bottle in list(r.context["gifted_bottles"])
+        assert "Given Bottles" in content
+        assert "Dana" in content
+
 
 # ---------------------------------------------------------------------------
 # Wine list view
@@ -295,8 +326,11 @@ class TestWineDetailView:
 
 @pytest.mark.django_db
 class TestWineListView:
-    def test_returns_200_with_wines(self, client, user, wine_factory):
-        wine_factory(user=user, name="Listed Wine")
+    def test_returns_200_with_wines(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user, name="Listed Wine")
+        storage_item_factory(wine=wine, user=user)
         client.force_login(user)
         r = client.get(reverse("wine-list"))
         assert r.status_code == HTTPStatus.OK
@@ -310,9 +344,13 @@ class TestWineListView:
         assert r.status_code == HTTPStatus.OK
         assert r.context["paginator"].per_page == 10
 
-    def test_filter_by_wine_type(self, client, user, wine_factory):
-        wine_factory(user=user, wine_type=WineType.RED, name="Red One")
-        wine_factory(user=user, wine_type=WineType.WHITE, name="White One")
+    def test_filter_by_wine_type(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        red = wine_factory(user=user, wine_type=WineType.RED, name="Red One")
+        white = wine_factory(user=user, wine_type=WineType.WHITE, name="White One")
+        storage_item_factory(wine=red, user=user)
+        storage_item_factory(wine=white, user=user)
         client.force_login(user)
         r = client.get(reverse("wine-list") + "?wine_type=RE")
         assert r.status_code == HTTPStatus.OK
@@ -320,10 +358,15 @@ class TestWineListView:
         assert "Red One" in names
         assert "White One" not in names
 
-    def test_filter_by_multiple_wine_types(self, client, user, wine_factory):
-        wine_factory(user=user, wine_type=WineType.RED, name="Red One")
-        wine_factory(user=user, wine_type=WineType.WHITE, name="White One")
-        wine_factory(user=user, wine_type=WineType.ROSE, name="Rose One")
+    def test_filter_by_multiple_wine_types(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        red = wine_factory(user=user, wine_type=WineType.RED, name="Red One")
+        white = wine_factory(user=user, wine_type=WineType.WHITE, name="White One")
+        rose = wine_factory(user=user, wine_type=WineType.ROSE, name="Rose One")
+        storage_item_factory(wine=red, user=user)
+        storage_item_factory(wine=white, user=user)
+        storage_item_factory(wine=rose, user=user)
         client.force_login(user)
         r = client.get(reverse("wine-list") + "?wine_type=RE&wine_type=WH")
         assert r.status_code == HTTPStatus.OK
@@ -331,6 +374,29 @@ class TestWineListView:
         assert "Red One" in names
         assert "White One" in names
         assert "Rose One" not in names
+
+    def test_list_defaults_to_in_stock_and_oldest_first(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        oldest = wine_factory(user=user, name="Oldest")
+        newest = wine_factory(user=user, name="Newest")
+        out_of_stock = wine_factory(user=user, name="Out of Stock")
+        old_created = timezone.now() - timezone.timedelta(days=30)
+        new_created = timezone.now() - timezone.timedelta(days=1)
+        Wine.objects.filter(pk=oldest.pk).update(created=old_created)
+        Wine.objects.filter(pk=newest.pk).update(created=new_created)
+
+        storage_item_factory(wine=oldest, user=user)
+        storage_item_factory(wine=newest, user=user)
+
+        client.force_login(user)
+        response = client.get(reverse("wine-list"))
+
+        assert response.status_code == HTTPStatus.OK
+        assert response.context["filter"].data["stock"] == "1"
+        assert response.context["filter"].data["order"] == "created"
+        assert list(response.context["wines"]) == [oldest, newest]
+        assert out_of_stock not in response.context["wines"]
 
     def test_per_page_parameter(self, client, user, wine_factory):
         for i in range(15):

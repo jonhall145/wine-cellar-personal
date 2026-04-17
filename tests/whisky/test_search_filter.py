@@ -17,6 +17,8 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
     @pytest.mark.django_db
     class TestWhiskySearchFilter:
         def _filter(self, user, **params):
+            params.setdefault("has_stock", "0")
+            params.setdefault("order", "created")
             request = RequestFactory().get("/")
             request.user = user
             return WhiskyFilter(
@@ -121,6 +123,18 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
             )
 
             assert tom_config["maxOptions"] is None
+
+        def test_rating_filter_supports_multiple_selected_ratings(
+            self, user, whisky_factory
+        ):
+            zero_star = whisky_factory(user=user, rating=0)
+            one_star = whisky_factory(user=user, rating=1)
+            two_star = whisky_factory(user=user, rating=2)
+
+            filt = self._filter(user, rating=["0", "1"], has_stock="0", order="created")
+
+            assert list(filt.qs) == [zero_star, one_star]
+            assert two_star not in filt.qs
 
     @pytest.mark.django_db
     class TestWhiskyStorageItemFilter:

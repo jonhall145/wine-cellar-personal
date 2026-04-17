@@ -6,6 +6,7 @@ from wine_cellar.apps.storage.views import (
     StorageItemDeleteView,
     StorageItemHistoryView,
     StorageItemListView,
+    StorageItemMarkGivenView,
     StorageItemUpdateView,
 )
 from wine_cellar.apps.wine.views import (
@@ -59,6 +60,7 @@ urlpatterns = [
     path(
         "stock/delete/<int:pk>/", StorageItemDeleteView.as_view(), name="stock-delete"
     ),
+    path("stock/give/<int:pk>/", StorageItemMarkGivenView.as_view(), name="stock-give"),
     path("bottles/", StorageItemListView.as_view(), name="bottle-list"),
     path("bottle/edit/<int:pk>/", StorageItemUpdateView.as_view(), name="bottle-edit"),
     path("storage/history/", StorageItemHistoryView.as_view(), name="stock-history"),

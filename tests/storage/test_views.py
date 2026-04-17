@@ -480,3 +480,64 @@ def test_consumed_bottle_history_links_back_to_consumed_bottles(
 
     assert r.status_code == HTTPStatus.OK
     assert expected_href in content
+
+
+@pytest.mark.django_db
+def test_mark_bottle_as_given_records_recipient_and_date(
+    client, user, wine_factory, storage_item_factory
+):
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(wine=wine, storage=storage, user=user)
+
+    client.force_login(user)
+    response = client.post(
+        reverse("stock-give", kwargs={"pk": bottle.pk}),
+        {
+            "recipient": "Alex",
+            "given_date": "2026-04-16",
+            "given_occasion": "Birthday",
+        },
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert response.url == reverse("wine-detail", kwargs={"pk": wine.pk})
+
+    bottle.refresh_from_db()
+    assert bottle.deleted is True
+    assert bottle.removal_reason == StorageItem.RemovalReason.GIVEN
+    assert bottle.recipient == "Alex"
+    assert bottle.given_date == date(2026, 4, 16)
+    assert bottle.given_occasion == "Birthday"
+    assert bottle.finished_date is None
+
+
+@pytest.mark.django_db
+def test_given_bottle_history_links_back_to_gifted_bottles(
+    client, user, wine_factory, storage_item_factory
+):
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(
+        wine=wine,
+        storage=storage,
+        user=user,
+        deleted=True,
+        removal_reason=StorageItem.RemovalReason.GIVEN,
+        recipient="Chris",
+        given_occasion="Retirement",
+        given_date=date(2025, 1, 5),
+    )
+
+    client.force_login(user)
+    r = client.get(reverse("bottle-history", kwargs={"pk": bottle.pk}))
+    content = r.content.decode()
+    expected_href = (
+        f'href="{reverse("wine-detail", kwargs={"pk": wine.pk})}'
+        "?show_consumed=1#gifted-bottles"
+    )
+
+    assert r.status_code == HTTPStatus.OK
+    assert expected_href in content
+    assert "Given away" in content
+    assert "Chris" in content
