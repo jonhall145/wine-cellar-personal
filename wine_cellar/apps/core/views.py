@@ -755,6 +755,8 @@ class BaseDetailView(RequireHouseholdMixin, DetailView):
     select_related_fields = ()
     prefetch_related_fields = ()
     storage_item_reverse = None  # e.g. "storageitem" or "whiskystorageitem"
+    extraction_log_model = None
+    extraction_log_fk_name = None
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -792,11 +794,26 @@ class BaseDetailView(RequireHouseholdMixin, DetailView):
             )
         )
         context["duplicates"] = duplicates
+        extraction_log = self.get_extraction_log(beverage)
+        if extraction_log:
+            context["extraction_log"] = extraction_log
 
         # Track recently viewed beverages in session
         _track_recent_view(self.request, beverage)
 
         return context
+
+    def get_extraction_log(self, beverage):
+        if not self.extraction_log_model or not self.extraction_log_fk_name:
+            return None
+
+        return (
+            self.extraction_log_model.objects.filter(
+                **{self.extraction_log_fk_name: beverage, "was_successful": True}
+            )
+            .order_by("-created")
+            .first()
+        )
 
 
 MAX_RECENT_VIEWS = 8
@@ -1105,6 +1122,48 @@ class BaseBeverageUpdateView(RequireMemberMixin, FormView):
     image_related_name = None  # e.g. "wineimage_set" or "images"
     detail_url_name = None  # e.g. "wine-detail" or "whisky-detail"
 
+    def get_form_image_config(self):
+        form_class = self.get_form_class()
+        return (
+            getattr(form_class, "image_model", None),
+            getattr(form_class, "image_fields_map", {}),
+            getattr(form_class, "beverage_fk_name", None),
+        )
+
+    def sync_form_images(self, beverage, user, cleaned_data):
+        image_model, image_fields_map, beverage_fk_name = self.get_form_image_config()
+        if not image_model or not beverage_fk_name:
+            return
+
+        for field_name, image_type in image_fields_map.items():
+            image = cleaned_data.get(field_name)
+            existing_image = image_model.objects.filter(
+                **{
+                    beverage_fk_name: beverage,
+                    "user": user,
+                    "image_type": image_type,
+                }
+            ).first()
+
+            if image is False:
+                if existing_image:
+                    existing_image.image.delete()
+                    existing_image.delete()
+                continue
+
+            if image and not hasattr(image, "instance"):
+                if existing_image:
+                    existing_image.image.delete()
+                    existing_image.delete()
+                image_model.objects.create(
+                    **{
+                        beverage_fk_name: beverage,
+                        "image": image,
+                        "user": user,
+                        "image_type": image_type,
+                    }
+                )
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         if "user" not in kwargs:
@@ -1147,8 +1206,10 @@ class BaseBeverageUpdateView(RequireMemberMixin, FormView):
             pk=self.kwargs["pk"],
             household=household,
         )
-        self.process_form_data(beverage, self.request.user, form.cleaned_data)
-        log_update(self.request.user, beverage)
+        with transaction.atomic():
+            self.process_form_data(beverage, self.request.user, form.cleaned_data)
+            self.sync_form_images(beverage, self.request.user, form.cleaned_data)
+            log_update(self.request.user, beverage)
         self.success_url = reverse_lazy(
             self.detail_url_name, kwargs={"pk": beverage.pk}
         )
@@ -1193,6 +1254,8 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
     vision_confidence_field_map = {}
     vision_create_fields = ()
     vision_fk_name_fields = {}
+    extraction_log_model = None
+    extraction_log_fk_name = None
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -1386,19 +1449,23 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
                     )
 
         household = get_active_household(self.request.user)
-        beverage, created = self.process_form_data(
-            self.request.user, household, form.cleaned_data
-        )
+        with transaction.atomic():
+            beverage, created = self.process_form_data(
+                self.request.user, household, form.cleaned_data
+            )
+            self.create_form_images(beverage, self.request.user, form.cleaned_data)
 
-        if created:
-            log_create(self.request.user, beverage)
+            if created:
+                log_create(self.request.user, beverage)
 
-        self.post_create(beverage, created)
+            self.post_create(beverage, created)
 
-        # Link extraction log to created beverage and record corrections
-        extraction_result = self.request.session.get("extraction_result")
-        if extraction_result and created:
-            self._link_extraction_log(beverage, form.cleaned_data, extraction_result)
+            # Link extraction log to created beverage and record corrections
+            extraction_result = self.request.session.get("extraction_result")
+            if extraction_result and created:
+                self._link_extraction_log(
+                    beverage, form.cleaned_data, extraction_result
+                )
 
         # Clear session data
         for key in ("scanned_label", "extraction_result"):
@@ -1428,6 +1495,33 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
     def process_form_data(self, user, household, cleaned_data):
         raise NotImplementedError
 
+    def get_form_image_config(self):
+        form_class = self.get_form_class()
+        return (
+            getattr(form_class, "image_model", None),
+            getattr(form_class, "image_fields_map", {}),
+            getattr(form_class, "beverage_fk_name", None),
+        )
+
+    def create_form_images(self, beverage, user, cleaned_data):
+        image_model, image_fields_map, beverage_fk_name = self.get_form_image_config()
+        if not image_model or not beverage_fk_name:
+            return
+
+        for field_name, image_type in image_fields_map.items():
+            image = cleaned_data.get(field_name)
+            if not image:
+                continue
+
+            image_model.objects.get_or_create(
+                **{
+                    beverage_fk_name: beverage,
+                    "image": image,
+                    "user": user,
+                    "image_type": image_type,
+                }
+            )
+
     def post_create(self, beverage, created):
         """Hook for post-creation processing. Override per app."""
         pass
@@ -1435,7 +1529,40 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
     def _link_extraction_log(self, beverage, cleaned_data, extraction_result):
         """Link the most recent extraction log to the created beverage
         and record any user corrections."""
-        pass  # Override per app
+        if not self.extraction_log_model or not self.extraction_log_fk_name:
+            return
+
+        try:
+            log = (
+                self.extraction_log_model.objects.filter(
+                    **{
+                        "user": self.request.user,
+                        f"{self.extraction_log_fk_name}__isnull": True,
+                    }
+                )
+                .order_by("-created")
+                .first()
+            )
+            if log:
+                extracted_data = extraction_result.get("extracted_data", {})
+                corrections = self._detect_corrections(cleaned_data, extracted_data)
+                setattr(log, self.extraction_log_fk_name, beverage)
+                log.was_successful = True
+                if corrections:
+                    log.user_corrections = corrections
+                log.save(
+                    update_fields=[
+                        self.extraction_log_fk_name,
+                        "was_successful",
+                        "user_corrections",
+                    ]
+                )
+        except Exception:
+            logger.exception(
+                "Failed to link extraction log to %s %s",
+                self.beverage_label,
+                beverage.pk,
+            )
 
     @staticmethod
     def _detect_corrections(cleaned_data, extracted_data):

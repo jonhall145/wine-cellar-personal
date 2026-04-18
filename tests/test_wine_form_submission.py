@@ -1,9 +1,18 @@
+import io
+
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from PIL import Image
 
 from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.wine.forms import WineForm
-from wine_cellar.apps.wine.models import Wine, WineBarcode
+from wine_cellar.apps.wine.models import (
+    VisionExtractionLog,
+    Wine,
+    WineBarcode,
+    WineImage,
+)
 
 
 def _minimal_wine_data(**overrides):
@@ -16,6 +25,13 @@ def _minimal_wine_data(**overrides):
     }
     data.update(overrides)
     return data
+
+
+def _test_image_upload(name="front.jpg"):
+    buffer = io.BytesIO()
+    Image.new("RGB", (20, 20), color="red").save(buffer, format="JPEG")
+    buffer.seek(0)
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/jpeg")
 
 
 @pytest.mark.django_db
@@ -96,6 +112,38 @@ class TestWineCreateView:
         bc = WineBarcode.objects.get(wine=wine)
         assert bc.barcode == "1234567890123"
         assert bc.user == user
+
+    def test_create_links_extraction_log_and_saves_label_image(
+        self, client, user, clear_image_folder
+    ):
+        client.force_login(user)
+        household = user.user_settings.active_household
+        log = VisionExtractionLog.objects.create(
+            user=user,
+            household=household,
+            image_count=1,
+            raw_response="{}",
+            extracted_data={"name": "Test Wine"},
+            confidence="high",
+            extracted_fields=["name"],
+        )
+        session = client.session
+        session["extraction_result"] = {"extracted_data": {"name": "Test Wine"}}
+        session.save()
+        image = _test_image_upload()
+
+        r = client.post(
+            reverse("wine-add"),
+            _minimal_wine_data(image_front_label=image),
+            follow=True,
+        )
+
+        assert r.status_code == 200
+        wine = Wine.objects.get(name="Test Wine")
+        log.refresh_from_db()
+        assert log.wine == wine
+        assert log.was_successful is True
+        assert WineImage.objects.filter(wine=wine, image_type="LF").count() == 1
 
     def test_missing_name_returns_form_error(self, client, user):
         """POST without required `name` field re-renders the form with errors."""
@@ -193,3 +241,24 @@ class TestWineUpdateView:
         r = client.post(reverse("wine-edit", kwargs={"pk": wine.pk}), data)
         assert r.status_code == 302
         assert r.url == reverse("wine-detail", kwargs={"pk": wine.pk})
+
+    def test_update_replaces_front_label_image(
+        self, client, user, wine_factory, wine_image_factory, clear_image_folder
+    ):
+        wine = wine_factory(user=user)
+        existing_image = wine_image_factory(user=user, wine=wine, image_type="LF")
+        client.force_login(user)
+        replacement_image = _test_image_upload("replacement.jpg")
+        data = _minimal_wine_data(
+            name=wine.name,
+            wine_type=wine.wine_type,
+            country=wine.country,
+            image_front_label=replacement_image,
+        )
+
+        r = client.post(reverse("wine-edit", kwargs={"pk": wine.pk}), data, follow=True)
+
+        assert r.status_code == 200
+        front_images = WineImage.objects.filter(wine=wine, image_type="LF")
+        assert front_images.count() == 1
+        assert front_images.get().pk != existing_image.pk
