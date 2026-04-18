@@ -24,8 +24,14 @@ from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.storage.utils import with_removal_sort_date
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.filters import WineFilter
-from wine_cellar.apps.wine.forms import WineBaseForm, WineEditForm, WineForm
-from wine_cellar.apps.wine.models import Collection, Wine, WineBarcode, WineImage
+from wine_cellar.apps.wine.forms import WineEditForm, WineForm
+from wine_cellar.apps.wine.models import (
+    Collection,
+    VisionExtractionLog,
+    Wine,
+    WineBarcode,
+    WineImage,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +133,8 @@ class WineCreateView(BaseBeverageCreateView):
         "appellation": "appellation",
     }
     vision_create_fields = ("grapes", "vineyard")
+    extraction_log_model = VisionExtractionLog
+    extraction_log_fk_name = "wine"
 
     def resolve_extracted_data(self, result_data, initial):
         # Vineyard: wrap string in list for form
@@ -191,29 +199,6 @@ class WineCreateView(BaseBeverageCreateView):
                 if confidence in ("high", "medium"):
                     extracted_data = extraction_result.get("extracted_data", {})
                     self._apply_auto_crop(beverage, extracted_data)
-
-    def _link_extraction_log(self, beverage, cleaned_data, extraction_result):
-        """Link the most recent VisionExtractionLog to the created wine."""
-        from wine_cellar.apps.wine.models import VisionExtractionLog
-
-        try:
-            log = (
-                VisionExtractionLog.objects.filter(
-                    user=self.request.user, wine__isnull=True
-                )
-                .order_by("-created")
-                .first()
-            )
-            if log:
-                extracted_data = extraction_result.get("extracted_data", {})
-                corrections = self._detect_corrections(cleaned_data, extracted_data)
-                log.wine = beverage
-                log.was_successful = True
-                if corrections:
-                    log.user_corrections = corrections
-                log.save(update_fields=["wine", "was_successful", "user_corrections"])
-        except Exception:
-            logger.exception("Failed to link extraction log to wine %s", beverage.pk)
 
     @staticmethod
     def _apply_auto_crop(wine, extracted_data):
@@ -323,13 +308,6 @@ class WineCreateView(BaseBeverageCreateView):
         wine.source.set(source)
         wine.attributes.set(attributes)
 
-        for form_field, image_type in WineBaseForm.image_fields_map.items():
-            image = cleaned_data.get(form_field)
-            if image:
-                WineImage.objects.get_or_create(
-                    image=image, wine=wine, user=user, image_type=image_type
-                )
-
         storage = cleaned_data.get("storage")
         if storage:
             row = cleaned_data.get("row")
@@ -433,24 +411,6 @@ class WineUpdateView(BaseBeverageUpdateView):
         wine.attributes.set(attributes)
         wine.source.set(source)
 
-        for form_field, image_type in WineBaseForm.image_fields_map.items():
-            image = cleaned_data.get(form_field)
-            existing_image = WineImage.objects.filter(
-                wine=wine, user=user, image_type=image_type
-            ).first()
-
-            if image is False:
-                if existing_image:
-                    existing_image.image.delete()
-                    existing_image.delete()
-            elif image and not hasattr(image, "instance"):
-                if existing_image:
-                    existing_image.image.delete()
-                    existing_image.delete()
-                WineImage.objects.create(
-                    image=image, wine=wine, user=user, image_type=image_type
-                )
-
 
 class WineDetailView(BaseDetailView):
     template_name = "wine_detail.html"
@@ -467,22 +427,15 @@ class WineDetailView(BaseDetailView):
         "collections",
     )
     storage_item_reverse = "storageitem"
+    extraction_log_model = VisionExtractionLog
+    extraction_log_fk_name = "wine"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        from wine_cellar.apps.wine.models import VisionExtractionLog
-
         household = get_active_household(self.request.user)
         context["all_collections"] = Collection.objects.filter(
             household=household
         ).order_by("name")
-        extraction_log = (
-            VisionExtractionLog.objects.filter(wine=self.object, was_successful=True)
-            .order_by("-created")
-            .first()
-        )
-        if extraction_log:
-            context["extraction_log"] = extraction_log
 
         removed_bottles = with_removal_sort_date(
             self.object.storageitem_set.filter(deleted=True)

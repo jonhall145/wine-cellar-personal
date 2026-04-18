@@ -404,6 +404,8 @@ class WhiskyCreateView(BaseBeverageCreateView):
         "region_name": "region",
         "bottler_name": "bottler",
     }
+    extraction_log_model = WhiskyVisionExtractionLog
+    extraction_log_fk_name = "whisky"
 
     def resolve_extracted_data(self, result_data, initial):
         _resolve_whisky_extracted_fks(result_data)
@@ -482,25 +484,6 @@ class WhiskyCreateView(BaseBeverageCreateView):
                 defaults={"whisky": whisky, "household": household},
             )
 
-        # Handle images
-        image_front_label = cleaned_data.get("image_front_label")
-        if image_front_label:
-            WhiskyImage.objects.get_or_create(
-                image=image_front_label,
-                whisky=whisky,
-                user=user,
-                image_type=WhiskyImage.ImageType.LABEL_FRONT,
-            )
-
-        image_back_label = cleaned_data.get("image_back_label")
-        if image_back_label:
-            WhiskyImage.objects.get_or_create(
-                image=image_back_label,
-                whisky=whisky,
-                user=user,
-                image_type=WhiskyImage.ImageType.LABEL_BACK,
-            )
-
         # Handle storage (add bottle to cellar) if provided
         storage = cleaned_data.get("storage")
         if storage:
@@ -530,29 +513,6 @@ class WhiskyCreateView(BaseBeverageCreateView):
             )
 
         return whisky, created
-
-    def _link_extraction_log(self, beverage, cleaned_data, extraction_result):
-        """Link the most recent WhiskyVisionExtractionLog to the created whisky."""
-        from wine_cellar.apps.whisky.models import WhiskyVisionExtractionLog
-
-        try:
-            log = (
-                WhiskyVisionExtractionLog.objects.filter(
-                    user=self.request.user, whisky__isnull=True
-                )
-                .order_by("-created")
-                .first()
-            )
-            if log:
-                extracted_data = extraction_result.get("extracted_data", {})
-                corrections = self._detect_corrections(cleaned_data, extracted_data)
-                log.whisky = beverage
-                log.was_successful = True
-                if corrections:
-                    log.user_corrections = corrections
-                log.save(update_fields=["whisky", "was_successful", "user_corrections"])
-        except Exception:
-            logger.exception("Failed to link extraction log to whisky %s", beverage.pk)
 
 
 class WhiskyUpdateView(BaseBeverageUpdateView):
@@ -632,49 +592,6 @@ class WhiskyUpdateView(BaseBeverageUpdateView):
                 defaults={"whisky": whisky, "household": whisky.household},
             )
 
-        # Handle images
-        image_front_label = cleaned_data.get("image_front_label")
-        existing_front = WhiskyImage.objects.filter(
-            whisky=whisky, user=user, image_type=WhiskyImage.ImageType.LABEL_FRONT
-        ).first()
-
-        if image_front_label is False:
-            # User explicitly cleared the image
-            if existing_front:
-                existing_front.image.delete()
-                existing_front.delete()
-        elif image_front_label and not hasattr(image_front_label, "instance"):
-            # User uploaded a new image
-            if existing_front:
-                existing_front.image.delete()
-                existing_front.delete()
-            WhiskyImage.objects.create(
-                image=image_front_label,
-                whisky=whisky,
-                user=user,
-                image_type=WhiskyImage.ImageType.LABEL_FRONT,
-            )
-
-        image_back_label = cleaned_data.get("image_back_label")
-        existing_back = WhiskyImage.objects.filter(
-            whisky=whisky, user=user, image_type=WhiskyImage.ImageType.LABEL_BACK
-        ).first()
-
-        if image_back_label is False:
-            if existing_back:
-                existing_back.image.delete()
-                existing_back.delete()
-        elif image_back_label and not hasattr(image_back_label, "instance"):
-            if existing_back:
-                existing_back.image.delete()
-                existing_back.delete()
-            WhiskyImage.objects.create(
-                image=image_back_label,
-                whisky=whisky,
-                user=user,
-                image_type=WhiskyImage.ImageType.LABEL_BACK,
-            )
-
 
 class WhiskyDetailView(BaseDetailView):
     template_name = "whisky/whisky_detail.html"
@@ -682,6 +599,8 @@ class WhiskyDetailView(BaseDetailView):
     select_related_fields = ("distillery", "region", "bottler", "source")
     prefetch_related_fields = ("cask_history", "images", "barcodes", "collections")
     storage_item_reverse = "whiskystorageitem"
+    extraction_log_model = WhiskyVisionExtractionLog
+    extraction_log_fk_name = "whisky"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -689,17 +608,6 @@ class WhiskyDetailView(BaseDetailView):
         context["all_collections"] = Collection.objects.filter(
             household=household
         ).order_by("name")
-        from wine_cellar.apps.whisky.models import WhiskyVisionExtractionLog
-
-        extraction_log = (
-            WhiskyVisionExtractionLog.objects.filter(
-                whisky=self.object, was_successful=True
-            )
-            .order_by("-created")
-            .first()
-        )
-        if extraction_log:
-            context["extraction_log"] = extraction_log
         return context
 
 

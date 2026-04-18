@@ -15,6 +15,7 @@ from wine_cellar.apps.whisky.models import (
     Whisky,
     WhiskyDrinkRecord,
     WhiskyStorageItem,
+    WhiskyVisionExtractionLog,
 )
 
 
@@ -593,6 +594,47 @@ def test_whisky_detail_loads(client, user, whisky_factory):
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="whisky/whisky_detail.html")
     assert r.context["object"] == whisky
+
+
+@pytest.mark.django_db
+def test_whisky_detail_uses_latest_successful_extraction_log(
+    client, user, whisky_factory
+):
+    whisky = whisky_factory(user=user, name="Ardbeg 10")
+    household = whisky.household
+    WhiskyVisionExtractionLog.objects.create(
+        user=user,
+        household=household,
+        whisky=whisky,
+        extracted_data={"name": whisky.name},
+        confidence="medium",
+        extracted_fields=["name"],
+        was_successful=True,
+    )
+    latest_success = WhiskyVisionExtractionLog.objects.create(
+        user=user,
+        household=household,
+        whisky=whisky,
+        extracted_data={"name": whisky.name},
+        confidence="high",
+        extracted_fields=["name"],
+        was_successful=True,
+    )
+    WhiskyVisionExtractionLog.objects.create(
+        user=user,
+        household=household,
+        whisky=whisky,
+        extracted_data={"name": whisky.name},
+        confidence="low",
+        extracted_fields=["name"],
+        was_successful=False,
+    )
+
+    client.force_login(user)
+    r = client.get(reverse("whisky-detail", kwargs={"pk": whisky.pk}))
+
+    assert r.status_code == HTTPStatus.OK
+    assert r.context["extraction_log"].pk == latest_success.pk
 
 
 @pytest.mark.django_db
