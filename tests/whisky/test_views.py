@@ -1,4 +1,5 @@
 import datetime
+import io
 import json
 from http import HTTPStatus
 from unittest.mock import MagicMock, patch
@@ -7,6 +8,7 @@ import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
+from PIL import Image
 from pytest_django.asserts import assertRedirects, assertTemplateUsed
 
 from wine_cellar.apps.whisky.models import (
@@ -14,9 +16,17 @@ from wine_cellar.apps.whisky.models import (
     FillLevel,
     Whisky,
     WhiskyDrinkRecord,
+    WhiskyImage,
     WhiskyStorageItem,
     WhiskyVisionExtractionLog,
 )
+
+
+def _test_image_upload(name="front.jpg"):
+    buffer = io.BytesIO()
+    Image.new("RGB", (20, 20), color="red").save(buffer, format="JPEG")
+    buffer.seek(0)
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/jpeg")
 
 
 @pytest.mark.django_db
@@ -824,6 +834,36 @@ def test_whisky_create_post_valid(client, user):
 
 
 @pytest.mark.django_db
+def test_whisky_create_saves_front_label_image(client, user, clear_image_folder):
+    client.force_login(user)
+    response = client.post(
+        reverse("whisky-add"),
+        {
+            "name": "Lagavulin 16",
+            "whisky_type": "SM",
+            "abv": 43.0,
+            "size": "0.70",
+            "country": "GB",
+            "comment": "",
+            "price": "",
+            "rating": "",
+            "image_front_label": _test_image_upload(),
+        },
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    whisky = Whisky.objects.get(user=user, name="Lagavulin 16")
+    assert (
+        WhiskyImage.objects.filter(
+            whisky=whisky,
+            image_type=WhiskyImage.ImageType.LABEL_FRONT,
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
 def test_whisky_create_post_empty(client, user):
     """Test that submitting an empty form shows validation errors."""
     client.force_login(user)
@@ -913,6 +953,55 @@ def test_whisky_stock_add_uses_shared_template(client, user, whisky_factory):
     assertTemplateUsed(response, "whisky/stock_add.html")
     assertTemplateUsed(response, "core/stock_add.html")
     assert response.context["whisky"].pk == whisky.pk
+
+
+@pytest.mark.django_db
+def test_whisky_update_replaces_front_image_and_clears_back_image(
+    client, user, whisky_factory, clear_image_folder
+):
+    whisky = whisky_factory(user=user)
+    front_image = WhiskyImage.objects.create(
+        whisky=whisky,
+        user=user,
+        image=_test_image_upload("front-existing.jpg"),
+        image_type=WhiskyImage.ImageType.LABEL_FRONT,
+    )
+    WhiskyImage.objects.create(
+        whisky=whisky,
+        user=user,
+        image=_test_image_upload("back-existing.jpg"),
+        image_type=WhiskyImage.ImageType.LABEL_BACK,
+    )
+
+    client.force_login(user)
+    response = client.post(
+        reverse("whisky-edit", kwargs={"pk": whisky.pk}),
+        {
+            "name": whisky.name,
+            "whisky_type": whisky.whisky_type,
+            "abv": whisky.abv,
+            "size": whisky.size,
+            "country": whisky.country,
+            "comment": whisky.comment,
+            "price": whisky.price or "",
+            "rating": whisky.rating or "",
+            "image_front_label": _test_image_upload("front-replacement.jpg"),
+            "image_back_label-clear": "on",
+        },
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    front_images = WhiskyImage.objects.filter(
+        whisky=whisky,
+        image_type=WhiskyImage.ImageType.LABEL_FRONT,
+    )
+    assert front_images.count() == 1
+    assert front_images.get().pk != front_image.pk
+    assert not WhiskyImage.objects.filter(
+        whisky=whisky,
+        image_type=WhiskyImage.ImageType.LABEL_BACK,
+    ).exists()
 
 
 @pytest.mark.django_db

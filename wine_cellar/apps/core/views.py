@@ -1206,9 +1206,10 @@ class BaseBeverageUpdateView(RequireMemberMixin, FormView):
             pk=self.kwargs["pk"],
             household=household,
         )
-        self.process_form_data(beverage, self.request.user, form.cleaned_data)
-        self.sync_form_images(beverage, self.request.user, form.cleaned_data)
-        log_update(self.request.user, beverage)
+        with transaction.atomic():
+            self.process_form_data(beverage, self.request.user, form.cleaned_data)
+            self.sync_form_images(beverage, self.request.user, form.cleaned_data)
+            log_update(self.request.user, beverage)
         self.success_url = reverse_lazy(
             self.detail_url_name, kwargs={"pk": beverage.pk}
         )
@@ -1448,20 +1449,23 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
                     )
 
         household = get_active_household(self.request.user)
-        beverage, created = self.process_form_data(
-            self.request.user, household, form.cleaned_data
-        )
-        self.create_form_images(beverage, self.request.user, form.cleaned_data)
+        with transaction.atomic():
+            beverage, created = self.process_form_data(
+                self.request.user, household, form.cleaned_data
+            )
+            self.create_form_images(beverage, self.request.user, form.cleaned_data)
 
-        if created:
-            log_create(self.request.user, beverage)
+            if created:
+                log_create(self.request.user, beverage)
 
-        self.post_create(beverage, created)
+            self.post_create(beverage, created)
 
-        # Link extraction log to created beverage and record corrections
-        extraction_result = self.request.session.get("extraction_result")
-        if extraction_result and created:
-            self._link_extraction_log(beverage, form.cleaned_data, extraction_result)
+            # Link extraction log to created beverage and record corrections
+            extraction_result = self.request.session.get("extraction_result")
+            if extraction_result and created:
+                self._link_extraction_log(
+                    beverage, form.cleaned_data, extraction_result
+                )
 
         # Clear session data
         for key in ("scanned_label", "extraction_result"):
