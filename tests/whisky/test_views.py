@@ -607,6 +607,34 @@ def test_whisky_detail_loads(client, user, whisky_factory):
 
 
 @pytest.mark.django_db
+def test_whisky_detail_record_drink_link_preserves_selected_storage_item(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+    )
+    client.force_login(user)
+
+    response = client.get(
+        reverse("whisky-detail", kwargs={"pk": bottle.whisky.pk}),
+        {"storage_item": bottle.pk},
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    expected_drink_url = (
+        reverse("drink-record-add", kwargs={"pk": bottle.whisky.pk})
+        + f"?storage_item={bottle.pk}"
+    )
+    assert f'href="{expected_drink_url}"' in response.content.decode()
+
+
+@pytest.mark.django_db
 def test_whisky_detail_uses_latest_successful_extraction_log(
     client, user, whisky_factory
 ):

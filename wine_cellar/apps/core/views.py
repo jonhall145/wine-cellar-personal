@@ -420,6 +420,16 @@ class BaseDrinkRecordCreateView(RequireMemberMixin, FormView):
     beverage_fk_name = None  # "wine" or "whisky"
     detail_url_name = None  # e.g. "wine-detail" or "whisky-detail"
 
+    def get_initial(self):
+        initial = super().get_initial()
+        storage_item_pk = self.request.GET.get("storage_item")
+        if storage_item_pk:
+            try:
+                initial["storage_item"] = int(storage_item_pk)
+            except (TypeError, ValueError):
+                pass
+        return initial
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         household = get_active_household(self.request.user)

@@ -985,6 +985,28 @@ def test_drink_record_without_bottle_still_works(client, user, wine_factory):
 
 
 @pytest.mark.django_db
+def test_wine_detail_record_drink_link_preserves_selected_storage_item(
+    client, user, wine_factory, storage_item_factory
+):
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(wine=wine, storage=storage, user=user)
+    client.force_login(user)
+
+    response = client.get(
+        reverse("wine-detail", kwargs={"pk": wine.pk}),
+        {"storage_item": bottle.pk},
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    expected_drink_url = (
+        reverse("drink-record-add", kwargs={"pk": wine.pk})
+        + f"?storage_item={bottle.pk}"
+    )
+    assert f'href="{expected_drink_url}"' in response.content.decode()
+
+
+@pytest.mark.django_db
 def test_form_shows_only_available_bottles(
     client, user, wine_factory, storage_item_factory
 ):

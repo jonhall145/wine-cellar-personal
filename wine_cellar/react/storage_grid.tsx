@@ -102,9 +102,14 @@ interface TooltipProps {
     itemUrlPrefix: string;
 }
 
+const getBottleDetailUrl = (itemUrlPrefix: string, wine: WineInfo): string => (
+    `${itemUrlPrefix}${wine.id}/?storage_item=${encodeURIComponent(String(wine.item_id))}`
+);
+
 const Tooltip: React.FC<TooltipProps> = ({ wine, position, itemUrlPrefix }) => {
     const tooltipRef = React.useRef<HTMLDivElement>(null);
     const [adjustedPosition, setAdjustedPosition] = React.useState({ x: position.x, y: position.y });
+    const detailUrl = getBottleDetailUrl(itemUrlPrefix, wine);
 
     React.useLayoutEffect(() => {
         if (tooltipRef.current) {
@@ -145,7 +150,7 @@ const Tooltip: React.FC<TooltipProps> = ({ wine, position, itemUrlPrefix }) => {
             }}
         >
             <a
-                href={`${itemUrlPrefix}${wine.id}/`}
+                href={detailUrl}
                 className="tooltip__name tooltip__name--link"
                 onClick={(e) => {
                     e.stopPropagation();
@@ -153,7 +158,7 @@ const Tooltip: React.FC<TooltipProps> = ({ wine, position, itemUrlPrefix }) => {
                 onTouchEnd={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    window.location.href = `${itemUrlPrefix}${wine.id}/`;
+                    window.location.href = detailUrl;
                 }}
             >
                 {wine.name}

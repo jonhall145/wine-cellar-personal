@@ -290,7 +290,7 @@
                     <div>
                         <a href="{% url 'stock-add' whisky.pk %}"
                            class="pure-button button__neutral"><i class="fa-regular fa-plus"></i> <span>Add bottle</span></a>
-                        <a href="{% url 'drink-record-add' whisky.pk %}"
+                        <a href="{% url 'drink-record-add' whisky.pk %}{% if request.GET.storage_item %}?storage_item={{ request.GET.storage_item|urlencode }}{% endif %}"
                            class="pure-button button__neutral"><i class="fa-solid fa-whiskey-glass"></i> <span>Record Drink</span></a>
                         <a href="{% url 'reorder-reminder-add' whisky.pk %}"
                            class="pure-button button__neutral"><i class="fa-solid fa-bell"></i> <span>Reorder Alert</span></a>

@@ -666,6 +666,22 @@ class TestDrinkRecordCreateView:
         assert r.status_code == HTTPStatus.OK
         assert r.context["beverage"].pk == wine.pk
 
+    def test_get_preselects_storage_item_from_query_param(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user)
+        storage = user.storage_set.first()
+        item = storage_item_factory(wine=wine, storage=storage, user=user)
+        client.force_login(user)
+
+        r = client.get(
+            reverse("drink-record-add", kwargs={"pk": wine.pk}),
+            {"storage_item": item.pk},
+        )
+
+        assert r.status_code == HTTPStatus.OK
+        assert r.context["form"]["storage_item"].value() == item.pk
+
     def test_get_defaults_date_consumed_to_today(self, client, user, wine_factory):
         wine = wine_factory(user=user)
         client.force_login(user)
