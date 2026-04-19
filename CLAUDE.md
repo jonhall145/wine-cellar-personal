@@ -193,10 +193,10 @@ Always use `make` targets rather than calling scripts directly. Run `make help` 
 
 **Key points:**
 - Both wine and whisky apps share the same Docker image
-- Deploy via GHCR: `make ghcr-deploy` pulls the latest image from `ghcr.io/jonhall145/wine-cellar-personal:latest` and recreates all containers
+- Deploy via GHCR: `make ghcr-deploy` pulls the `latest` image from `ghcr.io/jonhall145/wine-cellar-personal:latest`, while `make ghcr-deploy-next` pulls the `next` image from `ghcr.io/jonhall145/wine-cellar-personal:next`
 - Do NOT use `deploy-to-prod.sh` — that is the legacy non-Docker path and is no longer used
 - Static files and frontend assets are built inside the Docker image automatically
-- **Deploy agent should ONLY run `make ghcr-deploy`. Do NOT run lint, tests, or any other steps.**
+- **Deploy agent should ONLY run one deploy target: `make ghcr-deploy` for `main` / `latest`, or `make ghcr-deploy-next` when the user explicitly asks for `next`. Do NOT run lint, tests, or any other steps.**
 
 ## Key Directories
 
@@ -269,7 +269,7 @@ This is a **mobile-first app**. Mobile testing is mandatory, not optional.
 For production deployment:
 1. Run `make lint` - fix any issues before deploying
 2. Run `make pytest` - ensure tests pass
-3. Run `make ghcr-deploy` to pull the latest GHCR image and recreate all containers
+3. Run `make ghcr-deploy` to deploy `latest`, or `make ghcr-deploy-next` to deploy the `next` image when requested
 4. Static files and frontend assets are built inside the Docker image automatically
 
 ### Common Fix Patterns

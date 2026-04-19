@@ -24,6 +24,11 @@
 - Endpoints at `/rest/`: wines, storage, shelves, grapes, countries, etc.
 - Create new keys via: `docker compose -f docker-compose.prod.yml exec -T wine-web python manage.py create_api_key --name "Name" --user admin --household 1 --scope admin`
 
+## Deployment
+- Use `make ghcr-deploy` to deploy the GHCR `latest` image (`main` / release deploys).
+- Use `make ghcr-deploy-next` when the user explicitly asks to deploy `next`.
+- For deploy-only requests, run only the matching deploy command; do not add lint, tests, or build steps.
+
 ## Key conventions
 - `CELLAR_APP_TYPE` switches wine vs whisky mode; URL routing includes only one app at runtime, and whisky tests require `CELLAR_APP_TYPE=whisky` set before Django loads.
 - UI is mobile-first; verify UI/CSS changes on a mobile viewport and use HTTPS for camera-based scanning.
