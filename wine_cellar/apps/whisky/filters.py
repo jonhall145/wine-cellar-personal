@@ -269,8 +269,8 @@ class WhiskyStorageItemFilter(BaseStockItemFilter):
         lookup_expr="icontains",
         label="Whisky Name",
     )
-    fill_level = ChoiceFilter(
-        choices=[("", "All")] + list(FillLevel.choices),
+    fill_level = MultipleChoiceFilter(
+        choices=list(FillLevel.choices),
         label="Fill Level",
     )
     is_gift = ChoiceFilter(
