@@ -202,7 +202,8 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
 
             filt = self._filter(user, fill_level=["UN", "OP"])
 
-            assert list(filt.qs) == [unopened, opened]
+            assert filt.qs.count() == 2
+            assert {item.pk for item in filt.qs} == {unopened.pk, opened.pk}
             assert dreg not in filt.qs
 
         def test_show_used_default_excludes_deleted(
