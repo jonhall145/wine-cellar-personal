@@ -724,6 +724,17 @@ def test_whisky_create_get(client, user):
 
 
 @pytest.mark.django_db
+def test_whisky_create_marks_cask_type_as_creatable_for_vision_autofill(client, user):
+    """Whisky vision autofill should mark cask type as a creatable select."""
+    client.force_login(user)
+
+    response = client.get(reverse("whisky-add"))
+
+    assert response.status_code == HTTPStatus.OK
+    assert "cask_type" in response.context["vision_extraction_config"]["createFields"]
+
+
+@pytest.mark.django_db
 def test_whisky_create_prefills_distillery_when_scan_returns_full_whisky_name(
     client, user, distillery_factory
 ):

@@ -399,6 +399,7 @@ class WhiskyCreateView(BaseBeverageCreateView):
         "bottler_series": "bottler_series",
         "barcode": "barcode",
     }
+    vision_create_fields = ("cask_type",)
     vision_fk_name_fields = {
         "distillery_name": "distillery",
         "region_name": "region",
