@@ -230,6 +230,53 @@ def test_bottle_list_filters_by_whisky_name(client, user, whisky_storage_item_fa
 
 
 @pytest.mark.django_db
+def test_bottle_list_filters_by_multiple_fill_levels(
+    client, user, whisky_storage_item_factory
+):
+    """Bottle list should allow multiple fill level selections."""
+    household = user.user_settings.active_household
+    unopened = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.UNOPENED,
+    )
+    opened = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.OPENED,
+    )
+    dreg = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.DREG,
+    )
+
+    client.force_login(user)
+    r = client.get(
+        reverse("bottle-list"),
+        {"fill_level": [FillLevel.UNOPENED, FillLevel.OPENED]},
+    )
+
+    assert r.status_code == HTTPStatus.OK
+    bottles = list(r.context["bottles"])
+    assert unopened in bottles
+    assert opened in bottles
+    assert dreg not in bottles
+
+
+@pytest.mark.django_db
 def test_whisky_list_defaults_to_in_stock_and_oldest_first(
     client, user, whisky_factory, whisky_storage_item_factory
 ):
