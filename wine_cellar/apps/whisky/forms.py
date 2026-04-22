@@ -39,8 +39,8 @@ def get_whisky_owner_choices(household):
         owner=""
     )
     owners = sorted(
-        set(whisky_owners.values_list("owner", flat=True))
-        | set(storage_item_owners.values_list("owner", flat=True))
+        set(whisky_owners.values_list("owner", flat=True).distinct())
+        | set(storage_item_owners.values_list("owner", flat=True).distinct())
     )
     return [("", "---------")] + [(owner, owner) for owner in owners]
 
