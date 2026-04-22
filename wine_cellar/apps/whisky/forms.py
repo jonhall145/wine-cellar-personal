@@ -31,6 +31,20 @@ from wine_cellar.apps.whisky.models import (
 from wine_cellar.apps.wine.widgets import NoFilenameClearableFileInput
 
 
+def get_whisky_owner_choices(household):
+    whisky_owners = Whisky.objects.filter(household=household, deleted=False).exclude(
+        owner=""
+    )
+    storage_item_owners = WhiskyStorageItem.objects.filter(household=household).exclude(
+        owner=""
+    )
+    owners = sorted(
+        set(whisky_owners.values_list("owner", flat=True))
+        | set(storage_item_owners.values_list("owner", flat=True))
+    )
+    return [("", "---------")] + [(owner, owner) for owner in owners]
+
+
 class CreatableModelChoiceField(forms.ModelChoiceField):
     """ModelChoiceField that allows TomSelect-created values."""
 
@@ -136,16 +150,7 @@ class WhiskyBaseForm(
             household=self.household
         ).order_by("name")
 
-        # Whisky-specific: owner choices from existing values
-        existing_owners = (
-            Whisky.objects.filter(household=self.household, deleted=False)
-            .exclude(owner="")
-            .values_list("owner", flat=True)
-            .distinct()
-            .order_by("owner")
-        )
-        owner_choices = [("", "---------")] + [(o, o) for o in existing_owners]
-        self.fields["owner"].widget.choices = owner_choices
+        self.fields["owner"].widget.choices = get_whisky_owner_choices(self.household)
 
     name = forms.CharField(
         max_length=200,
@@ -733,27 +738,7 @@ class WhiskyStockAddForm(TomSelectMixin, forms.Form):
             household=household, app_type=get_app_type()
         ).order_by("order", "created")
 
-        # Populate owner choices from existing values
-        existing_owners = (
-            WhiskyStorageItem.objects.filter(household=household)
-            .exclude(owner="")
-            .values_list("owner", flat=True)
-            .distinct()
-            .order_by("owner")
-        )
-        owner_choices = [("", "---------")] + [(o, o) for o in existing_owners]
-        self.fields["owner"].widget.choices = owner_choices
-
-        # Also include owners from Whisky model
-        whisky_owners = (
-            Whisky.objects.filter(household=household, deleted=False)
-            .exclude(owner="")
-            .values_list("owner", flat=True)
-            .distinct()
-        )
-        all_owners = sorted(set(existing_owners) | set(whisky_owners))
-        owner_choices = [("", "---------")] + [(o, o) for o in all_owners]
-        self.fields["owner"].widget.choices = owner_choices
+        self.fields["owner"].widget.choices = get_whisky_owner_choices(household)
 
         owner_val = self.initial.get("owner", "")
         owner_items = [owner_val] if owner_val else []

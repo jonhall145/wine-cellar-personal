@@ -607,6 +607,34 @@ def test_whisky_detail_loads(client, user, whisky_factory):
 
 
 @pytest.mark.django_db
+def test_whisky_detail_shows_carousel_controls_for_multiple_images(
+    client, user, whisky_factory, clear_image_folder
+):
+    whisky = whisky_factory(user=user)
+    WhiskyImage.objects.create(
+        whisky=whisky,
+        user=user,
+        image=_test_image_upload("front.jpg"),
+        image_type=WhiskyImage.ImageType.LABEL_FRONT,
+    )
+    WhiskyImage.objects.create(
+        whisky=whisky,
+        user=user,
+        image=_test_image_upload("back.jpg"),
+        image_type=WhiskyImage.ImageType.LABEL_BACK,
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("whisky-detail", kwargs={"pk": whisky.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    content = response.content.decode()
+    assert 'class="image-controls"' in content
+    assert 'class="wine-prev"' in content
+    assert 'class="wine-next"' in content
+
+
+@pytest.mark.django_db
 def test_whisky_detail_record_drink_link_preserves_selected_storage_item(
     client, user, whisky_storage_item_factory
 ):
