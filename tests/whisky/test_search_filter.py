@@ -181,6 +181,30 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
 
             assert tom_config["maxOptions"] is None
 
+        def test_fill_level_filter_supports_multiple_selected_levels(
+            self, user, whisky_storage_item_factory
+        ):
+            unopened = self._create_storage_item(
+                user,
+                whisky_storage_item_factory,
+                fill_level="UN",
+            )
+            opened = self._create_storage_item(
+                user,
+                whisky_storage_item_factory,
+                fill_level="OP",
+            )
+            dreg = self._create_storage_item(
+                user,
+                whisky_storage_item_factory,
+                fill_level="DR",
+            )
+
+            filt = self._filter(user, fill_level=["UN", "OP"])
+
+            assert list(filt.qs) == [unopened, opened]
+            assert dreg not in filt.qs
+
         def test_show_used_default_excludes_deleted(
             self, user, whisky_storage_item_factory
         ):

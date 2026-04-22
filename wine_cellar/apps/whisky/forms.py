@@ -721,6 +721,15 @@ class WhiskyStorageItemFilterForm(TomSelectMixin, forms.Form):
                     placeholder="",
                     search=True,
                 )
+        if "fill_level" in self.fields:
+            self.set_tom_config(
+                name="fill_level",
+                create=False,
+                max_options=-1,
+                clear=False,
+                placeholder="",
+                closeAfterSelect=False,
+            )
 
 
 class WhiskyStockAddForm(TomSelectMixin, forms.Form):
