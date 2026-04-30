@@ -318,7 +318,9 @@ def storage_grid_data(request):
         items = []
         used_slots = storage.used_slots
         total_slots = storage.total_slots
-        utilization_percent = round((used_slots / total_slots) * 100) if total_slots else 0
+        utilization_percent = (
+            round((used_slots / total_slots) * 100) if total_slots else 0
+        )
         item_qs = storage._get_items().filter(deleted=False)
         if whisky_mode:
             item_qs = item_qs.select_related("whisky")

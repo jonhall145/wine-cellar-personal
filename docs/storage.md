@@ -84,6 +84,7 @@ The structured storage grid view provides a visual representation of your storag
 - **Color-coded** - Cells are colored according to wine type (red, white, rosé, etc.)
 - **Star ratings** - Bottle-specific ratings displayed as stars
 - **Utilisation summaries** - Each storage shows how many slots are used and the current fill percentage
+- **Storage overview** - A bird's eye set of mini-grids lets you switch between storages quickly
 - **Drag-and-drop** - Move bottles between slots by dragging
 - **Interactive tooltips** - Hover over cells to see wine details
 
