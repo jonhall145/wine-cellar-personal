@@ -41,7 +41,14 @@ For production, configure a real email backend:
 
 Background work is currently handled with Django management commands plus host
 cron scheduling. There are no task-queue-specific environment variables to
-configure.
+configure, but Docker deployments still use `REDIS_URL` for the shared Django
+cache.
+
+## Redis Cache (Docker)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `REDIS_URL` | No | `redis://redis:6379/1` | Redis cache URL used by Docker settings (`django.core.cache.backends.redis.RedisCache`) |
 
 ## Logging
 
@@ -73,6 +80,9 @@ EMAIL_PORT=587
 EMAIL_HOST_USER=winecellar@example.com
 EMAIL_HOST_PASSWORD=your-email-password
 DEFAULT_FROM_EMAIL=Wine Cellar <noreply@example.com>
+
+# Redis cache (Docker production)
+REDIS_URL=redis://redis:6379/1
 
 ```
 
