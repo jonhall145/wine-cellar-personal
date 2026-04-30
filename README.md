@@ -298,3 +298,4 @@ See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 ## License
 
 This project is licensed under the [AGPL-3.0 License](LICENSE).
+
