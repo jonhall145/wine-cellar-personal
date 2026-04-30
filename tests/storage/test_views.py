@@ -538,6 +538,25 @@ def test_bottle_quick_log_creates_record_and_consumes_bottle(
 
 
 @pytest.mark.django_db
+def test_bottle_quick_log_rejects_repeat_posts_for_consumed_bottle(
+    client, user, wine_factory, storage_item_factory
+):
+    from wine_cellar.apps.wine.models import DrinkRecord
+
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(wine=wine, storage=storage, user=user)
+
+    client.force_login(user)
+    first_response = client.post(reverse("bottle-quick-log", kwargs={"pk": bottle.pk}))
+    second_response = client.post(reverse("bottle-quick-log", kwargs={"pk": bottle.pk}))
+
+    assert first_response.status_code == HTTPStatus.FOUND
+    assert second_response.status_code == HTTPStatus.NOT_FOUND
+    assert DrinkRecord.objects.filter(storage_item=bottle).count() == 1
+
+
+@pytest.mark.django_db
 def test_mark_bottle_as_given_records_recipient_and_date(
     client, user, wine_factory, storage_item_factory
 ):

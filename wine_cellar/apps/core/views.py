@@ -513,13 +513,25 @@ class BaseBottleQuickLogView(RequireMemberMixin, View):
             deleted=False,
         )
 
+    def get_locked_object(self):
+        household = get_active_household(self.request.user)
+        queryset = self.storage_item_model.objects.select_for_update().select_related(
+            self.beverage_fk_name
+        )
+        return get_object_or_404(
+            queryset,
+            pk=self.kwargs["pk"],
+            household=household,
+            deleted=False,
+        )
+
     def post(self, request, *args, **kwargs):
         household = get_active_household(request.user)
-        storage_item = self.get_object()
         date_consumed = timezone.localdate()
-        beverage = getattr(storage_item, self.beverage_fk_name)
 
         with transaction.atomic():
+            storage_item = self.get_locked_object()
+            beverage = getattr(storage_item, self.beverage_fk_name)
             self.drink_record_model.objects.create(
                 **{self.beverage_fk_name: beverage},
                 user=request.user,
