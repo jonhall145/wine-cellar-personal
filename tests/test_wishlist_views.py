@@ -63,6 +63,7 @@ class TestWishlistCreateView:
         form = r.context["form"]
         assert form.initial["name"] == "Birthday Burgundy"
         assert form.initial["country"] == "FR"
+        assert 'name="price_url"' in r.content.decode()
         assert (
             form.initial["price_url"] == "https://example.com/wines/birthday-burgundy"
         )

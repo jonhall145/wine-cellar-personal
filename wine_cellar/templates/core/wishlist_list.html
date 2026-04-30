@@ -38,7 +38,8 @@
                                     {% if wishlist_convert_url_name %}
                                         <a href="{% url wishlist_convert_url_name %}?wishlist_item={{ item.pk }}"
                                            class="pure-button"
-                                           title="Create {{ APP_ITEM_NAME }} from wishlist">
+                                           title="Create {{ APP_ITEM_NAME }} from wishlist"
+                                           aria-label="Create {{ APP_ITEM_NAME }} from wishlist">
                                             <i class="fa-solid fa-wand-magic-sparkles"></i>
                                         </a>
                                     {% endif %}
@@ -46,6 +47,7 @@
                                         <a href="{{ item.external_url }}"
                                            class="pure-button"
                                            title="Open purchase link"
+                                           aria-label="Open purchase link"
                                            target="_blank"
                                            rel="noopener noreferrer">
                                             <i class="fa-solid fa-up-right-from-square"></i>

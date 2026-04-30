@@ -89,7 +89,7 @@ class WineCreateView(BaseBeverageCreateView):
         },
         {
             "title": "Origin & Price",
-            "fields": ("vineyard", "source", "price", "barcode"),
+            "fields": ("vineyard", "source", "price", "price_url", "barcode"),
         },
         {
             "title": "Personal Notes",
@@ -274,6 +274,7 @@ class WineCreateView(BaseBeverageCreateView):
         food_pairings = cleaned_data["food_pairings"]
         source = cleaned_data["source"]
         price = cleaned_data["price"]
+        price_url = cleaned_data["price_url"]
         vineyards = cleaned_data["vineyard"]
         grapes = cleaned_data["grapes"]
         name = cleaned_data["name"]
@@ -303,8 +304,13 @@ class WineCreateView(BaseBeverageCreateView):
                 "comment": comment,
                 "rating": rating,
                 "price": price,
+                "price_url": price_url,
             },
         )
+
+        if wine.price_url != price_url:
+            wine.price_url = price_url
+            wine.save(update_fields=["price_url"])
 
         if barcode:
             WineBarcode.objects.get_or_create(
@@ -377,6 +383,7 @@ class WineUpdateView(BaseBeverageUpdateView):
         food_pairings = cleaned_data["food_pairings"]
         source = cleaned_data["source"]
         price = cleaned_data["price"]
+        price_url = cleaned_data["price_url"]
         vineyards = cleaned_data["vineyard"]
         grapes = cleaned_data["grapes"]
         name = cleaned_data["name"]
@@ -401,6 +408,7 @@ class WineUpdateView(BaseBeverageUpdateView):
         wine.drink_to = drink_to
         wine.wine_type = wine_type
         wine.price = price
+        wine.price_url = price_url
         wine.save()
 
         if barcode:

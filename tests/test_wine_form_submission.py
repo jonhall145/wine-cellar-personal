@@ -95,6 +95,7 @@ class TestWineCreateView:
             household=household,
             wine_type="RE",
             country="FR",
+            external_url="https://example.com/wines/wishlist-wine",
         )
 
         r = client.post(
@@ -111,6 +112,8 @@ class TestWineCreateView:
         assert r.status_code == 200
         wish.refresh_from_db()
         assert wish.purchased is True
+        wine = Wine.objects.get(name="Wishlist Wine")
+        assert wine.price_url == "https://example.com/wines/wishlist-wine"
 
     def test_create_with_storage(self, client, user):
         """POST with storage fields creates a StorageItem."""

@@ -1440,6 +1440,19 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
                 continue
             initial[form_field] = value.pk if hasattr(value, "pk") else value
 
+    def apply_wishlist_cleaned_data(self, cleaned_data):
+        wishlist_item = self.get_wishlist_item()
+        if not wishlist_item:
+            return
+
+        for form_field, wishlist_field in self.wishlist_initial_field_map.items():
+            if cleaned_data.get(form_field) not in (None, "", []):
+                continue
+            value = getattr(wishlist_item, wishlist_field)
+            if value in (None, ""):
+                continue
+            cleaned_data[form_field] = value
+
     def mark_wishlist_item_purchased(self, wishlist_item):
         if wishlist_item.purchased:
             return
@@ -1576,6 +1589,7 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
                     )
 
         household = get_active_household(self.request.user)
+        self.apply_wishlist_cleaned_data(form.cleaned_data)
         with transaction.atomic():
             beverage, created = self.process_form_data(
                 self.request.user, household, form.cleaned_data
