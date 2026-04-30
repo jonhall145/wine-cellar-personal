@@ -306,6 +306,16 @@ class WhiskyCreateView(BaseBeverageCreateView):
     image_extract_hint = "Extract whisky details from uploaded images"
     scanned_label_alt = "Scanned whisky label"
     save_button_label = "Save Whisky"
+    wishlist_model = WhiskyWishlist
+    wishlist_initial_field_map = {
+        "name": "name",
+        "whisky_type": "whisky_type",
+        "distillery": "distillery",
+        "region": "region",
+        "country": "country",
+        "age_statement": "age_statement",
+        "comment": "notes",
+    }
     field_section_definitions = (
         {
             "title": "Details",
@@ -946,6 +956,7 @@ class WishlistListView(BaseWishlistListView):
     wishlist_model = WhiskyWishlist
     wishlist_columns_header = "whisky/includes/wishlist_columns_header.html"
     wishlist_columns_row = "whisky/includes/wishlist_columns_row.html"
+    wishlist_convert_url_name = "whisky-add"
 
 
 class WishlistCreateView(BaseWishlistCreateView):

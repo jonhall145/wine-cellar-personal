@@ -702,6 +702,12 @@ class Wishlist(UserContentModel):
         blank=True,
         verbose_name="Price Limit",
     )
+    external_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default="",
+        verbose_name="Purchase Link",
+    )
     notes = models.TextField(null=True, blank=True, verbose_name="Notes")
     priority = models.PositiveIntegerField(
         default=1,

@@ -12,6 +12,7 @@ from wine_cellar.apps.wine.models import (
     Wine,
     WineBarcode,
     WineImage,
+    Wishlist,
 )
 
 
@@ -84,6 +85,32 @@ class TestWineCreateView:
         assert wine.abv == 13.5
         assert wine.rating == 2
         assert wine.comment == "Lovely nose"
+
+    def test_create_from_wishlist_marks_item_purchased(self, client, user):
+        client.force_login(user)
+        household = user.user_settings.active_household
+        wish = Wishlist.objects.create(
+            name="Wishlist Wine",
+            user=user,
+            household=household,
+            wine_type="RE",
+            country="FR",
+        )
+
+        r = client.post(
+            reverse("wine-add"),
+            _minimal_wine_data(
+                name="Wishlist Wine",
+                wine_type="RE",
+                country="FR",
+                wishlist_item=wish.pk,
+            ),
+            follow=True,
+        )
+
+        assert r.status_code == 200
+        wish.refresh_from_db()
+        assert wish.purchased is True
 
     def test_create_with_storage(self, client, user):
         """POST with storage fields creates a StorageItem."""

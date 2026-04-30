@@ -947,6 +947,12 @@ class WhiskyWishlist(UserContentModel):
         blank=True,
         verbose_name="Max Price",
     )
+    external_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default="",
+        verbose_name="Purchase Link",
+    )
     notes = models.TextField(blank=True, default="", verbose_name="Notes")
     priority = models.PositiveIntegerField(
         default=0,

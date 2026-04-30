@@ -31,6 +31,7 @@ from wine_cellar.apps.wine.models import (
     Wine,
     WineBarcode,
     WineImage,
+    Wishlist,
 )
 
 logger = logging.getLogger(__name__)
@@ -100,6 +101,16 @@ class WineCreateView(BaseBeverageCreateView):
         "high": "✓ High Confidence",
         "medium": "⚠ Please Verify",
         "low": "⚡ Low Confidence",
+    }
+    wishlist_model = Wishlist
+    wishlist_initial_field_map = {
+        "name": "name",
+        "wine_type": "wine_type",
+        "country": "country",
+        "subregion": "subregion",
+        "vintage": "vintage",
+        "comment": "notes",
+        "price_url": "external_url",
     }
     vision_field_map = {
         "name": "name",

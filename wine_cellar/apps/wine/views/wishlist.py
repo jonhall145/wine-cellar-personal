@@ -12,6 +12,7 @@ class WishlistListView(BaseWishlistListView):
     wishlist_model = Wishlist
     wishlist_columns_header = "includes/wishlist_columns_header.html"
     wishlist_columns_row = "includes/wishlist_columns_row.html"
+    wishlist_convert_url_name = "wine-add"
 
 
 class WishlistCreateView(BaseWishlistCreateView):

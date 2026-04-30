@@ -954,6 +954,12 @@ class WhiskyWishlistForm(forms.Form):
         decimal_places=2,
         help_text="Maximum price you want to pay.",
     )
+    external_url = forms.URLField(
+        required=False,
+        max_length=500,
+        assume_scheme="https",
+        help_text="Link to where this whisky can be purchased.",
+    )
     notes = forms.CharField(
         required=False,
         widget=forms.Textarea,
