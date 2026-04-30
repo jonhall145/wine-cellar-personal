@@ -9,13 +9,15 @@ from wine_cellar.apps.whisky.models import (
     WhiskyBarcode,
     WhiskyImage,
     WhiskyStorageItem,
-    ImageType,
     FillLevel,
     VisionExtractionLog,
 )
 from wine_cellar.apps.whisky.utils import apply_manual_crop
 
 logger = logging.getLogger(__name__)
+
+# Import nested ImageType class
+ImageType = WhiskyImage.ImageType
 
 
 class WhiskyCreationService:
