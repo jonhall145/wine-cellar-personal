@@ -37,12 +37,11 @@ For production, configure a real email backend:
 | `EMAIL_USE_TLS` | No | `True` | Use TLS for SMTP connection |
 | `DEFAULT_FROM_EMAIL` | No | - | Default sender email address |
 
-## Celery (Background Tasks)
+## Background Tasks
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `CELERY_BROKER_URL` | No | - | Message broker URL (e.g., `redis://localhost:6379/0`) |
-| `CELERY_RESULT_BACKEND` | No | - | Result backend URL |
+Background work is currently handled with Django management commands plus host
+cron scheduling. There are no task-queue-specific environment variables to
+configure.
 
 ## Logging
 
@@ -75,8 +74,6 @@ EMAIL_HOST_USER=winecellar@example.com
 EMAIL_HOST_PASSWORD=your-email-password
 DEFAULT_FROM_EMAIL=Wine Cellar <noreply@example.com>
 
-# Celery (production)
-CELERY_BROKER_URL=redis://localhost:6379/0
 ```
 
 ## Security Notes
