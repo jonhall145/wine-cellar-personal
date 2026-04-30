@@ -27,11 +27,13 @@ from wine_cellar.apps.wine.filters import WineFilter
 from wine_cellar.apps.wine.forms import WineEditForm, WineForm
 from wine_cellar.apps.wine.models import (
     Collection,
+    ImageType,
     VisionExtractionLog,
     Wine,
     WineBarcode,
     WineImage,
 )
+from wine_cellar.apps.wine.services.creation import WineCreationService
 
 logger = logging.getLogger(__name__)
 
@@ -198,138 +200,14 @@ class WineCreateView(BaseBeverageCreateView):
                 confidence = extraction_result.get("confidence", "low")
                 if confidence in ("high", "medium"):
                     extracted_data = extraction_result.get("extracted_data", {})
-                    self._apply_auto_crop(beverage, extracted_data)
-
-    @staticmethod
-    def _apply_auto_crop(wine, extracted_data):
-        """Apply AI-extracted label bounds as auto-crop thumbnails."""
-        from PIL import Image
-
-        from wine_cellar.apps.wine.models import ImageType
-        from wine_cellar.apps.wine.utils import apply_manual_crop
-
-        bounds_map = {
-            ImageType.LABEL_FRONT: extracted_data.get("label_bounds_front"),
-            ImageType.LABEL_BACK: extracted_data.get("label_bounds_back"),
-        }
-
-        for image_type, bounds in bounds_map.items():
-            if not bounds:
-                continue
-            wine_image = wine.wineimage_set.filter(image_type=image_type).first()
-            if not wine_image or not wine_image.image:
-                continue
-            try:
-                import os
-
-                from django.conf import settings as django_settings
-
-                full_path = os.path.join(
-                    django_settings.MEDIA_ROOT, wine_image.image.name
-                )
-                with Image.open(full_path) as img:
-                    img_width, img_height = img.size
-
-                x = int((bounds["x1"] / 100) * img_width)
-                y = int((bounds["y1"] / 100) * img_height)
-                width = int(((bounds["x2"] - bounds["x1"]) / 100) * img_width)
-                height = int(((bounds["y2"] - bounds["y1"]) / 100) * img_height)
-
-                if width > 0 and height > 0:
-                    thumb_path = apply_manual_crop(wine_image, x, y, width, height)
-                    wine_image.thumbnail = thumb_path
-                    wine_image.save(update_fields=["thumbnail"])
-            except Exception:
-                logger.exception(
-                    f"Auto-crop failed for wine {wine.pk} image type {image_type}"
-                )
+                    WineCreationService.apply_auto_crop_from_extraction(
+                        beverage, extracted_data
+                    )
 
     @staticmethod
     @transaction.atomic
     def process_form_data(user, household, cleaned_data):
-        from wine_cellar.apps.wine.models import Size
-
-        abv = cleaned_data["abv"]
-        size_code = cleaned_data["size"]
-        size = None
-        if size_code:
-            size, _ = Size.objects.get_or_create(name=size_code, user=None)
-        category = cleaned_data["category"] or None
-        barcode = cleaned_data["barcode"]
-        comment = cleaned_data["comment"]
-        country = cleaned_data["country"]
-        subregion = cleaned_data["subregion"]
-        appellation = cleaned_data.get("appellation")
-        food_pairings = cleaned_data["food_pairings"]
-        source = cleaned_data["source"]
-        price = cleaned_data["price"]
-        vineyards = cleaned_data["vineyard"]
-        grapes = cleaned_data["grapes"]
-        name = cleaned_data["name"]
-        rating = cleaned_data["rating"]
-        vintage = cleaned_data["vintage"]
-        wine_type = cleaned_data["wine_type"]
-        attributes = cleaned_data["attributes"]
-        drink_from = cleaned_data["drink_from"]
-        drink_to = cleaned_data["drink_to"]
-
-        wine, created = Wine.objects.get_or_create(
-            name=name,
-            wine_type=wine_type,
-            abv=abv,
-            size=size,
-            vintage=vintage,
-            country=country,
-            user=user,
-            household=household,
-            deleted=False,
-            defaults={
-                "category": category,
-                "subregion": subregion,
-                "appellation": appellation,
-                "drink_from": drink_from,
-                "drink_to": drink_to,
-                "comment": comment,
-                "rating": rating,
-                "price": price,
-            },
-        )
-
-        if barcode:
-            WineBarcode.objects.get_or_create(
-                barcode=barcode,
-                user=user,
-                defaults={"wine": wine, "household": household},
-            )
-
-        wine.vineyard.set(vineyards)
-        wine.grapes.set(grapes)
-        wine.food_pairings.set(food_pairings)
-        wine.source.set(source)
-        wine.attributes.set(attributes)
-
-        storage = cleaned_data.get("storage")
-        if storage:
-            row = cleaned_data.get("row")
-            column = cleaned_data.get("column")
-            bottle_price = cleaned_data.get("bottle_price") or price
-            is_gift = cleaned_data.get("is_gift", False)
-            gift_from = cleaned_data.get("gift_from")
-            occasion = cleaned_data.get("occasion")
-            StorageItem.objects.create(
-                storage=storage,
-                wine=wine,
-                row=row,
-                column=column,
-                user=user,
-                household=household,
-                price=bottle_price,
-                is_gift=is_gift,
-                gift_from=gift_from,
-                occasion=occasion,
-            )
-
-        return wine, created
+        return WineCreationService.create_or_update_wine(user, household, cleaned_data)
 
 
 class WineUpdateView(BaseBeverageUpdateView):
