@@ -31,6 +31,16 @@ def test_homepage(client, user):
 
 
 @pytest.mark.django_db
+def test_base_template_includes_skip_link(client, user):
+    client.force_login(user)
+    r = client.get(reverse("homepage"), follow=True)
+    assert r.status_code == HTTPStatus.OK
+    content = r.content.decode()
+    assert 'href="#main-content"' in content
+    assert 'id="main-content"' in content
+
+
+@pytest.mark.django_db
 def test_homepage_stats(client, user, wine_factory, storage_item_factory):
     Wine.objects.filter(user=user).delete()
     wine = wine_factory(user=user, vintage=2020)
@@ -1140,6 +1150,24 @@ def test_stats_dashboard_purchase_trends(
     assert r.status_code == HTTPStatus.OK
     by_month = r.context_data["by_month"]
     assert len(by_month) >= 1
+
+
+@pytest.mark.django_db
+def test_stats_dashboard_charts_include_accessible_descriptions(
+    client, user, wine_factory, storage_item_factory
+):
+    Wine.objects.filter(user=user).delete()
+    storage = user.storage_set.first()
+    wine = wine_factory(user=user, wine_type="WH", country="FR", price=18.00)
+    storage_item_factory(wine=wine, storage=storage, price=None)
+    client.force_login(user)
+    r = client.get(reverse("stats-dashboard"))
+    assert r.status_code == HTTPStatus.OK
+    content = r.content.decode()
+    assert 'id="chartByTypeSummary"' in content
+    assert 'aria-describedby="chartByTypeSummary"' in content
+    assert 'aria-label="Bottles by country chart"' in content
+    assert 'aria-describedby="chartByStorageSummary"' in content
 
 
 @pytest.mark.django_db

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
     DndContext,
@@ -11,8 +11,6 @@ import {
     useSensors,
     useDraggable,
     useDroppable,
-    Active,
-    Over,
 } from '@dnd-kit/core';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -106,6 +104,107 @@ const getBottleDetailUrl = (itemUrlPrefix: string, wine: WineInfo): string => (
     `${itemUrlPrefix}${wine.id}/?storage_item=${encodeURIComponent(String(wine.item_id))}`
 );
 
+const getCellPositionFromElement = (element: HTMLElement): { clientX: number; clientY: number } => {
+    const rect = element.getBoundingClientRect();
+    return {
+        clientX: rect.left + (rect.width / 2),
+        clientY: rect.top + (rect.height / 2),
+    };
+};
+
+const focusGridCell = (currentTarget: HTMLElement, row: number, column: number) => {
+    const gridId = currentTarget.dataset.gridId;
+    if (!gridId) return;
+
+    const selector = `[data-grid-id="${gridId}"][data-row="${row}"][data-column="${column}"]`;
+    const nextCell = document.querySelector<HTMLElement>(selector);
+    nextCell?.focus();
+};
+
+const handleGridKeyDown = (
+    event: React.KeyboardEvent<HTMLElement>,
+    onActivate?: () => void,
+) => {
+    const currentRow = Number(event.currentTarget.dataset.row);
+    const currentColumn = Number(event.currentTarget.dataset.column);
+
+    switch (event.key) {
+    case 'ArrowUp':
+        event.preventDefault();
+        focusGridCell(event.currentTarget, currentRow - 1, currentColumn);
+        break;
+    case 'ArrowDown':
+        event.preventDefault();
+        focusGridCell(event.currentTarget, currentRow + 1, currentColumn);
+        break;
+    case 'ArrowLeft':
+        event.preventDefault();
+        focusGridCell(event.currentTarget, currentRow, currentColumn - 1);
+        break;
+    case 'ArrowRight':
+        event.preventDefault();
+        focusGridCell(event.currentTarget, currentRow, currentColumn + 1);
+        break;
+    case 'Home':
+        event.preventDefault();
+        focusGridCell(event.currentTarget, currentRow, 1);
+        break;
+    case 'End':
+        event.preventDefault();
+        focusGridCell(event.currentTarget, currentRow, Number(event.currentTarget.dataset.maxColumn));
+        break;
+    case 'Enter':
+    case ' ':
+        event.preventDefault();
+        onActivate?.();
+        break;
+    default:
+        break;
+    }
+};
+
+const getCellAriaLabel = (
+    cell: CellData,
+    storageName: string,
+    context: 'browse' | 'source' | 'destination',
+    hasSelectedBottle = false,
+): string => {
+    const location = `${storageName}, row ${cell.row}, column ${cell.column}`;
+
+    if (!cell.active) {
+        return `${location}. Unavailable cell.`;
+    }
+
+    if (cell.wine) {
+        const details = [
+            cell.wine.name,
+            cell.wine.vintage ? String(cell.wine.vintage) : null,
+            cell.wine.country || null,
+            cell.wine.wine_type || null,
+        ].filter(Boolean).join(', ');
+
+        if (context === 'source') {
+            return `${location}. ${details}. Press Enter to select this bottle to move.`;
+        }
+
+        if (context === 'destination') {
+            return `${location}. ${details}. Destination occupied. Choose an empty cell.`;
+        }
+
+        return `${location}. ${details}. Press Enter to open bottle details.`;
+    }
+
+    if (context === 'destination' && hasSelectedBottle) {
+        return `${location}. Empty cell. Press Enter to move the selected bottle here.`;
+    }
+
+    if (context === 'source') {
+        return `${location}. Empty cell. Select a bottle to move.`;
+    }
+
+    return `${location}. Empty cell.`;
+};
+
 const Tooltip: React.FC<TooltipProps> = ({ wine, position, itemUrlPrefix }) => {
     const tooltipRef = React.useRef<HTMLDivElement>(null);
     const [adjustedPosition, setAdjustedPosition] = React.useState({ x: position.x, y: position.y });
@@ -195,16 +294,26 @@ const RatingStars: React.FC<{ rating: number | null; maxRating?: number }> = ({ 
 interface DraggableCellProps {
     cell: CellData;
     storageId: number;
+    storageName: string;
+    gridId: string;
+    instructionsId: string;
+    maxColumn: number;
     onShowTooltip: (wine: WineInfo, e: { clientX: number; clientY: number }) => void;
     onHideTooltip: () => void;
+    onActivate: (cell: CellData) => void;
     isDragActive: boolean;
 }
 
 const DraggableCell: React.FC<DraggableCellProps> = ({
     cell,
     storageId,
+    storageName,
+    gridId,
+    instructionsId,
+    maxColumn,
     onShowTooltip,
     onHideTooltip,
+    onActivate,
     isDragActive,
 }) => {
     const id = `cell-${storageId}-${cell.row}-${cell.column}`;
@@ -224,7 +333,7 @@ const DraggableCell: React.FC<DraggableCellProps> = ({
     });
 
     // Combine refs
-    const setNodeRef = (node: HTMLDivElement | null) => {
+    const setNodeRef = (node: HTMLElement | null) => {
         setDragRef(node);
         setDropRef(node);
     };
@@ -255,7 +364,8 @@ const DraggableCell: React.FC<DraggableCellProps> = ({
     if (isOver && !hasWine && !isInactive) className += ' storage-grid__cell--drag-over';
 
     return (
-        <div
+        <button
+            type="button"
             ref={setNodeRef}
             className={className}
             {...listeners}
@@ -263,15 +373,29 @@ const DraggableCell: React.FC<DraggableCellProps> = ({
             onMouseEnter={handleMouseEnter}
             onMouseLeave={onHideTooltip}
             onTouchEnd={handleTouchEnd}
+            onFocus={(e) => {
+                if (cell.wine && !isDragActive) {
+                    onShowTooltip(cell.wine, getCellPositionFromElement(e.currentTarget));
+                }
+            }}
+            onBlur={onHideTooltip}
+            onKeyDown={(e) => handleGridKeyDown(e, () => onActivate(cell))}
             title={hasWine ? cell.wine!.name : `Empty (${cell.row}, ${cell.column})`}
+            aria-label={getCellAriaLabel(cell, storageName, 'browse')}
+            aria-describedby={instructionsId}
+            data-grid-id={gridId}
+            data-row={cell.row}
+            data-column={cell.column}
+            data-max-column={maxColumn}
+            disabled={isInactive}
         >
             {hasWine && !isDragging && (
                 <div className="storage-grid__bottle">
-                    <i className="fa-solid fa-wine-bottle" />
+                    <i className="fa-solid fa-wine-bottle" aria-hidden="true" />
                     <RatingStars rating={cell.wine!.rating} />
                 </div>
             )}
-        </div>
+        </button>
     );
 };
 
@@ -513,6 +637,11 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
     const sourceGrid = useMemo(() => sourceStorage ? buildGrid(sourceStorage) : [], [buildGrid, sourceStorage]);
     const targetGrid = useMemo(() => targetStorage ? buildGrid(targetStorage) : [], [buildGrid, targetStorage]);
 
+    const handleBrowseCellActivate = useCallback((cell: CellData) => {
+        if (!cell.wine) return;
+        window.location.href = getBottleDetailUrl(itemUrlPrefix, cell.wine);
+    }, [itemUrlPrefix]);
+
     // Early returns after all hooks
     if (loading) return <div className="storage-grid__loading">{translated.loading}</div>;
     if (error) return <div className="storage-grid__error">Error: {error}</div>;
@@ -555,7 +684,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                 ))}
             </div>
 
-            <div className="storage-grid__body">
+            <div className="storage-grid__body" role="group" aria-label={`${storage.name} storage grid`}>
                 {grid.map((row, rowIdx) => (
                     <div key={rowIdx} className="storage-grid__row">
                         <div className="storage-grid__row-label">{rowIdx + 1}</div>
@@ -569,12 +698,23 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                             const isInactive = !cell.active;
 
                             return (
-                                <div
+                                <button
+                                    type="button"
                                     key={`${rowIdx}-${colIdx}`}
                                     className={`storage-grid__cell${isInactive ? ' storage-grid__cell--inactive' : ''}${!isInactive && cell.wine ? ' storage-grid__cell--filled' : ''}${!isInactive && wineTypeClass ? ` storage-grid__cell--${wineTypeClass}` : ''}${isSelectedForMove ? ' storage-grid__cell--selected-for-move' : ''}${!isSource && !cell.wine && !isInactive && selectedBottle ? ' storage-grid__cell--drop-target' : ''}`}
-                                    onClick={() => !isInactive && handleMoveModeClick(cell, storage.id, isSource)}
+                                    onClick={() => {
+                                        if (!isInactive) {
+                                            handleMoveModeClick(cell, storage.id, isSource);
+                                        }
+                                    }}
                                     onMouseEnter={(e) => cell.wine && handleShowTooltip(cell.wine, e)}
                                     onMouseLeave={handleHideTooltip}
+                                    onFocus={(e) => {
+                                        if (cell.wine) {
+                                            handleShowTooltip(cell.wine, getCellPositionFromElement(e.currentTarget));
+                                        }
+                                    }}
+                                    onBlur={handleHideTooltip}
                                     onTouchStart={(e) => {
                                         if (cell.wine && e.touches.length > 0) {
                                             const touch = e.touches[0];
@@ -582,15 +722,33 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                                             e.stopPropagation();
                                         }
                                     }}
+                                    onKeyDown={(e) => handleGridKeyDown(e, () => {
+                                        if (!isInactive) {
+                                            handleMoveModeClick(cell, storage.id, isSource);
+                                        }
+                                    })}
                                     title={cell.wine ? cell.wine.name : `Empty (${cell.row}, ${cell.column})`}
+                                    aria-label={getCellAriaLabel(
+                                        cell,
+                                        storage.name,
+                                        isSource ? 'source' : 'destination',
+                                        Boolean(selectedBottle),
+                                    )}
+                                    aria-describedby="storage-grid-move-instructions"
+                                    aria-pressed={isSource && isSelectedForMove ? true : undefined}
+                                    data-grid-id={`${isSource ? 'source' : 'destination'}-${storage.id}`}
+                                    data-row={cell.row}
+                                    data-column={cell.column}
+                                    data-max-column={storage.columns}
+                                    disabled={isInactive}
                                 >
                                     {cell.wine && (
                                         <div className="storage-grid__bottle">
-                                            <i className="fa-solid fa-wine-bottle" />
+                                            <i className="fa-solid fa-wine-bottle" aria-hidden="true" />
                                             <RatingStars rating={cell.wine.rating} />
                                         </div>
                                     )}
-                                </div>
+                                </button>
                             );
                         })}
                     </div>
@@ -625,7 +783,10 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
 
                 {/* Message */}
                 {message && (
-                    <div className={`storage-grid__message storage-grid__message--${message.type}`}>
+                    <div
+                        className={`storage-grid__message storage-grid__message--${message.type}`}
+                        role={message.type === 'error' ? 'alert' : 'status'}
+                    >
                         {message.text}
                     </div>
                 )}
@@ -633,11 +794,15 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                 {/* Move mode hint */}
                 <div className="storage-grid__move-hint">
                     {selectedBottle ? (
-                        <><i className="fa-solid fa-hand-pointer" /> {translated.selectDestination}</>
+                        <><i className="fa-solid fa-hand-pointer" aria-hidden="true" /> {translated.selectDestination}</>
                     ) : (
-                        <><i className="fa-solid fa-wine-bottle" /> {translated.selectBottle}</>
+                        <><i className="fa-solid fa-wine-bottle" aria-hidden="true" /> {translated.selectBottle}</>
                     )}
                 </div>
+                <p id="storage-grid-move-instructions" className="visually-hidden">
+                    Use Tab or the arrow keys to move between cells. Press Enter to select a bottle in
+                    the source grid, then press Enter on an empty destination cell to move it.
+                </p>
 
                 {/* Dual pane layout */}
                 <div className="storage-grid__dual-pane">
@@ -691,10 +856,17 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
 
                 {/* Message */}
                 {message && (
-                    <div className={`storage-grid__message storage-grid__message--${message.type}`}>
+                    <div
+                        className={`storage-grid__message storage-grid__message--${message.type}`}
+                        role={message.type === 'error' ? 'alert' : 'status'}
+                    >
                         {message.text}
                     </div>
                 )}
+                <p id="storage-grid-browse-instructions" className="visually-hidden">
+                    Use Tab or the arrow keys to move between cells. Press Enter on a filled cell to
+                    open that bottle. Switch to move mode to move bottles without using drag and drop.
+                </p>
 
                 {/* Grid header with column numbers */}
                 <div className="storage-grid__header">
@@ -714,8 +886,13 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                                     key={`${rowIdx}-${colIdx}`}
                                     cell={cell}
                                     storageId={sourceStorageId!}
+                                    storageName={sourceStorage.name}
+                                    gridId={`browse-${sourceStorage.id}`}
+                                    instructionsId="storage-grid-browse-instructions"
+                                    maxColumn={sourceStorage.columns}
                                     onShowTooltip={handleShowTooltip}
                                     onHideTooltip={handleHideTooltip}
+                                    onActivate={handleBrowseCellActivate}
                                     isDragActive={activeItem !== null}
                                 />
                             ))}

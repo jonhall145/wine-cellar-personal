@@ -31,6 +31,7 @@
         </title>
     </head>
     <body class="layout">
+        <a class="skip-link" href="#main-content">Skip to main content</a>
         {% block menu %}
             {% spaceless %}
                 <header>
@@ -67,7 +68,7 @@
                 </header>
             {% endspaceless %}
         {% endblock menu %}
-        <main class="main">
+        <main class="main" id="main-content" tabindex="-1">
             {% block header %}
                 <h1 class="brand-title">{{ APP_NAME }}</h1>
             {% endblock header %}
