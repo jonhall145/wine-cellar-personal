@@ -46,6 +46,7 @@
 .storage-grid__controls {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-md);
 }
@@ -56,6 +57,21 @@
   border: 1px solid var(--gray-500);
   font-size: var(--font-sm);
   min-width: 200px;
+}
+
+.storage-grid__storage-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.storage-grid__storage-meta-item {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--gray-100);
+  border-radius: var(--border-radius-sm);
+  color: var(--gray-700);
+  font-size: var(--font-sm);
 }
 
 .storage-grid__message {
@@ -476,6 +492,11 @@
   border-color: var(--gray-300);
 }
 
+[data-theme="dark"] .storage-grid__storage-meta-item {
+  background-color: var(--gray-50);
+  color: var(--text-color-light);
+}
+
 /* Move Mode Styles */
 .storage-grid--move-mode {
   max-width: 100%;
@@ -551,6 +572,7 @@
 .storage-grid__pane-header {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
   font-weight: 600;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
     DndContext,
@@ -11,8 +11,6 @@ import {
     useSensors,
     useDraggable,
     useDroppable,
-    Active,
-    Over,
 } from '@dnd-kit/core';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -33,6 +31,9 @@ const translated = {
     cellOccupied: 'Cell is already occupied',
     movedSuccessfully: 'Bottle moved successfully',
     moveFailed: 'Move failed',
+    utilisation: 'Utilisation',
+    full: 'full',
+    slotsUsed: 'slots used',
 };
 
 interface WineInfo {
@@ -66,6 +67,9 @@ interface StorageData {
     name: string;
     rows: number;
     columns: number;
+    used_slots: number;
+    total_slots: number;
+    utilization_percent: number;
     cell_mask: [number, number][] | null;
     items: StorageItemData[];
 }
@@ -105,6 +109,18 @@ interface TooltipProps {
 const getBottleDetailUrl = (itemUrlPrefix: string, wine: WineInfo): string => (
     `${itemUrlPrefix}${wine.id}/?storage_item=${encodeURIComponent(String(wine.item_id))}`
 );
+
+const getStorageOptionLabel = (storage: StorageData): string => (
+    `${storage.name} (${storage.rows}x${storage.columns}, ${storage.utilization_percent}% ${translated.full})`
+);
+
+const getStorageUtilizationLabel = (storage: StorageData): string => {
+    if (storage.total_slots <= 0) {
+        return `${translated.utilisation}: ${storage.used_slots} ${translated.slotsUsed}`;
+    }
+
+    return `${translated.utilisation}: ${storage.used_slots}/${storage.total_slots} ${translated.slotsUsed} (${storage.utilization_percent}% ${translated.full})`;
+};
 
 const Tooltip: React.FC<TooltipProps> = ({ wine, position, itemUrlPrefix }) => {
     const tooltipRef = React.useRef<HTMLDivElement>(null);
@@ -542,10 +558,19 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                 >
                     {data.storages.map(s => (
                         <option key={s.id} value={s.id}>
-                            {s.name} ({s.rows}x{s.columns})
+                            {getStorageOptionLabel(s)}
                         </option>
                     ))}
                 </select>
+            </div>
+
+            <div className="storage-grid__storage-meta">
+                <span className="storage-grid__storage-meta-item">
+                    {storage.rows}x{storage.columns}
+                </span>
+                <span className="storage-grid__storage-meta-item">
+                    {getStorageUtilizationLabel(storage)}
+                </span>
             </div>
 
             <div className="storage-grid__header">
@@ -673,7 +698,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                     >
                         {data.storages.map(s => (
                             <option key={s.id} value={s.id}>
-                                {s.name} ({s.rows}x{s.columns})
+                                {getStorageOptionLabel(s)}
                             </option>
                         ))}
                     </select>
@@ -687,6 +712,15 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                             <i className="fa-solid fa-arrows-left-right" /> {translated.moveMode}
                         </button>
                     )}
+                </div>
+
+                <div className="storage-grid__storage-meta">
+                    <span className="storage-grid__storage-meta-item">
+                        {sourceStorage.rows}x{sourceStorage.columns}
+                    </span>
+                    <span className="storage-grid__storage-meta-item">
+                        {getStorageUtilizationLabel(sourceStorage)}
+                    </span>
                 </div>
 
                 {/* Message */}
