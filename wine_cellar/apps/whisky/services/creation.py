@@ -1,6 +1,7 @@
 import datetime
 import logging
-import transaction
+
+from django.db import transaction
 from PIL import Image
 
 from wine_cellar.apps.whisky.models import (

@@ -1,5 +1,6 @@
 import logging
-import transaction
+
+from django.db import transaction
 from PIL import Image
 
 from wine_cellar.apps.wine.models import (
