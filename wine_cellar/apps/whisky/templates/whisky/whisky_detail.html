@@ -289,6 +289,14 @@
                                 </tbody>
                             </table>
                         </div>
+                        {% if has_price_chart %}
+                            <div class="mt-12">
+                                <h4>Price Trend</h4>
+                                <div style="position: relative; height: 300px;">
+                                    <canvas id="price-history-chart"></canvas>
+                                </div>
+                            </div>
+                        {% endif %}
                         <div class="table-responsive mt-12">
                             <table class="pure-table pure-table-horizontal pure-table-striped">
                                 <thead>
@@ -481,3 +489,87 @@
         </div>
     </div>
 {% endblock content %}
+
+{% block extra_js %}
+    {{ block.super }}
+    {% if has_price_chart %}
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" integrity="sha384-T/4KgSWuZEPozpPz7rnnp/5lDSnpY1VPJCojf1S81uTHS1E38qgLfMgVsAeRCWc4" crossorigin="anonymous" defer></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const ctx = document.getElementById('price-history-chart');
+                if (!ctx) return;
+                
+                const chartData = {{ price_history_chart_data_json|safe }};
+                if (!chartData || chartData.length === 0) return;
+                
+                const labels = chartData.map(item => item.date);
+                const prices = chartData.map(item => item.price);
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Market Price',
+                            data: prices,
+                            borderColor: '#b89556',
+                            backgroundColor: 'rgba(184, 149, 86, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.1,
+                            fill: true,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#b89556',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: {
+                                    color: '#333',
+                                    font: {
+                                        size: 12,
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleColor: '#fff',
+                                bodyColor: '#fff',
+                                padding: 8,
+                                displayColors: false,
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Price',
+                                },
+                                ticks: {
+                                    color: '#666',
+                                },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.1)',
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#666',
+                                },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)',
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        </script>
+    {% endif %}
+{% endblock extra_js %}
