@@ -665,6 +665,13 @@ class DrinkRecord(UserContentModel):
         verbose_name="Bottle",
         help_text="The specific bottle consumed (optional).",
     )
+    photo = models.ImageField(
+        upload_to=user_directory_path,
+        null=True,
+        blank=True,
+        verbose_name="Photo",
+        help_text="Photo of the bottle, meal, or tasting setting.",
+    )
 
     class Meta:
         verbose_name = "Drink Record"

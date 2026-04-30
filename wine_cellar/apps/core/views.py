@@ -248,6 +248,7 @@ class BaseDrinkRecordEditView(RequireMemberMixin, FormView):
             "rating": record.rating,
             "shared_with": record.shared_with,
             "occasion": record.occasion,
+            "photo": record.photo,
         }
 
     def get_context_data(self, **kwargs):
@@ -266,6 +267,8 @@ class BaseDrinkRecordEditView(RequireMemberMixin, FormView):
         record.rating = form.cleaned_data.get("rating")
         record.shared_with = form.cleaned_data.get("shared_with")
         record.occasion = form.cleaned_data.get("occasion")
+        if form.cleaned_data.get("photo"):
+            record.photo = form.cleaned_data["photo"]
         record.save()
         self.success_url = reverse_lazy("drink-history")
         return super().form_valid(form)
@@ -467,6 +470,7 @@ class BaseDrinkRecordCreateView(RequireMemberMixin, FormView):
             shared_with=form.cleaned_data.get("shared_with"),
             occasion=form.cleaned_data.get("occasion"),
             storage_item=storage_item,
+            photo=form.cleaned_data.get("photo"),
         )
 
         if storage_item:

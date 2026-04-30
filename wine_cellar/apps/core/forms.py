@@ -160,6 +160,10 @@ class BaseDrinkRecordForm(forms.Form):
         required=False,
         help_text="What was the occasion?",
     )
+    photo = forms.ImageField(
+        required=False,
+        help_text="Attach a photo of the bottle, meal, or setting (optional).",
+    )
 
     def __init__(self, *args, **kwargs):
         beverage = kwargs.pop(self.beverage_fk_name, None)

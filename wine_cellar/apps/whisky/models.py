@@ -900,6 +900,13 @@ class WhiskyDrinkRecord(UserContentModel):
     occasion = models.CharField(
         max_length=200, blank=True, default="", verbose_name="Occasion"
     )
+    photo = models.ImageField(
+        upload_to=user_directory_path,
+        null=True,
+        blank=True,
+        verbose_name="Photo",
+        help_text="Photo of the bottle, meal, or tasting setting.",
+    )
 
     class Meta:
         ordering = ["-date_consumed"]
