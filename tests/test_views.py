@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from unittest.mock import patch
 
 import pytest
 from django.urls import reverse
@@ -9,6 +10,7 @@ from pytest_django.asserts import (
 )
 
 from wine_cellar.apps.wine.models import Collection, Wine, WineBarcode
+from wine_cellar.apps.wine.services import WineReminderService
 
 
 @pytest.mark.django_db
@@ -56,6 +58,20 @@ def test_homepage_stats(client, user, wine_factory, storage_item_factory):
     assert r.context_data["wines"] == 3
     assert r.context_data["countries"] == 2
     assert r.context_data["total_value"] == "€43"
+
+
+@pytest.mark.django_db
+def test_homepage_uses_reminder_service(client, user):
+    client.force_login(user)
+    household = user.user_settings.active_household
+    with patch.object(
+        WineReminderService,
+        "count_low_stock_reminders",
+        wraps=WineReminderService.count_low_stock_reminders,
+    ) as count_low_stock_reminders:
+        r = client.get(reverse("homepage"), follow=True)
+    assert r.status_code == HTTPStatus.OK
+    count_low_stock_reminders.assert_called_once_with(household)
 
 
 @pytest.mark.django_db

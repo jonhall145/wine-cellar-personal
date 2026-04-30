@@ -4,6 +4,7 @@ import json
 from datetime import date
 from decimal import Decimal
 from http import HTTPStatus
+from unittest.mock import patch
 
 import pytest
 from django.urls import reverse
@@ -22,6 +23,7 @@ from wine_cellar.apps.wine.models import (
     ReorderReminder,
     Wishlist,
 )
+from wine_cellar.apps.wine.services import WineReminderService
 
 # -- TomSelectMixin tests --
 
@@ -325,9 +327,15 @@ def test_reorder_reminders_view(client, user, wine_factory):
     ReorderReminder.objects.create(
         wine=wine, user=user, household=household, min_stock=2, is_active=True
     )
-    r = client.get(reverse("reorder-reminders"))
+    with patch.object(
+        WineReminderService,
+        "get_reorder_context",
+        wraps=WineReminderService.get_reorder_context,
+    ) as get_reorder_context:
+        r = client.get(reverse("reorder-reminders"))
     assert r.status_code == HTTPStatus.OK
     assert len(r.context["reminders"]) == 1
+    get_reorder_context.assert_called_once_with(household)
 
 
 @pytest.mark.django_db

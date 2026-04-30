@@ -97,6 +97,7 @@ from wine_cellar.apps.whisky.models import (
     WhiskyVisionExtractionLog,
     WhiskyWishlist,
 )
+from wine_cellar.apps.whisky.services import WhiskyReminderService
 
 logger = logging.getLogger(__name__)
 
@@ -223,6 +224,7 @@ class HomePageView(BaseHomePageView):
     stats_template = "whisky/includes/homepage_stats.html"
     alerts_template = "whisky/includes/homepage_alerts.html"
     beverage_icon = "whiskey-glass"
+    reminder_service = WhiskyReminderService
 
     def get_app_specific_context(self, household, user):
         import datetime
@@ -1086,6 +1088,7 @@ class DrinkingWindowAlertsView(RequireHouseholdMixin, TemplateView):
 class ReorderRemindersView(BaseReorderRemindersView):
     template_name = "core/reorder_reminders.html"
     reminder_model = WhiskyReorderReminder
+    reminder_service = WhiskyReminderService
     beverage_fk_name = "whisky"
     stock_reverse_path = "whisky__whiskystorageitem"
     beverage_icon = "whiskey-glass"
@@ -1095,6 +1098,7 @@ class ReorderReminderCreateView(BaseReorderReminderCreateView):
     template_name = "core/reorder_reminder_create.html"
     beverage_model = Whisky
     reminder_model = WhiskyReorderReminder
+    reminder_service = WhiskyReminderService
     beverage_fk_name = "whisky"
     detail_url_name = "whisky-detail"
 
