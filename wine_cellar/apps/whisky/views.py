@@ -37,7 +37,7 @@ from wine_cellar.apps.core.views import (
     BaseImagesView,
     BaseJourneyTimelineView,
     BaseLabelScanView,
-     BaseListView,
+    BaseListView,
     BaseMarkBottleBrokenOrLostView,
     BaseMarkBottleGivenView,
     BaseMergeConfirmView,
