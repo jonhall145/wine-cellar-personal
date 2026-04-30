@@ -90,7 +90,7 @@
                     </tr>
                     <tr>
                         <th>ABV</th>
-                        <td>{{ wine.abv  }}</td>
+                        <td>{{ wine.abv }}</td>
                     </tr>
                     <tr>
                         <th>Size</th>
@@ -206,6 +206,82 @@
                         </span>
                     </div>
                 {% endif %}
+                <div class="mt-12" id="price-tracking">
+                    <h3>Price Tracking</h3>
+                    <p class="text--gray text--small">Log market prices manually to track changes without brittle retailer scraping.</p>
+                    <form action="{% url 'wine-price-history-add' wine.pk %}" method="post" class="pure-form pure-form-stacked">
+                        {% csrf_token %}
+                        <label for="{{ price_history_form.price.id_for_label }}">Market price</label>
+                        {{ price_history_form.price }}
+                        <label for="{{ price_history_form.source.id_for_label }}">Source</label>
+                        {{ price_history_form.source }}
+                        <button type="submit" class="pure-button button__neutral mt-12">
+                            <i class="fa-solid fa-chart-line"></i> Save tracked price
+                        </button>
+                    </form>
+                    {% if price_history_latest %}
+                        <div class="table-responsive mt-12">
+                            <table class="pure-table pure-table-horizontal pure-table-striped">
+                                <tbody>
+                                    <tr>
+                                        <th>Latest tracked price</th>
+                                        <td>
+                                            {{ price_history_latest.price_with_currency }}
+                                            {% if price_history_latest.source %}from {{ price_history_latest.source }}{% endif %}
+                                            · {{ price_history_latest.recorded_at|date:"SHORT_DATE_FORMAT" }}
+                                        </td>
+                                    </tr>
+                                    {% if price_history_average_with_currency %}
+                                        <tr>
+                                            <th>Average tracked price</th>
+                                            <td>{{ price_history_average_with_currency }}</td>
+                                        </tr>
+                                    {% endif %}
+                                    {% if price_history_purchase_baseline_with_currency %}
+                                        <tr>
+                                            <th>Purchase price baseline</th>
+                                            <td>{{ price_history_purchase_baseline_with_currency }}</td>
+                                        </tr>
+                                    {% endif %}
+                                    {% if price_history_vs_purchase_with_currency %}
+                                        <tr>
+                                            <th>Market vs purchase</th>
+                                            <td>{{ price_history_vs_purchase_with_currency }}</td>
+                                        </tr>
+                                    {% endif %}
+                                    {% if price_history_trend_with_currency %}
+                                        <tr>
+                                            <th>Trend since first log</th>
+                                            <td>{{ price_history_trend_with_currency }}</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="table-responsive mt-12">
+                            <table class="pure-table pure-table-horizontal pure-table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Price</th>
+                                        <th>Source</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for entry in price_history_entries %}
+                                        <tr>
+                                            <td>{{ entry.recorded_at|date:"SHORT_DATE_FORMAT" }}</td>
+                                            <td>{{ entry.price_with_currency }}</td>
+                                            <td>{{ entry.source|default:"Manual" }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text--gray mt-12">No tracked market prices yet.</p>
+                    {% endif %}
+                </div>
             </div>
             <div class="pure-u-1 pure-u-md-1 text-align-center" id="wine-stock">
                 <h2 class="header__title">Stock</h2>

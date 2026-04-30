@@ -1,6 +1,7 @@
 import datetime
 import io
 import json
+from decimal import Decimal
 from http import HTTPStatus
 from unittest.mock import MagicMock, patch
 
@@ -17,6 +18,8 @@ from wine_cellar.apps.whisky.models import (
     Whisky,
     WhiskyDrinkRecord,
     WhiskyImage,
+    WhiskyPriceHistory,
+    WhiskySource,
     WhiskyStorageItem,
     WhiskyVisionExtractionLog,
 )
@@ -705,6 +708,73 @@ def test_whisky_detail_loads(client, user, whisky_factory):
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="whisky/whisky_detail.html")
     assert r.context["object"] == whisky
+
+
+@pytest.mark.django_db
+def test_whisky_detail_includes_price_tracking_context(client, user, whisky_factory):
+    household = user.user_settings.active_household
+    whisky = whisky_factory(user=user, name="Tracked Whisky", price=Decimal("50.00"))
+    source = WhiskySource.objects.create(
+        name="Retailer",
+        user=user,
+        household=household,
+        url="https://example.com",
+    )
+    WhiskyPriceHistory.objects.create(
+        whisky=whisky,
+        source=source,
+        price=Decimal("55.00"),
+        user=user,
+        household=household,
+    )
+    WhiskyPriceHistory.objects.create(
+        whisky=whisky,
+        price=Decimal("60.00"),
+        user=user,
+        household=household,
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("whisky-detail", kwargs={"pk": whisky.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.context["price_history_latest"].price == Decimal("60.00")
+    assert len(response.context["price_history_entries"]) == 2
+    assert (
+        response.context["price_history_form"]
+        .fields["source"]
+        .queryset.filter(pk=source.pk)
+        .exists()
+    )
+
+
+@pytest.mark.django_db
+def test_can_add_whisky_price_history(client, user, whisky_factory):
+    household = user.user_settings.active_household
+    whisky = whisky_factory(user=user, name="Tracked Whisky")
+    source = WhiskySource.objects.create(
+        name="Retailer",
+        user=user,
+        household=household,
+        url="https://example.com",
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse("whisky-price-history-add", kwargs={"pk": whisky.pk}),
+        {"price": "62.50", "source": source.pk},
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert (
+        response.url
+        == reverse("whisky-detail", kwargs={"pk": whisky.pk}) + "#price-tracking"
+    )
+    history_entry = WhiskyPriceHistory.objects.get(whisky=whisky)
+    assert history_entry.price == Decimal("62.50")
+    assert history_entry.source == source
+    assert history_entry.user == user
+    assert history_entry.household == household
 
 
 @pytest.mark.django_db

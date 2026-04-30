@@ -37,6 +37,7 @@ from wine_cellar.apps.wine.views import (
     WineScannedView,
     WineScanView,
     WineUpdateView,
+    add_price_history,
     WishlistCreateView,
     WishlistDeleteView,
     WishlistListView,
@@ -74,6 +75,11 @@ urlpatterns = [
     ),
     path("wine/extract-vision/", extract_wine_vision_ajax, name="wine-extract-vision"),
     path("wine/<int:pk>/", WineDetailView.as_view(), name="wine-detail"),
+    path(
+        "wine/<int:pk>/price-history/add/",
+        add_price_history,
+        name="wine-price-history-add",
+    ),
     path(
         "wine/<int:pk>/collections/add/",
         add_wine_to_collection,

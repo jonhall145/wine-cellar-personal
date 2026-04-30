@@ -3,9 +3,10 @@ import logging
 import re
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Count, Max, Min, Q
+from django.db.models import Avg, Count, Max, Min, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
@@ -75,6 +76,7 @@ from wine_cellar.apps.whisky.forms import (
     WhiskyDrinkRecordForm,
     WhiskyEditForm,
     WhiskyForm,
+    WhiskyPriceHistoryForm,
     WhiskyStockAddForm,
     WhiskyWishlistForm,
 )
@@ -99,6 +101,14 @@ from wine_cellar.apps.whisky.models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _format_price_delta(beverage, amount):
+    if amount is None:
+        return None
+    sign = "+" if amount > 0 else "-" if amount < 0 else ""
+    formatted = beverage.format_currency(abs(amount))
+    return f"{sign}{formatted}" if sign else formatted
 
 
 def _normalize_scan_lookup_text(value: str) -> str:
@@ -608,7 +618,80 @@ class WhiskyDetailView(BaseDetailView):
         context["all_collections"] = Collection.objects.filter(
             household=household
         ).order_by("name")
+        price_history_qs = self.object.whiskypricehistory_set.select_related("source")
+        price_history_entries = list(price_history_qs[:5])
+        latest_entry = price_history_entries[0] if price_history_entries else None
+        average_market_price = price_history_qs.aggregate(avg_price=Avg("price"))[
+            "avg_price"
+        ]
+        oldest_market_price = (
+            price_history_qs.order_by("recorded_at")
+            .values_list("price", flat=True)
+            .first()
+        )
+        purchase_price_baseline = self.object.whiskystorageitem_set.aggregate(
+            avg_price=Avg("price")
+        )["avg_price"]
+        if purchase_price_baseline is None:
+            purchase_price_baseline = self.object.price
+        context["price_history_form"] = kwargs.get("price_history_form") or (
+            WhiskyPriceHistoryForm(user=self.request.user)
+        )
+        context["price_history_entries"] = price_history_entries
+        context["price_history_latest"] = latest_entry
+        context["price_history_average_with_currency"] = self.object.format_currency(
+            average_market_price
+        )
+        context["price_history_purchase_baseline_with_currency"] = (
+            self.object.format_currency(purchase_price_baseline)
+        )
+        context["price_history_vs_purchase_with_currency"] = _format_price_delta(
+            self.object,
+            (
+                average_market_price - purchase_price_baseline
+                if average_market_price is not None
+                and purchase_price_baseline is not None
+                else None
+            ),
+        )
+        context["price_history_trend_with_currency"] = _format_price_delta(
+            self.object,
+            (
+                latest_entry.price - oldest_market_price
+                if latest_entry is not None and oldest_market_price is not None
+                else None
+            ),
+        )
         return context
+
+
+@login_required
+@require_member
+@require_POST
+def add_price_history(request, pk):
+    household = get_active_household(request.user)
+    whisky = get_object_or_404(Whisky, pk=pk, household=household, deleted=False)
+    form = WhiskyPriceHistoryForm(request.POST, user=request.user)
+
+    if form.is_valid():
+        WhiskyPriceHistory.objects.create(
+            whisky=whisky,
+            source=form.cleaned_data["source"],
+            price=form.cleaned_data["price"],
+            user=request.user,
+            household=household,
+        )
+        messages.success(request, "Tracked market price saved.")
+    else:
+        messages.error(
+            request,
+            "Could not save tracked market price. "
+            + "; ".join(error for errors in form.errors.values() for error in errors),
+        )
+
+    return redirect(
+        f"{reverse('whisky-detail', kwargs={'pk': whisky.pk})}#price-tracking"
+    )
 
 
 @login_required
