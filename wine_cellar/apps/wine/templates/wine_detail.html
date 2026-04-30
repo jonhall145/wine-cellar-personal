@@ -234,6 +234,8 @@
                                 <i class="fa-solid fa-eye-slash"></i>
                                 {% if gifted_bottle_count and not consumed_bottle_count %}
                                     Hide given bottles
+                                {% elif broken_lost_bottle_count and not actual_consumed_bottle_count and not gifted_bottle_count %}
+                                    Hide broken or lost bottles
                                 {% elif consumed_bottle_count and not gifted_bottle_count %}
                                     Hide consumed bottles
                                 {% else %}
@@ -246,6 +248,8 @@
                                 <i class="fa-regular fa-clock-rotate-left"></i>
                                 {% if gifted_bottle_count and not consumed_bottle_count %}
                                     Show given bottles ({{ gifted_bottle_count }})
+                                {% elif broken_lost_bottle_count and not actual_consumed_bottle_count and not gifted_bottle_count %}
+                                    Show broken or lost bottles ({{ broken_lost_bottle_count }})
                                 {% elif consumed_bottle_count and not gifted_bottle_count %}
                                     Show consumed bottles ({{ consumed_bottle_count }})
                                 {% else %}
@@ -281,7 +285,7 @@
                                         <a class="pure-button" href="{% url 'bottle-history' item.pk %}" title="History"><i class="fa-regular fa-clock-rotate-left"></i></a>
                                         <a class="pure-button" href="{% url 'bottle-edit' item.pk %}" title="Edit bottle"><i class="fa-regular fa-pen-to-square"></i></a>
                                         <a class="pure-button" href="{% url 'stock-give' item.pk %}" title="Mark as given"><i class="fa-solid fa-gift"></i></a>
-                                        <a class="pure-button" href="{% url 'stock-delete' item.pk %}" title="Remove bottle"><i class="fa-regular fa-trash-can"></i></a>
+                                        <a class="pure-button" href="{% url 'stock-delete' item.pk %}" title="Mark as broken or lost"><i class="fa-regular fa-trash-can"></i></a>
                                     </td>
                                 </tr>
                                 {% if item.notes.all %}
@@ -312,7 +316,15 @@
                 </div>
                 {% if show_consumed_bottles %}
                     <div class="pure-u-1 pure-u-md-1 mt-12" id="consumed-bottles">
-                        <h3>Consumed Bottles</h3>
+                        <h3>
+                            {% if broken_lost_bottle_count and not actual_consumed_bottle_count %}
+                                Broken or Lost Bottles
+                            {% elif broken_lost_bottle_count %}
+                                Removed Bottles
+                            {% else %}
+                                Consumed Bottles
+                            {% endif %}
+                        </h3>
                         <div class="table-responsive">
                             <table class="pure-table pure-table-horizontal pure-table-striped wine-detail__stock-table">
                                 <thead>
@@ -321,6 +333,7 @@
                                         <th>Row</th>
                                         <th>Cell</th>
                                         <th>Finished</th>
+                                        <th>Reason</th>
                                         <th>Gift</th>
                                         <th>Occasion</th>
                                         <th></th>
@@ -332,6 +345,7 @@
                                         <td>{{ item.row|default_if_none:"" }}</td>
                                         <td>{{ item.column|default_if_none:"" }}</td>
                                         <td>{{ item.finished_date|default_if_none:"" }}</td>
+                                        <td>{% if item.removal_reason == "removed" %}Broken or lost{% else %}Consumed{% endif %}</td>
                                         <td>{% if item.is_gift %}<i class="fa-solid fa-gift" title="{{ item.gift_from|default:'' }}"></i>{% if item.gift_from %} {{ item.gift_from }}{% endif %}{% endif %}</td>
                                         <td>{{ item.occasion|default_if_none:"" }}</td>
                                         <td>
@@ -340,7 +354,7 @@
                                     </tr>
                                     {% if item.notes.all %}
                                         <tr>
-                                            <td colspan="7" class="bottle-notes">
+                                            <td colspan="8" class="bottle-notes">
                                                 <strong>Notes:</strong>
                                                 <ul>
                                                     {% for note in item.notes.all %}

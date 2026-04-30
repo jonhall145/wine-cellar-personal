@@ -559,6 +559,67 @@ class BaseMarkBottleGivenView(RequireMemberMixin, FormView):
         return redirect(self.get_success_url())
 
 
+class BaseMarkBottleBrokenOrLostView(RequireMemberMixin, TemplateView):
+    template_name = "core/bottle_mark_broken_lost.html"
+    storage_item_model = None
+    beverage_fk_name = None
+    detail_url_name = None
+    list_url_name = None
+    storage_detail_url_name = None
+
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_object(self):
+        household = get_active_household(self.request.user)
+        return get_object_or_404(
+            self.storage_item_model,
+            pk=self.kwargs["pk"],
+            household=household,
+            deleted=False,
+        )
+
+    def get_success_url(self):
+        next_view = self.request.GET.get("next")
+        if next_view == "list" and self.list_url_name:
+            return reverse_lazy(self.list_url_name)
+        if next_view == "storage" and self.storage_detail_url_name:
+            return reverse_lazy(
+                self.storage_detail_url_name, kwargs={"pk": self.object.storage.pk}
+            )
+        beverage = getattr(self.object, self.beverage_fk_name)
+        return reverse_lazy(self.detail_url_name, kwargs={"pk": beverage.pk})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        beverage = getattr(self.object, self.beverage_fk_name)
+        context["storage_item"] = self.object
+        context["beverage"] = beverage
+        context[self.beverage_fk_name] = beverage
+        context["cancel_url"] = self.get_success_url()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        self.object.deleted = True
+        self.object.finished_date = timezone.localdate()
+        self.object.removal_reason = self.object.RemovalReason.REMOVED
+        self.object.given_date = None
+        self.object.recipient = ""
+        self.object.given_occasion = ""
+        self.object.save(
+            update_fields=[
+                "deleted",
+                "finished_date",
+                "removal_reason",
+                "given_date",
+                "recipient",
+                "given_occasion",
+            ]
+        )
+        return redirect(self.get_success_url())
+
+
 class BaseReorderReminderDeleteView(RequireMemberMixin, DeleteView):
     success_url = reverse_lazy("reorder-reminders")
 

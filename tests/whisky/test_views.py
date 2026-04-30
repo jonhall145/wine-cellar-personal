@@ -351,6 +351,35 @@ def test_mark_whisky_bottle_as_given_records_recipient_and_date(
 
 
 @pytest.mark.django_db
+def test_mark_whisky_bottle_as_broken_or_lost_records_removal_reason(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+    )
+
+    client.force_login(user)
+    response = client.post(reverse("stock-delete", kwargs={"pk": bottle.pk}))
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert response.url == reverse("whisky-detail", kwargs={"pk": bottle.whisky.pk})
+
+    bottle.refresh_from_db()
+    assert bottle.deleted is True
+    assert bottle.removal_reason == WhiskyStorageItem.RemovalReason.REMOVED
+    assert bottle.finished_date == timezone.localdate()
+    assert bottle.given_date is None
+    assert bottle.recipient == ""
+    assert bottle.given_occasion == ""
+
+
+@pytest.mark.django_db
 def test_given_whisky_bottle_history_shows_recipient_and_occasion(
     client, user, whisky_storage_item_factory
 ):
@@ -377,6 +406,31 @@ def test_given_whisky_bottle_history_shows_recipient_and_occasion(
     assert "Given away" in content
     assert "Jamie" in content
     assert "Thank you" in content
+
+
+@pytest.mark.django_db
+def test_broken_or_lost_whisky_bottle_history_shows_broken_or_lost_label(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        deleted=True,
+        removal_reason=WhiskyStorageItem.RemovalReason.REMOVED,
+        finished_date=datetime.date(2026, 4, 16),
+    )
+
+    client.force_login(user)
+    response = client.get(reverse("bottle-history", kwargs={"pk": bottle.pk}))
+    content = response.content.decode()
+
+    assert response.status_code == HTTPStatus.OK
+    assert "Broken or lost" in content
 
 
 @pytest.mark.django_db

@@ -448,8 +448,15 @@ class WineDetailView(BaseDetailView):
         gifted_bottles = removed_bottles.filter(
             removal_reason=StorageItem.RemovalReason.GIVEN
         )
+        broken_lost_bottles = consumed_bottles.filter(
+            removal_reason=StorageItem.RemovalReason.REMOVED
+        )
         context["consumed_bottle_count"] = consumed_bottles.count()
         context["gifted_bottle_count"] = gifted_bottles.count()
+        context["broken_lost_bottle_count"] = broken_lost_bottles.count()
+        context["actual_consumed_bottle_count"] = (
+            context["consumed_bottle_count"] - context["broken_lost_bottle_count"]
+        )
         context["show_consumed_bottles"] = self.request.GET.get(
             "show_consumed"
         ) == "1" and (
