@@ -22,7 +22,17 @@
                 <div class="pure-u-1 pure-u-md-1-2">
                     <h3>{{ APP_ITEM_NAME|capfirst }} by Type</h3>
                     {% if by_type %}
-                        <canvas id="chartByType" height="250"></canvas>
+                        <p id="chartByTypeSummary" class="visually-hidden">
+                            {{ APP_ITEM_NAME|capfirst }} by type:
+                            {% for type_name, count in by_type.items %}
+                                {{ type_name }} {{ count }} bottle{{ count|pluralize }}{% if not forloop.last %}; {% endif %}
+                            {% endfor %}
+                        </p>
+                        <canvas id="chartByType"
+                                height="250"
+                                role="img"
+                                aria-label="{{ APP_ITEM_NAME|capfirst }} by type chart"
+                                aria-describedby="chartByTypeSummary"></canvas>
                         <details class="mt-4">
                             <summary>Show table</summary>
                             <table class="pure-table pure-table-horizontal pure-table-striped">
@@ -51,7 +61,17 @@
                 <div class="pure-u-1 pure-u-md-1-2">
                     <h3>By Country</h3>
                     {% if by_country %}
-                        <canvas id="chartByCountry" height="250"></canvas>
+                        <p id="chartByCountrySummary" class="visually-hidden">
+                            Bottles by country:
+                            {% for country_name, count in by_country.items %}
+                                {{ country_name }} {{ count }} bottle{{ count|pluralize }}{% if not forloop.last %}; {% endif %}
+                            {% endfor %}
+                        </p>
+                        <canvas id="chartByCountry"
+                                height="250"
+                                role="img"
+                                aria-label="Bottles by country chart"
+                                aria-describedby="chartByCountrySummary"></canvas>
                         <details class="mt-4">
                             <summary>Show table</summary>
                             <table class="pure-table pure-table-horizontal pure-table-striped">
@@ -82,7 +102,17 @@
                 <div class="pure-u-1 pure-u-md-1-2">
                     <h3>Purchase Trends</h3>
                     {% if by_month %}
-                        <canvas id="chartByMonth" height="250"></canvas>
+                        <p id="chartByMonthSummary" class="visually-hidden">
+                            Purchase trends by month:
+                            {% for item in by_month %}
+                                {{ item.month|date:"F Y" }} {{ item.count }} bottle{{ item.count|pluralize }} added{% if not forloop.last %}; {% endif %}
+                            {% endfor %}
+                        </p>
+                        <canvas id="chartByMonth"
+                                height="250"
+                                role="img"
+                                aria-label="Purchase trends chart"
+                                aria-describedby="chartByMonthSummary"></canvas>
                         <details class="mt-4">
                             <summary>Show table</summary>
                             <table class="pure-table pure-table-horizontal pure-table-striped">
@@ -111,7 +141,17 @@
                 <div class="pure-u-1 pure-u-md-1-2">
                     <h3>Value by Storage Location</h3>
                     {% if by_storage %}
-                        <canvas id="chartByStorage" height="250"></canvas>
+                        <p id="chartByStorageSummary" class="visually-hidden">
+                            Value by storage location:
+                            {% for name, data in by_storage.items %}
+                                {{ name }} {{ data.count }} bottle{{ data.count|pluralize }} worth {{ currency }}{{ data.value }}{% if not forloop.last %}; {% endif %}
+                            {% endfor %}
+                        </p>
+                        <canvas id="chartByStorage"
+                                height="250"
+                                role="img"
+                                aria-label="Value by storage location chart"
+                                aria-describedby="chartByStorageSummary"></canvas>
                         <details class="mt-4">
                             <summary>Show table</summary>
                             <table class="pure-table pure-table-horizontal pure-table-striped">
