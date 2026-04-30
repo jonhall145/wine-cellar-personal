@@ -112,13 +112,39 @@ const getCellPositionFromElement = (element: HTMLElement): { clientX: number; cl
     };
 };
 
-const focusGridCell = (currentTarget: HTMLElement, row: number, column: number) => {
+const focusGridCell = (
+    currentTarget: HTMLElement,
+    row: number,
+    column: number,
+    rowStep = 0,
+    columnStep = 0,
+) => {
     const gridId = currentTarget.dataset.gridId;
     if (!gridId) return;
 
-    const selector = `[data-grid-id="${gridId}"][data-row="${row}"][data-column="${column}"]`;
-    const nextCell = document.querySelector<HTMLElement>(selector);
-    nextCell?.focus();
+    let nextRow = row;
+    let nextColumn = column;
+
+    while (true) {
+        const selector = `[data-grid-id="${gridId}"][data-row="${nextRow}"][data-column="${nextColumn}"]`;
+        const nextCell = document.querySelector<HTMLElement>(selector);
+
+        if (!nextCell) {
+            return;
+        }
+
+        if (!(nextCell instanceof HTMLButtonElement) || !nextCell.disabled) {
+            nextCell.focus();
+            return;
+        }
+
+        if (rowStep === 0 && columnStep === 0) {
+            return;
+        }
+
+        nextRow += rowStep;
+        nextColumn += columnStep;
+    }
 };
 
 const handleGridKeyDown = (
@@ -131,27 +157,27 @@ const handleGridKeyDown = (
     switch (event.key) {
     case 'ArrowUp':
         event.preventDefault();
-        focusGridCell(event.currentTarget, currentRow - 1, currentColumn);
+        focusGridCell(event.currentTarget, currentRow - 1, currentColumn, -1, 0);
         break;
     case 'ArrowDown':
         event.preventDefault();
-        focusGridCell(event.currentTarget, currentRow + 1, currentColumn);
+        focusGridCell(event.currentTarget, currentRow + 1, currentColumn, 1, 0);
         break;
     case 'ArrowLeft':
         event.preventDefault();
-        focusGridCell(event.currentTarget, currentRow, currentColumn - 1);
+        focusGridCell(event.currentTarget, currentRow, currentColumn - 1, 0, -1);
         break;
     case 'ArrowRight':
         event.preventDefault();
-        focusGridCell(event.currentTarget, currentRow, currentColumn + 1);
+        focusGridCell(event.currentTarget, currentRow, currentColumn + 1, 0, 1);
         break;
     case 'Home':
         event.preventDefault();
-        focusGridCell(event.currentTarget, currentRow, 1);
+        focusGridCell(event.currentTarget, currentRow, 1, 0, 1);
         break;
     case 'End':
         event.preventDefault();
-        focusGridCell(event.currentTarget, currentRow, Number(event.currentTarget.dataset.maxColumn));
+        focusGridCell(event.currentTarget, currentRow, Number(event.currentTarget.dataset.maxColumn), 0, -1);
         break;
     case 'Enter':
     case ' ':
