@@ -1,7 +1,10 @@
+from datetime import datetime
+from decimal import Decimal
 from http import HTTPStatus
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 from pytest_django.asserts import (
     assertRedirects,
     assertTemplateNotUsed,
@@ -1140,6 +1143,48 @@ def test_stats_dashboard_purchase_trends(
     assert r.status_code == HTTPStatus.OK
     by_month = r.context_data["by_month"]
     assert len(by_month) >= 1
+
+
+@pytest.mark.django_db
+def test_stats_dashboard_spending_trends(
+    client, user, wine_factory, storage_item_factory
+):
+    """Stats dashboard groups spending by month and year."""
+    storage = user.storage_set.first()
+    wine = wine_factory(user=user, price=Decimal("18.00"))
+    january_item = storage_item_factory(
+        wine=wine,
+        storage=storage,
+        price=Decimal("12.50"),
+    )
+    february_item = storage_item_factory(
+        wine=wine,
+        storage=storage,
+        price=None,
+    )
+    january_created = timezone.make_aware(datetime(2024, 1, 15, 12, 0))
+    february_created = timezone.make_aware(datetime(2024, 2, 10, 12, 0))
+    january_item.__class__.objects.filter(pk=january_item.pk).update(
+        created=january_created
+    )
+    february_item.__class__.objects.filter(pk=february_item.pk).update(
+        created=february_created
+    )
+
+    client.force_login(user)
+    r = client.get(reverse("stats-dashboard"))
+
+    assert r.status_code == HTTPStatus.OK
+    spend_by_month = r.context_data["spend_by_month"]
+    spend_by_year = r.context_data["spend_by_year"]
+
+    assert spend_by_month == [
+        {"month": january_created.date().replace(day=1), "amount": Decimal("12.50")},
+        {"month": february_created.date().replace(day=1), "amount": Decimal("18.00")},
+    ]
+    assert spend_by_year == [{"year": 2024, "amount": Decimal("30.50")}]
+    assert "Monthly Spend" in r.content.decode()
+    assert "Yearly Spend" in r.content.decode()
 
 
 @pytest.mark.django_db

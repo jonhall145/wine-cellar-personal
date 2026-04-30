@@ -1,6 +1,7 @@
 import datetime
 import io
 import json
+from decimal import Decimal
 from http import HTTPStatus
 from unittest.mock import MagicMock, patch
 
@@ -1423,6 +1424,43 @@ def test_whisky_stats_dashboard_by_type(
     assert r.status_code == HTTPStatus.OK
     by_type = r.context_data["by_type"]
     assert by_type.get("Single Malt", 0) == 1
+
+
+@pytest.mark.django_db
+def test_whisky_stats_dashboard_spending_trends(
+    client, user, whisky_factory, whisky_storage_item_factory
+):
+    """Stats dashboard groups whisky spending by month and year."""
+    storage = user.storage_set.first()
+    whisky = whisky_factory(user=user, price=Decimal("45.00"))
+    january_item = whisky_storage_item_factory(
+        whisky=whisky,
+        storage=storage,
+        price=Decimal("40.00"),
+    )
+    march_item = whisky_storage_item_factory(
+        whisky=whisky,
+        storage=storage,
+        price=None,
+    )
+    january_created = timezone.make_aware(datetime.datetime(2024, 1, 8, 12, 0))
+    march_created = timezone.make_aware(datetime.datetime(2024, 3, 14, 12, 0))
+    WhiskyStorageItem.objects.filter(pk=january_item.pk).update(created=january_created)
+    WhiskyStorageItem.objects.filter(pk=march_item.pk).update(created=march_created)
+
+    client.force_login(user)
+    r = client.get(reverse("stats-dashboard"))
+
+    assert r.status_code == HTTPStatus.OK
+    assert r.context_data["spend_by_month"] == [
+        {"month": january_created.date().replace(day=1), "amount": Decimal("40.00")},
+        {"month": march_created.date().replace(day=1), "amount": Decimal("45.00")},
+    ]
+    assert r.context_data["spend_by_year"] == [
+        {"year": 2024, "amount": Decimal("85.00")}
+    ]
+    assert "Monthly Spend" in r.content.decode()
+    assert "Yearly Spend" in r.content.decode()
 
 
 @pytest.mark.django_db

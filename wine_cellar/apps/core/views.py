@@ -1002,6 +1002,14 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
         """Return country display name for the beverage. Override per app."""
         raise NotImplementedError
 
+    def get_item_price(self, item, beverage):
+        """Return the best available purchase price for a stored bottle."""
+        if item.price is not None:
+            return item.price
+        if beverage.price is not None:
+            return beverage.price
+        return Decimal("0")
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         household = get_active_household(self.request.user)
@@ -1010,9 +1018,10 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
             getattr(user_settings, "currency", "EUR"), "€"
         )
 
-        items_qs = self.storage_item_model.objects.filter(
-            household=household, deleted=False
+        all_items_qs = self.storage_item_model.objects.filter(
+            household=household
         ).select_related(*self.select_related_fields, "storage")
+        items_qs = all_items_qs.filter(deleted=False)
 
         # --- By type (count in stock) ---
         by_type = defaultdict(int)
@@ -1020,6 +1029,8 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
         by_country = defaultdict(int)
         # --- Value by storage location ---
         by_storage = {}
+        spend_by_month = defaultdict(lambda: Decimal("0"))
+        spend_by_year = defaultdict(lambda: Decimal("0"))
 
         for item in items_qs:
             beverage = getattr(item, self.beverage_fk_name)
@@ -1030,13 +1041,14 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
             if storage_name not in by_storage:
                 by_storage[storage_name] = {"count": 0, "value": Decimal("0")}
             by_storage[storage_name]["count"] += 1
-            if item.price is not None:
-                item_price = item.price
-            elif beverage.price is not None:
-                item_price = beverage.price
-            else:
-                item_price = Decimal("0")
+            item_price = self.get_item_price(item, beverage)
             by_storage[storage_name]["value"] += item_price
+
+        for item in all_items_qs:
+            beverage = getattr(item, self.beverage_fk_name)
+            item_price = self.get_item_price(item, beverage)
+            spend_by_month[item.created.date().replace(day=1)] += item_price
+            spend_by_year[item.created.year] += item_price
 
         for data in by_storage.values():
             data["value"] = int(data["value"])
@@ -1057,6 +1069,14 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
             .annotate(count=Count("id"))
             .order_by("month")
         )
+        spend_by_month = [
+            {"month": month, "amount": amount.quantize(Decimal("0.01"))}
+            for month, amount in sorted(spend_by_month.items())
+        ]
+        spend_by_year = [
+            {"year": year, "amount": amount.quantize(Decimal("0.01"))}
+            for year, amount in sorted(spend_by_year.items())
+        ]
 
         context.update(
             {
@@ -1064,6 +1084,8 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
                 "by_country": by_country,
                 "by_storage": by_storage,
                 "by_month": list(by_month),
+                "spend_by_month": spend_by_month,
+                "spend_by_year": spend_by_year,
                 "currency": currency,
                 "total_in_stock": sum(by_type.values()),
             }
