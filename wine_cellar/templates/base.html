@@ -71,6 +71,15 @@
             {% block header %}
                 <h1 class="brand-title">{{ APP_NAME }}</h1>
             {% endblock header %}
+            {% if messages %}
+                <div class="pure-g">
+                    <div class="pure-u-1">
+                        {% for message in messages %}
+                            <div class="pure-alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
             {% block allauth_wrapper %}
                 {% block content %}
                 {% endblock content %}
