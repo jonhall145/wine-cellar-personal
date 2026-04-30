@@ -8,6 +8,7 @@ from wine_cellar.apps.core.forms import CsvImportMappingForm, CsvImportUploadFor
 from wine_cellar.apps.core.importing import (
     CsvImportValidationError,
     parse_import_csv,
+    parse_import_excel,
 )
 from wine_cellar.apps.household.mixins import RequireHouseholdMixin
 from wine_cellar.apps.user.views import get_active_household
@@ -108,8 +109,14 @@ class BaseCsvImportView(RequireHouseholdMixin, TemplateView):
                 self.get_context_data(upload_form=upload_form)
             )
 
+        uploaded_file = upload_form.cleaned_data["file"]
+        filename_lower = uploaded_file.name.lower()
+
         try:
-            headers, rows = parse_import_csv(upload_form.cleaned_data["file"])
+            if filename_lower.endswith((".xlsx", ".xls")):
+                headers, rows = parse_import_excel(uploaded_file)
+            else:
+                headers, rows = parse_import_csv(uploaded_file)
         except ValidationError as exc:
             upload_form.add_error("file", exc)
             return self.render_to_response(

@@ -9,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.http import QueryDict
+from openpyxl import load_workbook
 
 from wine_cellar.apps.storage.models import Storage, get_app_type
 
@@ -76,6 +77,64 @@ def parse_import_csv(uploaded_file):
 
     if not rows:
         raise ValidationError("The CSV file does not contain any data rows.")
+
+    return cleaned_headers, rows
+
+
+def parse_import_excel(uploaded_file):
+    if uploaded_file.size > MAX_IMPORT_FILE_SIZE:
+        raise ValidationError(
+            f"Excel files must be {MAX_IMPORT_FILE_SIZE // 1024}KB or smaller."
+        )
+
+    if not uploaded_file.name.lower().endswith((".xlsx", ".xls")):
+        raise ValidationError("Only Excel files (.xlsx or .xls) are supported.")
+
+    try:
+        workbook = load_workbook(uploaded_file, data_only=True)
+    except Exception as exc:
+        raise ValidationError("Invalid or corrupted Excel file.") from exc
+
+    if not workbook.sheetnames:
+        raise ValidationError("The Excel file does not contain any sheets.")
+
+    worksheet = workbook.active
+    if not worksheet or not worksheet.max_row:
+        raise ValidationError("The Excel sheet is empty.")
+
+    rows_data = []
+    for row in worksheet.iter_rows(values_only=True):
+        rows_data.append(row)
+
+    if not rows_data:
+        raise ValidationError("The Excel file does not contain any data.")
+
+    headers = [str(cell or "").strip() for cell in rows_data[0]]
+    if not any(headers):
+        raise ValidationError("The Excel file must include a header row.")
+
+    cleaned_headers = [header.strip() for header in headers]
+    if any(not header for header in cleaned_headers):
+        raise ValidationError("Excel column headers cannot be blank.")
+
+    normalized_headers = [normalize_import_key(header) for header in cleaned_headers]
+    if len(normalized_headers) != len(set(normalized_headers)):
+        raise ValidationError("Excel column headers must be unique.")
+
+    rows = []
+    for index, row in enumerate(rows_data[1:], start=1):
+        if index > MAX_IMPORT_ROWS:
+            raise ValidationError(
+                f"Excel imports are limited to {MAX_IMPORT_ROWS} rows."
+            )
+        cleaned_row = {
+            header: str(row[i] or "").strip()
+            for i, header in enumerate(cleaned_headers)
+        }
+        rows.append(cleaned_row)
+
+    if not rows:
+        raise ValidationError("The Excel file does not contain any data rows.")
 
     return cleaned_headers, rows
 

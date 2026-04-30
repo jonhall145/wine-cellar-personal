@@ -245,8 +245,8 @@ class ReorderReminderForm(forms.Form):
 
 class CsvImportUploadForm(forms.Form):
     file = forms.FileField(
-        label="CSV file",
-        help_text="Upload a UTF-8 CSV file with a header row.",
+        label="CSV or Excel file",
+        help_text="Upload a UTF-8 CSV file or Excel (.xlsx) file with a header row.",
     )
 
 
