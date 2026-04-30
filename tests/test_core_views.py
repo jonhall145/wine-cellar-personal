@@ -5,6 +5,7 @@ from decimal import Decimal
 from http import HTTPStatus
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 
@@ -129,6 +130,55 @@ class TestExportViews:
     def test_export_requires_login(self, client):
         r = client.get(reverse("wine-export-csv"))
         assert r.status_code == HTTPStatus.FOUND  # redirect to login
+
+
+@pytest.mark.django_db
+class TestWineImportView:
+    def test_import_creates_wine_and_stock(self, client, user, storage_factory):
+        storage = storage_factory(
+            user=user,
+            household=user.user_settings.active_household,
+            rows=0,
+            columns=0,
+            app_type="wine",
+        )
+        client.force_login(user)
+
+        csv_file = SimpleUploadedFile(
+            "wines.csv",
+            (
+                "name,type,country,stock,price,grapes\n"
+                "Imported Riesling,White,DE,2,12.50,Riesling\n"
+            ).encode("utf-8"),
+            content_type="text/csv",
+        )
+
+        preview = client.post(
+            reverse("wine-import"),
+            {"action": "upload", "file": csv_file},
+        )
+        assert preview.status_code == HTTPStatus.OK
+        assert "Step 2: Map columns" in preview.content.decode()
+
+        response = client.post(
+            reverse("wine-import"),
+            {
+                "action": "import",
+                "default_storage": storage.pk,
+                "map_name": "name",
+                "map_wine_type": "type",
+                "map_country": "country",
+                "map_stock_count": "stock",
+                "map_price": "price",
+                "map_grapes": "grapes",
+            },
+            follow=True,
+        )
+
+        assert response.status_code == HTTPStatus.OK
+        wine = Wine.objects.get(name="Imported Riesling")
+        assert wine.grapes.filter(name="Riesling").exists()
+        assert StorageItem.objects.filter(wine=wine, deleted=False).count() == 2
 
 
 # ---------------------------------------------------------------------------
