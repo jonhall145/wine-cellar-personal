@@ -1,5 +1,3 @@
-from django.views.generic import TemplateView
-
 from wine_cellar.apps.core.views import (
     BaseBottleNoteCreateView,
     BaseDrinkRecordCreateView,
@@ -8,9 +6,7 @@ from wine_cellar.apps.core.views import (
     BaseDrinkRecordListView,
     BaseJourneyTimelineView,
 )
-from wine_cellar.apps.household.mixins import RequireHouseholdMixin
 from wine_cellar.apps.storage.models import StorageItem
-from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.models import BottleNote, DrinkRecord, Wine
 
 
@@ -64,55 +60,3 @@ class BottleNoteCreateView(BaseBottleNoteCreateView):
     note_model = BottleNote
     beverage_fk_name = "wine"
     detail_url_name = "wine-detail"
-
-
-class DrinkingWindowAlertsView(RequireHouseholdMixin, TemplateView):
-    template_name = "drinking_window_alerts.html"
-
-    def get_context_data(self, **kwargs):
-        from datetime import date
-
-        from wine_cellar.apps.wine.models import DrinkingWindowAlert
-
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-
-        alerts = DrinkingWindowAlert.objects.filter(
-            household=household, is_read=False
-        ).select_related("wine")
-
-        current_year = date.today().year
-
-        upcoming_wines = (
-            Wine.objects.filter(
-                household=household,
-                deleted=False,
-                drink_to__isnull=False,
-                drink_to__gt=0,
-                drink_to__gte=current_year,
-                drink_to__lte=current_year + 1,
-            )
-            .filter(storageitem__deleted=False)
-            .distinct()
-        )
-
-        overdue_wines = (
-            Wine.objects.filter(
-                household=household,
-                deleted=False,
-                drink_to__isnull=False,
-                drink_to__gt=0,
-                drink_to__lt=current_year,
-            )
-            .filter(storageitem__deleted=False)
-            .distinct()
-        )
-
-        context.update(
-            {
-                "alerts": alerts,
-                "upcoming_wines": upcoming_wines,
-                "overdue_wines": overdue_wines,
-            }
-        )
-        return context

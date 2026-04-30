@@ -318,19 +318,6 @@ def test_bottle_note_create_view(client, user, wine_factory, storage_item_factor
 
 
 @pytest.mark.django_db
-def test_reorder_reminders_view(client, user, wine_factory):
-    client.force_login(user)
-    household = user.user_settings.active_household
-    wine = wine_factory(user=user)
-    ReorderReminder.objects.create(
-        wine=wine, user=user, household=household, min_stock=2, is_active=True
-    )
-    r = client.get(reverse("reorder-reminders"))
-    assert r.status_code == HTTPStatus.OK
-    assert len(r.context["reminders"]) == 1
-
-
-@pytest.mark.django_db
 def test_reorder_reminder_create_view(client, user, wine_factory):
     client.force_login(user)
     wine = wine_factory(user=user)

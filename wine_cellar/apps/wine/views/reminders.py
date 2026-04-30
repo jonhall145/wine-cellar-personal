@@ -1,17 +1,8 @@
 from wine_cellar.apps.core.views import (
     BaseReorderReminderCreateView,
     BaseReorderReminderDeleteView,
-    BaseReorderRemindersView,
 )
 from wine_cellar.apps.wine.models import ReorderReminder, Wine
-
-
-class ReorderRemindersView(BaseReorderRemindersView):
-    template_name = "core/reorder_reminders.html"
-    reminder_model = ReorderReminder
-    beverage_fk_name = "wine"
-    stock_reverse_path = "wine__storageitem"
-    beverage_icon = "wine-bottle"
 
 
 class ReorderReminderCreateView(BaseReorderReminderCreateView):

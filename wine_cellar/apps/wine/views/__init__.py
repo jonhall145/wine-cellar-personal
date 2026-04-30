@@ -16,7 +16,6 @@ from wine_cellar.apps.wine.views.cellar import (  # noqa: F401
 )
 from wine_cellar.apps.wine.views.drink import (  # noqa: F401
     BottleNoteCreateView,
-    DrinkingWindowAlertsView,
     DrinkRecordCreateView,
     DrinkRecordDeleteView,
     DrinkRecordEditView,
@@ -33,7 +32,6 @@ from wine_cellar.apps.wine.views.map import WineMapView  # noqa: F401
 from wine_cellar.apps.wine.views.reminders import (  # noqa: F401
     ReorderReminderCreateView,
     ReorderReminderDeleteView,
-    ReorderRemindersView,
 )
 from wine_cellar.apps.wine.views.scan import (  # noqa: F401
     LabelScanResultView,

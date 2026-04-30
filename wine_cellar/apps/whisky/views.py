@@ -37,7 +37,7 @@ from wine_cellar.apps.core.views import (
     BaseImagesView,
     BaseJourneyTimelineView,
     BaseLabelScanView,
-    BaseListView,
+     BaseListView,
     BaseMarkBottleBrokenOrLostView,
     BaseMarkBottleGivenView,
     BaseMergeConfirmView,
@@ -45,7 +45,6 @@ from wine_cellar.apps.core.views import (
     BaseRandomBottleView,
     BaseReorderReminderCreateView,
     BaseReorderReminderDeleteView,
-    BaseReorderRemindersView,
     BaseScanView,
     BaseStatsDashboardView,
     BaseStorageItemAddView,
@@ -1030,65 +1029,6 @@ class BottleNoteCreateView(BaseBottleNoteCreateView):
     note_model = WhiskyBottleNote
     beverage_fk_name = "whisky"
     detail_url_name = "whisky-detail"
-
-
-class DrinkingWindowAlertsView(RequireHouseholdMixin, TemplateView):
-    template_name = "whisky/drinking_window_alerts.html"
-
-    def get_context_data(self, **kwargs):
-        import datetime
-
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-
-        # Dreg alerts
-        dreg_cutoff_warning = datetime.date.today() - datetime.timedelta(days=335)
-        dreg_cutoff_expired = datetime.date.today() - datetime.timedelta(days=365)
-
-        dreg_expired = WhiskyStorageItem.objects.filter(
-            household=household,
-            deleted=False,
-            fill_level="DR",
-            dreg_date__lte=dreg_cutoff_expired,
-        ).select_related("whisky", "storage")
-
-        dreg_warning = WhiskyStorageItem.objects.filter(
-            household=household,
-            deleted=False,
-            fill_level="DR",
-            dreg_date__lte=dreg_cutoff_warning,
-            dreg_date__gt=dreg_cutoff_expired,
-        ).select_related("whisky", "storage")
-
-        # Low stock reminders
-        reminders = (
-            WhiskyReorderReminder.objects.filter(household=household, is_active=True)
-            .select_related("whisky")
-            .annotate(
-                current_stock=Count(
-                    "whisky__whiskystorageitem",
-                    filter=Q(whisky__whiskystorageitem__deleted=False),
-                )
-            )
-        )
-        needs_reorder = [r for r in reminders if r.current_stock <= r.min_stock]
-
-        context.update(
-            {
-                "dreg_expired": dreg_expired,
-                "dreg_warning": dreg_warning,
-                "needs_reorder": needs_reorder,
-            }
-        )
-        return context
-
-
-class ReorderRemindersView(BaseReorderRemindersView):
-    template_name = "core/reorder_reminders.html"
-    reminder_model = WhiskyReorderReminder
-    beverage_fk_name = "whisky"
-    stock_reverse_path = "whisky__whiskystorageitem"
-    beverage_icon = "whiskey-glass"
 
 
 class ReorderReminderCreateView(BaseReorderReminderCreateView):

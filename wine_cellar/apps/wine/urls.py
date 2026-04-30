@@ -13,7 +13,6 @@ from wine_cellar.apps.wine.views import (
     BottleNoteCreateView,
     CellarValueView,
     ConsumptionStatsView,
-    DrinkingWindowAlertsView,
     DrinkRecordCreateView,
     DrinkRecordDeleteView,
     DrinkRecordEditView,
@@ -25,7 +24,6 @@ from wine_cellar.apps.wine.views import (
     RandomBottleView,
     ReorderReminderCreateView,
     ReorderReminderDeleteView,
-    ReorderRemindersView,
     StatsDashboardView,
     WineCreateView,
     WineDeleteView,
@@ -139,11 +137,9 @@ urlpatterns = [
     path(
         "bottle/<int:pk>/note/", BottleNoteCreateView.as_view(), name="bottle-note-add"
     ),
-    path("alerts/", DrinkingWindowAlertsView.as_view(), name="drinking-alerts"),
     path("stats/", ConsumptionStatsView.as_view(), name="consumption-stats"),
     path("dashboard/", StatsDashboardView.as_view(), name="stats-dashboard"),
     # Reorder reminders
-    path("reorder/", ReorderRemindersView.as_view(), name="reorder-reminders"),
     path(
         "reorder/add/<int:pk>/",
         ReorderReminderCreateView.as_view(),
