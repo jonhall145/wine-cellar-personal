@@ -5,12 +5,12 @@ from django.db import transaction
 from PIL import Image
 
 from wine_cellar.apps.whisky.models import (
+    FillLevel,
+    VisionExtractionLog,
     Whisky,
     WhiskyBarcode,
     WhiskyImage,
     WhiskyStorageItem,
-    FillLevel,
-    VisionExtractionLog,
 )
 from wine_cellar.apps.whisky.utils import apply_manual_crop
 
@@ -27,7 +27,7 @@ class WhiskyCreationService:
     @transaction.atomic
     def create_or_update_whisky(user, household, cleaned_data):
         """Create or update a whisky with its related objects.
-        
+
         Returns:
             (whisky, created) tuple
         """
@@ -130,7 +130,7 @@ class WhiskyCreationService:
     @staticmethod
     def create_whisky_images(whisky, user, cleaned_data, image_fields_map):
         """Create WhiskyImage records from form data.
-        
+
         Args:
             whisky: Whisky instance
             user: User instance
@@ -152,7 +152,7 @@ class WhiskyCreationService:
     @staticmethod
     def apply_auto_crop_from_extraction(whisky, extracted_data):
         """Apply AI-extracted label bounds as auto-crop thumbnails.
-        
+
         Args:
             whisky: Whisky instance
             extracted_data: Dict of extraction results with label_bounds_front/back
@@ -170,6 +170,7 @@ class WhiskyCreationService:
                 continue
             try:
                 import os
+
                 from django.conf import settings as django_settings
 
                 full_path = os.path.join(
@@ -195,7 +196,7 @@ class WhiskyCreationService:
     @staticmethod
     def link_extraction_log(whisky, user, cleaned_data, extraction_result):
         """Link vision extraction log to created whisky and record corrections.
-        
+
         Args:
             whisky: Whisky instance
             user: User instance
@@ -212,8 +213,9 @@ class WhiskyCreationService:
                 .first()
             )
             if log:
-                corrections = _detect_corrections(cleaned_data,
-                                                 extraction_result.get("extracted_data", {}))
+                corrections = _detect_corrections(
+                    cleaned_data, extraction_result.get("extracted_data", {})
+                )
                 log.whisky = whisky
                 log.was_successful = True
                 if corrections:
@@ -226,14 +228,12 @@ class WhiskyCreationService:
                     ]
                 )
         except Exception:
-            logger.exception(
-                "Failed to link extraction log to whisky %s", whisky.pk
-            )
+            logger.exception("Failed to link extraction log to whisky %s", whisky.pk)
 
 
 def _detect_corrections(cleaned_data, extracted_data):
     """Detect differences between extracted data and user-corrected values.
-    
+
     Returns a dict of fields that were different from extraction.
     """
     corrections = {}

@@ -27,7 +27,6 @@ from wine_cellar.apps.wine.filters import WineFilter
 from wine_cellar.apps.wine.forms import WineEditForm, WineForm
 from wine_cellar.apps.wine.models import (
     Collection,
-    ImageType,
     VisionExtractionLog,
     Wine,
     WineBarcode,

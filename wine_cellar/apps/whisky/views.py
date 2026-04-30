@@ -418,7 +418,9 @@ class WhiskyCreateView(BaseBeverageCreateView):
     @staticmethod
     @transaction.atomic
     def process_form_data(user, household, cleaned_data):
-        return WhiskyCreationService.create_or_update_whisky(user, household, cleaned_data)
+        return WhiskyCreationService.create_or_update_whisky(
+            user, household, cleaned_data
+        )
 
 
 class WhiskyUpdateView(BaseBeverageUpdateView):

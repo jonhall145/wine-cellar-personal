@@ -3,15 +3,15 @@ import logging
 from django.db import transaction
 from PIL import Image
 
+from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.wine.models import (
+    ImageType,
     Size,
+    VisionExtractionLog,
     Wine,
     WineBarcode,
     WineImage,
-    ImageType,
-    VisionExtractionLog,
 )
-from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.wine.utils import apply_manual_crop
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class WineCreationService:
     @transaction.atomic
     def create_or_update_wine(user, household, cleaned_data):
         """Create or update a wine with its related objects.
-        
+
         Returns:
             (wine, created) tuple
         """
@@ -113,7 +113,7 @@ class WineCreationService:
     @staticmethod
     def create_wine_images(wine, user, cleaned_data, image_fields_map):
         """Create WineImage records from form data.
-        
+
         Args:
             wine: Wine instance
             user: User instance
@@ -135,7 +135,7 @@ class WineCreationService:
     @staticmethod
     def apply_auto_crop_from_extraction(wine, extracted_data):
         """Apply AI-extracted label bounds as auto-crop thumbnails.
-        
+
         Args:
             wine: Wine instance
             extracted_data: Dict of extraction results with label_bounds_front/back
@@ -153,6 +153,7 @@ class WineCreationService:
                 continue
             try:
                 import os
+
                 from django.conf import settings as django_settings
 
                 full_path = os.path.join(
@@ -178,7 +179,7 @@ class WineCreationService:
     @staticmethod
     def link_extraction_log(wine, user, cleaned_data, extraction_result):
         """Link vision extraction log to created wine and record corrections.
-        
+
         Args:
             wine: Wine instance
             user: User instance
@@ -195,8 +196,9 @@ class WineCreationService:
                 .first()
             )
             if log:
-                corrections = _detect_corrections(cleaned_data, 
-                                                 extraction_result.get("extracted_data", {}))
+                corrections = _detect_corrections(
+                    cleaned_data, extraction_result.get("extracted_data", {})
+                )
                 log.wine = wine
                 log.was_successful = True
                 if corrections:
@@ -209,14 +211,12 @@ class WineCreationService:
                     ]
                 )
         except Exception:
-            logger.exception(
-                "Failed to link extraction log to wine %s", wine.pk
-            )
+            logger.exception("Failed to link extraction log to wine %s", wine.pk)
 
 
 def _detect_corrections(cleaned_data, extracted_data):
     """Detect differences between extracted data and user-corrected values.
-    
+
     Returns a dict of fields that were different from extraction.
     """
     corrections = {}
