@@ -37,6 +37,9 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 var(--spacing-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 /* responsive styling for large and small menus */
@@ -100,24 +103,34 @@
   left: 0;
   right: 0;
   z-index: 5;
-  padding: var(--spacing-md) var(--spacing-lg);
+  padding: var(--spacing-md) 132px var(--spacing-md) 72px;
   font-size: var(--font-lg);
   font-weight: 600;
   border-radius: 0;
   margin: 0;
 }
 
-.app-switch-btn {
+.menu__sm-actions,
+.menu__md-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.menu__sm-actions {
   position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+}
+
+.app-switch-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  top: 10px;
-  right: 10px;
   background: var(--primary);
   color: white;
   font-size: 20px;
-  z-index: 10;
   width: 48px;
   height: 48px;
   border-radius: var(--border-radius-sm);
@@ -133,9 +146,59 @@
   color: white;
 }
 
+.header-notification-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--border-radius-sm);
+  background: var(--primary);
+  color: white;
+  box-shadow: var(--container-box-shadow);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.header-notification-link:hover,
+.header-notification-link:focus {
+  background: var(--primary-light);
+  transform: scale(1.05);
+  color: white;
+}
+
+.header-notification-link__badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 @media screen and (min-width: 48em) {
   .app-switch-btn {
     display: none;
+  }
+
+  .menu__sm-actions {
+    display: none;
+  }
+
+  .menu__md .header-notification-link {
+    width: 44px;
+    height: 44px;
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: none;
   }
 }
 

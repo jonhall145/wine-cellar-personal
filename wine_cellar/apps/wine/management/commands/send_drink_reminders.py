@@ -19,11 +19,13 @@ def drink_by_reminder() -> int:
     - reminder_enabled: whether to send reminders at all
     - reminder_years_before: how many years before drink_to to start reminding
     """
-    from wine_cellar.apps.user.models import UserSettings
+    from wine_cellar.apps.user.models import NotificationChannel, UserSettings
 
     User = get_user_model()
-    users = User.objects.exclude(user_settings__notifications=False).exclude(
-        user_settings__reminder_enabled=False
+    users = (
+        User.objects.exclude(user_settings__notifications=False)
+        .exclude(user_settings__reminder_enabled=False)
+        .exclude(user_settings__drink_window_notifications=NotificationChannel.NONE)
     )
     current_year = timezone.now().year
     sent = 0
@@ -50,17 +52,22 @@ def drink_by_reminder() -> int:
         ).distinct()
         wine_count = wines.count()
         if wine_count > 0:
-            # Send email if user has an email address
-            if user.email:
+            delivery = getattr(
+                user.user_settings,
+                "drink_window_notifications",
+                NotificationChannel.BOTH,
+            )
+
+            if user.email and NotificationChannel.includes_email(delivery):
                 send_drink_by_reminder(user, wines)
 
-            # Send push notification
-            send_push_to_user(
-                user,
-                title="🍷 Drink Window Reminder",
-                body=f"{wine_count} wine(s) are in their drinking window",
-                url="/alerts/",
-            )
+            if NotificationChannel.includes_in_app(delivery):
+                send_push_to_user(
+                    user,
+                    title="🍷 Drink Window Reminder",
+                    body=f"{wine_count} wine(s) are in their drinking window",
+                    url="/notifications/",
+                )
 
             sent += 1
             logger.info(

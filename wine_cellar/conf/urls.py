@@ -29,7 +29,12 @@ from wine_cellar.apps.core.api import (
     api_version,
 )
 from wine_cellar.apps.core.pwa import manifest_json, service_worker_js
-from wine_cellar.apps.user.views import UserSettingsView
+from wine_cellar.apps.user.views import (
+    NotificationCentreView,
+    NotificationDismissView,
+    NotificationMarkReadView,
+    UserSettingsView,
+)
 
 logger = logging.getLogger("wine_cellar.health_check")
 
@@ -122,6 +127,17 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("household/", include("wine_cellar.apps.household.urls")),
     path("user/settings/", UserSettingsView.as_view(), name="user-settings"),
+    path("notifications/", NotificationCentreView.as_view(), name="notifications"),
+    path(
+        "notifications/read/",
+        NotificationMarkReadView.as_view(),
+        name="notification-mark-read",
+    ),
+    path(
+        "notifications/dismiss/",
+        NotificationDismissView.as_view(),
+        name="notification-dismiss",
+    ),
     # Storage (shared across wine/whisky)
     path("", include("wine_cellar.apps.storage.urls")),
     # Shared utilities

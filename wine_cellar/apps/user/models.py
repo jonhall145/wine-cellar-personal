@@ -2,6 +2,23 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
 
+from wine_cellar.apps.core.models import UserContentModel
+
+
+class NotificationChannel(models.TextChoices):
+    NONE = "NO", "None"
+    EMAIL = "EM", "Email only"
+    IN_APP = "IA", "In-app only"
+    BOTH = "BO", "Email and in-app"
+
+    @classmethod
+    def includes_email(cls, value):
+        return value in {cls.EMAIL, cls.BOTH}
+
+    @classmethod
+    def includes_in_app(cls, value):
+        return value in {cls.IN_APP, cls.BOTH}
+
 
 class UserSettings(models.Model):
     user = models.OneToOneField(
@@ -27,6 +44,35 @@ class UserSettings(models.Model):
     notifications = models.BooleanField(
         default=True,
         verbose_name="Notifications",
+        help_text="Global switch for all notification channels.",
+    )
+    drink_window_notifications = models.CharField(
+        max_length=2,
+        choices=NotificationChannel.choices,
+        default=NotificationChannel.BOTH,
+        verbose_name="Drink Window Delivery",
+        help_text="Choose how drink window reminders are delivered.",
+    )
+    low_stock_notifications = models.CharField(
+        max_length=2,
+        choices=NotificationChannel.choices,
+        default=NotificationChannel.IN_APP,
+        verbose_name="Low Stock Delivery",
+        help_text="Choose how low stock reminders are delivered.",
+    )
+    household_invitation_notifications = models.CharField(
+        max_length=2,
+        choices=NotificationChannel.choices,
+        default=NotificationChannel.IN_APP,
+        verbose_name="Household Invitation Delivery",
+        help_text="Choose how household invitations are delivered.",
+    )
+    price_alert_notifications = models.CharField(
+        max_length=2,
+        choices=NotificationChannel.choices,
+        default=NotificationChannel.NONE,
+        verbose_name="Price Alert Delivery",
+        help_text="Choose how future price alerts are delivered.",
     )
     reminder_enabled = models.BooleanField(
         default=True,
@@ -46,6 +92,29 @@ class UserSettings(models.Model):
 
     def __str__(self):
         return f"Settings for {self.user}"
+
+    def get_notification_channel(self, notification_type):
+        field_map = {
+            "drink_window": "drink_window_notifications",
+            "low_stock": "low_stock_notifications",
+            "household_invitation": "household_invitation_notifications",
+            "price_alert": "price_alert_notifications",
+        }
+        return getattr(
+            self,
+            field_map.get(notification_type, "price_alert_notifications"),
+            NotificationChannel.NONE,
+        )
+
+    def allows_email_notifications(self, notification_type):
+        return self.notifications and NotificationChannel.includes_email(
+            self.get_notification_channel(notification_type)
+        )
+
+    def allows_in_app_notifications(self, notification_type):
+        return self.notifications and NotificationChannel.includes_in_app(
+            self.get_notification_channel(notification_type)
+        )
 
 
 class PushSubscription(models.Model):
@@ -79,3 +148,36 @@ class PushSubscription(models.Model):
                 "auth": self.auth,
             },
         }
+
+
+class InAppNotificationStatus(UserContentModel):
+    notification_key = models.CharField(max_length=120, verbose_name="Notification Key")
+    notification_type = models.CharField(
+        max_length=40, verbose_name="Notification Type"
+    )
+    is_read = models.BooleanField(default=False, verbose_name="Read")
+    read_at = models.DateTimeField(null=True, blank=True, verbose_name="Read At")
+    dismissed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Dismissed At",
+    )
+
+    class Meta:
+        verbose_name = "In-App Notification Status"
+        verbose_name_plural = "In-App Notification Statuses"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "notification_key"],
+                name="unique_in_app_notification_status",
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=["user", "notification_type"],
+                name="notif_status_user_type_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user} - {self.notification_type}"
