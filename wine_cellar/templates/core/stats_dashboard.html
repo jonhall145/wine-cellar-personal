@@ -195,6 +195,37 @@
                         <p>No spend data available.</p>
                     {% endif %}
                 </div>
+
+                {# --- Rating Distribution --- #}
+                <div class="pure-u-1 pure-u-md-1-2">
+                    <h3>Rating Distribution</h3>
+                    {% if by_rating %}
+                        <canvas id="chartRating" height="250"></canvas>
+                        <details class="mt-4">
+                            <summary>Show table</summary>
+                            <table class="pure-table pure-table-horizontal pure-table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Rating (Stars)</th>
+                                        <th class="text-right">Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for rating, count in by_rating.items %}
+                                        {% if count > 0 %}
+                                        <tr>
+                                            <td>{{ rating }} ⭐</td>
+                                            <td class="text-right">{{ count }}</td>
+                                        </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </details>
+                    {% else %}
+                        <p>No rating data available.</p>
+                    {% endif %}
+                </div>
             </div>
 
         </div>
@@ -299,6 +330,20 @@
                 }]
             },
             options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+        {% endif %}
+
+        {% if by_rating %}
+        new Chart(document.getElementById('chartRating'), {
+            type: 'doughnut',
+            data: {
+                labels: [{% for rating, count in by_rating.items %}'{{ rating }} ⭐'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for rating, count in by_rating.items %}{{ count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: chartColors
+                }]
+            },
+            options: { responsive: true }
         });
         {% endif %}
     });

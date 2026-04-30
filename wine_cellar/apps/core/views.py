@@ -1050,6 +1050,13 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
             spend_by_month[item.created.date().replace(day=1)] += item_price
             spend_by_year[item.created.year] += item_price
 
+        # --- Rating distribution ---
+        by_rating = {0: 0, 1: 0, 2: 0, 3: 0}
+        for item in items_qs:
+            beverage = getattr(item, self.beverage_fk_name)
+            if hasattr(beverage, "rating") and beverage.rating is not None:
+                by_rating[beverage.rating] += 1
+
         for data in by_storage.values():
             data["value"] = int(data["value"])
 
@@ -1086,6 +1093,7 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
                 "by_month": list(by_month),
                 "spend_by_month": spend_by_month,
                 "spend_by_year": spend_by_year,
+                "by_rating": by_rating,
                 "currency": currency,
                 "total_in_stock": sum(by_type.values()),
             }

@@ -1188,6 +1188,32 @@ def test_stats_dashboard_spending_trends(
 
 
 @pytest.mark.django_db
+def test_stats_dashboard_rating_distribution(
+    client, user, wine_factory, storage_item_factory
+):
+    """Stats dashboard shows rating distribution of wines in cellar."""
+    storage = user.storage_set.first()
+    wine_3_stars = wine_factory(user=user, rating=3)
+    wine_2_stars = wine_factory(user=user, rating=2)
+    wine_1_star = wine_factory(user=user, rating=1)
+    wine_unrated = wine_factory(user=user, rating=None)
+
+    storage_item_factory(wine=wine_3_stars, storage=storage)
+    storage_item_factory(wine=wine_2_stars, storage=storage)
+    storage_item_factory(wine=wine_1_star, storage=storage)
+    storage_item_factory(wine=wine_unrated, storage=storage)
+
+    client.force_login(user)
+    r = client.get(reverse("stats-dashboard"))
+
+    assert r.status_code == HTTPStatus.OK
+    by_rating = r.context_data["by_rating"]
+
+    assert by_rating == {0: 0, 1: 1, 2: 1, 3: 1}
+    assert "Rating Distribution" in r.content.decode()
+
+
+@pytest.mark.django_db
 def test_wine_check_duplicate_unauthenticated(client):
     """Unauthenticated requests to the check-duplicate endpoint are redirected."""
     r = client.get(reverse("wine-check-duplicate"), {"name": "Chateau Margaux"})
