@@ -1548,3 +1548,72 @@ def test_whisky_check_duplicate_no_cross_household(
     r = client.get(reverse("whisky-check-duplicate"), {"name": "Ardbeg Uigeadail"})
     assert r.status_code == HTTPStatus.OK
     assert r.json()["similar"] == []
+
+
+# ---------------------------------------------------------------------------
+# Whisky drink record tasting wheel tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_whisky_drink_record_create_with_taste_descriptors(
+    client, user, whisky_factory
+):
+    """Test that taste descriptors can be saved on whisky drink record creation."""
+    import json
+    from datetime import date
+
+    whisky = whisky_factory(user=user)
+    client.force_login(user)
+    descriptors = ["Smoky", "Peat", "Citrus"]
+    r = client.post(
+        reverse("drink-record-add", kwargs={"pk": whisky.pk}),
+        {
+            "date_consumed": date.today().isoformat(),
+            "tasting_notes": "Excellent dram",
+            "rating": "3",
+            "taste_descriptors": json.dumps(descriptors),
+        },
+    )
+    assert r.status_code == HTTPStatus.FOUND
+
+    from wine_cellar.apps.whisky.models import WhiskyDrinkRecord
+
+    record = WhiskyDrinkRecord.objects.filter(whisky=whisky).first()
+    assert record is not None
+    assert record.taste_descriptors == descriptors
+
+
+@pytest.mark.django_db
+def test_whisky_drink_record_edit_with_taste_descriptors(
+    client, user, whisky_factory
+):
+    """Test that taste descriptors can be updated on whisky drink record edit."""
+    import json
+    from datetime import date
+
+    from wine_cellar.apps.whisky.models import WhiskyDrinkRecord
+
+    whisky = whisky_factory(user=user)
+    household = user.user_settings.active_household
+    record = WhiskyDrinkRecord.objects.create(
+        whisky=whisky,
+        user=user,
+        household=household,
+        date_consumed=date.today(),
+        taste_descriptors=["Smoky"],
+    )
+    client.force_login(user)
+    new_descriptors = ["Spice", "Oak"]
+    r = client.post(
+        reverse("drink-record-edit", kwargs={"pk": record.pk}),
+        {
+            "date_consumed": date.today().isoformat(),
+            "tasting_notes": "Updated notes",
+            "rating": "2",
+            "taste_descriptors": json.dumps(new_descriptors),
+        },
+    )
+    assert r.status_code == HTTPStatus.FOUND
+    record.refresh_from_db()
+    assert record.taste_descriptors == new_descriptors

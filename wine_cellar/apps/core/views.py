@@ -249,6 +249,7 @@ class BaseDrinkRecordEditView(RequireMemberMixin, FormView):
             "shared_with": record.shared_with,
             "occasion": record.occasion,
             "photo": record.photo,
+            "taste_descriptors": json.dumps(record.taste_descriptors),
         }
 
     def get_context_data(self, **kwargs):
@@ -267,11 +268,24 @@ class BaseDrinkRecordEditView(RequireMemberMixin, FormView):
         record.rating = form.cleaned_data.get("rating")
         record.shared_with = form.cleaned_data.get("shared_with")
         record.occasion = form.cleaned_data.get("occasion")
+        record.taste_descriptors = self._parse_taste_descriptors(
+            form.cleaned_data.get("taste_descriptors")
+        )
         if form.cleaned_data.get("photo"):
             record.photo = form.cleaned_data["photo"]
         record.save()
         self.success_url = reverse_lazy("drink-history")
         return super().form_valid(form)
+
+    def _parse_taste_descriptors(self, descriptors_str):
+        """Parse JSON taste descriptors from form input."""
+        if not descriptors_str:
+            return []
+        try:
+            descriptors = json.loads(descriptors_str)
+            return descriptors if isinstance(descriptors, list) else []
+        except (json.JSONDecodeError, TypeError):
+            return []
 
 
 class BaseDrinkRecordDeleteView(RequireMemberMixin, DeleteView):
@@ -471,6 +485,9 @@ class BaseDrinkRecordCreateView(RequireMemberMixin, FormView):
             occasion=form.cleaned_data.get("occasion"),
             storage_item=storage_item,
             photo=form.cleaned_data.get("photo"),
+            taste_descriptors=self._parse_taste_descriptors(
+                form.cleaned_data.get("taste_descriptors")
+            ),
         )
 
         if storage_item:
@@ -480,6 +497,16 @@ class BaseDrinkRecordCreateView(RequireMemberMixin, FormView):
             self.detail_url_name, kwargs={"pk": beverage.pk}
         )
         return super().form_valid(form)
+
+    def _parse_taste_descriptors(self, descriptors_str):
+        """Parse JSON taste descriptors from form input."""
+        if not descriptors_str:
+            return []
+        try:
+            descriptors = json.loads(descriptors_str)
+            return descriptors if isinstance(descriptors, list) else []
+        except (json.JSONDecodeError, TypeError):
+            return []
 
     def handle_bottle_update(self, form, storage_item):
         """Default: mark bottle as consumed. Override for custom behavior."""

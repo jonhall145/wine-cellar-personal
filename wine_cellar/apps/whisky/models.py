@@ -907,6 +907,12 @@ class WhiskyDrinkRecord(UserContentModel):
         verbose_name="Photo",
         help_text="Photo of the bottle, meal, or tasting setting.",
     )
+    taste_descriptors = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Taste Descriptors",
+        help_text="Selected flavor descriptors from the tasting wheel.",
+    )
 
     class Meta:
         ordering = ["-date_consumed"]

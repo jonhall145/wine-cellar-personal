@@ -1,5 +1,13 @@
 {% extends 'base.html' %}
 {% load static %}
+{% block extra_js %}
+    {{ block.super }}
+    <script src="{% static 'js/tasting-wheel.js' %}"></script>
+{% endblock extra_js %}
+{% block extra_css %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'css/tasting-wheel.css' %}">
+{% endblock extra_css %}
 {% block title %}
     Edit Drink Record
 {% endblock title %}
@@ -16,6 +24,11 @@
                 {% csrf_token %}
                 {% include 'forms/form_field.html' with field=form.date_consumed %}
                 {% include 'forms/form_field.html' with field=form.tasting_notes %}
+                <div class="form-group">
+                    <label for="taste-wheel">Taste Descriptors</label>
+                    <div id="taste-wheel-container"></div>
+                    {{ form.taste_descriptors }}
+                </div>
                 {% include 'forms/form_field.html' with field=form.rating %}
                 {% include 'forms/form_field.html' with field=form.shared_with %}
                 {% include 'forms/form_field.html' with field=form.occasion %}

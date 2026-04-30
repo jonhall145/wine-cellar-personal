@@ -164,6 +164,11 @@ class BaseDrinkRecordForm(forms.Form):
         required=False,
         help_text="Attach a photo of the bottle, meal, or setting (optional).",
     )
+    taste_descriptors = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput(),
+        help_text="Selected flavor descriptors from the tasting wheel.",
+    )
 
     def __init__(self, *args, **kwargs):
         beverage = kwargs.pop(self.beverage_fk_name, None)

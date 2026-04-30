@@ -2,6 +2,7 @@
 {% load static %}
 {% block extra_js %}
     {{ block.super }}
+    <script src="{% static 'js/tasting-wheel.js' %}"></script>
     {% if form.fields.post_drink_status %}
         <script>
             document.addEventListener("DOMContentLoaded", function () {
@@ -42,6 +43,10 @@
         </script>
     {% endif %}
 {% endblock extra_js %}
+{% block extra_css %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'css/tasting-wheel.css' %}">
+{% endblock extra_css %}
 {% block title %}
     Record Drink
 {% endblock title %}
@@ -57,7 +62,15 @@
                   novalidate>
                 {% csrf_token %}
                 {% for field in form %}
-                    {% include 'forms/form_field.html' %}
+                    {% if field.name == 'taste_descriptors' %}
+                        <div class="form-group">
+                            <label for="id_taste_wheel">{{ field.label }}</label>
+                            <div id="taste-wheel-container"></div>
+                            {{ field }}
+                        </div>
+                    {% else %}
+                        {% include 'forms/form_field.html' %}
+                    {% endif %}
                 {% endfor %}
                 <div class="pure-controls">
                     <button type="submit"
