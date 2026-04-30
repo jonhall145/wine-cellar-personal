@@ -499,6 +499,43 @@ class BaseDrinkRecordCreateView(RequireMemberMixin, FormView):
         )
 
 
+class BaseBottleQuickLogView(RequireMemberMixin, View):
+    storage_item_model = None
+    drink_record_model = None
+    beverage_fk_name = None  # "wine" or "whisky"
+
+    def get_object(self):
+        household = get_active_household(self.request.user)
+        return get_object_or_404(
+            self.storage_item_model,
+            pk=self.kwargs["pk"],
+            household=household,
+            deleted=False,
+        )
+
+    def post(self, request, *args, **kwargs):
+        household = get_active_household(request.user)
+        storage_item = self.get_object()
+        date_consumed = timezone.localdate()
+        beverage = getattr(storage_item, self.beverage_fk_name)
+
+        with transaction.atomic():
+            self.drink_record_model.objects.create(
+                **{self.beverage_fk_name: beverage},
+                user=request.user,
+                household=household,
+                date_consumed=date_consumed,
+                storage_item=storage_item,
+            )
+            self.handle_bottle_update(storage_item, date_consumed)
+
+        messages.success(request, "Drink logged.")
+        return redirect("bottle-history", pk=storage_item.pk)
+
+    def handle_bottle_update(self, storage_item, date_consumed):
+        raise NotImplementedError
+
+
 class BaseMarkBottleGivenView(RequireMemberMixin, FormView):
     template_name = "core/bottle_mark_given.html"
     storage_item_model = None

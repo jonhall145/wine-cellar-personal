@@ -167,4 +167,9 @@ urlpatterns = [
         views.WhiskyBottleHistoryView.as_view(),
         name="bottle-history",
     ),
+    path(
+        "stock/<int:pk>/quick-log/",
+        views.WhiskyBottleQuickLogView.as_view(),
+        name="bottle-quick-log",
+    ),
 ]

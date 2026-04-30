@@ -14,6 +14,7 @@ from django.views.generic.list import MultipleObjectMixin
 from django_filters.views import FilterView
 
 from wine_cellar.apps.core.views import (
+    BaseBottleQuickLogView,
     BaseMarkBottleBrokenOrLostView,
     BaseMarkBottleGivenView,
     BaseStorageItemAddView,
@@ -40,7 +41,7 @@ from wine_cellar.apps.storage.utils import (
 )
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.utils import classify_cask_type
-from wine_cellar.apps.wine.models import Wine
+from wine_cellar.apps.wine.models import DrinkRecord, Wine
 
 logger = logging.getLogger(__name__)
 
@@ -636,6 +637,30 @@ class BottleHistoryView(RequireHouseholdMixin, DetailView):
             else:
                 context["beverage_detail_url"] += "?show_consumed=1#consumed-bottles"
         return context
+
+
+class BottleQuickLogView(BaseBottleQuickLogView):
+    storage_item_model = StorageItem
+    drink_record_model = DrinkRecord
+    beverage_fk_name = "wine"
+
+    def handle_bottle_update(self, storage_item, date_consumed):
+        storage_item.deleted = True
+        storage_item.finished_date = date_consumed
+        storage_item.removal_reason = StorageItem.RemovalReason.CONSUMED
+        storage_item.given_date = None
+        storage_item.recipient = ""
+        storage_item.given_occasion = ""
+        storage_item.save(
+            update_fields=[
+                "deleted",
+                "finished_date",
+                "removal_reason",
+                "given_date",
+                "recipient",
+                "given_occasion",
+            ]
+        )
 
 
 @login_required

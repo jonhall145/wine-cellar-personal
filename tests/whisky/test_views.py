@@ -409,6 +409,67 @@ def test_given_whisky_bottle_history_shows_recipient_and_occasion(
 
 
 @pytest.mark.django_db
+def test_whisky_bottle_history_shows_quick_log_for_active_bottle(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+    )
+
+    client.force_login(user)
+    response = client.get(reverse("bottle-history", kwargs={"pk": bottle.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assert (
+        reverse("bottle-quick-log", kwargs={"pk": bottle.pk})
+        in response.content.decode()
+    )
+    assert "Just drank this" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_whisky_bottle_quick_log_creates_record_and_marks_bottle_opened(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.UNOPENED,
+        opened_date=None,
+    )
+
+    client.force_login(user)
+    response = client.post(reverse("bottle-quick-log", kwargs={"pk": bottle.pk}))
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert response.url == reverse("bottle-history", kwargs={"pk": bottle.pk})
+
+    record = WhiskyDrinkRecord.objects.get(storage_item=bottle)
+    assert record.whisky == bottle.whisky
+    assert record.user == user
+    assert record.household == household
+    assert record.date_consumed == timezone.localdate()
+    assert record.rating is None
+    assert record.tasting_notes in (None, "")
+
+    bottle.refresh_from_db()
+    assert bottle.deleted is False
+    assert bottle.fill_level == FillLevel.OPENED
+    assert bottle.opened_date == timezone.localdate()
+
+
+@pytest.mark.django_db
 def test_broken_or_lost_whisky_bottle_history_shows_broken_or_lost_label(
     client, user, whisky_storage_item_factory
 ):
