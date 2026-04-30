@@ -13,7 +13,6 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import (
-    DeleteView,
     DetailView,
     ListView,
     TemplateView,
@@ -39,6 +38,7 @@ from wine_cellar.apps.core.views import (
     BaseJourneyTimelineView,
     BaseLabelScanView,
     BaseListView,
+    BaseMarkBottleBrokenOrLostView,
     BaseMarkBottleGivenView,
     BaseMergeConfirmView,
     BaseQRCodeView,
@@ -60,7 +60,6 @@ from wine_cellar.apps.core.views import (
 )
 from wine_cellar.apps.household.mixins import (
     RequireHouseholdMixin,
-    RequireMemberMixin,
     require_member,
 )
 from wine_cellar.apps.storage.utils import (
@@ -1130,37 +1129,13 @@ class StorageItemAddView(BaseStorageItemAddView):
         }
 
 
-class StorageItemDeleteView(RequireMemberMixin, DeleteView):
-    """Remove a bottle from storage."""
+class StorageItemDeleteView(BaseMarkBottleBrokenOrLostView):
+    """Mark a bottle as broken or lost."""
 
-    template_name = "whisky/stock_confirm_delete.html"
-
-    def get_queryset(self):
-        household = get_active_household(self.request.user)
-        return WhiskyStorageItem.objects.filter(household=household, deleted=False)
-
-    def get_success_url(self):
-        return reverse_lazy("whisky-detail", kwargs={"pk": self.object.whisky.pk})
-
-    def form_valid(self, form):
-        self.object = self.get_object()
-        self.object.deleted = True
-        self.object.finished_date = timezone.localdate()
-        self.object.removal_reason = WhiskyStorageItem.RemovalReason.REMOVED
-        self.object.given_date = None
-        self.object.recipient = ""
-        self.object.given_occasion = ""
-        self.object.save(
-            update_fields=[
-                "deleted",
-                "finished_date",
-                "removal_reason",
-                "given_date",
-                "recipient",
-                "given_occasion",
-            ]
-        )
-        return redirect(self.get_success_url())
+    storage_item_model = WhiskyStorageItem
+    beverage_fk_name = "whisky"
+    detail_url_name = "whisky-detail"
+    list_url_name = "bottle-list"
 
 
 class StorageItemMarkGivenView(BaseMarkBottleGivenView):
@@ -1361,12 +1336,17 @@ class WhiskyBottleHistoryView(RequireHouseholdMixin, DetailView):
                 }
             )
         elif item.finished_date:
-            label = "Removed from inventory"
+            event_type = "finished"
+            label = "Broken or lost"
             if item.removal_reason in ("", WhiskyStorageItem.RemovalReason.CONSUMED):
                 label = "Finished"
+            elif item.removal_reason != WhiskyStorageItem.RemovalReason.REMOVED:
+                label = "Removed from inventory"
+            else:
+                event_type = "removed"
             events.append(
                 {
-                    "type": "finished",
+                    "type": event_type,
                     "date": item.finished_date,
                     "label": label,
                     "detail": "",

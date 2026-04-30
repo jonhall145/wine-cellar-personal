@@ -68,7 +68,8 @@
                                 <td>{{ item.column|default_if_none:"" }}</td>
                                 <td>
                                     <a class="pure-button"
-                                       href="{% url 'stock-delete' item.pk %}?next=storage"><i class="fa-regular fa-trash-can"></i></a>
+                                       href="{% url 'stock-delete' item.pk %}?next=storage"
+                                       title="Mark as broken or lost"><i class="fa-regular fa-trash-can"></i></a>
                                 </td>
                             </tr>
                         {% endfor %}

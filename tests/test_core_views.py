@@ -343,6 +343,40 @@ class TestWineDetailView:
             "?show_consumed=1#gifted-bottles"
         ) in content
 
+    def test_broken_or_lost_bottles_use_broken_or_lost_copy(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user)
+        storage = user.storage_set.first()
+        broken_bottle = storage_item_factory(
+            wine=wine,
+            storage=storage,
+            user=user,
+            deleted=True,
+            removal_reason=StorageItem.RemovalReason.REMOVED,
+            finished_date=timezone.localdate(),
+        )
+        client.force_login(user)
+
+        r = client.get(reverse("wine-detail", kwargs={"pk": wine.pk}))
+        content = r.content.decode()
+
+        assert r.status_code == HTTPStatus.OK
+        assert r.context["broken_lost_bottle_count"] == 1
+        assert r.context["actual_consumed_bottle_count"] == 0
+        assert "Show broken or lost bottles (1)" in content
+        assert reverse("bottle-history", kwargs={"pk": broken_bottle.pk}) not in content
+
+        r = client.get(
+            f"{reverse('wine-detail', kwargs={'pk': wine.pk})}?show_consumed=1"
+        )
+        content = r.content.decode()
+
+        assert r.status_code == HTTPStatus.OK
+        assert broken_bottle in list(r.context["consumed_bottles"])
+        assert "Broken or Lost Bottles" in content
+        assert "Broken or lost" in content
+
 
 # ---------------------------------------------------------------------------
 # Wine list view

@@ -3,6 +3,7 @@ from http import HTTPStatus
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 from pytest_django.asserts import (
     assertRedirects,
     assertTemplateUsed,
@@ -246,6 +247,11 @@ def test_user_can_delete_stock(client, user, wine_factory, storage_item_factory)
     assert StorageItem.objects.count() == 1
     item.refresh_from_db()
     assert item.deleted is True
+    assert item.removal_reason == StorageItem.RemovalReason.REMOVED
+    assert item.finished_date == timezone.localdate()
+    assert item.given_date is None
+    assert item.recipient == ""
+    assert item.given_occasion == ""
 
 
 @pytest.mark.django_db
@@ -541,3 +547,26 @@ def test_given_bottle_history_links_back_to_gifted_bottles(
     assert expected_href in content
     assert "Given away" in content
     assert "Chris" in content
+
+
+@pytest.mark.django_db
+def test_broken_or_lost_bottle_history_shows_broken_or_lost_label(
+    client, user, wine_factory, storage_item_factory
+):
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(
+        wine=wine,
+        storage=storage,
+        user=user,
+        deleted=True,
+        removal_reason=StorageItem.RemovalReason.REMOVED,
+        finished_date=date(2025, 1, 5),
+    )
+
+    client.force_login(user)
+    response = client.get(reverse("bottle-history", kwargs={"pk": bottle.pk}))
+    content = response.content.decode()
+
+    assert response.status_code == HTTPStatus.OK
+    assert "Broken or lost" in content

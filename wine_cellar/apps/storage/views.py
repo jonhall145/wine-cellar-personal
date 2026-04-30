@@ -8,13 +8,13 @@ from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
-from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.generic import DeleteView, DetailView, FormView, ListView
 from django.views.generic.list import MultipleObjectMixin
 from django_filters.views import FilterView
 
 from wine_cellar.apps.core.views import (
+    BaseMarkBottleBrokenOrLostView,
     BaseMarkBottleGivenView,
     BaseStorageItemAddView,
     BaseStorageItemUpdateView,
@@ -232,40 +232,12 @@ class StorageItemAddView(BaseStorageItemAddView):
         return {"rating": wine.rating}
 
 
-class StorageItemDeleteView(DeleteView):
-    model = StorageItem
-    template_name = "storage_item_confirm_delete.html"
-
-    def get_success_url(self):
-        next = self.request.GET.get("next")
-        if next == "storage":
-            return reverse_lazy("storage-detail", kwargs={"pk": self.object.storage.pk})
-        return reverse_lazy("wine-detail", kwargs={"pk": self.object.wine.pk})
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        household = get_active_household(self.request.user)
-        return qs.filter(household=household, deleted=False)
-
-    def form_valid(self, form):
-        self.object = self.get_object()
-        self.object.deleted = True
-        self.object.finished_date = timezone.localdate()
-        self.object.removal_reason = StorageItem.RemovalReason.REMOVED
-        self.object.given_date = None
-        self.object.recipient = ""
-        self.object.given_occasion = ""
-        self.object.save(
-            update_fields=[
-                "deleted",
-                "finished_date",
-                "removal_reason",
-                "given_date",
-                "recipient",
-                "given_occasion",
-            ]
-        )
-        return redirect(self.get_success_url())
+class StorageItemDeleteView(BaseMarkBottleBrokenOrLostView):
+    storage_item_model = StorageItem
+    beverage_fk_name = "wine"
+    detail_url_name = "wine-detail"
+    list_url_name = "bottle-list"
+    storage_detail_url_name = "storage-detail"
 
 
 class StorageItemMarkGivenView(BaseMarkBottleGivenView):
@@ -636,12 +608,17 @@ class BottleHistoryView(RequireHouseholdMixin, DetailView):
                 }
             )
         elif item.finished_date:
-            label = "Removed from inventory"
+            event_type = "finished"
+            label = "Broken or lost"
             if item.removal_reason in ("", StorageItem.RemovalReason.CONSUMED):
                 label = "Finished"
+            elif item.removal_reason != StorageItem.RemovalReason.REMOVED:
+                label = "Removed from inventory"
+            else:
+                event_type = "removed"
             events.append(
                 {
-                    "type": "finished",
+                    "type": event_type,
                     "date": item.finished_date,
                     "label": label,
                     "detail": "",
