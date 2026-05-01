@@ -141,6 +141,7 @@ Get storage grid data for the React storage grid component.
       "used_slots": 12,
       "total_slots": 50,
       "utilization_percent": 24,
+      "item_url_prefix": "/wine/",
       "items": [
         {
           "row": 1,
