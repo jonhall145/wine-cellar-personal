@@ -6,7 +6,7 @@ from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.views.generic import UpdateView, View
 
-from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireAdminMixin
+from wine_cellar.apps.household.mixins import RequireAdminMixin, RequireHouseholdMixin
 from wine_cellar.apps.user.backup import (
     BackupImportError,
     build_backup_response,
