@@ -86,7 +86,9 @@ class WhiskyCsvImporter(BaseCsvBeverageImporter):
             dreg_date=dreg_date,
         )
 
-    def convert_field_value(self, *, field_name, raw_value, row, mapping, user, household):
+    def convert_field_value(
+        self, *, field_name, raw_value, row, mapping, user, household
+    ):
         if field_name in {
             "name",
             "owner",

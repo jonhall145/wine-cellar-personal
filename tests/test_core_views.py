@@ -232,8 +232,22 @@ class TestWineImportView:
         assert response.status_code == HTTPStatus.OK
         wine_a = Wine.objects.get(name="Wine A")
         wine_b = Wine.objects.get(name="Wine B")
-        assert StorageItem.objects.filter(wine=wine_a, storage=storage1, deleted=False).count() == 1
-        assert StorageItem.objects.filter(wine=wine_b, storage=storage2, deleted=False).count() == 1
+        assert (
+            StorageItem.objects.filter(
+                wine=wine_a,
+                storage=storage1,
+                deleted=False,
+            ).count()
+            == 1
+        )
+        assert (
+            StorageItem.objects.filter(
+                wine=wine_b,
+                storage=storage2,
+                deleted=False,
+            ).count()
+            == 1
+        )
 
     def test_import_with_bottle_price_mapping(self, client, user, storage_factory):
         """Test that bottle price is correctly parsed and stored."""
@@ -281,10 +295,10 @@ class TestWineImportView:
         assert response.status_code == HTTPStatus.OK
         expensive = Wine.objects.get(name="Expensive Wine")
         cheap = Wine.objects.get(name="Cheap Wine")
-        
+
         expensive_items = StorageItem.objects.filter(wine=expensive, deleted=False)
         cheap_items = StorageItem.objects.filter(wine=cheap, deleted=False)
-        
+
         assert all(Decimal("45.99") == item.price for item in expensive_items)
         assert all(Decimal("8.50") == item.price for item in cheap_items)
 

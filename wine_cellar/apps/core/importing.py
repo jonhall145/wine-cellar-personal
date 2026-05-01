@@ -401,7 +401,9 @@ class BaseCsvBeverageImporter:
     ):
         raise NotImplementedError
 
-    def convert_field_value(self, *, field_name, raw_value, row, mapping, user, household):
+    def convert_field_value(
+        self, *, field_name, raw_value, row, mapping, user, household
+    ):
         raise NotImplementedError
 
     def format_validation_error(self, exc: ValidationError) -> list[str]:

@@ -77,7 +77,9 @@ class WineCsvImporter(BaseCsvBeverageImporter):
             occasion=cleaned_data.get("occasion"),
         )
 
-    def convert_field_value(self, *, field_name, raw_value, row, mapping, user, household):
+    def convert_field_value(
+        self, *, field_name, raw_value, row, mapping, user, household
+    ):
         if field_name in {
             "name",
             "subregion",
