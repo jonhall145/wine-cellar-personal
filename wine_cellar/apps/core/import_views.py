@@ -11,7 +11,7 @@ from wine_cellar.apps.core.importing import (
     parse_import_csv,
     parse_import_excel,
 )
-from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
+from wine_cellar.apps.household.mixins import RequireMemberMixin
 from wine_cellar.apps.user.views import get_active_household
 
 
@@ -102,7 +102,7 @@ class BaseCsvImportView(RequireMemberMixin, TemplateView):
         if action == "import":
             return self.handle_import()
         return self.handle_upload()
-    
+
     def _safe_redirect(self, request, fallback_url):
         """Safely redirect to a user-provided URL or fallback."""
         next_url = (request.GET.get("next") or "").strip()
