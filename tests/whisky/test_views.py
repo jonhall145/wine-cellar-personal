@@ -19,6 +19,7 @@ from wine_cellar.apps.whisky.models import (
     WhiskyImage,
     WhiskyStorageItem,
     WhiskyVisionExtractionLog,
+    WhiskyWishlist,
 )
 
 
@@ -1169,6 +1170,53 @@ def test_whisky_create_post_with_distillery(client, user, distillery_factory):
     whisky = Whisky.objects.get(user=user, name="Laphroaig 10")
     assert whisky.distillery == distillery
     assert whisky.age_statement == 10
+
+
+@pytest.mark.django_db
+def test_whisky_create_from_wishlist_prefills_and_marks_purchased(
+    client, user, distillery_factory, whisky_region_factory
+):
+    distillery = distillery_factory(name="Talisker")
+    region = whisky_region_factory(name="Islands")
+    household = user.user_settings.active_household
+    wishlist_item = WhiskyWishlist.objects.create(
+        name="Talisker 10",
+        user=user,
+        household=household,
+        whisky_type="SM",
+        distillery=distillery,
+        region=region,
+        age_statement=10,
+        external_url="https://example.com/whisky/talisker-10",
+        notes="Birthday dram",
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("whisky-add") + f"?wishlist_item={wishlist_item.pk}")
+
+    assert response.status_code == HTTPStatus.OK
+    form = response.context["form"]
+    assert form.initial["name"] == "Talisker 10"
+    assert form.initial["distillery"] == distillery.pk
+    assert form.initial["region"] == region.pk
+    assert form.initial["comment"] == "Birthday dram"
+
+    post_response = client.post(
+        reverse("whisky-add"),
+        {
+            "name": "Talisker 10",
+            "whisky_type": "SM",
+            "abv": 45.8,
+            "size": "0.70",
+            "country": "GB",
+            "wishlist_item": wishlist_item.pk,
+        },
+        follow=True,
+    )
+
+    assert post_response.status_code == HTTPStatus.OK
+    wishlist_item.refresh_from_db()
+    assert wishlist_item.purchased is True
 
 
 @pytest.mark.django_db

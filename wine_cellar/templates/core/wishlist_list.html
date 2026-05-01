@@ -35,6 +35,24 @@
                                 <td>{{ item.price_limit|default_if_none:"-" }}</td>
                                 <td>{{ item.notes|default_if_none:"-"|truncatewords:10 }}</td>
                                 <td>
+                                    {% if wishlist_convert_url_name %}
+                                        <a href="{% url wishlist_convert_url_name %}?wishlist_item={{ item.pk }}"
+                                           class="pure-button"
+                                           title="Create {{ APP_ITEM_NAME }} from wishlist"
+                                           aria-label="Create {{ APP_ITEM_NAME }} from wishlist">
+                                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                        </a>
+                                    {% endif %}
+                                    {% if item.external_url %}
+                                        <a href="{{ item.external_url }}"
+                                           class="pure-button"
+                                           title="Open purchase link"
+                                           aria-label="Open purchase link"
+                                           target="_blank"
+                                           rel="noopener noreferrer">
+                                            <i class="fa-solid fa-up-right-from-square"></i>
+                                        </a>
+                                    {% endif %}
                                     <form method="post" action="{% url 'wishlist-purchased' item.pk %}" class="d-inline">{% csrf_token %}<button type="submit" class="pure-button" title="Mark as purchased"><i class="fa-solid fa-check"></i></button></form>
                                     <a href="{% url 'wishlist-delete' item.pk %}" class="pure-button" title="Delete"><i class="fa-regular fa-trash-can"></i></a>
                                 </td>
