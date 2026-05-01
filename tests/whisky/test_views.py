@@ -69,6 +69,54 @@ def test_whisky_list_loads(client, user):
 
 
 @pytest.mark.django_db
+def test_whisky_import_creates_whisky_and_stock(client, user, storage_factory):
+    storage = storage_factory(
+        user=user,
+        household=user.user_settings.active_household,
+        rows=0,
+        columns=0,
+        app_type="whisky",
+    )
+    client.force_login(user)
+
+    csv_file = SimpleUploadedFile(
+        "whiskies.csv",
+        (
+            "name,whisky_type,country,stock,distillery\n"
+            "Imported Dram,Single Malt,Scotland,1,New Distillery\n"
+        ).encode("utf-8"),
+        content_type="text/csv",
+    )
+
+    preview = client.post(
+        reverse("whisky-import"),
+        {"action": "upload", "file": csv_file},
+    )
+    assert preview.status_code == HTTPStatus.OK
+    assert "Step 2: Map columns" in preview.content.decode()
+
+    response = client.post(
+        reverse("whisky-import"),
+        {
+            "action": "import",
+            "default_storage": storage.pk,
+            "map_name": "name",
+            "map_whisky_type": "whisky_type",
+            "map_country": "country",
+            "map_stock_count": "stock",
+            "map_distillery": "distillery",
+        },
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    whisky = Whisky.objects.get(name="Imported Dram")
+    assert whisky.distillery is not None
+    assert whisky.distillery.name == "New Distillery"
+    assert WhiskyStorageItem.objects.filter(whisky=whisky, deleted=False).count() == 1
+
+
+@pytest.mark.django_db
 def test_whisky_list_shows_user_whiskies(
     client, user, whisky_factory, whisky_storage_item_factory
 ):

@@ -5,6 +5,7 @@ from decimal import Decimal
 from http import HTTPStatus
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 
@@ -129,6 +130,177 @@ class TestExportViews:
     def test_export_requires_login(self, client):
         r = client.get(reverse("wine-export-csv"))
         assert r.status_code == HTTPStatus.FOUND  # redirect to login
+
+
+@pytest.mark.django_db
+class TestWineImportView:
+    def test_import_creates_wine_and_stock(self, client, user, storage_factory):
+        storage = storage_factory(
+            user=user,
+            household=user.user_settings.active_household,
+            rows=0,
+            columns=0,
+            app_type="wine",
+        )
+        client.force_login(user)
+
+        csv_file = SimpleUploadedFile(
+            "wines.csv",
+            (
+                "name,type,country,stock,price,grapes\n"
+                "Imported Riesling,White,DE,2,12.50,Riesling\n"
+            ).encode("utf-8"),
+            content_type="text/csv",
+        )
+
+        preview = client.post(
+            reverse("wine-import"),
+            {"action": "upload", "file": csv_file},
+        )
+        assert preview.status_code == HTTPStatus.OK
+        assert "Step 2: Map columns" in preview.content.decode()
+
+        response = client.post(
+            reverse("wine-import"),
+            {
+                "action": "import",
+                "default_storage": storage.pk,
+                "map_name": "name",
+                "map_wine_type": "type",
+                "map_country": "country",
+                "map_stock_count": "stock",
+                "map_price": "price",
+                "map_grapes": "grapes",
+            },
+            follow=True,
+        )
+
+        assert response.status_code == HTTPStatus.OK
+        wine = Wine.objects.get(name="Imported Riesling")
+        assert wine.grapes.filter(name="Riesling").exists()
+        assert StorageItem.objects.filter(wine=wine, deleted=False).count() == 2
+
+    def test_import_with_storage_name_mapping(self, client, user, storage_factory):
+        """Test that storage name mapping creates stock in correct storage."""
+        storage1 = storage_factory(
+            user=user,
+            household=user.user_settings.active_household,
+            name="Cellar A",
+            rows=0,
+            columns=0,
+            app_type="wine",
+        )
+        storage2 = storage_factory(
+            user=user,
+            household=user.user_settings.active_household,
+            name="Cellar B",
+            rows=0,
+            columns=0,
+            app_type="wine",
+        )
+        client.force_login(user)
+
+        csv_file = SimpleUploadedFile(
+            "wines.csv",
+            (
+                "name,type,country,storage,stock\n"
+                "Wine A,White,FR,Cellar A,1\n"
+                "Wine B,Red,IT,Cellar B,1\n"
+            ).encode("utf-8"),
+            content_type="text/csv",
+        )
+
+        preview = client.post(
+            reverse("wine-import"),
+            {"action": "upload", "file": csv_file},
+        )
+        assert preview.status_code == HTTPStatus.OK
+
+        response = client.post(
+            reverse("wine-import"),
+            {
+                "action": "import",
+                "map_name": "name",
+                "map_wine_type": "type",
+                "map_country": "country",
+                "map_stock_count": "stock",
+                "map_storage_name": "storage",
+            },
+            follow=True,
+        )
+
+        assert response.status_code == HTTPStatus.OK
+        wine_a = Wine.objects.get(name="Wine A")
+        wine_b = Wine.objects.get(name="Wine B")
+        assert (
+            StorageItem.objects.filter(
+                wine=wine_a,
+                storage=storage1,
+                deleted=False,
+            ).count()
+            == 1
+        )
+        assert (
+            StorageItem.objects.filter(
+                wine=wine_b,
+                storage=storage2,
+                deleted=False,
+            ).count()
+            == 1
+        )
+
+    def test_import_with_bottle_price_mapping(self, client, user, storage_factory):
+        """Test that bottle price is correctly parsed and stored."""
+        from decimal import Decimal
+
+        storage = storage_factory(
+            user=user,
+            household=user.user_settings.active_household,
+            rows=0,
+            columns=0,
+            app_type="wine",
+        )
+        client.force_login(user)
+
+        csv_file = SimpleUploadedFile(
+            "wines.csv",
+            (
+                "name,type,country,stock,bottle_price\n"
+                "Expensive Wine,Red,FR,2,45.99\n"
+                "Cheap Wine,White,PT,1,8.50\n"
+            ).encode("utf-8"),
+            content_type="text/csv",
+        )
+
+        preview = client.post(
+            reverse("wine-import"),
+            {"action": "upload", "file": csv_file},
+        )
+        assert preview.status_code == HTTPStatus.OK
+
+        response = client.post(
+            reverse("wine-import"),
+            {
+                "action": "import",
+                "default_storage": storage.pk,
+                "map_name": "name",
+                "map_wine_type": "type",
+                "map_country": "country",
+                "map_stock_count": "stock",
+                "map_bottle_price": "bottle_price",
+            },
+            follow=True,
+        )
+
+        assert response.status_code == HTTPStatus.OK
+        expensive = Wine.objects.get(name="Expensive Wine")
+        cheap = Wine.objects.get(name="Cheap Wine")
+
+        expensive_items = StorageItem.objects.filter(wine=expensive, deleted=False)
+        cheap_items = StorageItem.objects.filter(wine=cheap, deleted=False)
+
+        assert all(Decimal("45.99") == item.price for item in expensive_items)
+        assert all(Decimal("8.50") == item.price for item in cheap_items)
 
 
 # ---------------------------------------------------------------------------

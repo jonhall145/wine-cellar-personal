@@ -20,6 +20,7 @@ from django.views.generic import (
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
+from wine_cellar.apps.core.import_views import BaseCsvImportView
 from wine_cellar.apps.core.views import (
     MAX_IMAGE_SIZE,
     BaseBeverageCreateView,
@@ -78,6 +79,7 @@ from wine_cellar.apps.whisky.forms import (
     WhiskyStockAddForm,
     WhiskyWishlistForm,
 )
+from wine_cellar.apps.whisky.importing import WhiskyCsvImporter
 from wine_cellar.apps.whisky.models import (
     Bottler,
     Collection,
@@ -681,6 +683,14 @@ class WhiskyListView(BaseListView, FilterView):
     card_template = "whisky/whisky_card.html"
     filter_field_template = "whisky/whisky_filter_field.html"
     beverage_icon = "whiskey-glass"
+
+
+class WhiskyImportView(BaseCsvImportView):
+    list_url_name = "whisky-list"
+    session_key = "whisky_csv_import_preview"
+
+    def get_importer(self):
+        return WhiskyCsvImporter(WhiskyCreateView.process_form_data)
 
 
 class WhiskyScanView(BaseScanView):

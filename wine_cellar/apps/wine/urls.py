@@ -31,6 +31,7 @@ from wine_cellar.apps.wine.views import (
     WineDeleteView,
     WineDetailView,
     WineImagesView,
+    WineImportView,
     WineListView,
     WineMapView,
     WineMergeConfirmView,
@@ -101,6 +102,7 @@ urlpatterns = [
         "wine/<int:pk>/drink/", DrinkRecordCreateView.as_view(), name="drink-record-add"
     ),
     path("wines/", WineListView.as_view(), name="wine-list"),
+    path("wines/import/", WineImportView.as_view(), name="wine-import"),
     path("wines/export/csv/", export_wines_csv_view, name="wine-export-csv"),
     path("wines/export/json/", export_wines_json_view, name="wine-export-json"),
     path("wines/bulk/", bulk_action_view, name="wine-bulk-action"),

@@ -29,6 +29,7 @@ from wine_cellar.apps.wine.views.home import (  # noqa: F401
     QRCodeView,
     RandomBottleView,
 )
+from wine_cellar.apps.wine.views.imports import WineImportView  # noqa: F401
 from wine_cellar.apps.wine.views.map import WineMapView  # noqa: F401
 from wine_cellar.apps.wine.views.reminders import (  # noqa: F401
     ReorderReminderCreateView,
