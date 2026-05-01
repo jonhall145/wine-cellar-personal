@@ -87,8 +87,8 @@ def parse_import_excel(uploaded_file):
             f"Excel files must be {MAX_IMPORT_FILE_SIZE // 1024}KB or smaller."
         )
 
-    if not uploaded_file.name.lower().endswith((".xlsx", ".xls")):
-        raise ValidationError("Only Excel files (.xlsx or .xls) are supported.")
+    if not uploaded_file.name.lower().endswith(".xlsx"):
+        raise ValidationError("Only Excel (.xlsx) files are supported. Legacy .xls files are not supported.")
 
     try:
         workbook = load_workbook(uploaded_file, data_only=True)
@@ -359,13 +359,13 @@ class BaseCsvBeverageImporter:
             return []
 
         if storage.rows <= 0 or storage.columns <= 0:
-            if explicit_row or explicit_column:
+            if explicit_row is not None or explicit_column is not None:
                 raise ValidationError(
                     f"Storage “{storage.name}” does not use row/column positions."
                 )
             return [(None, None)] * count
 
-        if explicit_row or explicit_column:
+        if explicit_row is not None or explicit_column is not None:
             if explicit_row is None or explicit_column is None:
                 raise ValidationError("Both row and column are required together.")
             if count != 1:

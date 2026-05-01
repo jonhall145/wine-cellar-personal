@@ -1,8 +1,7 @@
 from django.contrib import messages
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.shortcuts import redirect
 from django.urls import reverse
-from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import TemplateView
 
 from wine_cellar.apps.core.forms import CsvImportMappingForm, CsvImportUploadForm
@@ -95,6 +94,10 @@ class BaseCsvImportView(RequireMemberMixin, TemplateView):
         return context
 
     def post(self, request, *args, **kwargs):
+        if not self.can_edit():
+            raise PermissionDenied(
+                "You need Member role or higher to perform this action."
+            )
         action = request.POST.get("action", "upload")
         if action == "clear":
             self.clear_preview_data()
@@ -104,14 +107,7 @@ class BaseCsvImportView(RequireMemberMixin, TemplateView):
         return self.handle_upload()
 
     def _safe_redirect(self, request, fallback_url):
-        """Safely redirect to a user-provided URL or fallback."""
-        next_url = (request.GET.get("next") or "").strip()
-        if next_url and url_has_allowed_host_and_scheme(
-            url=next_url,
-            allowed_hosts={request.get_host()},
-            require_https=request.is_secure(),
-        ):
-            return redirect(next_url)
+        """Redirect to the fallback URL (never user-supplied input)."""
         return redirect(fallback_url)
 
     def handle_upload(self):
@@ -125,7 +121,7 @@ class BaseCsvImportView(RequireMemberMixin, TemplateView):
         filename_lower = uploaded_file.name.lower()
 
         try:
-            if filename_lower.endswith((".xlsx", ".xls")):
+            if filename_lower.endswith(".xlsx"):
                 headers, rows = parse_import_excel(uploaded_file)
             else:
                 headers, rows = parse_import_csv(uploaded_file)
@@ -147,7 +143,7 @@ class BaseCsvImportView(RequireMemberMixin, TemplateView):
     def handle_import(self):
         preview = self.get_preview_data()
         if not preview:
-            messages.error(self.request, "Upload a CSV file before importing.")
+            messages.error(self.request, "Upload a CSV or Excel file before importing.")
             return self._safe_redirect(self.request, self.request.path)
 
         mapping_form = self.get_mapping_form(data=self.request.POST)
