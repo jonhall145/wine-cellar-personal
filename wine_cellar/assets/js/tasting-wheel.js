@@ -64,27 +64,32 @@ document.addEventListener("DOMContentLoaded", function () {
 
             hiddenField.value = JSON.stringify(checked);
 
-            selectedDisplay.innerHTML = checked
-                .map(
-                    (descriptor) =>
-                        `<div class="tasting-wheel__selected-tag">
-                         ${descriptor}
-                         <button type="button" data-descriptor="${descriptor}" class="tasting-wheel__remove-tag">×</button>
-                       </div>`
-                )
-                .join("");
+            // Clear and rebuild using safe DOM methods
+            selectedDisplay.innerHTML = "";
+            checked.forEach((descriptor) => {
+                const tag = document.createElement("div");
+                tag.className = "tasting-wheel__selected-tag";
 
-            // Attach remove handlers
-            selectedDisplay.querySelectorAll(".tasting-wheel__remove-tag").forEach((btn) => {
-                btn.addEventListener("click", (e) => {
+                const text = document.createElement("span");
+                text.textContent = descriptor;
+                tag.appendChild(text);
+
+                const removeBtn = document.createElement("button");
+                removeBtn.type = "button";
+                removeBtn.className = "tasting-wheel__remove-tag";
+                removeBtn.textContent = "×";
+                removeBtn.dataset.descriptor = descriptor;
+                removeBtn.addEventListener("click", (e) => {
                     e.preventDefault();
-                    const descriptor = btn.dataset.descriptor;
                     const checkbox = container.querySelector(`input[value="${descriptor}"]`);
                     if (checkbox) {
                         checkbox.checked = false;
                         updateSelectedDisplay();
                     }
                 });
+                tag.appendChild(removeBtn);
+
+                selectedDisplay.appendChild(tag);
             });
         }
 
