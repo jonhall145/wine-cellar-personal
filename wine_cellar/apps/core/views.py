@@ -1021,7 +1021,6 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
         all_items_qs = self.storage_item_model.objects.filter(
             household=household
         ).select_related(*self.select_related_fields, "storage")
-        items_qs = all_items_qs.filter(deleted=False)
 
         # --- By type (count in stock) ---
         by_type = defaultdict(int)
@@ -1032,30 +1031,34 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
         spend_by_month = defaultdict(lambda: Decimal("0"))
         spend_by_year = defaultdict(lambda: Decimal("0"))
 
-        for item in items_qs:
-            beverage = getattr(item, self.beverage_fk_name)
-            by_type[self.get_type_display(beverage)] += 1
-            by_country[self.get_country_name(beverage)] += 1
-
-            storage_name = item.storage.name if item.storage else "Unknown"
-            if storage_name not in by_storage:
-                by_storage[storage_name] = {"count": 0, "value": Decimal("0")}
-            by_storage[storage_name]["count"] += 1
-            item_price = self.get_item_price(item, beverage)
-            by_storage[storage_name]["value"] += item_price
-
-        for item in all_items_qs:
-            beverage = getattr(item, self.beverage_fk_name)
-            item_price = self.get_item_price(item, beverage)
-            spend_by_month[item.created.date().replace(day=1)] += item_price
-            spend_by_year[item.created.year] += item_price
-
         # --- Rating distribution ---
         by_rating = {0: 0, 1: 0, 2: 0, 3: 0}
-        for item in items_qs:
+
+        # Single consolidated iteration over all items (includes deleted for spending trends).
+        for item in all_items_qs:
             beverage = getattr(item, self.beverage_fk_name)
-            if hasattr(beverage, "rating") and beverage.rating is not None:
-                by_rating[beverage.rating] += 1
+
+            # In-stock aggregates (skip deleted items)
+            if not item.deleted:
+                by_type[self.get_type_display(beverage)] += 1
+                by_country[self.get_country_name(beverage)] += 1
+
+                storage_name = item.storage.name if item.storage else "Unknown"
+                if storage_name not in by_storage:
+                    by_storage[storage_name] = {"count": 0, "value": Decimal("0")}
+                by_storage[storage_name]["count"] += 1
+                item_price = self.get_item_price(item, beverage)
+                by_storage[storage_name]["value"] += item_price
+
+                # Rating distribution (in-stock items only)
+                if hasattr(beverage, "rating") and beverage.rating is not None:
+                    by_rating[beverage.rating] += 1
+
+            # Spending trends (all items including deleted, for true purchase history)
+            item_price = self.get_item_price(item, beverage)
+            item_date = timezone.localtime(item.created).date()
+            spend_by_month[item_date.replace(day=1)] += item_price
+            spend_by_year[item_date.year] += item_price
 
         for data in by_storage.values():
             data["value"] = int(data["value"])
