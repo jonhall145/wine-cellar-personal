@@ -290,11 +290,13 @@ class BaseCsvBeverageImporter:
                 field_name=field.name,
                 raw_value=raw_value,
                 row=row,
+                mapping=mapping,
                 user=user,
                 household=household,
             )
             if field.name in self.stock_mapping_fields:
-                resolved_stock_data[field.name] = converted
+                storage_key = "storage" if field.name == "storage_name" else field.name
+                resolved_stock_data[storage_key] = converted
                 continue
 
             if field.name in self.multiple_fields:
@@ -336,9 +338,11 @@ class BaseCsvBeverageImporter:
                     form_data["row"] = str(first_row)
                 if first_column is not None:
                     form_data["column"] = str(first_column)
-            bottle_price = self.convert_decimal(
-                resolved_stock_data["bottle_price"], "Bottle price"
-            )
+            bottle_price = resolved_stock_data["bottle_price"]
+            if isinstance(bottle_price, Decimal):
+                bottle_price = bottle_price
+            elif bottle_price is not None:
+                bottle_price = self.convert_decimal(bottle_price, "Bottle price")
             if bottle_price is not None:
                 form_data["bottle_price"] = str(bottle_price)
 
@@ -397,7 +401,7 @@ class BaseCsvBeverageImporter:
     ):
         raise NotImplementedError
 
-    def convert_field_value(self, *, field_name, raw_value, row, user, household):
+    def convert_field_value(self, *, field_name, raw_value, row, mapping, user, household):
         raise NotImplementedError
 
     def format_validation_error(self, exc: ValidationError) -> list[str]:

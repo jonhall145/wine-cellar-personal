@@ -1,6 +1,7 @@
 import datetime
 
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from wine_cellar.apps.core.importing import (
     BaseCsvBeverageImporter,
@@ -70,7 +71,7 @@ class WhiskyCsvImporter(BaseCsvBeverageImporter):
         self, *, beverage, user, household, cleaned_data, row, column
     ):
         fill_level = cleaned_data.get("fill_level") or FillLevel.UNOPENED
-        dreg_date = datetime.date.today() if fill_level == FillLevel.DREG else None
+        dreg_date = timezone.localdate() if fill_level == FillLevel.DREG else None
         bottle_price = cleaned_data.get("bottle_price") or cleaned_data.get("price")
         WhiskyStorageItem.objects.create(
             storage=cleaned_data["storage"],
@@ -87,7 +88,7 @@ class WhiskyCsvImporter(BaseCsvBeverageImporter):
             dreg_date=dreg_date,
         )
 
-    def convert_field_value(self, *, field_name, raw_value, row, user, household):
+    def convert_field_value(self, *, field_name, raw_value, row, mapping, user, household):
         if field_name in {
             "name",
             "owner",

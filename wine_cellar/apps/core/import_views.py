@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import TemplateView
 
 from wine_cellar.apps.core.forms import CsvImportMappingForm, CsvImportUploadForm
@@ -10,11 +11,11 @@ from wine_cellar.apps.core.importing import (
     parse_import_csv,
     parse_import_excel,
 )
-from wine_cellar.apps.household.mixins import RequireHouseholdMixin
+from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
 from wine_cellar.apps.user.views import get_active_household
 
 
-class BaseCsvImportView(RequireHouseholdMixin, TemplateView):
+class BaseCsvImportView(RequireMemberMixin, TemplateView):
     template_name = "core/beverage_import.html"
     importer_class = None
     list_url_name = None
@@ -97,10 +98,21 @@ class BaseCsvImportView(RequireHouseholdMixin, TemplateView):
         action = request.POST.get("action", "upload")
         if action == "clear":
             self.clear_preview_data()
-            return redirect(request.path)
+            return self._safe_redirect(request, request.path)
         if action == "import":
             return self.handle_import()
         return self.handle_upload()
+    
+    def _safe_redirect(self, request, fallback_url):
+        """Safely redirect to a user-provided URL or fallback."""
+        next_url = (request.GET.get("next") or "").strip()
+        if next_url and url_has_allowed_host_and_scheme(
+            url=next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect(fallback_url)
 
     def handle_upload(self):
         upload_form = CsvImportUploadForm(self.request.POST, self.request.FILES)
@@ -136,7 +148,7 @@ class BaseCsvImportView(RequireHouseholdMixin, TemplateView):
         preview = self.get_preview_data()
         if not preview:
             messages.error(self.request, "Upload a CSV file before importing.")
-            return redirect(self.request.path)
+            return self._safe_redirect(self.request, self.request.path)
 
         mapping_form = self.get_mapping_form(data=self.request.POST)
         if mapping_form is None or not mapping_form.is_valid():

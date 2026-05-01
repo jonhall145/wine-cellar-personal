@@ -77,7 +77,7 @@ class WineCsvImporter(BaseCsvBeverageImporter):
             occasion=cleaned_data.get("occasion"),
         )
 
-    def convert_field_value(self, *, field_name, raw_value, row, user, household):
+    def convert_field_value(self, *, field_name, raw_value, row, mapping, user, household):
         if field_name in {
             "name",
             "subregion",
@@ -97,11 +97,12 @@ class WineCsvImporter(BaseCsvBeverageImporter):
             raw_value = raw_value.strip()
             if not raw_value:
                 return ""
-            country_code = (
-                self.resolve_country_code(row.get("country", ""))
-                if row.get("country")
-                else None
-            )
+            country_code = None
+            country_header = mapping.get("country", "")
+            if country_header:
+                country_raw = row.get(country_header, "").strip()
+                if country_raw:
+                    country_code = self.resolve_country_code(country_raw)
             qs = Appellation.objects.filter(name__iexact=raw_value)
             if country_code:
                 qs = qs.filter(country=country_code)
