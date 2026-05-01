@@ -6,7 +6,7 @@ from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.views.generic import UpdateView, View
 
-from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireMemberMixin
+from wine_cellar.apps.household.mixins import RequireHouseholdMixin, RequireAdminMixin
 from wine_cellar.apps.user.backup import (
     BackupImportError,
     build_backup_response,
@@ -46,7 +46,7 @@ class UserBackupExportView(LoginRequiredMixin, RequireHouseholdMixin, View):
         return build_backup_response(request.user, household)
 
 
-class UserBackupImportView(LoginRequiredMixin, RequireMemberMixin, View):
+class UserBackupImportView(LoginRequiredMixin, RequireAdminMixin, View):
     def post(self, request, *args, **kwargs):
         form = UserBackupImportForm(request.POST, request.FILES)
         if not form.is_valid():

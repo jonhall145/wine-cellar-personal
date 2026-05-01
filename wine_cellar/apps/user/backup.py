@@ -1,4 +1,5 @@
 import base64
+import binascii
 import json
 import os
 
@@ -11,6 +12,7 @@ from django.utils import timezone
 
 BACKUP_FORMAT_VERSION = 1
 BACKUP_CONTENT_TYPE = "application/json"
+MAX_BACKUP_SIZE = 50 * 1024 * 1024  # 50MB limit
 
 USER_SETTINGS_FIELDS = [
     "currency",
@@ -241,6 +243,10 @@ def export_backup_payload(user, household) -> dict:
 def restore_backup_file(uploaded_file, *, user, household) -> dict:
     try:
         raw = uploaded_file.read()
+        if len(raw) > MAX_BACKUP_SIZE:
+            raise BackupImportError(
+                f"Backup file exceeds maximum size of {MAX_BACKUP_SIZE // (1024 * 1024)}MB."
+            )
         payload = json.loads(raw.decode("utf-8"))
     except (AttributeError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise BackupImportError("Upload a valid JSON backup file.") from exc
@@ -302,9 +308,15 @@ def _restore_timestamps(instance, payload: dict, field_names: list[str]) -> None
 def _restore_file(field_file, file_payload: dict | None) -> None:
     if not file_payload or not file_payload.get("data"):
         return
-    filename = file_payload.get("name") or "backup-file"
-    content = ContentFile(base64.b64decode(file_payload["data"]))
-    field_file.save(filename, content, save=False)
+    try:
+        filename = file_payload.get("name") or "backup-file"
+        filename = os.path.basename(filename)
+        content = ContentFile(base64.b64decode(file_payload["data"]))
+        field_file.save(filename, content, save=False)
+    except (binascii.Error, ValueError) as exc:
+        raise BackupImportError(
+            f"Failed to restore file: invalid data encoding."
+        ) from exc
 
 
 def _export_file(field_file) -> dict | None:
@@ -1167,13 +1179,13 @@ def _restore_whisky_backup(data: dict, *, user, household) -> dict:
     region_map = {}
     for region_payload in refs.get("regions", []):
         region, _ = WhiskyRegion.objects.get_or_create(
-            name=region_payload["name"],
-            country=region_payload["country"],
+            slug=region_payload["slug"],
             defaults=_build_field_values(
                 WhiskyRegion,
                 region_payload,
                 [
-                    "slug",
+                    "name",
+                    "country",
                     "latitude",
                     "longitude",
                     "description",
