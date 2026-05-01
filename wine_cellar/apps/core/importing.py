@@ -88,7 +88,10 @@ def parse_import_excel(uploaded_file):
         )
 
     if not uploaded_file.name.lower().endswith(".xlsx"):
-        raise ValidationError("Only Excel (.xlsx) files are supported. Legacy .xls files are not supported.")
+        raise ValidationError(
+            "Only Excel (.xlsx) files are supported. "
+            "Legacy .xls files are not supported."
+        )
 
     try:
         workbook = load_workbook(uploaded_file, data_only=True)
