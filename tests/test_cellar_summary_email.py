@@ -73,3 +73,45 @@ def test_send_cellar_summary_skips_disabled_notifications(user):
 
     assert stdout.getvalue().strip() == "Sent 0 weekly summary email(s)"
     assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+def test_send_cellar_summary_sends_to_user_without_settings_row(django_user_model):
+    """Users with no UserSettings row must be included in the queryset (default: notifications=True).
+
+    Guards against the ORM INNER JOIN exclusion: previously
+    ``exclude(user_settings__notifications=False)`` would silently drop users
+    whose UserSettings row doesn't exist yet, because Django translates the
+    reverse-relation traversal into an INNER JOIN.  The new ``Q`` filter
+    explicitly includes null rows so those users are still queried.
+    """
+    from unittest.mock import patch
+
+    from wine_cellar.apps.user.models import UserSettings
+
+    user = django_user_model.objects.create_user(
+        username="no_settings_user",
+        email="no-settings@example.com",
+        password="pw",
+    )
+    # Verify there really is no UserSettings row for this user.
+    assert not UserSettings.objects.filter(user=user).exists()
+
+    called_for = []
+
+    def fake_send(u, period="weekly"):
+        called_for.append(u.pk)
+        return False  # no household, so no email — that's fine
+
+    with patch(
+        "wine_cellar.apps.core.emails.send_cellar_summary_email",
+        side_effect=fake_send,
+    ):
+        stdout = StringIO()
+        call_command("send_cellar_summary", stdout=stdout)
+
+    # The user with no settings row must have been included in the iteration.
+    assert user.pk in called_for, (
+        "send_cellar_summary_emails() excluded a user with no UserSettings row "
+        "(INNER JOIN regression)"
+    )
