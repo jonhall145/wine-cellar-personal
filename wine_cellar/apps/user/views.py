@@ -43,7 +43,11 @@ class UserSettingsView(LoginRequiredMixin, UpdateView):
 class UserBackupExportView(LoginRequiredMixin, RequireHouseholdMixin, View):
     def get(self, request, *args, **kwargs):
         household = get_active_household(request.user)
-        return build_backup_response(request.user, household)
+        try:
+            return build_backup_response(request.user, household)
+        except BackupImportError as exc:
+            messages.error(request, str(exc))
+            return redirect("user-settings")
 
 
 class UserBackupImportView(LoginRequiredMixin, RequireAdminMixin, View):

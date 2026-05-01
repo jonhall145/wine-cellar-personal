@@ -209,10 +209,13 @@ def build_backup_response(user, household) -> HttpResponse:
     payload = export_backup_payload(user, household)
     app_type = payload["app_type"]
     today = timezone.localdate().isoformat()
-    response = HttpResponse(
-        json.dumps(payload, indent=2, cls=DjangoJSONEncoder, ensure_ascii=False),
-        content_type=BACKUP_CONTENT_TYPE,
-    )
+    body = json.dumps(payload, indent=2, cls=DjangoJSONEncoder, ensure_ascii=False)
+    if len(body.encode("utf-8")) > MAX_BACKUP_SIZE:
+        raise BackupImportError(
+            f"Backup exceeds maximum size of {MAX_BACKUP_SIZE // (1024 * 1024)}MB "
+            "and cannot be exported. Reduce the number of images or cellar entries."
+        )
+    response = HttpResponse(body, content_type=BACKUP_CONTENT_TYPE)
     response["Content-Disposition"] = (
         f'attachment; filename="{app_type}_backup_{today}.json"'
     )
@@ -226,7 +229,7 @@ def export_backup_payload(user, household) -> dict:
         "exported_at": timezone.now(),
         "household": {"name": household.name},
         "user_settings": _export_simple_fields(
-            user.user_settings, USER_SETTINGS_FIELDS
+            getattr(user, "user_settings", None), USER_SETTINGS_FIELDS
         ),
         "household_settings": _export_simple_fields(
             household.settings if hasattr(household, "settings") else None,
@@ -452,11 +455,11 @@ def _export_wine_backup(user, household) -> dict:
                     if isinstance(wine.appellation, Appellation)
                     else None
                 ),
-                "grapes": list(wine.grapes.values_list("pk", flat=True)),
-                "attributes": list(wine.attributes.values_list("pk", flat=True)),
-                "food_pairings": list(wine.food_pairings.values_list("pk", flat=True)),
-                "vineyard": list(wine.vineyard.values_list("pk", flat=True)),
-                "source": list(wine.source.values_list("pk", flat=True)),
+                "grapes": [obj.pk for obj in wine.grapes.all()],
+                "attributes": [obj.pk for obj in wine.attributes.all()],
+                "food_pairings": [obj.pk for obj in wine.food_pairings.all()],
+                "vineyard": [obj.pk for obj in wine.vineyard.all()],
+                "source": [obj.pk for obj in wine.source.all()],
                 "barcodes": [
                     {"barcode": barcode.barcode, "created": barcode.created}
                     for barcode in wine.barcodes.all().order_by("pk")
@@ -477,7 +480,7 @@ def _export_wine_backup(user, household) -> dict:
             {
                 "backup_id": collection.pk,
                 **_export_simple_fields(collection, COLLECTION_FIELDS),
-                "wines": list(collection.wines.values_list("pk", flat=True)),
+                "wines": [w.pk for w in collection.wines.all()],
             }
             for collection in collections.order_by("pk")
         ],
@@ -691,7 +694,7 @@ def _export_whisky_backup(user, household) -> dict:
                 "distillery": whisky.distillery_id,
                 "bottler": whisky.bottler_id,
                 "source": whisky.source_id,
-                "attributes": list(whisky.attributes.values_list("pk", flat=True)),
+                "attributes": [a.pk for a in whisky.attributes.all()],
                 "barcodes": [
                     {"barcode": barcode.barcode, "created": barcode.created}
                     for barcode in whisky.barcodes.all().order_by("pk")
@@ -720,7 +723,7 @@ def _export_whisky_backup(user, household) -> dict:
             {
                 "backup_id": collection.pk,
                 **_export_simple_fields(collection, COLLECTION_FIELDS),
-                "whiskies": list(collection.whiskies.values_list("pk", flat=True)),
+                "whiskies": [w.pk for w in collection.whiskies.all()],
             }
             for collection in Collection.objects.filter(household=household)
             .prefetch_related("whiskies")
@@ -1086,7 +1089,7 @@ def _restore_wine_backup(data: dict, *, user, household) -> dict:
             source=_require_mapping(source_map, price_payload.get("source"), "source"),
             **_build_field_values(PriceHistory, price_payload, ["price"]),
         )
-        _restore_timestamps(record, price_payload, ["recorded_at"])
+        _restore_timestamps(record, price_payload, ["recorded_at", "created", "modified"])
 
     for history_payload in data.get("move_history", []):
         history = BottleMoveHistory.objects.create(
@@ -1421,7 +1424,7 @@ def _restore_whisky_backup(data: dict, *, user, household) -> dict:
             source=_require_mapping(source_map, price_payload.get("source"), "source"),
             **_build_field_values(WhiskyPriceHistory, price_payload, ["price"]),
         )
-        _restore_timestamps(record, price_payload, ["recorded_at"])
+        _restore_timestamps(record, price_payload, ["recorded_at", "created", "modified"])
 
     for history_payload in data.get("move_history", []):
         history = WhiskyBottleMoveHistory.objects.create(
