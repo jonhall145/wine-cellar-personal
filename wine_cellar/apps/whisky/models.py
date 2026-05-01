@@ -954,6 +954,12 @@ class WhiskyWishlist(UserContentModel):
         verbose_name="Priority",
     )
     purchased = models.BooleanField(default=False, verbose_name="Purchased")
+    external_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default="",
+        verbose_name="Purchase Link",
+    )
 
     class Meta:
         ordering = ["-priority", "name"]

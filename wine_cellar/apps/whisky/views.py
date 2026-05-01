@@ -352,6 +352,16 @@ class WhiskyCreateView(BaseBeverageCreateView):
         },
     )
     cellar_extra_field_names = ("fill_level",)
+    wishlist_model = WhiskyWishlist
+    wishlist_initial_field_map = {
+        "name": "name",
+        "whisky_type": "whisky_type",
+        "distillery": "distillery",
+        "region": "region",
+        "country": "country",
+        "age_statement": "age_statement",
+        "comment": "notes",
+    }
     confidence_badge_labels = {
         "high": "High Confidence",
         "medium": "Please Verify",
@@ -946,6 +956,7 @@ class WishlistListView(BaseWishlistListView):
     wishlist_model = WhiskyWishlist
     wishlist_columns_header = "whisky/includes/wishlist_columns_header.html"
     wishlist_columns_row = "whisky/includes/wishlist_columns_row.html"
+    wishlist_convert_url_name = "whisky-add"
 
 
 class WishlistCreateView(BaseWishlistCreateView):
@@ -958,6 +969,7 @@ class WishlistCreateView(BaseWishlistCreateView):
             "whisky_type": form.cleaned_data.get("whisky_type") or None,
             "distillery": form.cleaned_data.get("distillery"),
             "region": form.cleaned_data.get("region"),
+            "country": form.cleaned_data.get("country") or "",
             "age_statement": form.cleaned_data.get("age_statement"),
         }
 

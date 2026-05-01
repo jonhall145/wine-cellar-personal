@@ -944,6 +944,15 @@ class WhiskyWishlistForm(forms.Form):
         required=False,
         help_text="Region.",
     )
+    country = forms.CharField(
+        max_length=2,
+        required=False,
+        widget=forms.Select(
+            choices=[("", "---------")]
+            + [(c.alpha_2, c.name) for c in pycountry.countries],
+        ),
+        help_text="Country of origin.",
+    )
     age_statement = forms.IntegerField(
         required=False,
         help_text="Desired age in years.",
@@ -958,6 +967,11 @@ class WhiskyWishlistForm(forms.Form):
         required=False,
         widget=forms.Textarea,
         help_text="Any notes about why you want this whisky.",
+    )
+    external_url = forms.URLField(
+        required=False,
+        max_length=500,
+        help_text="URL where you can purchase this whisky.",
     )
     priority = forms.IntegerField(
         initial=1,

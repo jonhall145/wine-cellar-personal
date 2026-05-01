@@ -10,8 +10,7 @@
     <div class="pure-g">
         <div class="pure-u-1">
             <div class="mb-12">
-                <a href="{% url 'wishlist-add' %}"
-                   class="pure-button button__neutral"><i class="fa-regular fa-plus"></i> Add to Wishlist</a>
+                <a href="{% url 'wishlist-add' %}" class="pure-button button__neutral"><i class="fa-regular fa-plus"></i> Add to Wishlist</a>
             </div>
             {% if wishlist_items %}
                 <table class="pure-table pure-table-horizontal pure-table-striped">
@@ -35,8 +34,35 @@
                                 <td>{{ item.price_limit|default_if_none:"-" }}</td>
                                 <td>{{ item.notes|default_if_none:"-"|truncatewords:10 }}</td>
                                 <td>
-                                    <form method="post" action="{% url 'wishlist-purchased' item.pk %}" class="d-inline">{% csrf_token %}<button type="submit" class="pure-button" title="Mark as purchased"><i class="fa-solid fa-check"></i></button></form>
-                                    <a href="{% url 'wishlist-delete' item.pk %}" class="pure-button" title="Delete"><i class="fa-regular fa-trash-can"></i></a>
+                                    {% if wishlist_convert_url_name %}
+                                        <a href="{% url wishlist_convert_url_name %}?wishlist_item={{ item.pk }}"
+                                           class="pure-button"
+                                           title="Create {{ APP_ITEM_NAME }} from wishlist"
+                                           aria-label="Create {{ APP_ITEM_NAME }} from wishlist">
+                                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                        </a>
+                                    {% endif %}
+                                    {% if item.external_url %}
+                                        <a href="{{ item.external_url }}"
+                                           class="pure-button"
+                                           title="Open purchase link"
+                                           aria-label="Open purchase link"
+                                           target="_blank"
+                                           rel="noopener noreferrer">
+                                            <i class="fa-solid fa-up-right-from-square"></i>
+                                        </a>
+                                    {% endif %}
+                                    <form method="post"
+                                          action="{% url 'wishlist-purchased' item.pk %}"
+                                          class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="pure-button" title="Mark as purchased">
+                                            <i class="fa-solid fa-check"></i>
+                                        </button>
+                                    </form>
+                                    <a href="{% url 'wishlist-delete' item.pk %}"
+                                       class="pure-button"
+                                       title="Delete"><i class="fa-regular fa-trash-can"></i></a>
                                 </td>
                             </tr>
                         {% endfor %}
@@ -44,10 +70,13 @@
                 </table>
             {% else %}
                 <div class="empty-state">
-                    <div class="empty-state__icon"><i class="fa-solid fa-heart"></i></div>
+                    <div class="empty-state__icon">
+                        <i class="fa-solid fa-heart"></i>
+                    </div>
                     <h3 class="empty-state__title">Wishlist is empty</h3>
                     <p class="empty-state__message">Add {{ APP_ITEM_NAME_PLURAL }} you'd like to buy someday.</p>
-                    <a href="{% url 'wishlist-add' %}" class="pure-button button__primary empty-state__action">
+                    <a href="{% url 'wishlist-add' %}"
+                       class="pure-button button__primary empty-state__action">
                         <i class="fa-solid fa-plus"></i> Add to Wishlist
                     </a>
                 </div>

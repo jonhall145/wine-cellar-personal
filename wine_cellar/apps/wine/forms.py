@@ -600,6 +600,11 @@ class WishlistForm(forms.Form):
         widget=forms.Textarea,
         help_text="Any notes about why you want this wine.",
     )
+    external_url = forms.URLField(
+        required=False,
+        max_length=500,
+        help_text="URL where you can purchase this wine.",
+    )
     priority = forms.IntegerField(
         initial=1,
         validators=[MinValueValidator(1), MaxValueValidator(5)],

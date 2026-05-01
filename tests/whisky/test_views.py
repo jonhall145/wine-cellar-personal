@@ -18,6 +18,7 @@ from wine_cellar.apps.whisky.models import (
     WhiskyDrinkRecord,
     WhiskyImage,
     WhiskyStorageItem,
+    WhiskyWishlist,
     WhiskyVisionExtractionLog,
 )
 
@@ -1108,6 +1109,95 @@ def test_whisky_create_post_with_distillery(client, user, distillery_factory):
     whisky = Whisky.objects.get(user=user, name="Laphroaig 10")
     assert whisky.distillery == distillery
     assert whisky.age_statement == 10
+
+
+@pytest.mark.django_db
+def test_whisky_wishlist_create_saves_country_and_external_url(client, user):
+    client.force_login(user)
+
+    response = client.post(
+        reverse("wishlist-add"),
+        {
+            "name": "Wishlist Whisky",
+            "whisky_type": "SM",
+            "country": "GB",
+            "priority": 2,
+            "external_url": "https://example.com/whisky",
+        },
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    wishlist_item = WhiskyWishlist.objects.get(name="Wishlist Whisky")
+    assert wishlist_item.country == "GB"
+    assert wishlist_item.external_url == "https://example.com/whisky"
+
+
+@pytest.mark.django_db
+def test_whisky_create_from_wishlist_prefills_and_marks_purchased(client, user):
+    household = user.user_settings.active_household
+    wishlist_item = WhiskyWishlist.objects.create(
+        name="Lagavulin Wishlist",
+        user=user,
+        household=household,
+        whisky_type="SM",
+        country="GB",
+        notes="Peaty favourite",
+        external_url="https://example.com/lagavulin",
+    )
+    client.force_login(user)
+
+    get_response = client.get(
+        reverse("whisky-add") + f"?wishlist_item={wishlist_item.pk}"
+    )
+
+    assert get_response.status_code == HTTPStatus.OK
+    assert get_response.context["form"].initial["name"] == "Lagavulin Wishlist"
+    assert get_response.context["form"].initial["whisky_type"] == "SM"
+    assert get_response.context["form"].initial["country"] == "GB"
+    assert get_response.context["form"].initial["comment"] == "Peaty favourite"
+
+    post_response = client.post(
+        reverse("whisky-add"),
+        {
+            "wishlist_item": wishlist_item.pk,
+            "name": "Lagavulin Wishlist",
+            "whisky_type": "SM",
+            "abv": 43.0,
+            "size": "0.70",
+            "country": "GB",
+            "comment": "Peaty favourite",
+            "price": "",
+            "rating": "",
+        },
+        follow=True,
+    )
+
+    assert post_response.status_code == HTTPStatus.OK
+    wishlist_item.refresh_from_db()
+    assert Whisky.objects.filter(user=user, name="Lagavulin Wishlist").exists()
+    assert wishlist_item.purchased is True
+
+
+@pytest.mark.django_db
+def test_whisky_wishlist_list_shows_convert_and_purchase_links(client, user):
+    household = user.user_settings.active_household
+    wishlist_item = WhiskyWishlist.objects.create(
+        name="Wishlist Link Whisky",
+        user=user,
+        household=household,
+        external_url="https://example.com/buy-whisky",
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("wishlist-list"))
+    content = response.content.decode()
+
+    assert response.status_code == HTTPStatus.OK
+    assert (
+        reverse("whisky-add") + f"?wishlist_item={wishlist_item.pk}"
+    ) in content
+    assert "https://example.com/buy-whisky" in content
 
 
 @pytest.mark.django_db

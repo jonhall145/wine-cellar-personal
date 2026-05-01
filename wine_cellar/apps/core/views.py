@@ -34,6 +34,7 @@ class BaseWishlistListView(RequireHouseholdMixin, TemplateView):
     wishlist_model = None  # Set by subclass
     wishlist_columns_header = None  # Template path for column headers
     wishlist_columns_row = None  # Template path for column cells
+    wishlist_convert_url_name = None  # Optional create view route name
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -43,6 +44,7 @@ class BaseWishlistListView(RequireHouseholdMixin, TemplateView):
         )
         context["wishlist_columns_header"] = self.wishlist_columns_header
         context["wishlist_columns_row"] = self.wishlist_columns_row
+        context["wishlist_convert_url_name"] = self.wishlist_convert_url_name
         return context
 
 
@@ -1097,6 +1099,7 @@ class BaseWishlistCreateView(RequireMemberMixin, FormView):
             price_limit=form.cleaned_data.get("price_limit"),
             notes=form.cleaned_data.get("notes"),
             priority=form.cleaned_data.get("priority", 1),
+            external_url=form.cleaned_data.get("external_url", ""),
             **self.get_extra_create_kwargs(form),
         )
         return super().form_valid(form)
@@ -1327,6 +1330,8 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
     vision_fk_name_fields = {}
     extraction_log_model = None
     extraction_log_fk_name = None
+    wishlist_model = None  # Set by subclass
+    wishlist_initial_field_map = {}
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -1396,6 +1401,8 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
                 self.resolve_extracted_data(result_data, initial)
                 initial.update(result_data)
 
+        self.apply_wishlist_values(initial, overwrite=True)
+
         return initial
 
     def _get_extractor(self):
@@ -1432,6 +1439,44 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
             "createFields": list(self.vision_create_fields),
             "fkNameFields": self.vision_fk_name_fields,
         }
+
+    def get_wishlist_item(self):
+        if hasattr(self, "_wishlist_item_cache"):
+            return self._wishlist_item_cache
+
+        if not self.wishlist_model:
+            self._wishlist_item_cache = None
+            return self._wishlist_item_cache
+
+        wishlist_item_id = self.request.GET.get(
+            "wishlist_item"
+        ) or self.request.POST.get("wishlist_item")
+        if not wishlist_item_id:
+            self._wishlist_item_cache = None
+            return self._wishlist_item_cache
+
+        try:
+            household = get_active_household(self.request.user)
+            self._wishlist_item_cache = self.wishlist_model.objects.get(
+                pk=wishlist_item_id, household=household
+            )
+        except self.wishlist_model.DoesNotExist:
+            self._wishlist_item_cache = None
+
+        return self._wishlist_item_cache
+
+    def apply_wishlist_values(self, values, *, overwrite=False):
+        wishlist_item = self.get_wishlist_item()
+        if not wishlist_item:
+            return
+
+        for form_field, wishlist_field in self.wishlist_initial_field_map.items():
+            if not overwrite and values.get(form_field) not in (None, "", []):
+                continue
+            value = getattr(wishlist_item, wishlist_field)
+            if value in (None, ""):
+                continue
+            values[form_field] = value
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1520,6 +1565,7 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
                     )
 
         household = get_active_household(self.request.user)
+        self.apply_wishlist_values(form.cleaned_data)
         with transaction.atomic():
             beverage, created = self.process_form_data(
                 self.request.user, household, form.cleaned_data
@@ -1537,6 +1583,11 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
                 self._link_extraction_log(
                     beverage, form.cleaned_data, extraction_result
                 )
+
+            wishlist_item = self.get_wishlist_item()
+            if wishlist_item and not wishlist_item.purchased:
+                wishlist_item.purchased = True
+                wishlist_item.save(update_fields=["purchased"])
 
         # Clear session data
         for key in ("scanned_label", "extraction_result"):
