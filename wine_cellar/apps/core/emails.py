@@ -8,6 +8,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.db.models import Avg, Count, F, Q, Sum
 from django.db.models.functions import Coalesce
 from django.template.loader import render_to_string
+from django.utils import timezone
 
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 
@@ -115,7 +116,7 @@ def _build_wine_summary_context(user, household, period: str):
         Wishlist,
     )
 
-    today = date.today()
+    today = timezone.localdate()
     user_settings = get_user_settings(user)
     currency_symbol = settings.CURRENCY_SYMBOLS.get(
         getattr(user_settings, "currency", "EUR"), "€"
@@ -222,7 +223,7 @@ def _build_whisky_summary_context(user, household, period: str):
         WhiskyWishlist,
     )
 
-    today = date.today()
+    today = timezone.localdate()
     user_settings = get_user_settings(user)
     currency_symbol = settings.CURRENCY_SYMBOLS.get(
         getattr(user_settings, "currency", "EUR"), "€"
