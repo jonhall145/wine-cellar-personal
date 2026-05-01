@@ -77,7 +77,7 @@ def test_send_cellar_summary_skips_disabled_notifications(user):
 
 @pytest.mark.django_db
 def test_send_cellar_summary_sends_to_user_without_settings_row(django_user_model):
-    """Users with no UserSettings row must be included in the queryset (default: notifications=True).
+    """Users with no UserSettings row must still be included in the queryset.
 
     Guards against the ORM INNER JOIN exclusion: previously
     ``exclude(user_settings__notifications=False)`` would silently drop users
