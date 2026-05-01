@@ -248,7 +248,8 @@ def restore_backup_file(uploaded_file, *, user, household) -> dict:
         raw = uploaded_file.read()
         if len(raw) > MAX_BACKUP_SIZE:
             raise BackupImportError(
-                f"Backup file exceeds maximum size of {MAX_BACKUP_SIZE // (1024 * 1024)}MB."
+                "Backup file exceeds maximum size of "
+                f"{MAX_BACKUP_SIZE // (1024 * 1024)}MB."
             )
         payload = json.loads(raw.decode("utf-8"))
     except (AttributeError, UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -318,7 +319,7 @@ def _restore_file(field_file, file_payload: dict | None) -> None:
         field_file.save(filename, content, save=False)
     except (binascii.Error, ValueError) as exc:
         raise BackupImportError(
-            f"Failed to restore file: invalid data encoding."
+            "Failed to restore file: invalid data encoding."
         ) from exc
 
 
@@ -1089,7 +1090,11 @@ def _restore_wine_backup(data: dict, *, user, household) -> dict:
             source=_require_mapping(source_map, price_payload.get("source"), "source"),
             **_build_field_values(PriceHistory, price_payload, ["price"]),
         )
-        _restore_timestamps(record, price_payload, ["recorded_at", "created", "modified"])
+        _restore_timestamps(
+            record,
+            price_payload,
+            ["recorded_at", "created", "modified"],
+        )
 
     for history_payload in data.get("move_history", []):
         history = BottleMoveHistory.objects.create(
@@ -1424,7 +1429,11 @@ def _restore_whisky_backup(data: dict, *, user, household) -> dict:
             source=_require_mapping(source_map, price_payload.get("source"), "source"),
             **_build_field_values(WhiskyPriceHistory, price_payload, ["price"]),
         )
-        _restore_timestamps(record, price_payload, ["recorded_at", "created", "modified"])
+        _restore_timestamps(
+            record,
+            price_payload,
+            ["recorded_at", "created", "modified"],
+        )
 
     for history_payload in data.get("move_history", []):
         history = WhiskyBottleMoveHistory.objects.create(
