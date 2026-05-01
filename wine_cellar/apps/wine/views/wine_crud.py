@@ -1,10 +1,13 @@
+import json
 import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Avg
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
+from django.utils.dateformat import format as date_format
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django_filters.views import FilterView
@@ -24,9 +27,10 @@ from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.storage.utils import with_removal_sort_date
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.filters import WineFilter
-from wine_cellar.apps.wine.forms import WineEditForm, WineForm
+from wine_cellar.apps.wine.forms import WineEditForm, WineForm, WinePriceHistoryForm
 from wine_cellar.apps.wine.models import (
     Collection,
+    PriceHistory,
     VisionExtractionLog,
     Wine,
     WineBarcode,
@@ -38,6 +42,14 @@ logger = logging.getLogger(__name__)
 
 # Form step constants - no longer used for multi-step, kept for compatibility
 FINAL_FORM_STEP = 4
+
+
+def _format_price_delta(beverage, amount):
+    if amount is None:
+        return None
+    sign = "+" if amount > 0 else "-" if amount < 0 else ""
+    formatted = beverage.format_currency(abs(amount))
+    return f"{sign}{formatted}" if sign else formatted
 
 
 @method_decorator(
@@ -491,6 +503,70 @@ class WineDetailView(BaseDetailView):
             if context["show_consumed_bottles"]
             else self.object.storageitem_set.none()
         )
+        price_history_qs = self.object.price_history.select_related("source")
+        price_history_entries = list(price_history_qs[:5])
+        latest_entry = price_history_entries[0] if price_history_entries else None
+        average_market_price = price_history_qs.aggregate(avg_price=Avg("price"))[
+            "avg_price"
+        ]
+        oldest_market_price = (
+            price_history_qs.order_by("recorded_at")
+            .values_list("price", flat=True)
+            .first()
+        )
+        purchase_price_baseline = self.object.storageitem_set.aggregate(
+            avg_price=Avg("price")
+        )["avg_price"]
+        if purchase_price_baseline is None:
+            purchase_price_baseline = self.object.price
+        context["price_history_form"] = kwargs.get("price_history_form") or (
+            WinePriceHistoryForm(user=self.request.user)
+        )
+        context["price_history_entries"] = price_history_entries
+        context["price_history_latest"] = latest_entry
+        context["price_history_average_with_currency"] = self.object.format_currency(
+            average_market_price
+        )
+        context["price_history_purchase_baseline_with_currency"] = (
+            self.object.format_currency(purchase_price_baseline)
+        )
+        context["price_history_vs_purchase_with_currency"] = _format_price_delta(
+            self.object,
+            (
+                average_market_price - purchase_price_baseline
+                if average_market_price is not None
+                and purchase_price_baseline is not None
+                else None
+            ),
+        )
+        context["price_history_trend_with_currency"] = _format_price_delta(
+            self.object,
+            (
+                latest_entry.price - oldest_market_price
+                if latest_entry is not None and oldest_market_price is not None
+                else None
+            ),
+        )
+
+        # Prepare chart data for price history visualization
+        all_price_history = (
+            self.object.price_history.select_related("source")
+            .order_by("recorded_at")
+            .values_list("recorded_at", "price")
+        )
+        if all_price_history.exists():
+            chart_data = [
+                {
+                    "date": date_format(record[0], "Y-m-d"),
+                    "price": float(record[1]),
+                }
+                for record in all_price_history
+            ]
+            context["price_history_chart_data_json"] = json.dumps(chart_data)
+            context["has_price_chart"] = True
+        else:
+            context["has_price_chart"] = False
+
         return context
 
 
@@ -608,3 +684,33 @@ def remove_wine_from_collection(request, pk, collection_pk):
     collection = get_object_or_404(Collection, pk=collection_pk, household=household)
     collection.wines.remove(wine)
     return redirect("wine-detail", pk=wine.pk)
+
+
+@login_required
+@require_member
+@require_POST
+def add_price_history(request, pk):
+    household = get_active_household(request.user)
+    wine = get_object_or_404(Wine, pk=pk, household=household, deleted=False)
+    form = WinePriceHistoryForm(request.POST, user=request.user)
+
+    if form.is_valid():
+        source = form.cleaned_data["source"]
+        PriceHistory.objects.create(
+            wine=wine,
+            source=source,
+            price=form.cleaned_data["price"],
+            user=request.user,
+            household=household,
+        )
+        if source:
+            wine.source.add(source)
+        messages.success(request, "Tracked market price saved.")
+    else:
+        messages.error(
+            request,
+            "Could not save tracked market price. "
+            + "; ".join(error for errors in form.errors.values() for error in errors),
+        )
+
+    return redirect(f"{reverse('wine-detail', kwargs={'pk': wine.pk})}#price-tracking")

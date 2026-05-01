@@ -613,6 +613,34 @@ class WishlistForm(forms.Form):
     )
 
 
+class WinePriceHistoryForm(forms.Form):
+    price = forms.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        min_value=0.01,
+        localize=True,
+        widget=forms.TextInput(
+            attrs={"inputmode": "decimal", "placeholder": "e.g. 19.99"}
+        ),
+        help_text="Current market price.",
+    )
+    source = forms.ModelChoiceField(
+        queryset=Source.objects.none(),
+        required=False,
+        empty_label="Manual / no source",
+        help_text="Optional retailer or source for this price.",
+    )
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        household = None
+        if hasattr(user, "user_settings") and user.user_settings:
+            household = user.user_settings.active_household
+        self.fields["source"].queryset = Source.objects.filter(
+            Q(household__isnull=True) | Q(household=household)
+        ).order_by("name")
+
+
 class LabelScanForm(forms.Form):
     """Form for uploading wine label images for scanning."""
 

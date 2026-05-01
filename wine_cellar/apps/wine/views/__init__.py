@@ -53,6 +53,7 @@ from wine_cellar.apps.wine.views.wine_crud import (  # noqa: F401
     WineListView,
     WineMergeConfirmView,
     WineUpdateView,
+    add_price_history,
     add_wine_to_collection,
     remove_wine_from_collection,
 )

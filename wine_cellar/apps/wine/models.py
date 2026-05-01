@@ -429,29 +429,33 @@ class Wine(UserContentModel):
         return "\n".join([str(attribute) for attribute in self.attributes.all()])
 
     @property
-    def get_price_with_currency(self):
+    def currency_symbol(self):
         user_settings = get_user_settings(self.user)
-        currency = settings.CURRENCY_SYMBOLS.get(
+        return settings.CURRENCY_SYMBOLS.get(
             getattr(user_settings, "currency", "EUR"), "€"
         )
-        formatted_price = number_format(self.price, use_l10n=True)
-        return f"{currency}{formatted_price}"
+
+    def format_currency(self, amount):
+        if amount is None:
+            return None
+        if hasattr(amount, "quantize"):
+            amount = amount.quantize(Decimal("0.00"))
+        formatted_price = number_format(amount, use_l10n=True)
+        return f"{self.currency_symbol}{formatted_price}"
+
+    @property
+    def get_price_with_currency(self):
+        return self.format_currency(self.price)
 
     @property
     def get_average_price_with_currency(self):
-        user_settings = get_user_settings(self.user)
-        currency = settings.CURRENCY_SYMBOLS.get(
-            getattr(user_settings, "currency", "EUR"), "€"
-        )
         avg_price = self.storageitem_set.aggregate(avg_price=models.Avg("price"))[
             "avg_price"
         ]
 
         if avg_price is None:
             return None
-        avg_price = avg_price.quantize(Decimal("0.00"))
-        formatted_price = number_format(avg_price, use_l10n=True)
-        return f"{currency}{formatted_price}"
+        return self.format_currency(avg_price)
 
     @property
     def get_food_pairings(self):
@@ -892,3 +896,7 @@ class PriceHistory(UserContentModel):
     def __str__(self):
         source_name = self.source.name if self.source else "Unknown"
         return f"{self.wine.name} - {self.price} ({source_name})"
+
+    @property
+    def price_with_currency(self):
+        return self.wine.format_currency(self.price)

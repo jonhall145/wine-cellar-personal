@@ -13,6 +13,11 @@ urlpatterns = [
     path("whisky/add/", views.WhiskyCreateView.as_view(), name="whisky-add"),
     path("whisky/<int:pk>/", views.WhiskyDetailView.as_view(), name="whisky-detail"),
     path(
+        "whisky/<int:pk>/price-history/add/",
+        views.add_price_history,
+        name="whisky-price-history-add",
+    ),
+    path(
         "whisky/<int:pk>/collections/add/",
         views.add_whisky_to_collection,
         name="whisky-collection-add",

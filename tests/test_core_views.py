@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from wine_cellar.apps.storage.models import StorageItem
-from wine_cellar.apps.wine.models import Wine, WineType
+from wine_cellar.apps.wine.models import PriceHistory, Wine, WineType
 
 # ---------------------------------------------------------------------------
 # QR Code view
@@ -401,6 +401,62 @@ class TestWineDetailView:
         session = client.session
         recent = session.get("recent_views", [])
         assert any(r["pk"] == wine.pk for r in recent)
+
+    def test_includes_price_tracking_context(
+        self, client, user, wine_factory, source_factory
+    ):
+        household = user.user_settings.active_household
+        wine = wine_factory(user=user, name="Tracked Wine", price=Decimal("14.00"))
+        source = source_factory(user=user, household=household, name="Merchant")
+        PriceHistory.objects.create(
+            wine=wine,
+            source=source,
+            price=Decimal("16.00"),
+            user=user,
+            household=household,
+        )
+        PriceHistory.objects.create(
+            wine=wine,
+            price=Decimal("18.00"),
+            user=user,
+            household=household,
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("wine-detail", kwargs={"pk": wine.pk}))
+
+        assert response.status_code == HTTPStatus.OK
+        assert response.context["price_history_latest"].price == Decimal("18.00")
+        assert len(response.context["price_history_entries"]) == 2
+        assert (
+            response.context["price_history_form"]
+            .fields["source"]
+            .queryset.filter(pk=source.pk)
+            .exists()
+        )
+
+    def test_can_add_price_history(self, client, user, wine_factory, source_factory):
+        household = user.user_settings.active_household
+        wine = wine_factory(user=user, name="Tracked Wine")
+        source = source_factory(user=user, household=household, name="Merchant")
+        client.force_login(user)
+
+        response = client.post(
+            reverse("wine-price-history-add", kwargs={"pk": wine.pk}),
+            {"price": "19.50", "source": source.pk},
+        )
+
+        assert response.status_code == HTTPStatus.FOUND
+        assert (
+            response.url
+            == reverse("wine-detail", kwargs={"pk": wine.pk}) + "#price-tracking"
+        )
+        history_entry = PriceHistory.objects.get(wine=wine)
+        assert history_entry.price == Decimal("19.50")
+        assert history_entry.source == source
+        assert history_entry.user == user
+        assert history_entry.household == household
+        assert source in wine.source.all()
 
     def test_consumed_bottles_are_hidden_by_default(
         self, client, user, wine_factory, storage_item_factory
