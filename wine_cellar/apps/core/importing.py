@@ -128,7 +128,7 @@ def parse_import_excel(uploaded_file):
                 f"Excel imports are limited to {MAX_IMPORT_ROWS} rows."
             )
         cleaned_row = {
-            header: str(row[i] or "").strip()
+            header: str(row[i] if i < len(row) and row[i] is not None else "").strip()
             for i, header in enumerate(cleaned_headers)
         }
         rows.append(cleaned_row)
