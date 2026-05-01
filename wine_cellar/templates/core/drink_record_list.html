@@ -51,7 +51,7 @@
                                     <td>{{ record.rating|default_if_none:"-" }}</td>
                                     <td>
                                         {% if record.photo %}
-                                            <img src="{{ record.photo.url }}" alt="Photo" style="max-height: 50px; max-width: 50px; object-fit: cover;">
+                                            <img src="{{ record.photo.url }}" alt="Photo" width="50" height="50" loading="lazy" style="max-height: 50px; max-width: 50px; object-fit: cover;">
                                         {% else %}
                                             <span class="text--gray">-</span>
                                         {% endif %}

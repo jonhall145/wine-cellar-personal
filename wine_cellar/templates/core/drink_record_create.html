@@ -2,7 +2,7 @@
 {% load static %}
 {% block extra_js %}
     {{ block.super }}
-    <script src="{% static 'js/tasting-wheel.js' %}"></script>
+    <script src="{% static 'tasting_wheel.js' %}" defer></script>
     {% if form.fields.post_drink_status %}
         <script>
             document.addEventListener("DOMContentLoaded", function () {
@@ -43,10 +43,10 @@
         </script>
     {% endif %}
 {% endblock extra_js %}
-{% block extra_css %}
+{% block styles %}
     {{ block.super }}
-    <link rel="stylesheet" href="{% static 'css/tasting-wheel.css' %}">
-{% endblock extra_css %}
+    <link rel="stylesheet" href="{% static 'tasting_wheel.css' %}">
+{% endblock styles %}
 {% block title %}
     Record Drink
 {% endblock title %}
@@ -64,8 +64,8 @@
                 {% for field in form %}
                     {% if field.name == 'taste_descriptors' %}
                         <div class="form-group">
-                            <label for="id_taste_wheel">{{ field.label }}</label>
-                            <div id="taste-wheel-container"></div>
+                            <label id="taste-wheel-label">{{ field.label }}</label>
+                            <div id="taste-wheel-container" aria-labelledby="taste-wheel-label"></div>
                             {{ field }}
                         </div>
                     {% else %}

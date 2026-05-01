@@ -73,7 +73,13 @@ module.exports = {
     },
     duplicate_check: {
       import: ['./wine_cellar/assets/js/duplicate_check.js'],
-    }
+    },
+    tasting_wheel: {
+      import: [
+        './wine_cellar/assets/css/tasting-wheel.css',
+        './wine_cellar/assets/js/tasting-wheel.js',
+      ],
+    },
   },
   output: {
     path: path.resolve('./wine_cellar/static/'),

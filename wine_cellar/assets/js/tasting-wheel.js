@@ -24,7 +24,22 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!container) return;
 
         const hiddenField = document.querySelector('input[name="taste_descriptors"]');
-        const selectedDescriptors = hiddenField?.value ? JSON.parse(hiddenField.value) : [];
+        let selectedDescriptors = [];
+        if (hiddenField?.value) {
+            try {
+                const parsed = JSON.parse(hiddenField.value);
+                selectedDescriptors = Array.isArray(parsed) ? parsed : [];
+            } catch (_e) {
+                selectedDescriptors = [];
+            }
+        }
+
+        // Collect all known options so we can preserve unknown descriptors (e.g.
+        // free-text values saved before this UI existed) instead of silently dropping them.
+        const allKnownOptions = Object.values(FLAVOR_CATEGORIES).flat();
+        const unknownDescriptors = selectedDescriptors.filter(
+            (d) => !allKnownOptions.includes(d)
+        );
 
         // Build the wheel HTML
         let html = '<div class="tasting-wheel">';
@@ -62,11 +77,14 @@ document.addEventListener("DOMContentLoaded", function () {
                 .filter((cb) => cb.checked)
                 .map((cb) => cb.value);
 
-            hiddenField.value = JSON.stringify(checked);
+            // Merge checkbox-backed selections with any descriptors unknown to
+            // FLAVOR_CATEGORIES so they are never silently dropped on save.
+            const all = [...checked, ...unknownDescriptors];
+            hiddenField.value = JSON.stringify(all);
 
             // Clear and rebuild using safe DOM methods
             selectedDisplay.innerHTML = "";
-            checked.forEach((descriptor) => {
+            all.forEach((descriptor) => {
                 const tag = document.createElement("div");
                 tag.className = "tasting-wheel__selected-tag";
 
@@ -84,8 +102,12 @@ document.addEventListener("DOMContentLoaded", function () {
                     const checkbox = container.querySelector(`input[value="${descriptor}"]`);
                     if (checkbox) {
                         checkbox.checked = false;
-                        updateSelectedDisplay();
+                    } else {
+                        // Unknown descriptor — remove from the preserved list
+                        const idx = unknownDescriptors.indexOf(descriptor);
+                        if (idx !== -1) unknownDescriptors.splice(idx, 1);
                     }
+                    updateSelectedDisplay();
                 });
                 tag.appendChild(removeBtn);
 
