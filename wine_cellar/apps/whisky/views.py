@@ -664,7 +664,7 @@ class WhiskyDetailView(BaseDetailView):
                 else None
             ),
         )
-        
+
         # Prepare chart data for price history visualization
         all_price_history = (
             self.object.whiskypricehistory_set.select_related("source")
@@ -683,7 +683,7 @@ class WhiskyDetailView(BaseDetailView):
             context["has_price_chart"] = True
         else:
             context["has_price_chart"] = False
-        
+
         return context
 
 

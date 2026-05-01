@@ -7,8 +7,8 @@ from django.db import transaction
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
-from django.utils.decorators import method_decorator
 from django.utils.dateformat import format as date_format
+from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
@@ -528,7 +528,7 @@ class WineDetailView(BaseDetailView):
                 else None
             ),
         )
-        
+
         # Prepare chart data for price history visualization
         all_price_history = (
             self.object.price_history.select_related("source")
@@ -547,7 +547,7 @@ class WineDetailView(BaseDetailView):
             context["has_price_chart"] = True
         else:
             context["has_price_chart"] = False
-        
+
         return context
 
 
