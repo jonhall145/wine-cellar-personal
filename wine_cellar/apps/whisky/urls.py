@@ -9,8 +9,14 @@ urlpatterns = [
     path("random/", views.RandomBottleView.as_view(), name="random-bottle"),
     # Whisky CRUD
     path("whiskies/", views.WhiskyListView.as_view(), name="whisky-list"),
+    path("whiskies/import/", views.WhiskyImportView.as_view(), name="whisky-import"),
     path("whisky/add/", views.WhiskyCreateView.as_view(), name="whisky-add"),
     path("whisky/<int:pk>/", views.WhiskyDetailView.as_view(), name="whisky-detail"),
+    path(
+        "whisky/<int:pk>/price-history/add/",
+        views.add_price_history,
+        name="whisky-price-history-add",
+    ),
     path(
         "whisky/<int:pk>/collections/add/",
         views.add_whisky_to_collection,
@@ -22,16 +28,16 @@ urlpatterns = [
         name="whisky-collection-remove",
     ),
     path("whisky/<int:pk>/qr/", views.QRCodeView.as_view(), name="whisky-qr"),
-    path("whisky/<int:pk>/edit/", views.WhiskyUpdateView.as_view(), name="whisky-edit"),
+    path("whisky/edit/<int:pk>/", views.WhiskyUpdateView.as_view(), name="whisky-edit"),
     path(
-        "whisky/<int:pk>/delete/",
+        "whisky/delete/<int:pk>/",
         views.WhiskyDeleteView.as_view(),
         name="whisky-delete",
     ),
     # Scanning
     path("whisky/scan/", views.WhiskyScanView.as_view(), name="whisky-scan"),
     path(
-        "whisky/scanned/<str:code>/",
+        "whisky/scan/<str:code>/",
         views.WhiskyScannedView.as_view(),
         name="whisky-scanned",
     ),
@@ -72,29 +78,25 @@ urlpatterns = [
     ),
     # Merge
     path(
-        "whisky/<int:pk>/merge/<int:primary_pk>/",
+        "whisky/merge/<int:pk>/into/<int:primary_pk>/",
         views.WhiskyMergeConfirmView.as_view(),
         name="whisky-merge-confirm",
     ),
     # Storage/Bottles
     path("bottles/", views.StorageItemListView.as_view(), name="bottle-list"),
+    path("stock/add/<int:pk>/", views.StorageItemAddView.as_view(), name="stock-add"),
     path(
-        "whisky/<int:pk>/stock/add/",
-        views.StorageItemAddView.as_view(),
-        name="stock-add",
-    ),
-    path(
-        "stock/<int:pk>/delete/",
+        "stock/delete/<int:pk>/",
         views.StorageItemDeleteView.as_view(),
         name="stock-delete",
     ),
     path(
-        "stock/<int:pk>/give/",
+        "stock/give/<int:pk>/",
         views.StorageItemMarkGivenView.as_view(),
         name="stock-give",
     ),
     path(
-        "stock/<int:pk>/edit/",
+        "bottle/edit/<int:pk>/",
         views.StorageItemUpdateView.as_view(),
         name="bottle-edit",
     ),
@@ -112,12 +114,12 @@ urlpatterns = [
     path("drink-history/", views.DrinkRecordListView.as_view(), name="drink-history"),
     path("journey/", views.JourneyTimelineView.as_view(), name="journey-timeline"),
     path(
-        "drink-record/<int:pk>/edit/",
+        "drink-history/edit/<int:pk>/",
         views.DrinkRecordEditView.as_view(),
         name="drink-record-edit",
     ),
     path(
-        "drink-record/<int:pk>/delete/",
+        "drink-history/delete/<int:pk>/",
         views.DrinkRecordDeleteView.as_view(),
         name="drink-record-delete",
     ),
@@ -125,12 +127,12 @@ urlpatterns = [
     path("wishlist/", views.WishlistListView.as_view(), name="wishlist-list"),
     path("wishlist/add/", views.WishlistCreateView.as_view(), name="wishlist-add"),
     path(
-        "wishlist/<int:pk>/delete/",
+        "wishlist/delete/<int:pk>/",
         views.WishlistDeleteView.as_view(),
         name="wishlist-delete",
     ),
     path(
-        "wishlist/<int:pk>/purchased/",
+        "wishlist/purchased/<int:pk>/",
         views.WishlistPurchasedView.as_view(),
         name="wishlist-purchased",
     ),
@@ -146,25 +148,48 @@ urlpatterns = [
     # Reorder reminders
     path("reorder/", views.ReorderRemindersView.as_view(), name="reorder-reminders"),
     path(
-        "whisky/<int:pk>/reorder/add/",
+        "reorder/add/<int:pk>/",
         views.ReorderReminderCreateView.as_view(),
         name="reorder-reminder-add",
     ),
     path(
-        "reorder/<int:pk>/delete/",
+        "reorder/delete/<int:pk>/",
         views.ReorderReminderDeleteView.as_view(),
         name="reorder-reminder-delete",
     ),
     # Bottle notes
     path(
-        "stock/<int:pk>/note/add/",
+        "bottle/<int:pk>/note/",
         views.BottleNoteCreateView.as_view(),
         name="bottle-note-add",
     ),
     # Bottle history
     path(
-        "stock/<int:pk>/history/",
+        "bottle/<int:pk>/history/",
         views.WhiskyBottleHistoryView.as_view(),
         name="bottle-history",
     ),
+]
+
+# Keep legacy whisky URLs working for saved links and bookmarks.
+urlpatterns += [
+    path("whisky/<int:pk>/edit/", views.WhiskyUpdateView.as_view()),
+    path("whisky/<int:pk>/delete/", views.WhiskyDeleteView.as_view()),
+    path("whisky/scanned/<str:code>/", views.WhiskyScannedView.as_view()),
+    path(
+        "whisky/<int:pk>/merge/<int:primary_pk>/",
+        views.WhiskyMergeConfirmView.as_view(),
+    ),
+    path("whisky/<int:pk>/stock/add/", views.StorageItemAddView.as_view()),
+    path("stock/<int:pk>/delete/", views.StorageItemDeleteView.as_view()),
+    path("stock/<int:pk>/give/", views.StorageItemMarkGivenView.as_view()),
+    path("stock/<int:pk>/edit/", views.StorageItemUpdateView.as_view()),
+    path("drink-record/<int:pk>/edit/", views.DrinkRecordEditView.as_view()),
+    path("drink-record/<int:pk>/delete/", views.DrinkRecordDeleteView.as_view()),
+    path("wishlist/<int:pk>/delete/", views.WishlistDeleteView.as_view()),
+    path("wishlist/<int:pk>/purchased/", views.WishlistPurchasedView.as_view()),
+    path("whisky/<int:pk>/reorder/add/", views.ReorderReminderCreateView.as_view()),
+    path("reorder/<int:pk>/delete/", views.ReorderReminderDeleteView.as_view()),
+    path("stock/<int:pk>/note/add/", views.BottleNoteCreateView.as_view()),
+    path("stock/<int:pk>/history/", views.WhiskyBottleHistoryView.as_view()),
 ]

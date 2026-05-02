@@ -71,18 +71,23 @@
                         <option value="{% querystring per_page=option page=1 %}" {% if option == current_per_page %}selected{% endif %}>{{ option }}</option>
                     {% endfor %}
                 </select>
-                {% if export_csv_url %}
                 <span class="export-links">
+                    {% if can_edit %}
+                    <a href="{% bev_url 'import' %}" class="pure-button button__secondary button--sm" title="Import CSV">
+                        <i class="fa-solid fa-file-import"></i> Import
+                    </a>
+                    {% endif %}
+                    {% if export_csv_url %}
                     <a href="{{ export_csv_url }}" class="pure-button button__secondary button--sm" title="Export CSV">
                         <i class="fa-solid fa-file-csv"></i> CSV
                     </a>
                     <a href="{{ export_json_url }}" class="pure-button button__secondary button--sm" title="Export JSON">
                         <i class="fa-solid fa-file-code"></i> JSON
                     </a>
+                    {% endif %}
                 </span>
-                {% endif %}
-            </div>
-            {% endif %}
+             </div>
+             {% endif %}
             <ul class="wine-card__list">
                 {% for beverage in beverages %}
                     {% include card_template with wine=beverage whisky=beverage %}
@@ -91,12 +96,17 @@
                         <div class="empty-state__icon"><i class="fa-solid fa-{{ beverage_icon }}"></i></div>
                         <h3 class="empty-state__title">No {{ APP_ITEM_NAME_PLURAL }} yet</h3>
                         <p class="empty-state__message">Start building your collection by adding your first {{ APP_ITEM_NAME }}.</p>
-                        <a href="{% bev_url 'add' %}" class="pure-button button__primary empty-state__action">
-                            <i class="fa-solid fa-plus"></i> Add {{ APP_ITEM_NAME }}
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
+                         <a href="{% bev_url 'add' %}" class="pure-button button__primary empty-state__action">
+                             <i class="fa-solid fa-plus"></i> Add {{ APP_ITEM_NAME }}
+                         </a>
+                         {% if can_edit %}
+                         <a href="{% bev_url 'import' %}" class="pure-button button__secondary empty-state__action">
+                             <i class="fa-solid fa-file-import"></i> Import CSV
+                         </a>
+                         {% endif %}
+                     </li>
+                 {% endfor %}
+             </ul>
             {% include "includes/pagination.html" %}
         </div>
     </div>

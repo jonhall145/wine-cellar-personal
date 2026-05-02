@@ -1,6 +1,7 @@
 import datetime
 import io
 import json
+from decimal import Decimal
 from http import HTTPStatus
 from unittest.mock import MagicMock, patch
 
@@ -17,8 +18,11 @@ from wine_cellar.apps.whisky.models import (
     Whisky,
     WhiskyDrinkRecord,
     WhiskyImage,
+    WhiskyPriceHistory,
+    WhiskySource,
     WhiskyStorageItem,
     WhiskyVisionExtractionLog,
+    WhiskyWishlist,
 )
 
 
@@ -65,6 +69,54 @@ def test_whisky_list_loads(client, user):
     r = client.get(reverse("whisky-list"))
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="core/beverage_list.html")
+
+
+@pytest.mark.django_db
+def test_whisky_import_creates_whisky_and_stock(client, user, storage_factory):
+    storage = storage_factory(
+        user=user,
+        household=user.user_settings.active_household,
+        rows=0,
+        columns=0,
+        app_type="whisky",
+    )
+    client.force_login(user)
+
+    csv_file = SimpleUploadedFile(
+        "whiskies.csv",
+        (
+            "name,whisky_type,country,stock,distillery\n"
+            "Imported Dram,Single Malt,Scotland,1,New Distillery\n"
+        ).encode("utf-8"),
+        content_type="text/csv",
+    )
+
+    preview = client.post(
+        reverse("whisky-import"),
+        {"action": "upload", "file": csv_file},
+    )
+    assert preview.status_code == HTTPStatus.OK
+    assert "Step 2: Map columns" in preview.content.decode()
+
+    response = client.post(
+        reverse("whisky-import"),
+        {
+            "action": "import",
+            "default_storage": storage.pk,
+            "map_name": "name",
+            "map_whisky_type": "whisky_type",
+            "map_country": "country",
+            "map_stock_count": "stock",
+            "map_distillery": "distillery",
+        },
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    whisky = Whisky.objects.get(name="Imported Dram")
+    assert whisky.distillery is not None
+    assert whisky.distillery.name == "New Distillery"
+    assert WhiskyStorageItem.objects.filter(whisky=whisky, deleted=False).count() == 1
 
 
 @pytest.mark.django_db
@@ -708,6 +760,73 @@ def test_whisky_detail_loads(client, user, whisky_factory):
 
 
 @pytest.mark.django_db
+def test_whisky_detail_includes_price_tracking_context(client, user, whisky_factory):
+    household = user.user_settings.active_household
+    whisky = whisky_factory(user=user, name="Tracked Whisky", price=Decimal("50.00"))
+    source = WhiskySource.objects.create(
+        name="Retailer",
+        user=user,
+        household=household,
+        url="https://example.com",
+    )
+    WhiskyPriceHistory.objects.create(
+        whisky=whisky,
+        source=source,
+        price=Decimal("55.00"),
+        user=user,
+        household=household,
+    )
+    WhiskyPriceHistory.objects.create(
+        whisky=whisky,
+        price=Decimal("60.00"),
+        user=user,
+        household=household,
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("whisky-detail", kwargs={"pk": whisky.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.context["price_history_latest"].price == Decimal("60.00")
+    assert len(response.context["price_history_entries"]) == 2
+    assert (
+        response.context["price_history_form"]
+        .fields["source"]
+        .queryset.filter(pk=source.pk)
+        .exists()
+    )
+
+
+@pytest.mark.django_db
+def test_can_add_whisky_price_history(client, user, whisky_factory):
+    household = user.user_settings.active_household
+    whisky = whisky_factory(user=user, name="Tracked Whisky")
+    source = WhiskySource.objects.create(
+        name="Retailer",
+        user=user,
+        household=household,
+        url="https://example.com",
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse("whisky-price-history-add", kwargs={"pk": whisky.pk}),
+        {"price": "62.50", "source": source.pk},
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert (
+        response.url
+        == reverse("whisky-detail", kwargs={"pk": whisky.pk}) + "#price-tracking"
+    )
+    history_entry = WhiskyPriceHistory.objects.get(whisky=whisky)
+    assert history_entry.price == Decimal("62.50")
+    assert history_entry.source == source
+    assert history_entry.user == user
+    assert history_entry.household == household
+
+
+@pytest.mark.django_db
 def test_whisky_detail_shows_carousel_controls_for_multiple_images(
     client, user, whisky_factory, clear_image_folder
 ):
@@ -1108,6 +1227,53 @@ def test_whisky_create_post_with_distillery(client, user, distillery_factory):
     whisky = Whisky.objects.get(user=user, name="Laphroaig 10")
     assert whisky.distillery == distillery
     assert whisky.age_statement == 10
+
+
+@pytest.mark.django_db
+def test_whisky_create_from_wishlist_prefills_and_marks_purchased(
+    client, user, distillery_factory, whisky_region_factory
+):
+    distillery = distillery_factory(name="Talisker")
+    region = whisky_region_factory(name="Islands")
+    household = user.user_settings.active_household
+    wishlist_item = WhiskyWishlist.objects.create(
+        name="Talisker 10",
+        user=user,
+        household=household,
+        whisky_type="SM",
+        distillery=distillery,
+        region=region,
+        age_statement=10,
+        external_url="https://example.com/whisky/talisker-10",
+        notes="Birthday dram",
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("whisky-add") + f"?wishlist_item={wishlist_item.pk}")
+
+    assert response.status_code == HTTPStatus.OK
+    form = response.context["form"]
+    assert form.initial["name"] == "Talisker 10"
+    assert form.initial["distillery"] == distillery.pk
+    assert form.initial["region"] == region.pk
+    assert form.initial["comment"] == "Birthday dram"
+
+    post_response = client.post(
+        reverse("whisky-add"),
+        {
+            "name": "Talisker 10",
+            "whisky_type": "SM",
+            "abv": 45.8,
+            "size": "0.70",
+            "country": "GB",
+            "wishlist_item": wishlist_item.pk,
+        },
+        follow=True,
+    )
+
+    assert post_response.status_code == HTTPStatus.OK
+    wishlist_item.refresh_from_db()
+    assert wishlist_item.purchased is True
 
 
 @pytest.mark.django_db
