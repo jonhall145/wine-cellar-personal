@@ -1572,6 +1572,35 @@ def test_storage_grid_data_mixed_finish_prioritises_sherry(
 
 
 @pytest.mark.django_db
+def test_storage_grid_data_includes_utilization_stats(
+    client, user, whisky_storage_item_factory
+):
+    item = _make_storage_item(whisky_storage_item_factory, user, "Bourbon")
+    storage = item.storage
+    storage.rows = 2
+    storage.columns = 2
+    storage.cell_mask = [[1, 1], [1, 2], [2, 1]]
+    storage.save(update_fields=["rows", "columns", "cell_mask"])
+    whisky_storage_item_factory(
+        user=user,
+        household=user.user_settings.active_household,
+        storage=storage,
+        whisky__user=user,
+        whisky__household=user.user_settings.active_household,
+        row=1,
+        column=2,
+    )
+    client.force_login(user)
+    r = client.get(reverse("storage-grid-data"), {"storage_id": storage.pk})
+    assert r.status_code == HTTPStatus.OK
+    data = json.loads(r.content)
+    storage_data = next(s for s in data["storages"] if s["id"] == storage.pk)
+    assert storage_data["used_slots"] == 2
+    assert storage_data["total_slots"] == 3
+    assert storage_data["utilization_percent"] == 67
+
+
+@pytest.mark.django_db
 def test_cellar_value_uses_whisky_price_as_fallback(
     client, user, whisky_factory, whisky_storage_item_factory
 ):

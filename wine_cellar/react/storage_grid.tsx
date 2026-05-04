@@ -16,6 +16,9 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 const translated = {
     storage: 'Storage',
+    overview: 'Overview',
+    storageOverview: 'Storage overview',
+    overviewHint: 'Tap a mini-grid to switch storages',
     moveMode: 'Move Mode',
     moveModeHint: 'Select a bottle, then select destination',
     source: 'Source',
@@ -31,6 +34,10 @@ const translated = {
     cellOccupied: 'Cell is already occupied',
     movedSuccessfully: 'Bottle moved successfully',
     moveFailed: 'Move failed',
+    utilisation: 'Utilisation',
+    full: 'full',
+    slotsUsed: 'slots used',
+    noGridConfigured: 'No grid configured',
 };
 
 interface WineInfo {
@@ -64,6 +71,9 @@ interface StorageData {
     name: string;
     rows: number;
     columns: number;
+    used_slots: number;
+    total_slots: number;
+    utilization_percent: number;
     cell_mask: [number, number][] | null;
     items: StorageItemData[];
 }
@@ -103,6 +113,49 @@ interface TooltipProps {
 const getBottleDetailUrl = (itemUrlPrefix: string, wine: WineInfo): string => (
     `${itemUrlPrefix}${wine.id}/?storage_item=${encodeURIComponent(String(wine.item_id))}`
 );
+
+const getStorageOptionLabel = (storage: StorageData): string => (
+    `${storage.name} (${storage.rows}x${storage.columns}, ${storage.utilization_percent}% ${translated.full})`
+);
+
+const getStorageUtilizationLabel = (storage: StorageData): string => {
+    if (storage.total_slots <= 0) {
+        return `${translated.utilisation}: ${storage.used_slots} ${translated.slotsUsed}`;
+    }
+
+    return `${translated.utilisation}: ${storage.used_slots}/${storage.total_slots} ${translated.slotsUsed} (${storage.utilization_percent}% ${translated.full})`;
+};
+
+const getCellClassName = (
+    cell: CellData,
+    options: {
+        isDragging?: boolean;
+        isOver?: boolean;
+        extraClasses?: string[];
+    } = {}
+): string => {
+    const {
+        isDragging = false,
+        isOver = false,
+        extraClasses = [],
+    } = options;
+    const classNames = ['storage-grid__cell', ...extraClasses];
+    const hasWine = cell.wine !== null;
+    const isInactive = !cell.active;
+
+    if (isInactive) {
+        classNames.push('storage-grid__cell--inactive');
+    } else if (hasWine) {
+        classNames.push('storage-grid__cell--filled');
+        const wineTypeClass = getWineTypeClass(cell.wine?.wine_type_class ?? cell.wine?.wine_type);
+        if (wineTypeClass) classNames.push(`storage-grid__cell--${wineTypeClass}`);
+    }
+
+    if (isDragging) classNames.push('storage-grid__cell--dragging');
+    if (isOver && !hasWine && !isInactive) classNames.push('storage-grid__cell--drag-over');
+
+    return classNames.join(' ');
+};
 
 const getCellPositionFromElement = (element: HTMLElement): { clientX: number; clientY: number } => {
     const rect = element.getBoundingClientRect();
@@ -378,22 +431,11 @@ const DraggableCell: React.FC<DraggableCellProps> = ({
         }
     };
 
-    let className = 'storage-grid__cell';
-    if (isInactive) {
-        className += ' storage-grid__cell--inactive';
-    } else if (hasWine) {
-        className += ' storage-grid__cell--filled';
-        const wineTypeClass = getWineTypeClass(cell.wine?.wine_type_class ?? cell.wine?.wine_type);
-        if (wineTypeClass) className += ` storage-grid__cell--${wineTypeClass}`;
-    }
-    if (isDragging) className += ' storage-grid__cell--dragging';
-    if (isOver && !hasWine && !isInactive) className += ' storage-grid__cell--drag-over';
-
     return (
         <button
             type="button"
             ref={setNodeRef}
-            className={className}
+            className={getCellClassName(cell, { isDragging, isOver })}
             {...listeners}
             {...attributes}
             onMouseEnter={handleMouseEnter}
@@ -662,6 +704,10 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
     // Memoize grid computations
     const sourceGrid = useMemo(() => sourceStorage ? buildGrid(sourceStorage) : [], [buildGrid, sourceStorage]);
     const targetGrid = useMemo(() => targetStorage ? buildGrid(targetStorage) : [], [buildGrid, targetStorage]);
+    const overviewGrids = useMemo(
+        () => data?.storages.map((storage) => ({ storage, grid: buildGrid(storage) })) ?? [],
+        [buildGrid, data]
+    );
 
     const handleBrowseCellActivate = useCallback((cell: CellData) => {
         if (!cell.wine) return;
@@ -697,10 +743,19 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                 >
                     {data.storages.map(s => (
                         <option key={s.id} value={s.id}>
-                            {s.name} ({s.rows}x{s.columns})
+                            {getStorageOptionLabel(s)}
                         </option>
                     ))}
                 </select>
+            </div>
+
+            <div className="storage-grid__storage-meta">
+                <span className="storage-grid__storage-meta-item">
+                    {storage.rows}x{storage.columns}
+                </span>
+                <span className="storage-grid__storage-meta-item">
+                    {getStorageUtilizationLabel(storage)}
+                </span>
             </div>
 
             <div className="storage-grid__header">
@@ -715,35 +770,33 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                     <div key={rowIdx} className="storage-grid__row">
                         <div className="storage-grid__row-label">{rowIdx + 1}</div>
                         {row.map((cell, colIdx) => {
-                            const isSelectedForMove = selectedBottle?.cell.row === cell.row &&
-                                selectedBottle?.cell.column === cell.column &&
-                                selectedBottle?.storageId === storage.id;
+                                const isSelectedForMove = selectedBottle?.cell.row === cell.row &&
+                                    selectedBottle?.cell.column === cell.column &&
+                                    selectedBottle?.storageId === storage.id;
 
-                            const wineTypeClass = cell.wine ? getWineTypeClass(cell.wine.wine_type_class ?? cell.wine.wine_type) : '';
+                                const extraClasses = [];
+                                if (isSelectedForMove) extraClasses.push('storage-grid__cell--selected-for-move');
+                                if (!isSource && !cell.wine && !isInactive && selectedBottle) {
+                                    extraClasses.push('storage-grid__cell--drop-target');
+                                }
 
-                            const isInactive = !cell.active;
-
-                            return (
-                                <button
-                                    type="button"
-                                    key={`${rowIdx}-${colIdx}`}
-                                    className={`storage-grid__cell${isInactive ? ' storage-grid__cell--inactive' : ''}${!isInactive && cell.wine ? ' storage-grid__cell--filled' : ''}${!isInactive && wineTypeClass ? ` storage-grid__cell--${wineTypeClass}` : ''}${isSelectedForMove ? ' storage-grid__cell--selected-for-move' : ''}${!isSource && !cell.wine && !isInactive && selectedBottle ? ' storage-grid__cell--drop-target' : ''}`}
-                                    onClick={() => {
-                                        if (!isInactive) {
-                                            handleMoveModeClick(cell, storage.id, isSource);
-                                        }
-                                    }}
-                                    onMouseEnter={(e) => cell.wine && handleShowTooltip(cell.wine, e)}
-                                    onMouseLeave={handleHideTooltip}
-                                    onFocus={(e) => {
-                                        if (cell.wine) {
-                                            handleShowTooltip(cell.wine, getCellPositionFromElement(e.currentTarget));
-                                        }
-                                    }}
-                                    onBlur={handleHideTooltip}
-                                    onTouchStart={(e) => {
-                                        if (cell.wine && e.touches.length > 0) {
-                                            const touch = e.touches[0];
+                                return (
+                                    <button
+                                        type="button"
+                                        key={`${rowIdx}-${colIdx}`}
+                                        className={getCellClassName(cell, { extraClasses })}
+                                        onClick={() => !isInactive && handleMoveModeClick(cell, storage.id, isSource)}
+                                        onMouseEnter={(e) => cell.wine && handleShowTooltip(cell.wine, e)}
+                                        onMouseLeave={handleHideTooltip}
+                                        onFocus={(e) => {
+                                            if (cell.wine) {
+                                                handleShowTooltip(cell.wine, getCellPositionFromElement(e.currentTarget));
+                                            }
+                                        }}
+                                        onBlur={handleHideTooltip}
+                                        onTouchStart={(e) => {
+                                            if (cell.wine && e.touches.length > 0) {
+                                                const touch = e.touches[0];
                                             handleShowTooltip(cell.wine, { clientX: touch.clientX, clientY: touch.clientY });
                                             e.stopPropagation();
                                         }
@@ -782,6 +835,64 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
             </div>
         </div>
     );
+
+    const renderOverview = () => {
+        if (data.storages.length <= 1) return null;
+
+        return (
+            <section className="storage-grid__overview" aria-label={translated.storageOverview}>
+                <div className="storage-grid__overview-header">
+                    <div>
+                        <div className="storage-grid__overview-eyebrow">{translated.overview}</div>
+                        <h2 className="storage-grid__overview-title">{translated.storageOverview}</h2>
+                    </div>
+                    <p className="storage-grid__overview-hint">{translated.overviewHint}</p>
+                </div>
+
+                <div className="storage-grid__overview-list">
+                    {overviewGrids.map(({ storage, grid }) => (
+                        <button
+                            key={storage.id}
+                            type="button"
+                            className={`storage-grid__overview-card${storage.id === sourceStorageId ? ' storage-grid__overview-card--active' : ''}`}
+                            onClick={() => setSourceStorageId(storage.id)}
+                            aria-pressed={storage.id === sourceStorageId}
+                        >
+                            <div className="storage-grid__overview-card-header">
+                                <span className="storage-grid__overview-card-title">{storage.name}</span>
+                                <span className="storage-grid__overview-card-dimensions">
+                                    {storage.rows}x{storage.columns}
+                                </span>
+                            </div>
+
+                            <div className="storage-grid__overview-card-meta">
+                                {getStorageUtilizationLabel(storage)}
+                            </div>
+
+                            {storage.rows > 0 && storage.columns > 0 ? (
+                                <div
+                                    className="storage-grid__mini-grid"
+                                    style={{ gridTemplateColumns: `repeat(${storage.columns}, minmax(0, 1fr))` }}
+                                    aria-hidden="true"
+                                >
+                                    {grid.map((row, rowIdx) => row.map((cell, colIdx) => (
+                                        <div
+                                            key={`${storage.id}-${rowIdx}-${colIdx}`}
+                                            className={getCellClassName(cell, { extraClasses: ['storage-grid__mini-cell'] })}
+                                        />
+                                    )))}
+                                </div>
+                            ) : (
+                                <div className="storage-grid__overview-card-empty">
+                                    {translated.noGridConfigured}
+                                </div>
+                            )}
+                        </button>
+                    ))}
+                </div>
+            </section>
+        );
+    };
 
     // Move mode: dual pane view (without dnd-kit, uses click-based selection)
     if (moveMode && targetStorage) {
@@ -853,6 +964,8 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
             onDragEnd={handleDragEnd}
         >
             <div className="storage-grid">
+                {renderOverview()}
+
                 {/* Controls */}
                 <div className="storage-grid__controls">
                     <label htmlFor="storage-select">{translated.storage}:</label>
@@ -864,7 +977,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                     >
                         {data.storages.map(s => (
                             <option key={s.id} value={s.id}>
-                                {s.name} ({s.rows}x{s.columns})
+                                {getStorageOptionLabel(s)}
                             </option>
                         ))}
                     </select>
@@ -878,6 +991,15 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                             <i className="fa-solid fa-arrows-left-right" /> {translated.moveMode}
                         </button>
                     )}
+                </div>
+
+                <div className="storage-grid__storage-meta">
+                    <span className="storage-grid__storage-meta-item">
+                        {sourceStorage.rows}x{sourceStorage.columns}
+                    </span>
+                    <span className="storage-grid__storage-meta-item">
+                        {getStorageUtilizationLabel(sourceStorage)}
+                    </span>
                 </div>
 
                 {/* Message */}

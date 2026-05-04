@@ -46,6 +46,7 @@
 .storage-grid__controls {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-md);
 }
@@ -56,6 +57,129 @@
   border: 1px solid var(--gray-500);
   font-size: var(--font-sm);
   min-width: 200px;
+}
+
+.storage-grid__storage-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.storage-grid__storage-meta-item {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--gray-100);
+  border-radius: var(--border-radius-sm);
+  color: var(--gray-700);
+  font-size: var(--font-sm);
+}
+
+.storage-grid__overview {
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background-color: var(--gray-100);
+  border-radius: var(--border-radius);
+}
+
+.storage-grid__overview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.storage-grid__overview-eyebrow {
+  font-size: var(--font-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wine-red);
+  margin-bottom: var(--spacing-xs);
+}
+
+.storage-grid__overview-title {
+  margin: 0;
+  font-size: var(--font-lg);
+}
+
+.storage-grid__overview-hint {
+  margin: 0;
+  font-size: var(--font-sm);
+  color: var(--gray-700);
+}
+
+.storage-grid__overview-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.storage-grid__overview-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--border-radius);
+  background: var(--white);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.storage-grid__overview-card:hover {
+  border-color: var(--wine-red);
+  transform: translateY(-1px);
+}
+
+.storage-grid__overview-card:focus-visible {
+  outline: 2px solid var(--wine-red);
+  outline-offset: 2px;
+}
+
+.storage-grid__overview-card--active {
+  border-color: var(--wine-red);
+  box-shadow: 0 0 0 2px rgba(114, 47, 55, 0.15);
+}
+
+.storage-grid__overview-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  align-items: baseline;
+}
+
+.storage-grid__overview-card-title {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.storage-grid__overview-card-dimensions,
+.storage-grid__overview-card-meta,
+.storage-grid__overview-card-empty {
+  font-size: var(--font-xs);
+  color: var(--gray-700);
+}
+
+.storage-grid__mini-grid {
+  display: grid;
+  gap: 3px;
+  align-self: start;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.storage-grid__mini-cell {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  border-width: 1px;
+  border-radius: 3px;
+  pointer-events: none;
 }
 
 .storage-grid__message {
@@ -487,6 +611,36 @@
   border-color: var(--gray-300);
 }
 
+[data-theme="dark"] .storage-grid__storage-meta-item {
+  background-color: var(--gray-50);
+  color: var(--text-color-light);
+}
+
+[data-theme="dark"] .storage-grid__overview {
+  background-color: var(--gray-50);
+}
+
+[data-theme="dark"] .storage-grid__overview-card {
+  background-color: var(--gray-100);
+  border-color: var(--gray-300);
+}
+
+[data-theme="dark"] .storage-grid__overview-card:hover,
+[data-theme="dark"] .storage-grid__overview-card--active {
+  border-color: var(--wine-red);
+}
+
+[data-theme="dark"] .storage-grid__overview-card-title {
+  color: var(--text-color-light);
+}
+
+[data-theme="dark"] .storage-grid__overview-hint,
+[data-theme="dark"] .storage-grid__overview-card-dimensions,
+[data-theme="dark"] .storage-grid__overview-card-meta,
+[data-theme="dark"] .storage-grid__overview-card-empty {
+  color: var(--text-color-light);
+}
+
 /* Move Mode Styles */
 .storage-grid--move-mode {
   max-width: 100%;
@@ -562,6 +716,7 @@
 .storage-grid__pane-header {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
   font-weight: 600;
@@ -763,6 +918,14 @@
 
 /* Responsive: stack panes on mobile */
 @media (max-width: 768px) {
+  .storage-grid__overview-header {
+    flex-direction: column;
+  }
+
+  .storage-grid__overview-list {
+    grid-template-columns: 1fr;
+  }
+
   .storage-grid__dual-pane {
     flex-direction: column;
   }
