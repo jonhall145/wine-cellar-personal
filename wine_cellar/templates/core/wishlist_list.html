@@ -56,7 +56,10 @@
                                           action="{% url 'wishlist-purchased' item.pk %}"
                                           class="d-inline">
                                         {% csrf_token %}
-                                        <button type="submit" class="pure-button" title="Mark as purchased">
+                                        <button type="submit"
+                                                class="pure-button"
+                                                title="Mark as purchased"
+                                                aria-label="Mark as purchased">
                                             <i class="fa-solid fa-check"></i>
                                         </button>
                                     </form>
