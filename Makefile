@@ -206,8 +206,8 @@ whisky-prod-logs:
 
 .PHONY: pytest
 pytest:
-	$(DEV_COMPOSE) up -d web
-	$(DEV_COMPOSE) exec -T web py.test --reuse-db
+	$(DEV_COMPOSE) build web
+	$(DEV_COMPOSE) run --rm web py.test --reuse-db
 
 .PHONY: smoke-test
 smoke-test:
@@ -218,19 +218,19 @@ test: pytest
 
 .PHONY: pytest-lastfailed
 pytest-lastfailed:
-	$(DEV_COMPOSE) up -d web
-	$(DEV_COMPOSE) exec -T web py.test --reuse-db --last-failed
+	$(DEV_COMPOSE) build web
+	$(DEV_COMPOSE) run --rm web py.test --reuse-db --last-failed
 
 .PHONY: pytest-clean
 pytest-clean:
 	if [ -f test_db.sqlite3 ]; then rm test_db.sqlite3; fi
-	$(DEV_COMPOSE) up -d web
-	$(DEV_COMPOSE) exec -T web py.test
+	$(DEV_COMPOSE) build web
+	$(DEV_COMPOSE) run --rm web py.test
 
 .PHONY: coverage
 coverage:
-	$(DEV_COMPOSE) up -d web
-	$(DEV_COMPOSE) exec -T web py.test --reuse-db --cov --cov-report=html
+	$(DEV_COMPOSE) build web
+	$(DEV_COMPOSE) run --rm web py.test --reuse-db --cov --cov-report=html
 
 .PHONY: lint
 lint:
