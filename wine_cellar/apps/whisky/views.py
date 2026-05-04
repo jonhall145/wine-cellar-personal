@@ -30,6 +30,7 @@ from wine_cellar.apps.core.views import (
     BaseBeverageDeleteView,
     BaseBeverageUpdateView,
     BaseBottleNoteCreateView,
+    BaseBottleQuickLogView,
     BaseCellarValueView,
     BaseConsumptionStatsView,
     BaseDetailView,
@@ -1486,3 +1487,23 @@ class WhiskyBottleHistoryView(RequireHouseholdMixin, DetailView):
         )
         context["is_whisky"] = True
         return context
+
+
+class WhiskyBottleQuickLogView(BaseBottleQuickLogView):
+    storage_item_model = WhiskyStorageItem
+    drink_record_model = WhiskyDrinkRecord
+    beverage_fk_name = "whisky"
+
+    def handle_bottle_update(self, storage_item, date_consumed):
+        update_fields = []
+
+        if storage_item.fill_level == FillLevel.UNOPENED:
+            storage_item.fill_level = FillLevel.OPENED
+            update_fields.append("fill_level")
+
+        if not storage_item.opened_date:
+            storage_item.opened_date = date_consumed
+            update_fields.append("opened_date")
+
+        if update_fields:
+            storage_item.save(update_fields=update_fields)

@@ -461,6 +461,67 @@ def test_given_whisky_bottle_history_shows_recipient_and_occasion(
 
 
 @pytest.mark.django_db
+def test_whisky_bottle_history_shows_quick_log_for_active_bottle(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+    )
+
+    client.force_login(user)
+    response = client.get(reverse("bottle-history", kwargs={"pk": bottle.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assert (
+        reverse("bottle-quick-log", kwargs={"pk": bottle.pk})
+        in response.content.decode()
+    )
+    assert "Just drank this" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_whisky_bottle_quick_log_creates_record_and_marks_bottle_opened(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.UNOPENED,
+        opened_date=None,
+    )
+
+    client.force_login(user)
+    response = client.post(reverse("bottle-quick-log", kwargs={"pk": bottle.pk}))
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert response.url == reverse("bottle-history", kwargs={"pk": bottle.pk})
+
+    record = WhiskyDrinkRecord.objects.get(storage_item=bottle)
+    assert record.whisky == bottle.whisky
+    assert record.user == user
+    assert record.household == household
+    assert record.date_consumed == timezone.localdate()
+    assert record.rating is None
+    assert record.tasting_notes in (None, "")
+
+    bottle.refresh_from_db()
+    assert bottle.deleted is False
+    assert bottle.fill_level == FillLevel.OPENED
+    assert bottle.opened_date == timezone.localdate()
+
+
+@pytest.mark.django_db
 def test_broken_or_lost_whisky_bottle_history_shows_broken_or_lost_label(
     client, user, whisky_storage_item_factory
 ):
@@ -1653,3 +1714,72 @@ def test_whisky_check_duplicate_no_cross_household(
     r = client.get(reverse("whisky-check-duplicate"), {"name": "Ardbeg Uigeadail"})
     assert r.status_code == HTTPStatus.OK
     assert r.json()["similar"] == []
+
+
+# ---------------------------------------------------------------------------
+# Whisky drink record tasting wheel tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_whisky_drink_record_create_with_taste_descriptors(
+    client, user, whisky_factory
+):
+    """Test that taste descriptors can be saved on whisky drink record creation."""
+    import json
+    from datetime import date
+
+    whisky = whisky_factory(user=user)
+    client.force_login(user)
+    descriptors = ["Smoky", "Peat", "Citrus"]
+    r = client.post(
+        reverse("drink-record-add", kwargs={"pk": whisky.pk}),
+        {
+            "date_consumed": date.today().isoformat(),
+            "tasting_notes": "Excellent dram",
+            "rating": "3",
+            "taste_descriptors": json.dumps(descriptors),
+        },
+    )
+    assert r.status_code == HTTPStatus.FOUND
+
+    from wine_cellar.apps.whisky.models import WhiskyDrinkRecord
+
+    record = WhiskyDrinkRecord.objects.filter(whisky=whisky).first()
+    assert record is not None
+    assert record.taste_descriptors == descriptors
+
+
+@pytest.mark.django_db
+def test_whisky_drink_record_edit_with_taste_descriptors(
+    client, user, whisky_factory
+):
+    """Test that taste descriptors can be updated on whisky drink record edit."""
+    import json
+    from datetime import date
+
+    from wine_cellar.apps.whisky.models import WhiskyDrinkRecord
+
+    whisky = whisky_factory(user=user)
+    household = user.user_settings.active_household
+    record = WhiskyDrinkRecord.objects.create(
+        whisky=whisky,
+        user=user,
+        household=household,
+        date_consumed=date.today(),
+        taste_descriptors=["Smoky"],
+    )
+    client.force_login(user)
+    new_descriptors = ["Spice", "Oak"]
+    r = client.post(
+        reverse("drink-record-edit", kwargs={"pk": record.pk}),
+        {
+            "date_consumed": date.today().isoformat(),
+            "tasting_notes": "Updated notes",
+            "rating": "2",
+            "taste_descriptors": json.dumps(new_descriptors),
+        },
+    )
+    assert r.status_code == HTTPStatus.FOUND
+    record.refresh_from_db()
+    assert record.taste_descriptors == new_descriptors

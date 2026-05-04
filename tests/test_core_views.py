@@ -1014,6 +1014,51 @@ class TestDrinkRecordCreateView:
         r = client.get(reverse("drink-record-add", kwargs={"pk": wine.pk}))
         assert r.status_code == HTTPStatus.NOT_FOUND
 
+    def test_post_with_photo(self, client, user, wine_factory):
+        """Test that photos can be uploaded with drink records."""
+        from datetime import date
+        from io import BytesIO
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        from wine_cellar.apps.wine.models import DrinkRecord
+
+        wine = wine_factory(user=user)
+        client.force_login(user)
+
+        # Create a valid JPEG image
+        image = Image.new("RGB", (100, 100), color="red")
+        image_io = BytesIO()
+        image.save(image_io, format="JPEG")
+        image_io.seek(0)
+        uploaded_file = SimpleUploadedFile(
+            name="test.jpg",
+            content=image_io.getvalue(),
+            content_type="image/jpeg",
+        )
+
+        response = client.post(
+            reverse("drink-record-add", kwargs={"pk": wine.pk}),
+            {
+                "date_consumed": date.today().isoformat(),
+                "photo": uploaded_file,
+            },
+        )
+
+        assert response.status_code == HTTPStatus.FOUND
+        record = DrinkRecord.objects.get(wine=wine)
+        assert record.photo
+        assert "test.jpg" in record.photo.name
+
+    def test_get_renders_photo_field(self, client, user, wine_factory):
+        """Test that the photo field is rendered in the form."""
+        wine = wine_factory(user=user)
+        client.force_login(user)
+        response = client.get(reverse("drink-record-add", kwargs={"pk": wine.pk}))
+        assert response.status_code == HTTPStatus.OK
+        assert "photo" in response.context["form"].fields
+
 
 # ---------------------------------------------------------------------------
 # Beverage create view (wine-add)
@@ -1133,6 +1178,50 @@ class TestDrinkRecordEditView:
         assert record.tasting_notes == "Updated notes"
         assert record.rating == 2
 
+    def test_post_updates_photo(self, client, user, wine_factory):
+        """Test that photos can be updated on drink records."""
+        from datetime import date
+        from io import BytesIO
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        from wine_cellar.apps.wine.models import DrinkRecord
+
+        wine = wine_factory(user=user)
+        household = user.user_settings.active_household
+        record = DrinkRecord.objects.create(
+            wine=wine,
+            user=user,
+            household=household,
+            date_consumed=date.today(),
+        )
+        client.force_login(user)
+
+        # Create a valid JPEG image
+        image = Image.new("RGB", (100, 100), color="blue")
+        image_io = BytesIO()
+        image.save(image_io, format="JPEG")
+        image_io.seek(0)
+        uploaded_file = SimpleUploadedFile(
+            name="updated.jpg",
+            content=image_io.getvalue(),
+            content_type="image/jpeg",
+        )
+
+        response = client.post(
+            reverse("drink-record-edit", kwargs={"pk": record.pk}),
+            {
+                "date_consumed": date.today().isoformat(),
+                "photo": uploaded_file,
+            },
+        )
+
+        assert response.status_code == HTTPStatus.FOUND
+        record.refresh_from_db()
+        assert record.photo
+        assert "updated.jpg" in record.photo.name
+
 
 # ---------------------------------------------------------------------------
 # Drink record delete view
@@ -1171,6 +1260,98 @@ class TestDrinkRecordDeleteView:
         client.force_login(other)
         r = client.post(reverse("drink-record-delete", kwargs={"pk": record.pk}))
         assert r.status_code == HTTPStatus.NOT_FOUND
+
+
+# ---------------------------------------------------------------------------
+# Tasting wheel tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestTastingWheel:
+    def test_drink_record_create_with_taste_descriptors(
+        self, client, user, wine_factory
+    ):
+        """Test that taste descriptors can be saved on drink record creation."""
+        import json
+        from datetime import date
+
+        wine = wine_factory(user=user)
+        client.force_login(user)
+        descriptors = ["Apple", "Citrus", "Pepper"]
+        r = client.post(
+            reverse("drink-record-add", kwargs={"pk": wine.pk}),
+            {
+                "date_consumed": date.today().isoformat(),
+                "tasting_notes": "Great flavors",
+                "rating": "3",
+                "taste_descriptors": json.dumps(descriptors),
+            },
+        )
+        assert r.status_code == HTTPStatus.FOUND
+
+        from wine_cellar.apps.wine.models import DrinkRecord
+
+        record = DrinkRecord.objects.filter(wine=wine).first()
+        assert record is not None
+        assert record.taste_descriptors == descriptors
+
+    def test_drink_record_edit_with_taste_descriptors(
+        self, client, user, wine_factory
+    ):
+        """Test that taste descriptors can be updated on drink record edit."""
+        import json
+        from datetime import date
+
+        from wine_cellar.apps.wine.models import DrinkRecord
+
+        wine = wine_factory(user=user)
+        household = user.user_settings.active_household
+        record = DrinkRecord.objects.create(
+            wine=wine,
+            user=user,
+            household=household,
+            date_consumed=date.today(),
+            taste_descriptors=["Apple"],
+        )
+        client.force_login(user)
+        new_descriptors = ["Citrus", "Floral"]
+        r = client.post(
+            reverse("drink-record-edit", kwargs={"pk": record.pk}),
+            {
+                "date_consumed": date.today().isoformat(),
+                "tasting_notes": "Updated notes",
+                "rating": "2",
+                "taste_descriptors": json.dumps(new_descriptors),
+            },
+        )
+        assert r.status_code == HTTPStatus.FOUND
+        record.refresh_from_db()
+        assert record.taste_descriptors == new_descriptors
+
+    def test_drink_record_taste_descriptors_default_empty(
+        self, client, user, wine_factory
+    ):
+        """Test that taste descriptors default to empty list."""
+        from datetime import date
+
+        from wine_cellar.apps.wine.models import DrinkRecord
+
+        wine = wine_factory(user=user)
+        client.force_login(user)
+        r = client.post(
+            reverse("drink-record-add", kwargs={"pk": wine.pk}),
+            {
+                "date_consumed": date.today().isoformat(),
+                "tasting_notes": "No descriptors",
+                "rating": "2",
+            },
+        )
+        assert r.status_code == HTTPStatus.FOUND
+
+        record = DrinkRecord.objects.filter(wine=wine).first()
+        assert record is not None
+        assert record.taste_descriptors == []
 
 
 # ---------------------------------------------------------------------------

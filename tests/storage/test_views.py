@@ -489,6 +489,74 @@ def test_consumed_bottle_history_links_back_to_consumed_bottles(
 
 
 @pytest.mark.django_db
+def test_bottle_history_shows_quick_log_for_active_bottle(
+    client, user, wine_factory, storage_item_factory
+):
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(wine=wine, storage=storage, user=user)
+
+    client.force_login(user)
+    response = client.get(reverse("bottle-history", kwargs={"pk": bottle.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assert (
+        reverse("bottle-quick-log", kwargs={"pk": bottle.pk})
+        in response.content.decode()
+    )
+    assert "Just drank this" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_bottle_quick_log_creates_record_and_consumes_bottle(
+    client, user, wine_factory, storage_item_factory
+):
+    from wine_cellar.apps.wine.models import DrinkRecord
+
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(wine=wine, storage=storage, user=user)
+
+    client.force_login(user)
+    response = client.post(reverse("bottle-quick-log", kwargs={"pk": bottle.pk}))
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert response.url == reverse("bottle-history", kwargs={"pk": bottle.pk})
+
+    record = DrinkRecord.objects.get(storage_item=bottle)
+    assert record.wine == wine
+    assert record.user == user
+    assert record.household == user.user_settings.active_household
+    assert record.date_consumed == timezone.localdate()
+    assert record.rating is None
+    assert record.tasting_notes in (None, "")
+
+    bottle.refresh_from_db()
+    assert bottle.deleted is True
+    assert bottle.finished_date == timezone.localdate()
+    assert bottle.removal_reason == StorageItem.RemovalReason.CONSUMED
+
+
+@pytest.mark.django_db
+def test_bottle_quick_log_rejects_repeat_posts_for_consumed_bottle(
+    client, user, wine_factory, storage_item_factory
+):
+    from wine_cellar.apps.wine.models import DrinkRecord
+
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(wine=wine, storage=storage, user=user)
+
+    client.force_login(user)
+    first_response = client.post(reverse("bottle-quick-log", kwargs={"pk": bottle.pk}))
+    second_response = client.post(reverse("bottle-quick-log", kwargs={"pk": bottle.pk}))
+
+    assert first_response.status_code == HTTPStatus.FOUND
+    assert second_response.status_code == HTTPStatus.NOT_FOUND
+    assert DrinkRecord.objects.filter(storage_item=bottle).count() == 1
+
+
+@pytest.mark.django_db
 def test_mark_bottle_as_given_records_recipient_and_date(
     client, user, wine_factory, storage_item_factory
 ):

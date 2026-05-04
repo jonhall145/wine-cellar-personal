@@ -2,6 +2,7 @@ from django.urls import path
 
 from wine_cellar.apps.storage.views import (
     BottleHistoryView,
+    BottleQuickLogView,
     StorageItemAddView,
     StorageItemDeleteView,
     StorageItemHistoryView,
@@ -177,6 +178,11 @@ urlpatterns = [
         "bottle/<int:pk>/history/",
         BottleHistoryView.as_view(),
         name="bottle-history",
+    ),
+    path(
+        "bottle/<int:pk>/quick-log/",
+        BottleQuickLogView.as_view(),
+        name="bottle-quick-log",
     ),
     # Homepage
     path("", HomePageView.as_view(), name="homepage"),

@@ -27,6 +27,18 @@ logger = logging.getLogger(__name__)
 
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
 
+
+def _parse_taste_descriptors(descriptors_str):
+    """Parse JSON taste descriptors from form input. Returns a list or []."""
+    if not descriptors_str:
+        return []
+    try:
+        descriptors = json.loads(descriptors_str)
+        return descriptors if isinstance(descriptors, list) else []
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+
 # --- Wishlist views ---
 
 
@@ -250,6 +262,8 @@ class BaseDrinkRecordEditView(RequireMemberMixin, FormView):
             "rating": record.rating,
             "shared_with": record.shared_with,
             "occasion": record.occasion,
+            "photo": record.photo,
+            "taste_descriptors": json.dumps(record.taste_descriptors),
         }
 
     def get_context_data(self, **kwargs):
@@ -268,6 +282,11 @@ class BaseDrinkRecordEditView(RequireMemberMixin, FormView):
         record.rating = form.cleaned_data.get("rating")
         record.shared_with = form.cleaned_data.get("shared_with")
         record.occasion = form.cleaned_data.get("occasion")
+        record.taste_descriptors = _parse_taste_descriptors(
+            form.cleaned_data.get("taste_descriptors")
+        )
+        if form.cleaned_data.get("photo"):
+            record.photo = form.cleaned_data["photo"]
         record.save()
         self.success_url = reverse_lazy("drink-history")
         return super().form_valid(form)
@@ -469,6 +488,10 @@ class BaseDrinkRecordCreateView(RequireMemberMixin, FormView):
             shared_with=form.cleaned_data.get("shared_with"),
             occasion=form.cleaned_data.get("occasion"),
             storage_item=storage_item,
+            photo=form.cleaned_data.get("photo"),
+            taste_descriptors=_parse_taste_descriptors(
+                form.cleaned_data.get("taste_descriptors")
+            ),
         )
 
         if storage_item:
@@ -499,6 +522,55 @@ class BaseDrinkRecordCreateView(RequireMemberMixin, FormView):
                 "given_occasion",
             ]
         )
+
+
+class BaseBottleQuickLogView(RequireMemberMixin, View):
+    storage_item_model = None
+    drink_record_model = None
+    beverage_fk_name = None  # "wine" or "whisky"
+
+    def get_object(self):
+        household = get_active_household(self.request.user)
+        return get_object_or_404(
+            self.storage_item_model,
+            pk=self.kwargs["pk"],
+            household=household,
+            deleted=False,
+        )
+
+    def get_locked_object(self):
+        household = get_active_household(self.request.user)
+        queryset = self.storage_item_model.objects.select_for_update().select_related(
+            self.beverage_fk_name
+        )
+        return get_object_or_404(
+            queryset,
+            pk=self.kwargs["pk"],
+            household=household,
+            deleted=False,
+        )
+
+    def post(self, request, *args, **kwargs):
+        household = get_active_household(request.user)
+        date_consumed = timezone.localdate()
+
+        with transaction.atomic():
+            storage_item = self.get_locked_object()
+            beverage = getattr(storage_item, self.beverage_fk_name)
+            self.drink_record_model.objects.create(
+                **{self.beverage_fk_name: beverage},
+                user=request.user,
+                household=household,
+                date_consumed=date_consumed,
+                storage_item=storage_item,
+            )
+            self.handle_bottle_update(storage_item, date_consumed)
+
+        messages.success(request, "Drink logged.")
+        return redirect("bottle-history", pk=storage_item.pk)
+
+    def handle_bottle_update(self, storage_item, date_consumed):
+        raise NotImplementedError
 
 
 class BaseMarkBottleGivenView(RequireMemberMixin, FormView):
