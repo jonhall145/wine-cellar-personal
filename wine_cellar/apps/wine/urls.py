@@ -2,6 +2,7 @@ from django.urls import path
 
 from wine_cellar.apps.storage.views import (
     BottleHistoryView,
+    BottleQuickLogView,
     StorageItemAddView,
     StorageItemDeleteView,
     StorageItemHistoryView,
@@ -31,6 +32,7 @@ from wine_cellar.apps.wine.views import (
     WineDeleteView,
     WineDetailView,
     WineImagesView,
+    WineImportView,
     WineListView,
     WineMapView,
     WineMergeConfirmView,
@@ -41,6 +43,7 @@ from wine_cellar.apps.wine.views import (
     WishlistDeleteView,
     WishlistListView,
     WishlistPurchasedView,
+    add_price_history,
     add_wine_to_collection,
     bulk_action_view,
     crop_wine_image,
@@ -75,6 +78,11 @@ urlpatterns = [
     path("wine/extract-vision/", extract_wine_vision_ajax, name="wine-extract-vision"),
     path("wine/<int:pk>/", WineDetailView.as_view(), name="wine-detail"),
     path(
+        "wine/<int:pk>/price-history/add/",
+        add_price_history,
+        name="wine-price-history-add",
+    ),
+    path(
         "wine/<int:pk>/collections/add/",
         add_wine_to_collection,
         name="wine-collection-add",
@@ -101,6 +109,7 @@ urlpatterns = [
         "wine/<int:pk>/drink/", DrinkRecordCreateView.as_view(), name="drink-record-add"
     ),
     path("wines/", WineListView.as_view(), name="wine-list"),
+    path("wines/import/", WineImportView.as_view(), name="wine-import"),
     path("wines/export/csv/", export_wines_csv_view, name="wine-export-csv"),
     path("wines/export/json/", export_wines_json_view, name="wine-export-json"),
     path("wines/bulk/", bulk_action_view, name="wine-bulk-action"),
@@ -169,6 +178,11 @@ urlpatterns = [
         "bottle/<int:pk>/history/",
         BottleHistoryView.as_view(),
         name="bottle-history",
+    ),
+    path(
+        "bottle/<int:pk>/quick-log/",
+        BottleQuickLogView.as_view(),
+        name="bottle-quick-log",
     ),
     # Homepage
     path("", HomePageView.as_view(), name="homepage"),

@@ -50,6 +50,7 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
         "drinkrecord__tasting_notes",
         "storageitem__notes__note",
     )
+    include_unrated_with_zero_rating = True
 
     search = django_filters.CharFilter(method="filter_search", label="Search")
     stock = ChoiceFilter(

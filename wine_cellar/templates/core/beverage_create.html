@@ -99,6 +99,12 @@
                   data-loading
                   novalidate>
                 {% csrf_token %}
+                {% if wishlist_source_item %}
+                    <input type="hidden" name="wishlist_item" value="{{ wishlist_source_item.pk }}">
+                    <div class="form-hint mb-12">
+                        Creating from wishlist item: <strong>{{ wishlist_source_item.name }}</strong>
+                    </div>
+                {% endif %}
                 <fieldset>
                     <legend>
                         <h2 class="form-subhead text--gray">

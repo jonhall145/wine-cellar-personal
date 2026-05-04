@@ -954,6 +954,12 @@ class WhiskyWishlistForm(forms.Form):
         decimal_places=2,
         help_text="Maximum price you want to pay.",
     )
+    external_url = forms.URLField(
+        required=False,
+        max_length=500,
+        assume_scheme="https",
+        help_text="Link to where this whisky can be purchased.",
+    )
     notes = forms.CharField(
         required=False,
         widget=forms.Textarea,
@@ -964,3 +970,29 @@ class WhiskyWishlistForm(forms.Form):
         validators=[validators.MinValueValidator(1), validators.MaxValueValidator(5)],
         help_text="Priority from 1 (low) to 5 (high).",
     )
+
+
+class WhiskyPriceHistoryForm(forms.Form):
+    price = forms.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        min_value=0.01,
+        localize=True,
+        widget=forms.TextInput(
+            attrs={"inputmode": "decimal", "placeholder": "e.g. 54.99"}
+        ),
+        help_text="Current market price.",
+    )
+    source = forms.ModelChoiceField(
+        queryset=WhiskySource.objects.none(),
+        required=False,
+        empty_label="Manual / no source",
+        help_text="Optional retailer or source for this price.",
+    )
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        household = get_active_household(user)
+        self.fields["source"].queryset = WhiskySource.objects.filter(
+            household=household
+        ).order_by("name")

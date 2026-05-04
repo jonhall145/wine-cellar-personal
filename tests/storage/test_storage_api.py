@@ -50,6 +50,26 @@ class TestStorageGridData:
         data = json.loads(r.content)
         assert data["current_storage_id"] == s2.pk
 
+    def test_includes_utilization_stats(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        storage = user.storage_set.first()
+        storage.rows = 2
+        storage.columns = 3
+        storage.cell_mask = [[1, 1], [1, 2], [2, 1], [2, 2]]
+        storage.save(update_fields=["rows", "columns", "cell_mask"])
+        wine = wine_factory(user=user)
+        storage_item_factory(wine=wine, storage=storage, row=1, column=1)
+        storage_item_factory(wine=wine, storage=storage, row=1, column=2)
+        storage_item_factory(wine=wine, storage=storage, row=2, column=1, deleted=True)
+        client.force_login(user)
+        r = client.get(reverse("storage-grid-data"), {"storage_id": storage.pk})
+        data = json.loads(r.content)
+        storage_data = next(s for s in data["storages"] if s["id"] == storage.pk)
+        assert storage_data["used_slots"] == 2
+        assert storage_data["total_slots"] == 4
+        assert storage_data["utilization_percent"] == 50
+
 
 @pytest.mark.django_db
 class TestMoveBottle:
