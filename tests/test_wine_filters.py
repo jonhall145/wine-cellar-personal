@@ -69,6 +69,7 @@ def test_filter_rating_supports_multiple_selected_ratings(user, wine_factory):
     zero_star = wine_factory(user=user, rating=0)
     one_star = wine_factory(user=user, rating=1)
     two_star = wine_factory(user=user, rating=2)
+    unrated = wine_factory(user=user, rating=None)
 
     filt = WineFilter(
         data={"rating": ["0", "1"], "stock": "0", "order": "created"},
@@ -76,5 +77,7 @@ def test_filter_rating_supports_multiple_selected_ratings(user, wine_factory):
         request=request,
     )
 
-    assert list(filt.qs) == [zero_star, one_star]
+    assert zero_star in filt.qs
+    assert one_star in filt.qs
+    assert unrated in filt.qs
     assert two_star not in filt.qs

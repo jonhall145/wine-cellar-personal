@@ -42,6 +42,7 @@ class WineCreationService:
         food_pairings = cleaned_data["food_pairings"]
         source = cleaned_data["source"]
         price = cleaned_data["price"]
+        price_url = cleaned_data["price_url"]
         vineyards = cleaned_data["vineyard"]
         grapes = cleaned_data["grapes"]
         name = cleaned_data["name"]
@@ -71,8 +72,13 @@ class WineCreationService:
                 "comment": comment,
                 "rating": rating,
                 "price": price,
+                "price_url": price_url,
             },
         )
+
+        if wine.price_url != price_url:
+            wine.price_url = price_url
+            wine.save(update_fields=["price_url"])
 
         if barcode:
             WineBarcode.objects.get_or_create(

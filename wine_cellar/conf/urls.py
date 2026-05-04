@@ -29,7 +29,11 @@ from wine_cellar.apps.core.api import (
     api_version,
 )
 from wine_cellar.apps.core.pwa import manifest_json, service_worker_js
-from wine_cellar.apps.user.views import UserSettingsView
+from wine_cellar.apps.user.views import (
+    UserBackupExportView,
+    UserBackupImportView,
+    UserSettingsView,
+)
 
 logger = logging.getLogger("wine_cellar.health_check")
 
@@ -122,6 +126,16 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("household/", include("wine_cellar.apps.household.urls")),
     path("user/settings/", UserSettingsView.as_view(), name="user-settings"),
+    path(
+        "user/settings/backup/export/",
+        UserBackupExportView.as_view(),
+        name="user-backup-export",
+    ),
+    path(
+        "user/settings/backup/import/",
+        UserBackupImportView.as_view(),
+        name="user-backup-import",
+    ),
     # Storage (shared across wine/whisky)
     path("", include("wine_cellar.apps.storage.urls")),
     # Shared utilities

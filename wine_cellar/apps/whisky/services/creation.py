@@ -6,13 +6,13 @@ from PIL import Image
 
 from wine_cellar.apps.whisky.models import (
     FillLevel,
-    VisionExtractionLog,
     Whisky,
     WhiskyBarcode,
     WhiskyImage,
     WhiskyStorageItem,
+    WhiskyVisionExtractionLog,
 )
-from wine_cellar.apps.whisky.utils import apply_manual_crop
+from wine_cellar.apps.wine.utils import apply_manual_crop
 
 logger = logging.getLogger(__name__)
 
@@ -205,7 +205,7 @@ class WhiskyCreationService:
         """
         try:
             log = (
-                VisionExtractionLog.objects.filter(
+                WhiskyVisionExtractionLog.objects.filter(
                     user=user,
                     whisky__isnull=True,
                 )
