@@ -393,6 +393,30 @@ Adjust the time (`0 9 * * *` = 09:00 daily) to suit your timezone. The command o
 
 ---
 
+## Cellar Summary Emails (Cron)
+
+Cellar summary emails are sent by the `send_cellar_summary` management command. Use `--period weekly` or `--period monthly` to match the digest cadence you want to schedule.
+
+Email configuration (see above) must be set up before summaries will be delivered.
+
+### Docker deployments
+
+```
+0 8 * * 1 docker compose -f /path/to/docker-compose.prod.yml exec -T wine-web python manage.py send_cellar_summary --period weekly >> /var/log/cellar_summary.log 2>&1
+0 8 1 * * docker compose -f /path/to/docker-compose.prod.yml exec -T wine-web python manage.py send_cellar_summary --period monthly >> /var/log/cellar_summary.log 2>&1
+```
+
+### Non-Docker (bare-metal / virtualenv) deployments
+
+```
+0 8 * * 1 cd /path/to/wine-cellar && venv/bin/python manage.py send_cellar_summary --period weekly >> /var/log/cellar_summary.log 2>&1
+0 8 1 * * cd /path/to/wine-cellar && venv/bin/python manage.py send_cellar_summary --period monthly >> /var/log/cellar_summary.log 2>&1
+```
+
+These digests only go to users who have notifications enabled, an email address, and an active household in the current app mode.
+
+---
+
 ## Systemd Service (Auto-Start)
 
 Create `/etc/systemd/system/wine-cellar.service`:
