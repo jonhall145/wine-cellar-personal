@@ -351,10 +351,11 @@ class BaseReorderRemindersView(RequireHouseholdMixin, TemplateView):
     beverage_fk_name = None  # "wine" or "whisky"
     stock_reverse_path = None  # e.g. "wine__storageitem" or "whisky__whiskystorageitem"
     beverage_icon = None  # e.g. "wine-bottle" or "whiskey-glass"
+    reminder_service = None
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
+    def get_reminder_context(self, household):
+        if self.reminder_service:
+            return self.reminder_service.get_reorder_context(household)
 
         reminders = (
             self.reminder_model.objects.filter(household=household, is_active=True)
@@ -366,20 +367,22 @@ class BaseReorderRemindersView(RequireHouseholdMixin, TemplateView):
                 )
             )
         )
+        needs_reorder = [
+            {
+                self.beverage_fk_name: getattr(reminder, self.beverage_fk_name),
+                "current_stock": reminder.current_stock,
+                "min_stock": reminder.min_stock,
+                "reminder": reminder,
+            }
+            for reminder in reminders
+            if reminder.current_stock <= reminder.min_stock
+        ]
+        return reminders, needs_reorder
 
-        needs_reorder = []
-        for reminder in reminders:
-            if reminder.current_stock <= reminder.min_stock:
-                beverage = getattr(reminder, self.beverage_fk_name)
-                needs_reorder.append(
-                    {
-                        self.beverage_fk_name: beverage,
-                        "current_stock": reminder.current_stock,
-                        "min_stock": reminder.min_stock,
-                        "reminder": reminder,
-                    }
-                )
-
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        household = get_active_household(self.request.user)
+        reminders, needs_reorder = self.get_reminder_context(household)
         context.update(
             {
                 "reminders": reminders,
@@ -396,6 +399,7 @@ class BaseReorderReminderCreateView(RequireMemberMixin, FormView):
     reminder_model = None  # Set by subclass
     beverage_fk_name = None  # "wine" or "whisky"
     detail_url_name = None  # e.g. "wine-detail" or "whisky-detail"
+    reminder_service = None
 
     def get_form_class(self):
         from wine_cellar.apps.core.forms import ReorderReminderForm
@@ -417,19 +421,31 @@ class BaseReorderReminderCreateView(RequireMemberMixin, FormView):
         beverage = get_object_or_404(
             self.beverage_model, pk=self.kwargs["pk"], household=household
         )
-        self.reminder_model.objects.update_or_create(
-            **{self.beverage_fk_name: beverage},
-            user=self.request.user,
+        self.save_reorder_reminder(
+            beverage=beverage,
             household=household,
-            defaults={
-                "min_stock": form.cleaned_data["min_stock"],
-                "is_active": True,
-            },
+            min_stock=form.cleaned_data["min_stock"],
         )
         self.success_url = reverse_lazy(
             self.detail_url_name, kwargs={"pk": beverage.pk}
         )
         return super().form_valid(form)
+
+    def save_reorder_reminder(self, *, beverage, household, min_stock):
+        if self.reminder_service:
+            return self.reminder_service.save_reorder_reminder(
+                **{self.beverage_fk_name: beverage},
+                user=self.request.user,
+                household=household,
+                min_stock=min_stock,
+            )
+
+        return self.reminder_model.objects.update_or_create(
+            **{self.beverage_fk_name: beverage},
+            user=self.request.user,
+            household=household,
+            defaults={"min_stock": min_stock, "is_active": True},
+        )
 
 
 # --- Drink record create view ---
@@ -2413,10 +2429,27 @@ class BaseHomePageView(RequireHouseholdMixin, TemplateView):
     stats_template = None  # e.g. "includes/homepage_stats.html"
     alerts_template = None  # e.g. "includes/homepage_alerts.html"
     beverage_icon = None  # e.g. "wine-glass"
+    reminder_service = None
 
     def get_app_specific_context(self, household, user):
         """Return app-specific context dict. Override per app."""
         return {}
+
+    def get_low_stock_count(self, household):
+        if self.reminder_service:
+            return self.reminder_service.count_low_stock_reminders(household)
+
+        return (
+            self.reminder_model.objects.filter(household=household, is_active=True)
+            .annotate(
+                current_stock=Count(
+                    self.stock_reverse_path,
+                    filter=Q(**{f"{self.stock_reverse_path}__deleted": False}),
+                )
+            )
+            .filter(current_stock__lte=F("min_stock"))
+            .count()
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -2446,17 +2479,7 @@ class BaseHomePageView(RequireHouseholdMixin, TemplateView):
         ).count()
 
         # Low stock reminders
-        low_stock_count = (
-            self.reminder_model.objects.filter(household=household, is_active=True)
-            .annotate(
-                current_stock=Count(
-                    self.stock_reverse_path,
-                    filter=Q(**{f"{self.stock_reverse_path}__deleted": False}),
-                )
-            )
-            .filter(current_stock__lte=F("min_stock"))
-            .count()
-        )
+        low_stock_count = self.get_low_stock_count(household)
 
         # Recent drinks
         recent_drinks = (

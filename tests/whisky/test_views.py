@@ -19,11 +19,13 @@ from wine_cellar.apps.whisky.models import (
     WhiskyDrinkRecord,
     WhiskyImage,
     WhiskyPriceHistory,
+    WhiskyReorderReminder,
     WhiskySource,
     WhiskyStorageItem,
     WhiskyVisionExtractionLog,
     WhiskyWishlist,
 )
+from wine_cellar.apps.whisky.services import WhiskyReminderService
 
 
 def _test_image_upload(name="front.jpg"):
@@ -49,6 +51,39 @@ def test_homepage_authenticated(client, user):
     r = client.get(reverse("homepage"), follow=True)
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="core/homepage.html")
+
+
+@pytest.mark.django_db
+def test_homepage_uses_reminder_service(client, user):
+    client.force_login(user)
+    household = user.user_settings.active_household
+    with patch.object(
+        WhiskyReminderService,
+        "count_low_stock_reminders",
+        wraps=WhiskyReminderService.count_low_stock_reminders,
+    ) as count_low_stock_reminders:
+        r = client.get(reverse("homepage"), follow=True)
+    assert r.status_code == HTTPStatus.OK
+    count_low_stock_reminders.assert_called_once_with(household)
+
+
+@pytest.mark.django_db
+def test_reorder_reminders_uses_service(client, user, whisky_factory):
+    client.force_login(user)
+    household = user.user_settings.active_household
+    whisky = whisky_factory(user=user)
+    WhiskyReorderReminder.objects.create(
+        whisky=whisky, user=user, household=household, min_stock=2, is_active=True
+    )
+    with patch.object(
+        WhiskyReminderService,
+        "get_reorder_context",
+        wraps=WhiskyReminderService.get_reorder_context,
+    ) as get_reorder_context:
+        r = client.get(reverse("reorder-reminders"))
+    assert r.status_code == HTTPStatus.OK
+    assert len(r.context["reminders"]) == 1
+    get_reorder_context.assert_called_once_with(household)
 
 
 @pytest.mark.django_db

@@ -104,6 +104,10 @@ from wine_cellar.apps.whisky.models import (
     WhiskyVisionExtractionLog,
     WhiskyWishlist,
 )
+from wine_cellar.apps.whisky.services import (
+    WhiskyCreationService,
+    WhiskyReminderService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -238,6 +242,7 @@ class HomePageView(BaseHomePageView):
     stats_template = "whisky/includes/homepage_stats.html"
     alerts_template = "whisky/includes/homepage_alerts.html"
     beverage_icon = "whiskey-glass"
+    reminder_service = WhiskyReminderService
 
     def get_app_specific_context(self, household, user):
         import datetime
@@ -438,106 +443,9 @@ class WhiskyCreateView(BaseBeverageCreateView):
     @staticmethod
     @transaction.atomic
     def process_form_data(user, household, cleaned_data):
-        abv = cleaned_data["abv"]
-        size = cleaned_data["size"]
-        barcode = cleaned_data.get("barcode")
-        comment = cleaned_data["comment"]
-        country = cleaned_data["country"]
-        price = cleaned_data["price"]
-        name = cleaned_data["name"]
-        rating = cleaned_data["rating"]
-        whisky_type = cleaned_data["whisky_type"]
-        distillery = cleaned_data.get("distillery")
-        region = cleaned_data.get("region")
-        age_statement = cleaned_data.get("age_statement")
-        vintage_year = cleaned_data.get("vintage_year")
-        bottled_year = cleaned_data.get("bottled_year")
-        peated_level = cleaned_data.get("peated_level") or None
-        cask_type = cleaned_data.get("cask_type") or ""
-        cask_strength = cleaned_data.get("cask_strength", False)
-        color = cleaned_data.get("color")
-        bottler = cleaned_data.get("bottler")
-        bottler_series = cleaned_data.get("bottler_series")
-        cask_number = cleaned_data.get("cask_number")
-        batch_number = cleaned_data.get("batch_number")
-        bottle_number = cleaned_data.get("bottle_number")
-        limited_edition = cleaned_data.get("limited_edition", False)
-        release_year = cleaned_data.get("release_year")
-        source = cleaned_data.get("source")
-        owner = cleaned_data.get("owner", "")
-
-        # Use get_or_create to handle duplicate whiskies gracefully
-        whisky, created = Whisky.objects.get_or_create(
-            name=name,
-            whisky_type=whisky_type,
-            abv=abv,
-            size=size,
-            vintage_year=vintage_year,
-            bottled_year=bottled_year,
-            user=user,
-            household=household,
-            deleted=False,
-            defaults={
-                "distillery": distillery,
-                "region": region,
-                "country": country,
-                "age_statement": age_statement,
-                "peated_level": peated_level,
-                "cask_type": cask_type,
-                "cask_strength": cask_strength,
-                "color": color,
-                "bottler": bottler,
-                "bottler_series": bottler_series,
-                "cask_number": cask_number,
-                "batch_number": batch_number,
-                "bottle_number": bottle_number,
-                "limited_edition": limited_edition,
-                "release_year": release_year,
-                "comment": comment,
-                "rating": rating,
-                "price": price,
-                "source": source,
-                "owner": owner,
-            },
+        return WhiskyCreationService.create_or_update_whisky(
+            user, household, cleaned_data
         )
-
-        # Create barcode entry if provided
-        if barcode:
-            WhiskyBarcode.objects.get_or_create(
-                barcode=barcode,
-                user=user,
-                defaults={"whisky": whisky, "household": household},
-            )
-
-        # Handle storage (add bottle to cellar) if provided
-        storage = cleaned_data.get("storage")
-        if storage:
-            import datetime
-
-            row = cleaned_data.get("row")
-            column = cleaned_data.get("column")
-            bottle_price = cleaned_data.get("bottle_price") or price
-            is_gift = cleaned_data.get("is_gift", False)
-            gift_from = cleaned_data.get("gift_from")
-            occasion = cleaned_data.get("occasion")
-            fill_level = cleaned_data.get("fill_level", FillLevel.UNOPENED)
-            dreg_date = datetime.date.today() if fill_level == FillLevel.DREG else None
-            WhiskyStorageItem.objects.create(
-                storage=storage,
-                whisky=whisky,
-                row=row,
-                column=column,
-                user=user,
-                household=household,
-                price=bottle_price,
-                is_gift=is_gift,
-                gift_from=gift_from,
-                occasion=occasion,
-                fill_level=fill_level,
-                dreg_date=dreg_date,
-            )
-
-        return whisky, created
 
 
 class WhiskyUpdateView(BaseBeverageUpdateView):
@@ -1213,6 +1121,7 @@ class DrinkingWindowAlertsView(RequireHouseholdMixin, TemplateView):
 class ReorderRemindersView(BaseReorderRemindersView):
     template_name = "core/reorder_reminders.html"
     reminder_model = WhiskyReorderReminder
+    reminder_service = WhiskyReminderService
     beverage_fk_name = "whisky"
     stock_reverse_path = "whisky__whiskystorageitem"
     beverage_icon = "whiskey-glass"
@@ -1222,6 +1131,7 @@ class ReorderReminderCreateView(BaseReorderReminderCreateView):
     template_name = "core/reorder_reminder_create.html"
     beverage_model = Whisky
     reminder_model = WhiskyReorderReminder
+    reminder_service = WhiskyReminderService
     beverage_fk_name = "whisky"
     detail_url_name = "whisky-detail"
 
