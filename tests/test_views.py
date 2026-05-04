@@ -1,7 +1,10 @@
+from datetime import datetime
+from decimal import Decimal
 from http import HTTPStatus
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 from pytest_django.asserts import (
     assertRedirects,
     assertTemplateNotUsed,
@@ -1150,6 +1153,74 @@ def test_stats_dashboard_purchase_trends(
     assert r.status_code == HTTPStatus.OK
     by_month = r.context_data["by_month"]
     assert len(by_month) >= 1
+
+
+@pytest.mark.django_db
+def test_stats_dashboard_spending_trends(
+    client, user, wine_factory, storage_item_factory
+):
+    """Stats dashboard groups spending by month and year."""
+    storage = user.storage_set.first()
+    wine = wine_factory(user=user, price=Decimal("18.00"))
+    january_item = storage_item_factory(
+        wine=wine,
+        storage=storage,
+        price=Decimal("12.50"),
+    )
+    february_item = storage_item_factory(
+        wine=wine,
+        storage=storage,
+        price=None,
+    )
+    january_created = timezone.make_aware(datetime(2024, 1, 15, 12, 0))
+    february_created = timezone.make_aware(datetime(2024, 2, 10, 12, 0))
+    january_item.__class__.objects.filter(pk=january_item.pk).update(
+        created=january_created
+    )
+    february_item.__class__.objects.filter(pk=february_item.pk).update(
+        created=february_created
+    )
+
+    client.force_login(user)
+    r = client.get(reverse("stats-dashboard"))
+
+    assert r.status_code == HTTPStatus.OK
+    spend_by_month = r.context_data["spend_by_month"]
+    spend_by_year = r.context_data["spend_by_year"]
+
+    assert spend_by_month == [
+        {"month": january_created.date().replace(day=1), "amount": Decimal("12.50")},
+        {"month": february_created.date().replace(day=1), "amount": Decimal("18.00")},
+    ]
+    assert spend_by_year == [{"year": 2024, "amount": Decimal("30.50")}]
+    assert "Monthly Spend" in r.content.decode()
+    assert "Yearly Spend" in r.content.decode()
+
+
+@pytest.mark.django_db
+def test_stats_dashboard_rating_distribution(
+    client, user, wine_factory, storage_item_factory
+):
+    """Stats dashboard shows rating distribution of wines in cellar."""
+    storage = user.storage_set.first()
+    wine_3_stars = wine_factory(user=user, rating=3)
+    wine_2_stars = wine_factory(user=user, rating=2)
+    wine_1_star = wine_factory(user=user, rating=1)
+    wine_unrated = wine_factory(user=user, rating=None)
+
+    storage_item_factory(wine=wine_3_stars, storage=storage)
+    storage_item_factory(wine=wine_2_stars, storage=storage)
+    storage_item_factory(wine=wine_1_star, storage=storage)
+    storage_item_factory(wine=wine_unrated, storage=storage)
+
+    client.force_login(user)
+    r = client.get(reverse("stats-dashboard"))
+
+    assert r.status_code == HTTPStatus.OK
+    by_rating = r.context_data["by_rating"]
+
+    assert by_rating == {0: 0, 1: 1, 2: 1, 3: 1}
+    assert "Rating Distribution" in r.content.decode()
 
 
 @pytest.mark.django_db

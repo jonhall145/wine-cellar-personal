@@ -179,6 +179,95 @@
                 </div>
             </div>
 
+            <div class="pure-g mt-12">
+                <div class="pure-u-1 pure-u-md-1-2">
+                    <h3>Monthly Spend</h3>
+                    {% if spend_by_month %}
+                        <canvas id="chartSpendByMonth" height="250"></canvas>
+                        <details class="mt-4">
+                            <summary>Show table</summary>
+                            <table class="pure-table pure-table-horizontal pure-table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Month</th>
+                                        <th class="text-right">Spend</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in spend_by_month %}
+                                        <tr>
+                                            <td>{{ item.month|date:"F Y" }}</td>
+                                            <td class="text-right">{{ currency }}{{ item.amount|floatformat:2 }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </details>
+                    {% else %}
+                        <p>No spend data available.</p>
+                    {% endif %}
+                </div>
+
+                <div class="pure-u-1 pure-u-md-1-2">
+                    <h3>Yearly Spend</h3>
+                    {% if spend_by_year %}
+                        <canvas id="chartSpendByYear" height="250"></canvas>
+                        <details class="mt-4">
+                            <summary>Show table</summary>
+                            <table class="pure-table pure-table-horizontal pure-table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Year</th>
+                                        <th class="text-right">Spend</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in spend_by_year %}
+                                        <tr>
+                                            <td>{{ item.year }}</td>
+                                            <td class="text-right">{{ currency }}{{ item.amount|floatformat:2 }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </details>
+                    {% else %}
+                        <p>No spend data available.</p>
+                    {% endif %}
+                </div>
+
+                {# --- Rating Distribution --- #}
+                <div class="pure-u-1 pure-u-md-1-2">
+                    <h3>Rating Distribution</h3>
+                    {% if by_rating %}
+                        <canvas id="chartRating" height="250"></canvas>
+                        <details class="mt-4">
+                            <summary>Show table</summary>
+                            <table class="pure-table pure-table-horizontal pure-table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Rating (Stars)</th>
+                                        <th class="text-right">Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for rating, count in by_rating.items %}
+                                        {% if count > 0 %}
+                                        <tr>
+                                            <td>{{ rating }} ⭐</td>
+                                            <td class="text-right">{{ count }}</td>
+                                        </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </details>
+                    {% else %}
+                        <p>No rating data available.</p>
+                    {% endif %}
+                </div>
+            </div>
+
         </div>
     </div>
     <script>
@@ -248,6 +337,53 @@
                 plugins: { legend: { display: false } },
                 scales: { x: { ticks: { maxRotation: 45, minRotation: 0 } } }
             }
+        });
+        {% endif %}
+
+        {% if spend_by_month %}
+        new Chart(document.getElementById('chartSpendByMonth'), {
+            type: 'line',
+            data: {
+                labels: [{% for item in spend_by_month %}'{{ item.month|date:"M Y"|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Spend ({{ currency }})',
+                    data: [{% for item in spend_by_month %}{{ item.amount }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    borderColor: '#722f37',
+                    backgroundColor: 'rgba(114, 47, 55, 0.2)',
+                    fill: true,
+                    tension: 0.25
+                }]
+            },
+            options: { responsive: true }
+        });
+        {% endif %}
+
+        {% if spend_by_year %}
+        new Chart(document.getElementById('chartSpendByYear'), {
+            type: 'bar',
+            data: {
+                labels: [{% for item in spend_by_year %}'{{ item.year }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Spend ({{ currency }})',
+                    data: [{% for item in spend_by_year %}{{ item.amount }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: chartColors
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+        {% endif %}
+
+        {% if by_rating %}
+        new Chart(document.getElementById('chartRating'), {
+            type: 'doughnut',
+            data: {
+                labels: [{% for rating, count in by_rating.items %}'{{ rating }} ⭐'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for rating, count in by_rating.items %}{{ count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: chartColors
+                }]
+            },
+            options: { responsive: true }
         });
         {% endif %}
     });
