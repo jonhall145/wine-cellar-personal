@@ -160,6 +160,15 @@ class BaseDrinkRecordForm(forms.Form):
         required=False,
         help_text="What was the occasion?",
     )
+    photo = forms.ImageField(
+        required=False,
+        help_text="Attach a photo of the bottle, meal, or setting (optional).",
+    )
+    taste_descriptors = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput(),
+        help_text="Selected flavor descriptors from the tasting wheel.",
+    )
 
     def __init__(self, *args, **kwargs):
         beverage = kwargs.pop(self.beverage_fk_name, None)
@@ -241,3 +250,42 @@ class ReorderReminderForm(forms.Form):
         initial=1,
         help_text="Alert when stock drops to or below this number.",
     )
+
+
+class CsvImportUploadForm(forms.Form):
+    file = forms.FileField(
+        label="CSV or Excel file",
+        help_text="Upload a UTF-8 CSV file or Excel (.xlsx) file with a header row.",
+    )
+
+
+class CsvImportMappingForm(forms.Form):
+    default_storage = forms.ModelChoiceField(
+        queryset=Storage.objects.none(),
+        required=False,
+        help_text="Used when the CSV includes stock but does not map a storage column.",
+    )
+
+    def __init__(self, *args, headers, field_specs, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        choices = [("", "Do not import")] + [(header, header) for header in headers]
+        household = get_active_household(user)
+        self.fields["default_storage"].queryset = Storage.objects.filter(
+            household=household, app_type=get_app_type()
+        ).order_by("order", "created")
+        self.field_specs = field_specs
+
+        for field in field_specs:
+            self.fields[f"map_{field.name}"] = forms.ChoiceField(
+                label=field.label,
+                choices=choices,
+                required=False,
+                initial=kwargs.get("initial", {}).get(f"map_{field.name}", ""),
+                help_text=field.help_text,
+            )
+
+    def get_mapping(self):
+        return {
+            field.name: self.cleaned_data.get(f"map_{field.name}", "")
+            for field in self.field_specs
+        }

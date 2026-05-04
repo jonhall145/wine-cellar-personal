@@ -31,6 +31,7 @@
         </title>
     </head>
     <body class="layout">
+        <a class="skip-link" href="#main-content">Skip to main content</a>
         {% block menu %}
             {% spaceless %}
                 <header>
@@ -67,10 +68,25 @@
                 </header>
             {% endspaceless %}
         {% endblock menu %}
-        <main class="main">
+        <main class="main" id="main-content" tabindex="-1">
             {% block header %}
                 <h1 class="brand-title">{{ APP_NAME }}</h1>
             {% endblock header %}
+            {% if messages %}
+                <div class="pure-g">
+                    <div class="pure-u-1">
+                        {% for message in messages %}
+                            {% if message.level_tag == 'error' %}
+                                <div class="alert alert--danger">{{ message }}</div>
+                            {% elif message.level_tag == 'warning' %}
+                                <div class="alert alert--warning">{{ message }}</div>
+                            {% else %}
+                                <div class="alert">{{ message }}</div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
             {% block allauth_wrapper %}
                 {% block content %}
                 {% endblock content %}

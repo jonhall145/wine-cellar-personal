@@ -9,6 +9,7 @@ from wine_cellar.apps.core.views import (
 )
 from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.wine.models import Wine
+from wine_cellar.apps.wine.services import WineReminderService
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,7 @@ class HomePageView(BaseHomePageView):
     stats_template = "includes/homepage_stats.html"
     alerts_template = "includes/homepage_alerts.html"
     beverage_icon = "wine-glass"
+    reminder_service = WineReminderService
 
     def get_context_data(self, **kwargs):
         from wine_cellar.apps.wine.models import DrinkRecord, ReorderReminder, Wishlist

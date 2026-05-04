@@ -2,6 +2,14 @@
 
 This guide covers backup and restore procedures for Wine Cellar data.
 
+## User-Facing Account Backup
+
+Users can export and restore their current household's cellar data from **Settings**.
+
+- **Export** downloads a JSON backup of the active wine or whisky cellar, including bottles, notes, history, collections, and uploaded label images.
+- **Restore** replaces the current household's data for the active app type with a previously exported backup.
+- Backups are app-specific: wine backups restore into the wine app, and whisky backups restore into the whisky app.
+
 ## What to Back Up
 
 Wine Cellar stores data in two locations:

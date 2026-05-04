@@ -9,10 +9,10 @@ from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.wine.forms import WineForm
 from wine_cellar.apps.wine.models import (
     VisionExtractionLog,
-    Wishlist,
     Wine,
     WineBarcode,
     WineImage,
+    Wishlist,
 )
 
 
@@ -85,6 +85,35 @@ class TestWineCreateView:
         assert wine.abv == 13.5
         assert wine.rating == 2
         assert wine.comment == "Lovely nose"
+
+    def test_create_from_wishlist_marks_item_purchased(self, client, user):
+        client.force_login(user)
+        household = user.user_settings.active_household
+        wish = Wishlist.objects.create(
+            name="Wishlist Wine",
+            user=user,
+            household=household,
+            wine_type="RE",
+            country="FR",
+            external_url="https://example.com/wines/wishlist-wine",
+        )
+
+        r = client.post(
+            reverse("wine-add"),
+            _minimal_wine_data(
+                name="Wishlist Wine",
+                wine_type="RE",
+                country="FR",
+                wishlist_item=wish.pk,
+            ),
+            follow=True,
+        )
+
+        assert r.status_code == 200
+        wish.refresh_from_db()
+        assert wish.purchased is True
+        wine = Wine.objects.get(name="Wishlist Wine")
+        assert wine.price_url == "https://example.com/wines/wishlist-wine"
 
     def test_create_with_storage(self, client, user):
         """POST with storage fields creates a StorageItem."""
@@ -218,36 +247,6 @@ class TestWineCreateView:
             response.context["form"].initial["price_url"]
             == "https://example.com/wishlist-wine"
         )
-
-    def test_create_from_wishlist_marks_item_purchased(self, client, user):
-        household = user.user_settings.active_household
-        wishlist_item = Wishlist.objects.create(
-            name="Converted Wine",
-            user=user,
-            household=household,
-            wine_type="RE",
-            country="FR",
-            external_url="https://example.com/converted-wine",
-        )
-        client.force_login(user)
-
-        response = client.post(
-            reverse("wine-add"),
-            _minimal_wine_data(
-                wishlist_item=wishlist_item.pk,
-                name="Converted Wine",
-                wine_type="RE",
-                country="FR",
-                price_url="https://example.com/converted-wine",
-            ),
-            follow=True,
-        )
-
-        assert response.status_code == 200
-        wine = Wine.objects.get(name="Converted Wine")
-        wishlist_item.refresh_from_db()
-        assert wine.price_url == "https://example.com/converted-wine"
-        assert wishlist_item.purchased is True
 
     def test_wishlist_list_shows_convert_and_purchase_links(self, client, user):
         household = user.user_settings.active_household

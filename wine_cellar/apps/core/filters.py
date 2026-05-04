@@ -23,6 +23,7 @@ class BeverageFilterMixin:
     storage_item_reverse = None
     nullable_order_fields = ()
     search_fields = ()
+    include_unrated_with_zero_rating = False
 
     def filter_rating(self, queryset, name, value):
         if not value:
@@ -30,7 +31,10 @@ class BeverageFilterMixin:
         values = value if isinstance(value, (list, tuple, set)) else [value]
         ratings = [int(v) for v in values if v not in ("", None)]
         if ratings:
-            return queryset.filter(rating__in=ratings)
+            query = Q(rating__in=ratings)
+            if self.include_unrated_with_zero_rating and 0 in ratings:
+                query |= Q(rating__isnull=True)
+            return queryset.filter(query)
         return queryset
 
     def filter_order(self, queryset, name, value):
