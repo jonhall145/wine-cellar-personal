@@ -126,6 +126,17 @@ const getStorageUtilizationLabel = (storage: StorageData): string => {
     return `${translated.utilisation}: ${storage.used_slots}/${storage.total_slots} ${translated.slotsUsed} (${storage.utilization_percent}% ${translated.full})`;
 };
 
+const renderStorageMeta = (storage: StorageData, className = '') => (
+    <div className={`storage-grid__storage-meta${className ? ` ${className}` : ''}`}>
+        <span className="storage-grid__storage-meta-item">
+            {storage.rows}x{storage.columns}
+        </span>
+        <span className="storage-grid__storage-meta-item">
+            {getStorageUtilizationLabel(storage)}
+        </span>
+    </div>
+);
+
 const getCellClassName = (
     cell: CellData,
     options: {
@@ -749,15 +760,6 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                 </select>
             </div>
 
-            <div className="storage-grid__storage-meta">
-                <span className="storage-grid__storage-meta-item">
-                    {storage.rows}x{storage.columns}
-                </span>
-                <span className="storage-grid__storage-meta-item">
-                    {getStorageUtilizationLabel(storage)}
-                </span>
-            </div>
-
             <div className="storage-grid__header">
                 <div className="storage-grid__corner" />
                 {Array.from({ length: storage.columns }, (_, i) => (
@@ -833,6 +835,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                     </div>
                 ))}
             </div>
+            {renderStorageMeta(storage, 'storage-grid__storage-meta--after-grid')}
         </div>
     );
 
@@ -993,15 +996,6 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                     )}
                 </div>
 
-                <div className="storage-grid__storage-meta">
-                    <span className="storage-grid__storage-meta-item">
-                        {sourceStorage.rows}x{sourceStorage.columns}
-                    </span>
-                    <span className="storage-grid__storage-meta-item">
-                        {getStorageUtilizationLabel(sourceStorage)}
-                    </span>
-                </div>
-
                 {/* Message */}
                 {message && (
                     <div
@@ -1047,6 +1041,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                         </div>
                     ))}
                 </div>
+                {renderStorageMeta(sourceStorage, 'storage-grid__storage-meta--after-grid')}
 
                 {/* Drag overlay */}
                 <DragOverlay>

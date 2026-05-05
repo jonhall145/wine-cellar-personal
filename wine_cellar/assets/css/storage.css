@@ -66,6 +66,11 @@
   margin-bottom: var(--spacing-md);
 }
 
+.storage-grid__storage-meta--after-grid {
+  margin-top: var(--spacing-md);
+  margin-bottom: 0;
+}
+
 .storage-grid__storage-meta-item {
   padding: var(--spacing-xs) var(--spacing-sm);
   background-color: var(--gray-100);
