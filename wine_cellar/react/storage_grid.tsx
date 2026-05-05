@@ -772,42 +772,45 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                     <div key={rowIdx} className="storage-grid__row">
                         <div className="storage-grid__row-label">{rowIdx + 1}</div>
                         {row.map((cell, colIdx) => {
-                                const isSelectedForMove = selectedBottle?.cell.row === cell.row &&
-                                    selectedBottle?.cell.column === cell.column &&
-                                    selectedBottle?.storageId === storage.id;
+                            const isInactive = !cell.active;
+                            const isSelectedForMove = selectedBottle?.cell.row === cell.row &&
+                                selectedBottle?.cell.column === cell.column &&
+                                selectedBottle?.storageId === storage.id;
 
-                                const extraClasses = [];
-                                if (isSelectedForMove) extraClasses.push('storage-grid__cell--selected-for-move');
-                                if (!isSource && !cell.wine && !isInactive && selectedBottle) {
-                                    extraClasses.push('storage-grid__cell--drop-target');
-                                }
+                            const extraClasses = [];
+                            if (isSelectedForMove) extraClasses.push('storage-grid__cell--selected-for-move');
+                            if (!isSource && !cell.wine && !isInactive && selectedBottle) {
+                                extraClasses.push('storage-grid__cell--drop-target');
+                            }
 
-                                return (
-                                    <button
-                                        type="button"
-                                        key={`${rowIdx}-${colIdx}`}
-                                        className={getCellClassName(cell, { extraClasses })}
-                                        onClick={() => !isInactive && handleMoveModeClick(cell, storage.id, isSource)}
-                                        onMouseEnter={(e) => cell.wine && handleShowTooltip(cell.wine, e)}
-                                        onMouseLeave={handleHideTooltip}
-                                        onFocus={(e) => {
-                                            if (cell.wine) {
-                                                handleShowTooltip(cell.wine, getCellPositionFromElement(e.currentTarget));
-                                            }
-                                        }}
-                                        onBlur={handleHideTooltip}
-                                        onTouchStart={(e) => {
-                                            if (cell.wine && e.touches.length > 0) {
-                                                const touch = e.touches[0];
+                            return (
+                                <button
+                                    type="button"
+                                    key={`${rowIdx}-${colIdx}`}
+                                    className={getCellClassName(cell, { extraClasses })}
+                                    onClick={() => !isInactive && handleMoveModeClick(cell, storage.id, isSource)}
+                                    onMouseEnter={(e) => cell.wine && handleShowTooltip(cell.wine, e)}
+                                    onMouseLeave={handleHideTooltip}
+                                    onFocus={(e) => {
+                                        if (cell.wine) {
+                                            handleShowTooltip(cell.wine, getCellPositionFromElement(e.currentTarget));
+                                        }
+                                    }}
+                                    onBlur={handleHideTooltip}
+                                    onTouchStart={(e) => {
+                                        if (cell.wine && e.touches.length > 0) {
+                                            const touch = e.touches[0];
                                             handleShowTooltip(cell.wine, { clientX: touch.clientX, clientY: touch.clientY });
                                             e.stopPropagation();
                                         }
                                     }}
-                                    onKeyDown={(e) => handleGridKeyDown(e, () => {
-                                        if (!isInactive) {
-                                            handleMoveModeClick(cell, storage.id, isSource);
-                                        }
-                                    })}
+                                    onKeyDown={(e) => {
+                                        handleGridKeyDown(e, () => {
+                                            if (!isInactive) {
+                                                handleMoveModeClick(cell, storage.id, isSource);
+                                            }
+                                        });
+                                    }}
                                     title={cell.wine ? cell.wine.name : `Empty (${cell.row}, ${cell.column})`}
                                     aria-label={getCellAriaLabel(
                                         cell,
