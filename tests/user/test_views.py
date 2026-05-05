@@ -17,6 +17,10 @@ def test_user_settings_page(client, user):
     data = {
         "currency": "EUR",
         "notifications": True,
+        "drink_window_notifications": "BO",
+        "low_stock_notifications": "IA",
+        "household_invitation_notifications": "IA",
+        "price_alert_notifications": "NO",
         "reminder_enabled": True,
         "reminder_years_before": 0,
     }
@@ -30,6 +34,10 @@ def test_user_settings_page(client, user):
     data = {
         "currency": "EUR",
         "notifications": False,
+        "drink_window_notifications": "EM",
+        "low_stock_notifications": "NO",
+        "household_invitation_notifications": "NO",
+        "price_alert_notifications": "NO",
         "reminder_enabled": True,
         "reminder_years_before": 0,
     }
@@ -38,6 +46,7 @@ def test_user_settings_page(client, user):
     user_settings.refresh_from_db()
     assert user_settings.currency == "EUR"
     assert not user_settings.notifications
+    assert user_settings.drink_window_notifications == "EM"
 
 
 @pytest.mark.django_db

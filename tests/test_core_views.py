@@ -1296,9 +1296,7 @@ class TestTastingWheel:
         assert record is not None
         assert record.taste_descriptors == descriptors
 
-    def test_drink_record_edit_with_taste_descriptors(
-        self, client, user, wine_factory
-    ):
+    def test_drink_record_edit_with_taste_descriptors(self, client, user, wine_factory):
         """Test that taste descriptors can be updated on drink record edit."""
         import json
         from datetime import date

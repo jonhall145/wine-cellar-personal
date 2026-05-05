@@ -711,7 +711,7 @@ class BaseMarkBottleBrokenOrLostView(RequireMemberMixin, TemplateView):
 
 
 class BaseReorderReminderDeleteView(RequireMemberMixin, DeleteView):
-    success_url = reverse_lazy("reorder-reminders")
+    success_url = reverse_lazy("notifications")
 
     def get_queryset(self):
         household = get_active_household(self.request.user)

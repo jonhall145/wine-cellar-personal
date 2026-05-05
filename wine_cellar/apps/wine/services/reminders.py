@@ -56,11 +56,13 @@ class WineReminderService:
 
     @staticmethod
     def send_drink_by_reminders() -> int:
-        from wine_cellar.apps.user.models import UserSettings
+        from wine_cellar.apps.user.models import NotificationChannel, UserSettings
 
         User = get_user_model()
-        users = User.objects.exclude(user_settings__notifications=False).exclude(
-            user_settings__reminder_enabled=False
+        users = (
+            User.objects.exclude(user_settings__notifications=False)
+            .exclude(user_settings__reminder_enabled=False)
+            .exclude(user_settings__drink_window_notifications=NotificationChannel.NONE)
         )
         current_year = timezone.now().year
         sent = 0
@@ -88,15 +90,23 @@ class WineReminderService:
             if wine_count <= 0:
                 continue
 
-            if user.email:
+            delivery = getattr(
+                user.user_settings,
+                "drink_window_notifications",
+                NotificationChannel.BOTH,
+            )
+
+            if user.email and NotificationChannel.includes_email(delivery):
                 send_drink_by_reminder(user, wines)
 
-            send_push_to_user(
-                user,
-                title="🍷 Drink Window Reminder",
-                body=f"{wine_count} wine(s) are in their drinking window",
-                url="/alerts/",
-            )
+            if NotificationChannel.includes_in_app(delivery):
+                send_push_to_user(
+                    user,
+                    title="🍷 Drink Window Reminder",
+                    body=f"{wine_count} wine(s) are in their drinking window",
+                    url="/notifications/",
+                )
+
             sent += 1
 
         return sent

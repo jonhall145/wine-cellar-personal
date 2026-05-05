@@ -649,6 +649,112 @@ a:hover {
   line-height: 1;
 }
 
+.notification-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--border-radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--container-box-shadow);
+}
+
+.notification-summary__link {
+  font-size: var(--font-sm);
+}
+
+.notifications-section {
+  margin-bottom: var(--spacing-xl);
+}
+
+.notifications-section__title {
+  margin-bottom: var(--spacing-md);
+}
+
+.notification-list {
+  display: grid;
+  gap: var(--spacing-md);
+}
+
+.notification-card {
+  background: var(--bg-card);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--container-box-shadow);
+  padding: var(--spacing-lg);
+  border-left: 4px solid transparent;
+}
+
+.notification-card--unread {
+  box-shadow: var(--container-box-shadow-lg);
+}
+
+.notification-card--danger {
+  border-left-color: var(--status-danger);
+}
+
+.notification-card--warning {
+  border-left-color: var(--status-warning);
+}
+
+.notification-card--info {
+  border-left-color: var(--primary);
+}
+
+.notification-card__top {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: flex-start;
+}
+
+.notification-card__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.notification-card__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-card__eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin: 0 0 var(--spacing-xs);
+  color: var(--text-color-gray);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.notification-card__title {
+  margin: 0 0 var(--spacing-xs);
+}
+
+.notification-card__body {
+  margin: 0;
+  color: var(--text-color-gray);
+}
+
+.notification-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
 /* Priority badges */
 .priority-badge {
   font-size: var(--font-xs);

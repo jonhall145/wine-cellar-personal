@@ -22,7 +22,12 @@
                       novalidate>
                     {% csrf_token %}
                     {% include 'forms/form_field.html' with field=form.currency %}
+                    <h2 id="notification-preferences">Notification Centre</h2>
                     {% include 'forms/form_field.html' with field=form.notifications %}
+                    {% include 'forms/form_field.html' with field=form.drink_window_notifications %}
+                    {% include 'forms/form_field.html' with field=form.low_stock_notifications %}
+                    {% include 'forms/form_field.html' with field=form.household_invitation_notifications %}
+                    {% include 'forms/form_field.html' with field=form.price_alert_notifications %}
                     <h2>Drink Reminders</h2>
                     {% include 'forms/form_field.html' with field=form.reminder_enabled %}
                     {% include 'forms/form_field.html' with field=form.reminder_years_before %}

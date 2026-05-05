@@ -45,11 +45,24 @@
                             {# djlint:on #}
                         </label>
                         <a href="{% url 'homepage' %}" class="pure-menu-heading pure-menu-link">{{ APP_NAME }}</a>
-                        {% if SWITCH_APP_URL %}
-                            <a href="{{ SWITCH_APP_URL }}" class="app-switch-btn" title="{{ SWITCH_APP_NAME }}" aria-label="Switch to {{ SWITCH_APP_NAME }}">
-                                <i class="fa-solid {{ SWITCH_APP_ICON }}"></i>
-                            </a>
-                        {% endif %}
+                        <div class="menu__sm-actions">
+                            {% if user.is_authenticated %}
+                                <a href="{% url 'notifications' %}"
+                                   class="header-notification-link"
+                                   title="Notifications"
+                                   aria-label="Notifications">
+                                    <i class="fa-solid fa-bell"></i>
+                                    {% if notification_unread_count %}
+                                        <span class="header-notification-link__badge">{{ notification_unread_count }}</span>
+                                    {% endif %}
+                                </a>
+                            {% endif %}
+                            {% if SWITCH_APP_URL %}
+                                <a href="{{ SWITCH_APP_URL }}" class="app-switch-btn" title="{{ SWITCH_APP_NAME }}" aria-label="Switch to {{ SWITCH_APP_NAME }}">
+                                    <i class="fa-solid {{ SWITCH_APP_ICON }}"></i>
+                                </a>
+                            {% endif %}
+                        </div>
                         <div class="pure-menu">
                             <ul class="pure-menu-list">
                                 {% include "includes/navigation_items.html" %}
@@ -60,9 +73,22 @@
                     <nav class="pure-menu pure-menu-horizontal menu__md">
                         <div class="menu__container">
                             <a href="{% url 'homepage' %}" class="pure-menu-heading pure-menu-link">{{ APP_NAME }}</a>
-                            <ul class="pure-menu-list">
-                                {% include "includes/navigation_items.html" with show_dropdown_indicator=True %}
-                            </ul>
+                            <div class="menu__md-actions">
+                                {% if user.is_authenticated %}
+                                    <a href="{% url 'notifications' %}"
+                                       class="header-notification-link"
+                                       title="Notifications"
+                                       aria-label="Notifications">
+                                        <i class="fa-solid fa-bell"></i>
+                                        {% if notification_unread_count %}
+                                            <span class="header-notification-link__badge">{{ notification_unread_count }}</span>
+                                        {% endif %}
+                                    </a>
+                                {% endif %}
+                                <ul class="pure-menu-list">
+                                    {% include "includes/navigation_items.html" with show_dropdown_indicator=True %}
+                                </ul>
+                            </div>
                         </div>
                     </nav>
                 </header>

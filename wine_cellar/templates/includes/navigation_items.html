@@ -55,10 +55,9 @@
                 <a href="{% url 'cellar-value' %}" class="pure-menu-link">Cellar Value</a>
             </li>
             <li class="pure-menu-item">
-                <a href="{% url 'drinking-alerts' %}" class="pure-menu-link">Alerts</a>
-            </li>
-            <li class="pure-menu-item">
-                <a href="{% url 'reorder-reminders' %}" class="pure-menu-link">Reorder</a>
+                <a href="{% url 'notifications' %}" class="pure-menu-link">
+                    Notifications{% if notification_unread_count %} <span class="nav-badge">{{ notification_unread_count }}</span>{% endif %}
+                </a>
             </li>
         </ul>
     </li>

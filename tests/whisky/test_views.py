@@ -1412,9 +1412,7 @@ def test_whisky_wishlist_list_shows_convert_and_purchase_links(client, user):
     content = response.content.decode()
 
     assert response.status_code == HTTPStatus.OK
-    assert (
-        reverse("whisky-add") + f"?wishlist_item={wishlist_item.pk}"
-    ) in content
+    assert (reverse("whisky-add") + f"?wishlist_item={wishlist_item.pk}") in content
     assert "https://example.com/buy-whisky" in content
 
 
@@ -1923,9 +1921,7 @@ def test_whisky_drink_record_create_with_taste_descriptors(
 
 
 @pytest.mark.django_db
-def test_whisky_drink_record_edit_with_taste_descriptors(
-    client, user, whisky_factory
-):
+def test_whisky_drink_record_edit_with_taste_descriptors(client, user, whisky_factory):
     """Test that taste descriptors can be updated on whisky drink record edit."""
     import json
     from datetime import date

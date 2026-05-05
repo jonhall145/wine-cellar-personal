@@ -91,9 +91,13 @@ def send_cellar_summary_emails(period: str = "weekly") -> int:
     User = get_user_model()
     # Use an explicit OR filter so users without a UserSettings row (INNER JOIN
     # exclusion) are still included — the default for notifications is True.
-    users = User.objects.filter(
-        Q(user_settings__notifications=True) | Q(user_settings__isnull=True)
-    ).exclude(email__isnull=True).exclude(email="")
+    users = (
+        User.objects.filter(
+            Q(user_settings__notifications=True) | Q(user_settings__isnull=True)
+        )
+        .exclude(email__isnull=True)
+        .exclude(email="")
+    )
 
     sent = 0
     for user in users:

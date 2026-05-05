@@ -30,6 +30,9 @@ from wine_cellar.apps.core.api import (
 )
 from wine_cellar.apps.core.pwa import manifest_json, service_worker_js
 from wine_cellar.apps.user.views import (
+    NotificationCentreView,
+    NotificationDismissView,
+    NotificationMarkReadView,
     UserBackupExportView,
     UserBackupImportView,
     UserSettingsView,
@@ -126,6 +129,17 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("household/", include("wine_cellar.apps.household.urls")),
     path("user/settings/", UserSettingsView.as_view(), name="user-settings"),
+    path("notifications/", NotificationCentreView.as_view(), name="notifications"),
+    path(
+        "notifications/read/",
+        NotificationMarkReadView.as_view(),
+        name="notification-mark-read",
+    ),
+    path(
+        "notifications/dismiss/",
+        NotificationDismissView.as_view(),
+        name="notification-dismiss",
+    ),
     path(
         "user/settings/backup/export/",
         UserBackupExportView.as_view(),

@@ -262,9 +262,7 @@ class TestWineCreateView:
         content = response.content.decode()
 
         assert response.status_code == 200
-        assert (
-            reverse("wine-add") + f"?wishlist_item={wishlist_item.pk}"
-        ) in content
+        assert (reverse("wine-add") + f"?wishlist_item={wishlist_item.pk}") in content
         assert "https://example.com/buy-wine" in content
 
 

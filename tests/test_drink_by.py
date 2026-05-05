@@ -3,6 +3,7 @@ from django.core import mail
 from django.utils import timezone
 
 from wine_cellar.apps.storage.models import StorageItem
+from wine_cellar.apps.user.models import NotificationChannel
 from wine_cellar.apps.user.views import get_user_settings
 from wine_cellar.apps.wine.management.commands.send_drink_reminders import (
     drink_by_reminder,
@@ -58,3 +59,18 @@ def test_drink_by_reminder_not_send_for_other_user(user, user_factory, wine_fact
     assert Wine.objects.count() == 2
     assert len(mail.outbox) == 1
     assert mail.outbox[0].to == [user1.email]
+
+
+@pytest.mark.django_db
+def test_drink_by_reminder_skips_email_for_in_app_only(user, wine_factory):
+    user_settings = get_user_settings(user)
+    user_settings.drink_window_notifications = NotificationChannel.IN_APP
+    user_settings.save()
+    current_year = timezone.now().year
+    wine = wine_factory(drink_to=current_year, user=user)
+    storage = user.storage_set.first()
+    StorageItem.objects.create(wine=wine, storage=storage, user=user)
+
+    drink_by_reminder()
+
+    assert len(mail.outbox) == 0
