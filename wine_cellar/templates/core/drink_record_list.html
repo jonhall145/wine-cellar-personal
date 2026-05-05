@@ -17,6 +17,7 @@
                                 <th>Date</th>
                                 <th>{{ APP_ITEM_NAME|title }}</th>
                                 <th>Rating</th>
+                                <th>Photo</th>
                                 <th>Shared With</th>
                                 <th>Occasion</th>
                                 <th>Notes</th>
@@ -48,6 +49,13 @@
                                         {% endif %}
                                     </td>
                                     <td>{{ record.rating|default_if_none:"-" }}</td>
+                                    <td>
+                                        {% if record.photo %}
+                                            <img src="{{ record.photo.url }}" alt="Photo" width="50" height="50" loading="lazy" style="max-height: 50px; max-width: 50px; object-fit: cover;">
+                                        {% else %}
+                                            <span class="text--gray">-</span>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ record.shared_with|default_if_none:"-" }}</td>
                                     <td>{{ record.occasion|default_if_none:"-" }}</td>
                                     <td>{{ record.tasting_notes|default_if_none:"-"|truncatewords:20 }}</td>

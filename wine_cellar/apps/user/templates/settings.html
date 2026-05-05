@@ -48,6 +48,27 @@
                         Enable Push Notifications
                     </button>
                 </div>
+                <div class="push-section">
+                    <h2>Data Backup</h2>
+                    {% if active_household %}
+                        <p>Export or restore the current household's cellar data, including bottles, notes, and history.</p>
+                        <p>
+                            <a href="{{ backup_export_url }}" class="pure-button button__secondary">Export backup JSON</a>
+                        </p>
+                        <form method="post"
+                              action="{{ backup_import_url }}"
+                              enctype="multipart/form-data"
+                              class="pure-form pure-form-stacked wine-form"
+                              novalidate>
+                            {% csrf_token %}
+                            {% include 'forms/form_field.html' with field=backup_import_form.backup_file %}
+                            {% include 'forms/form_field.html' with field=backup_import_form.confirm_replace %}
+                            <button type="submit" class="pure-button button__primary">Restore backup</button>
+                        </form>
+                    {% else %}
+                        <p>Select a household before exporting or restoring a backup.</p>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>

@@ -554,35 +554,35 @@ class Whisky(UserContentModel):
         return self.get_whisky_type_display()
 
     @property
-    def get_price_with_currency(self):
+    def currency_symbol(self):
         from wine_cellar.apps.user.views import get_user_settings
 
-        if self.price is None:
-            return None
         user_settings = get_user_settings(self.user)
-        currency = settings.CURRENCY_SYMBOLS.get(
+        return settings.CURRENCY_SYMBOLS.get(
             getattr(user_settings, "currency", "EUR"), "€"
         )
-        formatted_price = number_format(self.price, use_l10n=True)
-        return f"{currency}{formatted_price}"
+
+    def format_currency(self, amount):
+        if amount is None:
+            return None
+        if hasattr(amount, "quantize"):
+            amount = amount.quantize(Decimal("0.00"))
+        formatted_price = number_format(amount, use_l10n=True)
+        return f"{self.currency_symbol}{formatted_price}"
+
+    @property
+    def get_price_with_currency(self):
+        return self.format_currency(self.price)
 
     @property
     def get_average_price_with_currency(self):
-        from wine_cellar.apps.user.views import get_user_settings
-
-        user_settings = get_user_settings(self.user)
-        currency = settings.CURRENCY_SYMBOLS.get(
-            getattr(user_settings, "currency", "EUR"), "€"
-        )
         avg_price = self.whiskystorageitem_set.aggregate(avg_price=models.Avg("price"))[
             "avg_price"
         ]
 
         if avg_price is None:
             return None
-        avg_price = avg_price.quantize(Decimal("0.00"))
-        formatted_price = number_format(avg_price, use_l10n=True)
-        return f"{currency}{formatted_price}"
+        return self.format_currency(avg_price)
 
 
 # ---------------------------------------------------------------------------
@@ -900,6 +900,19 @@ class WhiskyDrinkRecord(UserContentModel):
     occasion = models.CharField(
         max_length=200, blank=True, default="", verbose_name="Occasion"
     )
+    photo = models.ImageField(
+        upload_to=user_directory_path,
+        null=True,
+        blank=True,
+        verbose_name="Photo",
+        help_text="Photo of the bottle, meal, or tasting setting.",
+    )
+    taste_descriptors = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Taste Descriptors",
+        help_text="Selected flavor descriptors from the tasting wheel.",
+    )
 
     class Meta:
         ordering = ["-date_consumed"]
@@ -947,6 +960,12 @@ class WhiskyWishlist(UserContentModel):
         blank=True,
         verbose_name="Max Price",
     )
+    external_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default="",
+        verbose_name="Purchase Link",
+    )
     notes = models.TextField(blank=True, default="", verbose_name="Notes")
     priority = models.PositiveIntegerField(
         default=0,
@@ -954,6 +973,12 @@ class WhiskyWishlist(UserContentModel):
         verbose_name="Priority",
     )
     purchased = models.BooleanField(default=False, verbose_name="Purchased")
+    external_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default="",
+        verbose_name="Purchase Link",
+    )
 
     class Meta:
         ordering = ["-priority", "name"]
@@ -1131,6 +1156,10 @@ class WhiskyPriceHistory(UserContentModel):
 
     def __str__(self):
         return f"{self.whisky.name} - {self.price} at {self.recorded_at}"
+
+    @property
+    def price_with_currency(self):
+        return self.whisky.format_currency(self.price)
 
 
 class WhiskyBottleMoveHistory(models.Model):

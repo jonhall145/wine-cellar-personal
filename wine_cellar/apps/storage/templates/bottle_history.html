@@ -15,6 +15,21 @@
                     <a href="{{ beverage_detail_url }}" class="pure-button button__neutral">
                         <i class="fa-solid fa-arrow-left"></i> Back to {{ beverage.name }}
                     </a>
+                    {% if not item.deleted %}
+                        <form method="post"
+                              action="{% url 'bottle-quick-log' item.pk %}"
+                              class="display-inline-block">
+                            {% csrf_token %}
+                            <button type="submit" class="pure-button button__secondary">
+                                {% if CELLAR_APP_TYPE == "whisky" %}
+                                    <i class="fa-solid fa-whiskey-glass"></i>
+                                {% else %}
+                                    <i class="fa-solid fa-wine-glass"></i>
+                                {% endif %}
+                                Just drank this
+                            </button>
+                        </form>
+                    {% endif %}
                 </div>
 
                 <h2>Bottle History</h2>

@@ -33,6 +33,8 @@ from wine_cellar.apps.user.views import (
     NotificationCentreView,
     NotificationDismissView,
     NotificationMarkReadView,
+    UserBackupExportView,
+    UserBackupImportView,
     UserSettingsView,
 )
 
@@ -137,6 +139,16 @@ urlpatterns = [
         "notifications/dismiss/",
         NotificationDismissView.as_view(),
         name="notification-dismiss",
+    ),
+    path(
+        "user/settings/backup/export/",
+        UserBackupExportView.as_view(),
+        name="user-backup-export",
+    ),
+    path(
+        "user/settings/backup/import/",
+        UserBackupImportView.as_view(),
+        name="user-backup-import",
     ),
     # Storage (shared across wine/whisky)
     path("", include("wine_cellar.apps.storage.urls")),

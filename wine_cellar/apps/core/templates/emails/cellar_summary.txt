@@ -1,0 +1,22 @@
+Hi {{ user.get_username }},
+
+Here is your {{ period|lower }} {{ app_name }} summary for {{ household.name }}.
+
+Cellar stats
+- {{ total_items_label }}: {{ total_items }}
+- Bottles in stock: {{ bottles_in_stock }}
+- Total cellar value: {{ total_value }}
+- Low-stock reminders: {{ low_stock_count }}
+- Wishlist items: {{ wishlist_count }}
+- Bottles logged as consumed: {{ total_consumed }}
+- Average rating: {{ avg_rating }}
+{% for stat in extra_stats %}- {{ stat.label }}: {{ stat.value }}
+{% endfor %}
+
+{{ highlight_title }}{% if highlight_count %} ({{ highlight_count }}){% endif %}
+{% if highlights %}{% for item in highlights %}- {{ item.name }}{% if item.detail %} — {{ item.detail }}{% endif %}
+{% endfor %}{% else %}- Nothing new right now.
+{% endif %}
+
+View your cellar: {{ summary_url }}
+Check alerts: {{ alerts_url }}

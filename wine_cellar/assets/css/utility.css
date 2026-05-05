@@ -18,6 +18,25 @@
   white-space: nowrap;
 }
 
+.skip-link {
+  position: fixed;
+  top: var(--spacing-sm);
+  left: var(--spacing-sm);
+  z-index: var(--z-modal);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--primary);
+  color: var(--white);
+  border-radius: var(--border-radius-sm);
+  box-shadow: var(--container-box-shadow);
+  transform: translateY(-200%);
+  transition: transform var(--transition-fast);
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
 .m-auto {
   margin: auto;
 }
