@@ -18,11 +18,6 @@
             </div>
             <div class="pure-u-1 pure-u-md-1 text-align-center">
                 <span class="storage-detail__location">Location: {{ storage.location }}</span>
-                {% if storage.total_slots > 0 %}
-                    <span>Bottles: {{ storage.used_slots }}/{{ storage.total_slots }}</span>
-                {% else %}
-                    <span>Bottles: {{ storage.used_slots }}</span>
-                {% endif %}
             </div>
             
             {% if storage.rows > 0 and storage.columns > 0 %}
@@ -77,6 +72,13 @@
                     {% include "includes/pagination.html" %}
                 {% else %}
                     <p>{% if CELLAR_APP_TYPE == "whisky" %}No whiskies here yet.{% else %}No wines here yet.{% endif %}</p>
+                {% endif %}
+            </div>
+            <div class="pure-u-1 pure-u-md-1 text-align-center storage-detail__summary">
+                {% if storage.total_slots > 0 %}
+                    <span>Bottles: {{ storage.used_slots }}/{{ storage.total_slots }}</span>
+                {% else %}
+                    <span>Bottles: {{ storage.used_slots }}</span>
                 {% endif %}
             </div>
         </div>

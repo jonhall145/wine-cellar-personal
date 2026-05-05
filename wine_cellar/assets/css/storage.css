@@ -35,6 +35,10 @@
   margin-right: var(--spacing-lg);
 }
 
+.storage-detail__summary {
+  margin-top: var(--spacing-md);
+}
+
 /* Storage Grid View */
 .storage-grid {
   max-width: 100%;
