@@ -110,11 +110,6 @@ class WineCreateView(BaseBeverageCreateView):
         },
     )
     cellar_extra_field_names = ()
-    confidence_badge_labels = {
-        "high": "✓ High Confidence",
-        "medium": "⚠ Please Verify",
-        "low": "⚡ Low Confidence",
-    }
     wishlist_model = Wishlist
     wishlist_initial_field_map = {
         "name": "name",
@@ -124,6 +119,11 @@ class WineCreateView(BaseBeverageCreateView):
         "vintage": "vintage",
         "comment": "notes",
         "price_url": "external_url",
+    }
+    confidence_badge_labels = {
+        "high": "✓ High Confidence",
+        "medium": "⚠ Please Verify",
+        "low": "⚡ Low Confidence",
     }
     vision_field_map = {
         "name": "name",

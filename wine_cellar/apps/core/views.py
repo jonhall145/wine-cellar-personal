@@ -1219,9 +1219,9 @@ class BaseWishlistCreateView(RequireMemberMixin, FormView):
             household=household,
             name=form.cleaned_data["name"],
             price_limit=form.cleaned_data.get("price_limit"),
-            external_url=form.cleaned_data.get("external_url"),
             notes=form.cleaned_data.get("notes"),
             priority=form.cleaned_data.get("priority", 1),
+            external_url=form.cleaned_data.get("external_url", ""),
             **self.get_extra_create_kwargs(form),
         )
         return super().form_valid(form)
@@ -1452,7 +1452,7 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
     vision_fk_name_fields = {}
     extraction_log_model = None
     extraction_log_fk_name = None
-    wishlist_model = None
+    wishlist_model = None  # Set by subclass
     wishlist_initial_field_map = {}
 
     def get_form_kwargs(self):
@@ -1523,7 +1523,7 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
                 self.resolve_extracted_data(result_data, initial)
                 initial.update(result_data)
 
-        self.apply_wishlist_initial(initial)
+        self.apply_wishlist_values(initial, overwrite=True, serialize_related=True)
         return initial
 
     def get_wishlist_item(self):
@@ -1548,43 +1548,6 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
             household=household,
         )
         return self._wishlist_item_cache
-
-    def apply_wishlist_initial(self, initial):
-        wishlist_item = self.get_wishlist_item()
-        if not wishlist_item:
-            return
-
-        for form_field, wishlist_field in self.wishlist_initial_field_map.items():
-            value = getattr(wishlist_item, wishlist_field)
-            if value in (None, ""):
-                continue
-            if initial.get(form_field) not in (None, "", []):
-                continue
-            initial[form_field] = value.pk if hasattr(value, "pk") else value
-
-    def apply_wishlist_cleaned_data(self, cleaned_data):
-        wishlist_item = self.get_wishlist_item()
-        if not wishlist_item:
-            return
-
-        for form_field, wishlist_field in self.wishlist_initial_field_map.items():
-            if cleaned_data.get(form_field) not in (None, "", []):
-                continue
-            value = getattr(wishlist_item, wishlist_field)
-            if value in (None, ""):
-                continue
-            cleaned_data[form_field] = value
-
-    def mark_wishlist_item_purchased(self, wishlist_item):
-        if wishlist_item.purchased:
-            return
-
-        wishlist_item.purchased = True
-        wishlist_item.save(update_fields=["purchased"])
-        messages.success(
-            self.request,
-            f'Wishlist item "{wishlist_item.name}" marked as purchased.',
-        )
 
     def _get_extractor(self):
         """Lazy-import the vision extractor from the dotted path."""
@@ -1620,6 +1583,35 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
             "createFields": list(self.vision_create_fields),
             "fkNameFields": self.vision_fk_name_fields,
         }
+
+    def apply_wishlist_values(
+        self, values, *, overwrite=False, serialize_related=False
+    ):
+        wishlist_item = self.get_wishlist_item()
+        if not wishlist_item:
+            return
+
+        for form_field, wishlist_field in self.wishlist_initial_field_map.items():
+            if not overwrite and values.get(form_field) not in (None, "", []):
+                continue
+            value = getattr(wishlist_item, wishlist_field)
+            if value in (None, ""):
+                continue
+            if serialize_related and hasattr(value, "pk"):
+                values[form_field] = value.pk
+            else:
+                values[form_field] = value
+
+    def mark_wishlist_item_purchased(self, wishlist_item):
+        if wishlist_item.purchased:
+            return
+
+        wishlist_item.purchased = True
+        wishlist_item.save(update_fields=["purchased"])
+        messages.success(
+            self.request,
+            f'Wishlist item "{wishlist_item.name}" marked as purchased.',
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1711,7 +1703,7 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
                     )
 
         household = get_active_household(self.request.user)
-        self.apply_wishlist_cleaned_data(form.cleaned_data)
+        self.apply_wishlist_values(form.cleaned_data)
         with transaction.atomic():
             beverage, created = self.process_form_data(
                 self.request.user, household, form.cleaned_data

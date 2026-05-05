@@ -1326,6 +1326,28 @@ def test_whisky_create_post_with_distillery(client, user, distillery_factory):
 
 
 @pytest.mark.django_db
+def test_whisky_wishlist_create_saves_country_and_external_url(client, user):
+    client.force_login(user)
+
+    response = client.post(
+        reverse("wishlist-add"),
+        {
+            "name": "Wishlist Whisky",
+            "whisky_type": "SM",
+            "country": "GB",
+            "priority": 2,
+            "external_url": "https://example.com/whisky",
+        },
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    wishlist_item = WhiskyWishlist.objects.get(name="Wishlist Whisky")
+    assert wishlist_item.country == "GB"
+    assert wishlist_item.external_url == "https://example.com/whisky"
+
+
+@pytest.mark.django_db
 def test_whisky_create_from_wishlist_prefills_and_marks_purchased(
     client, user, distillery_factory, whisky_region_factory
 ):
@@ -1339,6 +1361,7 @@ def test_whisky_create_from_wishlist_prefills_and_marks_purchased(
         whisky_type="SM",
         distillery=distillery,
         region=region,
+        country="GB",
         age_statement=10,
         external_url="https://example.com/whisky/talisker-10",
         notes="Birthday dram",
@@ -1352,6 +1375,7 @@ def test_whisky_create_from_wishlist_prefills_and_marks_purchased(
     assert form.initial["name"] == "Talisker 10"
     assert form.initial["distillery"] == distillery.pk
     assert form.initial["region"] == region.pk
+    assert form.initial["country"] == "GB"
     assert form.initial["comment"] == "Birthday dram"
 
     post_response = client.post(
@@ -1369,10 +1393,31 @@ def test_whisky_create_from_wishlist_prefills_and_marks_purchased(
 
     assert post_response.status_code == HTTPStatus.OK
     wishlist_item.refresh_from_db()
+    assert Whisky.objects.filter(user=user, name="Talisker 10").exists()
     assert wishlist_item.purchased is True
 
 
 @pytest.mark.django_db
+def test_whisky_wishlist_list_shows_convert_and_purchase_links(client, user):
+    household = user.user_settings.active_household
+    wishlist_item = WhiskyWishlist.objects.create(
+        name="Wishlist Link Whisky",
+        user=user,
+        household=household,
+        external_url="https://example.com/buy-whisky",
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("wishlist-list"))
+    content = response.content.decode()
+
+    assert response.status_code == HTTPStatus.OK
+    assert (
+        reverse("whisky-add") + f"?wishlist_item={wishlist_item.pk}"
+    ) in content
+    assert "https://example.com/buy-whisky" in content
+
+
 def test_whisky_stock_add_uses_shared_template(client, user, whisky_factory):
     whisky = whisky_factory(user=user)
     client.force_login(user)

@@ -42,6 +42,18 @@ class TestWishlistCreateView:
         wish = Wishlist.objects.filter(name="Simple Wish").first()
         assert wish is not None
 
+    def test_create_saves_external_url(self, client, user):
+        client.force_login(user)
+        data = {
+            "name": "Linked Wish",
+            "priority": 2,
+            "external_url": "https://example.com/wine",
+        }
+        r = client.post(reverse("wishlist-add"), data=data, follow=True)
+        assert r.status_code == 200
+        wish = Wishlist.objects.get(name="Linked Wish")
+        assert wish.external_url == "https://example.com/wine"
+
     def test_prefills_wine_create_from_wishlist(self, client, user):
         client.force_login(user)
         household = user.user_settings.active_household

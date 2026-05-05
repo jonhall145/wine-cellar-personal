@@ -217,6 +217,56 @@ class TestWineCreateView:
         assert "form" in r.context
         assert "wine_create.html" in [t.name for t in r.templates]
 
+    def test_get_from_wishlist_prefills_form(self, client, user):
+        household = user.user_settings.active_household
+        wishlist_item = Wishlist.objects.create(
+            name="Wishlist Wine",
+            user=user,
+            household=household,
+            wine_type="RE",
+            country="FR",
+            subregion="Bordeaux",
+            vintage=2018,
+            notes="Birthday bottle",
+            external_url="https://example.com/wishlist-wine",
+        )
+        client.force_login(user)
+
+        response = client.get(
+            reverse("wine-add") + f"?wishlist_item={wishlist_item.pk}"
+        )
+
+        assert response.status_code == 200
+        assert response.context["form"].initial["name"] == "Wishlist Wine"
+        assert response.context["form"].initial["wine_type"] == "RE"
+        assert response.context["form"].initial["country"] == "FR"
+        assert response.context["form"].initial["subregion"] == "Bordeaux"
+        assert response.context["form"].initial["vintage"] == 2018
+        assert response.context["form"].initial["comment"] == "Birthday bottle"
+        assert (
+            response.context["form"].initial["price_url"]
+            == "https://example.com/wishlist-wine"
+        )
+
+    def test_wishlist_list_shows_convert_and_purchase_links(self, client, user):
+        household = user.user_settings.active_household
+        wishlist_item = Wishlist.objects.create(
+            name="Wishlist Link Wine",
+            user=user,
+            household=household,
+            external_url="https://example.com/buy-wine",
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("wishlist-list"))
+        content = response.content.decode()
+
+        assert response.status_code == 200
+        assert (
+            reverse("wine-add") + f"?wishlist_item={wishlist_item.pk}"
+        ) in content
+        assert "https://example.com/buy-wine" in content
+
 
 @pytest.mark.django_db
 class TestWineUpdateView:
