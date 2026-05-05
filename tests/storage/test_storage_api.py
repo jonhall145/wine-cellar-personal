@@ -512,7 +512,7 @@ class TestStorageDetailView:
         r = client.get(reverse("storage-detail", kwargs={"pk": storage.pk}))
         assert r.status_code == 200
         content = r.content.decode()
-        assert content.index('id="grid-view"') < content.index(
+        assert content.index('id="storage-grid-container"') < content.index(
             "storage-detail__summary"
         )
         assert content.index("storage-detail__location") < content.index(
