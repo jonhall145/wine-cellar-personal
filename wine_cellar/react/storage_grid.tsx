@@ -967,8 +967,6 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
             onDragEnd={handleDragEnd}
         >
             <div className="storage-grid">
-                {renderOverview()}
-
                 {/* Controls */}
                 <div className="storage-grid__controls">
                     <label htmlFor="storage-select">{translated.storage}:</label>
@@ -1058,6 +1056,8 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                     <p><i className="fa-solid fa-hand-pointer" /> {translated.tapToSeeDetails}</p>
                     <p><i className="fa-solid fa-hand-back-fist" /> {translated.dragToMove}</p>
                 </div>
+
+                {renderOverview()}
             </div>
         </DndContext>
     );
