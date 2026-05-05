@@ -504,6 +504,21 @@ class TestStorageDetailView:
         r = client.get(reverse("storage-detail", kwargs={"pk": storage.pk}))
         assert r.status_code == 200
 
+    def test_bottles_summary_renders_after_storage_content(
+        self, client, user, storage_factory
+    ):
+        storage = storage_factory(user=user, rows=2, columns=2)
+        client.force_login(user)
+        r = client.get(reverse("storage-detail", kwargs={"pk": storage.pk}))
+        assert r.status_code == 200
+        content = r.content.decode()
+        assert content.index('id="storage-grid-container"') < content.index(
+            "storage-detail__summary"
+        )
+        assert content.index("storage-detail__location") < content.index(
+            "storage-detail__summary"
+        )
+
     def test_shows_wines(self, client, user, wine_factory, storage_item_factory):
         wine = wine_factory(user=user, name="Detail Wine")
         storage = user.storage_set.first()
