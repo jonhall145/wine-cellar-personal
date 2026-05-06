@@ -63,11 +63,15 @@
                 {% csrf_token %}
                 {% for field in form %}
                     {% if field.name == 'taste_descriptors' %}
-                        <div class="form-group">
-                            <label id="taste-wheel-label">{{ field.label }}</label>
-                            <div id="taste-wheel-container" aria-labelledby="taste-wheel-label"></div>
-                            {{ field }}
-                        </div>
+                        <details id="taste-descriptors-toggle"{% if show_taste_descriptors %} open{% endif %}>
+                            <summary>Taste descriptors</summary>
+                            <div class="form-group">
+                                <label id="taste-wheel-label">{{ field.label }}</label>
+                                {% if field.help_text %}<p class="form-hint">{{ field.help_text }}</p>{% endif %}
+                                <div id="taste-wheel-container" aria-labelledby="taste-wheel-label"></div>
+                                {{ field }}
+                            </div>
+                        </details>
                     {% else %}
                         {% include 'forms/form_field.html' %}
                     {% endif %}

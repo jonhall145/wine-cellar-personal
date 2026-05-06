@@ -39,6 +39,13 @@ def _parse_taste_descriptors(descriptors_str):
         return []
 
 
+def _has_selected_taste_descriptors(descriptors):
+    """Return whether the form currently has any selected taste descriptors."""
+    if isinstance(descriptors, list):
+        return bool(descriptors)
+    return bool(_parse_taste_descriptors(descriptors))
+
+
 # --- Wishlist views ---
 
 
@@ -269,10 +276,16 @@ class BaseDrinkRecordEditView(RequireMemberMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         record = self.get_object()
+        form = context.get("form")
         context["record"] = record
         beverage = getattr(record, self.beverage_fk_name)
         context[self.beverage_fk_name] = beverage
         context["beverage"] = beverage
+        context["show_taste_descriptors"] = bool(
+            form
+            and "taste_descriptors" in form.fields
+            and _has_selected_taste_descriptors(form["taste_descriptors"].value())
+        )
         return context
 
     def form_valid(self, form):

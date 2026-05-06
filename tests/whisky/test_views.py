@@ -1892,6 +1892,46 @@ def test_whisky_check_duplicate_no_cross_household(
 
 
 @pytest.mark.django_db
+def test_whisky_drink_record_create_hides_taste_descriptors_by_default(
+    client, user, whisky_factory
+):
+    whisky = whisky_factory(user=user)
+    client.force_login(user)
+
+    response = client.get(reverse("drink-record-add", kwargs={"pk": whisky.pk}))
+    html = response.content.decode()
+
+    assert response.status_code == HTTPStatus.OK
+    assert '<details id="taste-descriptors-toggle">' in html
+    assert '<details id="taste-descriptors-toggle" open>' not in html
+
+
+@pytest.mark.django_db
+def test_whisky_drink_record_edit_shows_taste_descriptors_when_present(
+    client, user, whisky_factory
+):
+    from datetime import date
+
+    from wine_cellar.apps.whisky.models import WhiskyDrinkRecord
+
+    whisky = whisky_factory(user=user)
+    household = user.user_settings.active_household
+    record = WhiskyDrinkRecord.objects.create(
+        whisky=whisky,
+        user=user,
+        household=household,
+        date_consumed=date.today(),
+        taste_descriptors=["Smoky"],
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("drink-record-edit", kwargs={"pk": record.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assert '<details id="taste-descriptors-toggle" open>' in response.content.decode()
+
+
+@pytest.mark.django_db
 def test_whisky_drink_record_create_with_taste_descriptors(
     client, user, whisky_factory
 ):
