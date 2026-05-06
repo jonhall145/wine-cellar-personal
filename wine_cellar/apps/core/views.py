@@ -425,14 +425,8 @@ class BaseReorderReminderCreateView(RequireMemberMixin, FormView):
         beverage = get_object_or_404(
             self.beverage_model, pk=self.kwargs["pk"], household=household
         )
-        form = context.get("form")
         context[self.beverage_fk_name] = beverage
         context["beverage"] = beverage
-        context["show_taste_descriptors"] = bool(
-            form
-            and "taste_descriptors" in form.fields
-            and _has_selected_taste_descriptors(form["taste_descriptors"].value())
-        )
         return context
 
     def form_valid(self, form):
