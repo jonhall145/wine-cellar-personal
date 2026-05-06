@@ -24,11 +24,17 @@
                 {% csrf_token %}
                 {% include 'forms/form_field.html' with field=form.date_consumed %}
                 {% include 'forms/form_field.html' with field=form.tasting_notes %}
-                <div class="form-group">
-                    <label id="taste-wheel-label">Taste Descriptors</label>
-                    <div id="taste-wheel-container" aria-labelledby="taste-wheel-label"></div>
-                    {{ form.taste_descriptors }}
-                </div>
+                <details id="taste-descriptors-toggle"{% if show_taste_descriptors %} open{% endif %}>
+                    <summary>Taste descriptors</summary>
+                    <div class="form-group">
+                        <label id="taste-wheel-label">{{ form.taste_descriptors.label }}</label>
+                        {% if form.taste_descriptors.help_text %}
+                            <p class="form-hint">{{ form.taste_descriptors.help_text }}</p>
+                        {% endif %}
+                        <div id="taste-wheel-container" aria-labelledby="taste-wheel-label"></div>
+                        {{ form.taste_descriptors }}
+                    </div>
+                </details>
                 {% include 'forms/form_field.html' with field=form.rating %}
                 {% include 'forms/form_field.html' with field=form.shared_with %}
                 {% include 'forms/form_field.html' with field=form.occasion %}
