@@ -1991,3 +1991,22 @@ def test_whisky_drink_record_edit_with_taste_descriptors(client, user, whisky_fa
     assert r.status_code == HTTPStatus.FOUND
     record.refresh_from_db()
     assert record.taste_descriptors == new_descriptors
+
+
+@pytest.mark.django_db
+def test_whisky_drink_record_delete_confirmation_renders(client, user, whisky_factory):
+    from datetime import date
+
+    from wine_cellar.apps.whisky.models import WhiskyDrinkRecord
+
+    whisky = whisky_factory(user=user)
+    household = user.user_settings.active_household
+    record = WhiskyDrinkRecord.objects.create(
+        whisky=whisky, user=user, household=household, date_consumed=date.today()
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("drink-record-delete", kwargs={"pk": record.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assert "Delete Drink Record" in response.content.decode()

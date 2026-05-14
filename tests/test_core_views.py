@@ -1230,6 +1230,23 @@ class TestDrinkRecordEditView:
 
 @pytest.mark.django_db
 class TestDrinkRecordDeleteView:
+    def test_get_renders_confirmation_page(self, client, user, wine_factory):
+        from datetime import date
+
+        from wine_cellar.apps.wine.models import DrinkRecord
+
+        wine = wine_factory(user=user)
+        household = user.user_settings.active_household
+        record = DrinkRecord.objects.create(
+            wine=wine, user=user, household=household, date_consumed=date.today()
+        )
+        client.force_login(user)
+
+        r = client.get(reverse("drink-record-delete", kwargs={"pk": record.pk}))
+
+        assert r.status_code == HTTPStatus.OK
+        assert "Delete Drink Record" in r.content.decode()
+
     def test_post_deletes_record(self, client, user, wine_factory):
         from datetime import date
 
