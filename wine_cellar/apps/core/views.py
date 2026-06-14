@@ -1419,6 +1419,7 @@ class BaseBeverageUpdateView(RequireMemberMixin, FormView):
             self.process_form_data(beverage, self.request.user, form.cleaned_data)
             self.sync_form_images(beverage, self.request.user, form.cleaned_data)
             log_update(self.request.user, beverage)
+            self.post_save_beverage(beverage)
         self.success_url = reverse_lazy(
             self.detail_url_name, kwargs={"pk": beverage.pk}
         )
@@ -1426,6 +1427,10 @@ class BaseBeverageUpdateView(RequireMemberMixin, FormView):
 
     def process_form_data(self, beverage, user, cleaned_data):
         raise NotImplementedError
+
+    def post_save_beverage(self, beverage):
+        """Hook for post-save processing. Override per app."""
+        pass
 
 
 # --- Beverage create view ---
@@ -1736,6 +1741,7 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
                 self._link_extraction_log(
                     beverage, form.cleaned_data, extraction_result
                 )
+            self.post_save_beverage(beverage)
 
         # Clear session data
         for key in ("scanned_label", "extraction_result"):
@@ -1794,6 +1800,10 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
 
     def post_create(self, beverage, created):
         """Hook for post-creation processing. Override per app."""
+        pass
+
+    def post_save_beverage(self, beverage):
+        """Hook for post-save processing. Override per app."""
         pass
 
     def _link_extraction_log(self, beverage, cleaned_data, extraction_result):

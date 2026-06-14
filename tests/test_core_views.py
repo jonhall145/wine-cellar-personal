@@ -435,6 +435,36 @@ class TestWineDetailView:
             .exists()
         )
 
+    def test_renders_ai_summary_with_sources(self, client, user, wine_factory):
+        wine = wine_factory(user=user, name="Summarised Wine")
+        wine.ai_summary = (
+            "This is a concentrated red from a well-known producer "
+            "with a long ageing window."
+        )
+        wine.ai_summary_sources = [
+            {"title": "Producer profile", "url": "https://example.com/producer"},
+            {"title": "Regional guide", "url": "https://example.com/region"},
+        ]
+        wine.ai_summary_generated_at = timezone.now()
+        wine.ai_summary_model = "claude-sonnet-4-6"
+        wine.save(
+            update_fields=[
+                "ai_summary",
+                "ai_summary_sources",
+                "ai_summary_generated_at",
+                "ai_summary_model",
+            ]
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("wine-detail", kwargs={"pk": wine.pk}))
+        content = response.content.decode()
+
+        assert response.status_code == HTTPStatus.OK
+        assert "<summary>AI Summary</summary>" in content
+        assert "Producer profile" in content
+        assert 'href="https://example.com/producer"' in content
+
     def test_can_add_price_history(self, client, user, wine_factory, source_factory):
         household = user.user_settings.active_household
         wine = wine_factory(user=user, name="Tracked Wine")
