@@ -402,6 +402,29 @@ class Wine(UserContentModel):
         verbose_name="Price URL",
         help_text="Product page URL for automatic price tracking",
     )
+    ai_summary = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="AI Summary",
+        help_text="AI-generated wine summary stored with source citations.",
+    )
+    ai_summary_sources = models.JSONField(
+        blank=True,
+        default=list,
+        verbose_name="AI Summary Sources",
+        help_text="Source list captured for the AI-generated wine summary.",
+    )
+    ai_summary_generated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="AI Summary Generated At",
+    )
+    ai_summary_model = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        verbose_name="AI Summary Model",
+    )
     deleted = models.BooleanField(default=False, db_index=True)
 
     def __str__(self):

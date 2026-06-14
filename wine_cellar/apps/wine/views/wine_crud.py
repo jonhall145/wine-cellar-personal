@@ -37,6 +37,7 @@ from wine_cellar.apps.wine.models import (
     WineImage,
     Wishlist,
 )
+from wine_cellar.apps.wine.services import WineAISummaryService
 from wine_cellar.apps.wine.services.creation import WineCreationService
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,18 @@ def _format_price_delta(beverage, amount):
     sign = "+" if amount > 0 else "-" if amount < 0 else ""
     formatted = beverage.format_currency(abs(amount))
     return f"{sign}{formatted}" if sign else formatted
+
+
+def _schedule_ai_summary_refresh(wine_id):
+    def _callback():
+        try:
+            WineAISummaryService.refresh_summary(wine_id)
+        except Exception:
+            logger.exception(
+                "Unexpected error generating AI summary for wine %s", wine_id
+            )
+
+    transaction.on_commit(_callback)
 
 
 @method_decorator(
@@ -226,6 +239,9 @@ class WineCreateView(BaseBeverageCreateView):
                         beverage, extracted_data
                     )
 
+    def post_save_beverage(self, beverage):
+        _schedule_ai_summary_refresh(beverage.pk)
+
     @staticmethod
     @transaction.atomic
     def process_form_data(user, household, cleaned_data):
@@ -245,6 +261,9 @@ class WineUpdateView(BaseBeverageUpdateView):
         context = super().get_context_data(**kwargs)
         context["barcode_delete_url_pattern"] = reverse("wine-barcode-delete", args=[0])
         return context
+
+    def post_save_beverage(self, beverage):
+        _schedule_ai_summary_refresh(beverage.pk)
 
     @staticmethod
     @transaction.atomic

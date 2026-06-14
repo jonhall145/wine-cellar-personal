@@ -1,4 +1,7 @@
 import io
+from importlib import util
+from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -61,12 +64,25 @@ class TestWineCreateView:
     def test_create_minimal(self, client, user):
         """POST with only required fields creates a wine."""
         client.force_login(user)
-        r = client.post(reverse("wine-add"), _minimal_wine_data(), follow=True)
+        with (
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAISummaryService.refresh_summary"
+                )
+            ) as refresh_summary,
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
+                side_effect=lambda callback: callback(),
+            ),
+        ):
+            r = client.post(reverse("wine-add"), _minimal_wine_data(), follow=True)
         assert r.status_code == 200
         wine = Wine.objects.get(name="Test Wine")
         assert wine.wine_type == "RE"
         assert wine.country == "FR"
         assert wine.user == user
+        refresh_summary.assert_called_once_with(wine.pk)
 
     def test_create_with_optional_fields(self, client, user):
         """POST with optional fields populates them on the wine."""
@@ -267,6 +283,38 @@ class TestWineCreateView:
 
 
 @pytest.mark.django_db
+def test_schedule_ai_summary_refresh_swallows_exceptions(monkeypatch):
+    module_path = (
+        Path(__file__).resolve().parents[1] / "wine_cellar/apps/wine/views/wine_crud.py"
+    )
+    spec = util.spec_from_file_location("test_wine_crud_module", module_path)
+    assert spec and spec.loader
+    wine_crud = util.module_from_spec(spec)
+    spec.loader.exec_module(wine_crud)
+    logged = []
+
+    monkeypatch.setattr(
+        wine_crud.WineAISummaryService,
+        "refresh_summary",
+        lambda wine_id: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+    monkeypatch.setattr(
+        wine_crud.transaction,
+        "on_commit",
+        lambda callback: callback(),
+    )
+    monkeypatch.setattr(
+        wine_crud.logger,
+        "exception",
+        lambda message, wine_id: logged.append((message, wine_id)),
+    )
+
+    wine_crud._schedule_ai_summary_refresh(123)
+
+    assert logged == [("Unexpected error generating AI summary for wine %s", 123)]
+
+
+@pytest.mark.django_db
 class TestWineUpdateView:
     def test_update_name(self, client, user, wine_factory):
         """POST to wine-edit updates the wine name."""
@@ -277,10 +325,25 @@ class TestWineUpdateView:
             wine_type=wine.wine_type,
             country=wine.country,
         )
-        r = client.post(reverse("wine-edit", kwargs={"pk": wine.pk}), data, follow=True)
+        with (
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAISummaryService.refresh_summary"
+                )
+            ) as refresh_summary,
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
+                side_effect=lambda callback: callback(),
+            ),
+        ):
+            r = client.post(
+                reverse("wine-edit", kwargs={"pk": wine.pk}), data, follow=True
+            )
         assert r.status_code == 200
         wine.refresh_from_db()
         assert wine.name == "Updated Name"
+        refresh_summary.assert_called_once_with(wine.pk)
 
     def test_update_wine_type(self, client, user, wine_factory):
         """POST to wine-edit updates the wine type."""

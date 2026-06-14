@@ -41,6 +41,7 @@ CSRF_TRUSTED_ORIGINS = os.environ.get(
 
 # Anthropic API Key for vision-based wine label extraction
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+WINE_AI_SUMMARY_MODEL = os.environ.get("WINE_AI_SUMMARY_MODEL", "claude-sonnet-4-6")
 
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
