@@ -80,6 +80,55 @@ def test_refresh_summary_saves_text_and_sources(settings, monkeypatch, wine_fact
 
 
 @pytest.mark.django_db
+def test_refresh_summary_drops_unsafe_source_urls(settings, monkeypatch, wine_factory):
+    settings.ANTHROPIC_API_KEY = "test-key"
+    wine = wine_factory(
+        user=None,
+        household=None,
+        name="Filtered Source Wine",
+        country="FR",
+    )
+
+    response = SimpleNamespace(
+        model="claude-sonnet-test",
+        content=[
+            SimpleNamespace(
+                text="A concise sourced summary.",
+                citations=[
+                    SimpleNamespace(
+                        type="web_search_result_location",
+                        title="Producer page",
+                        url="https://example.com/producer",
+                    ),
+                    SimpleNamespace(
+                        type="web_search_result_location",
+                        title="Unsafe javascript URL",
+                        url="javascript:alert(1)",
+                    ),
+                    SimpleNamespace(
+                        type="web_search_result_location",
+                        title="Relative path",
+                        url="/producer",
+                    ),
+                ],
+            )
+        ],
+    )
+
+    monkeypatch.setattr(
+        "wine_cellar.apps.wine.services.ai_summary.anthropic.Anthropic",
+        lambda api_key: _FakeAnthropicClient(response, {}),
+    )
+
+    assert WineAISummaryService.refresh_summary(wine.pk) is True
+
+    wine.refresh_from_db()
+    assert wine.ai_summary_sources == [
+        {"title": "Producer page", "url": "https://example.com/producer"}
+    ]
+
+
+@pytest.mark.django_db
 def test_refresh_summary_skips_without_api_key(settings, wine_factory):
     settings.ANTHROPIC_API_KEY = ""
     wine = wine_factory(

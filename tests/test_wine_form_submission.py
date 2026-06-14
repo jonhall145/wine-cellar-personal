@@ -1,4 +1,6 @@
 import io
+from importlib import util
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -278,6 +280,38 @@ class TestWineCreateView:
         assert response.status_code == 200
         assert (reverse("wine-add") + f"?wishlist_item={wishlist_item.pk}") in content
         assert "https://example.com/buy-wine" in content
+
+
+@pytest.mark.django_db
+def test_schedule_ai_summary_refresh_swallows_exceptions(monkeypatch):
+    module_path = (
+        Path(__file__).resolve().parents[1] / "wine_cellar/apps/wine/views/wine_crud.py"
+    )
+    spec = util.spec_from_file_location("test_wine_crud_module", module_path)
+    assert spec and spec.loader
+    wine_crud = util.module_from_spec(spec)
+    spec.loader.exec_module(wine_crud)
+    logged = []
+
+    monkeypatch.setattr(
+        wine_crud.WineAISummaryService,
+        "refresh_summary",
+        lambda wine_id: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+    monkeypatch.setattr(
+        wine_crud.transaction,
+        "on_commit",
+        lambda callback: callback(),
+    )
+    monkeypatch.setattr(
+        wine_crud.logger,
+        "exception",
+        lambda message, wine_id: logged.append((message, wine_id)),
+    )
+
+    wine_crud._schedule_ai_summary_refresh(123)
+
+    assert logged == [("Unexpected error generating AI summary for wine %s", 123)]
 
 
 @pytest.mark.django_db

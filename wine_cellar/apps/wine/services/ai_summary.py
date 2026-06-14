@@ -42,12 +42,7 @@ class WineAISummaryService:
             )
             return False
 
-        wine = (
-            Wine.objects.with_related()
-            .filter(pk=wine_id, deleted=False)
-            .prefetch_related("source", "vineyard")
-            .first()
-        )
+        wine = Wine.objects.with_related().filter(pk=wine_id, deleted=False).first()
         if wine is None:
             logger.warning(
                 "Skipping AI summary generation: wine %s was not found", wine_id
@@ -170,6 +165,12 @@ class WineAISummaryService:
                     continue
                 url = getattr(citation, "url", "")
                 if not url or url in seen_urls:
+                    continue
+                parsed = urlparse(url)
+                if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+                    logger.warning(
+                        "Dropping AI summary citation with unsafe URL: %r", url
+                    )
                     continue
                 seen_urls.add(url)
                 title = getattr(citation, "title", "") or cls._display_title_from_url(

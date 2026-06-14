@@ -55,11 +55,15 @@ def _format_price_delta(beverage, amount):
 
 
 def _schedule_ai_summary_refresh(wine_id):
-    transaction.on_commit(
-        lambda saved_wine_id=wine_id: WineAISummaryService.refresh_summary(
-            saved_wine_id
-        )
-    )
+    def _callback():
+        try:
+            WineAISummaryService.refresh_summary(wine_id)
+        except Exception:
+            logger.exception(
+                "Unexpected error generating AI summary for wine %s", wine_id
+            )
+
+    transaction.on_commit(_callback)
 
 
 @method_decorator(
