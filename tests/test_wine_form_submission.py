@@ -1,4 +1,5 @@
 import io
+from unittest.mock import patch
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -61,12 +62,25 @@ class TestWineCreateView:
     def test_create_minimal(self, client, user):
         """POST with only required fields creates a wine."""
         client.force_login(user)
-        r = client.post(reverse("wine-add"), _minimal_wine_data(), follow=True)
+        with (
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAISummaryService.refresh_summary"
+                )
+            ) as refresh_summary,
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
+                side_effect=lambda callback: callback(),
+            ),
+        ):
+            r = client.post(reverse("wine-add"), _minimal_wine_data(), follow=True)
         assert r.status_code == 200
         wine = Wine.objects.get(name="Test Wine")
         assert wine.wine_type == "RE"
         assert wine.country == "FR"
         assert wine.user == user
+        refresh_summary.assert_called_once_with(wine.pk)
 
     def test_create_with_optional_fields(self, client, user):
         """POST with optional fields populates them on the wine."""
@@ -277,10 +291,25 @@ class TestWineUpdateView:
             wine_type=wine.wine_type,
             country=wine.country,
         )
-        r = client.post(reverse("wine-edit", kwargs={"pk": wine.pk}), data, follow=True)
+        with (
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAISummaryService.refresh_summary"
+                )
+            ) as refresh_summary,
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
+                side_effect=lambda callback: callback(),
+            ),
+        ):
+            r = client.post(
+                reverse("wine-edit", kwargs={"pk": wine.pk}), data, follow=True
+            )
         assert r.status_code == 200
         wine.refresh_from_db()
         assert wine.name == "Updated Name"
+        refresh_summary.assert_called_once_with(wine.pk)
 
     def test_update_wine_type(self, client, user, wine_factory):
         """POST to wine-edit updates the wine type."""

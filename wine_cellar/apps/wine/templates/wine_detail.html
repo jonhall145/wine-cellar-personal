@@ -530,6 +530,33 @@
                 </div>
             </div>
             {% endif %}
+            {% if wine.ai_summary %}
+                <div class="pure-u-1 pure-u-md-1 mt-12" id="ai-summary">
+                    <details>
+                        <summary>AI Summary</summary>
+                        <div class="mt-12">
+                            <p>{{ wine.ai_summary|linebreaksbr }}</p>
+                            {% if wine.ai_summary_generated_at %}
+                                <p class="text--gray text--small">
+                                    Generated {{ wine.ai_summary_generated_at|date:"SHORT_DATETIME_FORMAT" }}
+                                </p>
+                            {% endif %}
+                            {% if wine.ai_summary_sources %}
+                                <h4>Sources</h4>
+                                <ul>
+                                    {% for source in wine.ai_summary_sources %}
+                                        <li>
+                                            <a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">
+                                                {{ source.title|default:source.url }}
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </div>
+                    </details>
+                </div>
+            {% endif %}
         </div>
     </div>
 {% endblock content %}
