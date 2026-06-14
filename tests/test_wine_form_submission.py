@@ -1,4 +1,5 @@
 import io
+import json
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -8,6 +9,7 @@ from PIL import Image
 from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.wine.forms import WineForm
 from wine_cellar.apps.wine.models import (
+    Appellation,
     VisionExtractionLog,
     Wine,
     WineBarcode,
@@ -216,6 +218,65 @@ class TestWineCreateView:
         assert r.status_code == 200
         assert "form" in r.context
         assert "wine_create.html" in [t.name for t in r.templates]
+
+    def test_extracted_grapes_are_preserved_in_create_form(self, client, user):
+        client.force_login(user)
+        session = client.session
+        session["extraction_result"] = {
+            "extracted_data": {
+                "name": "Vision Wine",
+                "wine_type": "WH",
+                "country": "FR",
+                "grapes": ["Riesling"],
+            }
+        }
+        session.save()
+
+        response = client.get(reverse("wine-add"))
+
+        assert response.status_code == 200
+        grapes_config = json.loads(
+            response.context["form"].fields["grapes"].widget.attrs["data-tom_config"]
+        )
+        assert grapes_config["items"] == ["tom_new_optRiesling"]
+        assert response.context["form"].fields["grapes"].widget.attrs["data-clear"] == (
+            "false"
+        )
+
+    def test_extracted_appellation_is_preserved_in_create_form(self, client, user):
+        client.force_login(user)
+        appellation = Appellation.objects.create(
+            name="Vision Test Appellation",
+            country="FR",
+            latitude=44.8378,
+            longitude=-0.5792,
+        )
+        session = client.session
+        session["extraction_result"] = {
+            "extracted_data": {
+                "name": "Vision Wine",
+                "wine_type": "RE",
+                "country": "FR",
+                "subregion": "Bordeaux",
+                "appellation": appellation.pk,
+            }
+        }
+        session.save()
+
+        response = client.get(reverse("wine-add"))
+
+        assert response.status_code == 200
+        assert response.context["form"].initial["subregion"] == "Bordeaux"
+        appellation_config = json.loads(
+            response.context["form"]
+            .fields["appellation"]
+            .widget.attrs["data-tom_config"]
+        )
+        assert appellation_config["items"] == [str(appellation.pk)]
+        assert (
+            response.context["form"].fields["appellation"].widget.attrs["data-clear"]
+            == "false"
+        )
 
     def test_get_from_wishlist_prefills_form(self, client, user):
         household = user.user_settings.active_household

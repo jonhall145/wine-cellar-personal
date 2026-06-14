@@ -176,6 +176,52 @@ class WineBaseForm(
                 json.dumps(country_map)
             )
 
+    def _get_creatable_initial_items(self, field_name):
+        values = self.initial.get(field_name)
+        if not values:
+            return []
+
+        if not isinstance(values, (list, tuple, set)):
+            values = [values]
+
+        field = self.fields[field_name]
+        query_field = getattr(field, "field_name", "name")
+        items = []
+        extra_choices = []
+
+        for value in values:
+            if hasattr(value, "pk"):
+                items.append(str(value.pk))
+                continue
+
+            normalized_value = str(value).strip()
+            if not normalized_value:
+                continue
+
+            existing_choice = field.queryset.filter(
+                **{f"{query_field}__iexact": normalized_value}
+            ).first()
+            if existing_choice:
+                items.append(str(existing_choice.pk))
+                continue
+
+            token = f"tom_new_opt{normalized_value}"
+            items.append(token)
+            extra_choices.append((token, normalized_value))
+
+        if extra_choices:
+            field.choices = list(field.choices) + extra_choices
+
+        return items
+
+    def _get_choice_initial_items(self, field_name):
+        value = self.initial.get(field_name)
+        if value in (None, ""):
+            return []
+        if hasattr(value, "pk"):
+            return [str(value.pk)]
+        return [str(value)]
+
     class Meta:
         abstract = True
 
@@ -401,17 +447,32 @@ class WineForm(WineBaseForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.initial["form_step"] = 0
-        self.set_tom_config(name="grapes", create=True)
+        initial_grapes = self._get_creatable_initial_items("grapes")
+        self.set_tom_config(
+            name="grapes",
+            create=True,
+            items=initial_grapes or None,
+            clear=not bool(initial_grapes),
+        )
         self.set_tom_config(name="attributes", create=True)
         self.set_tom_config(name="food_pairings", create=True)
         self.set_tom_config(name="source", create=True)
-        self.set_tom_config(name="vineyard", create=True)
+        initial_vineyard = self._get_creatable_initial_items("vineyard")
+        self.set_tom_config(
+            name="vineyard",
+            create=True,
+            items=initial_vineyard or None,
+            clear=not bool(initial_vineyard),
+        )
+        initial_appellation = self._get_choice_initial_items("appellation")
         self.set_tom_config(
             name="appellation",
+            items=initial_appellation or None,
             max_items=1,
             max_options=-1,
             search=True,
             placeholder="Search appellations...",
+            clear=not bool(initial_appellation),
         )
 
         # Include initial country value in TomSelect config to preserve it
