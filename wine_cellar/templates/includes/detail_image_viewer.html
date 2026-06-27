@@ -1,0 +1,126 @@
+{% if detail_images %}
+    {{ detail_images|json_script:"beverage-detail-images" }}
+{% endif %}
+<div class="wine-detail__image-wrapper">
+    {% if detail_images %}
+        <button type="button"
+                class="wine-detail__image-button"
+                data-image-viewer-open
+                aria-controls="beverage-image-viewer"
+                aria-haspopup="dialog"
+                aria-label="View photos for {{ beverage.name }}">
+            <div class="image wine-detail__image" id="wine-image-wrapper">
+                <img id="wine-image"
+                     src="{{ preview_image }}"
+                     loading="lazy"
+                     height="225"
+                     width="auto"
+                     alt="{{ image_alt }}">
+            </div>
+        </button>
+        {% if detail_images|length > 1 %}
+            <div class="image-controls" role="group" aria-label="Image carousel controls">
+                <button type="button"
+                        class="wine-prev"
+                        aria-label="Previous image"
+                        title="Previous image">«</button>
+                <button type="button"
+                        class="wine-next"
+                        aria-label="Next image"
+                        title="Next image">»</button>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="image wine-detail__image" id="wine-image-wrapper">
+            <img id="wine-image"
+                 src="{{ preview_image }}"
+                 loading="lazy"
+                 height="225"
+                 width="auto"
+                 alt="{{ image_alt }}">
+        </div>
+    {% endif %}
+</div>
+<div class="wine-detail__image-actions">
+    {% if detail_images %}
+        <button type="button" class="pure-button button__neutral" data-image-viewer-open>
+            <i class="fa-solid fa-images"></i> View Photos
+        </button>
+    {% endif %}
+    <a href="{{ edit_url }}" class="pure-button button__neutral">
+        <i class="fa-solid fa-crop"></i> Edit Images
+    </a>
+</div>
+{% if detail_images %}
+    <div id="beverage-image-viewer"
+         class="image-viewer"
+         hidden
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="beverage-image-viewer-title">
+        <div class="image-viewer__backdrop" data-image-viewer-close></div>
+        <div class="image-viewer__sheet">
+            <div class="image-viewer__header">
+                <div>
+                    <p id="beverage-image-viewer-title" class="image-viewer__title">{{ beverage.name }}</p>
+                    <p id="beverage-image-viewer-count" class="image-viewer__meta"></p>
+                </div>
+                <button type="button"
+                        class="image-viewer__icon-button"
+                        data-image-viewer-close
+                        aria-label="Close photo viewer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="image-viewer__toolbar">
+                <div class="image-viewer__control-group">
+                    <button type="button"
+                            class="image-viewer__icon-button"
+                            data-image-viewer-prev
+                            aria-label="Previous photo">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <button type="button"
+                            class="image-viewer__icon-button"
+                            data-image-viewer-next
+                            aria-label="Next photo">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div class="image-viewer__control-group">
+                    <button type="button"
+                            class="image-viewer__icon-button"
+                            data-image-viewer-zoom-out
+                            aria-label="Zoom out">
+                        <i class="fa-solid fa-magnifying-glass-minus"></i>
+                    </button>
+                    <button type="button"
+                            class="image-viewer__zoom-reset"
+                            data-image-viewer-reset
+                            aria-label="Reset zoom">100%</button>
+                    <button type="button"
+                            class="image-viewer__icon-button"
+                            data-image-viewer-zoom-in
+                            aria-label="Zoom in">
+                        <i class="fa-solid fa-magnifying-glass-plus"></i>
+                    </button>
+                </div>
+                <a id="beverage-image-viewer-link"
+                   class="image-viewer__open-link"
+                   href="{{ detail_images.0 }}"
+                   target="_blank"
+                   rel="noopener">
+                    <i class="fa-solid fa-up-right-from-square"></i> Open original
+                </a>
+            </div>
+            <div id="beverage-image-viewer-stage" class="image-viewer__stage">
+                <div class="image-viewer__canvas">
+                    <img id="beverage-image-viewer-image"
+                         class="image-viewer__image"
+                         src="{{ detail_images.0 }}"
+                         alt="{{ image_alt }}">
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}

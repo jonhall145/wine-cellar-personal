@@ -21,40 +21,8 @@
                 </div>
             </div>
             <div class="pure-u-1 pure-u-md-1-2">
-                {% if wine.image_thumbnail %}
-                    <div class="wine-detail__image-wrapper"
-                         data-images='[{% for img in wine.image_thumbnails %}"{{ img }}"{% if not forloop.last %},{% endif %}{% endfor %}]'>
-                        <div class="image wine-detail__image" id="wine-image-wrapper">
-                            <img id="wine-image"
-                                 src="{{ wine.image_thumbnail }}"
-                                 loading="lazy"
-                                 height="225"
-                                 width="auto"
-                                 alt="Picture of a wine bottle">
-                        </div>
-                        {% if wine.image_thumbnails|length > 1 %}
-                            <div class="image-controls"
-                                 role="group"
-                                 aria-label="Image carousel controls">
-                                <button type="button"
-                                        class="wine-prev"
-                                        aria-label="Previous image"
-                                        title="Previous image">«</button>
-                                <button type="button"
-                                        class="wine-next"
-                                        aria-label="Next image"
-                                        title="Next image">»</button>
-                            </div>
-                        {% endif %}
-                    </div>
-                    <div class="wine-detail__image-actions">
-                        <a href="{% url 'wine-images' wine.pk %}" class="pure-button button__neutral">
-                            <i class="fa-solid fa-crop"></i> Edit Images
-                        </a>
-                    </div>
-                {% else %}
-                    <div>No image</div>
-                {% endif %}
+                {% url 'wine-images' wine.pk as image_edit_url %}
+                {% include "includes/detail_image_viewer.html" with beverage=wine preview_image=wine.image_thumbnail detail_images=wine.detail_image_urls edit_url=image_edit_url image_alt="Picture of a wine bottle" %}
             </div>
             <div class="pure-u-1 pure-u-md-1-2">
                 <table class="wine-detail__table">

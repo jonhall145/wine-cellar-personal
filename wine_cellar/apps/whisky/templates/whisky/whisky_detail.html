@@ -21,42 +21,8 @@
                 </div>
             </div>
             <div class="pure-u-1 pure-u-md-1-2">
-                {% if whisky.image_thumbnail %}
-                    {% with images=whisky.all_images %}
-                        <div class="wine-detail__image-wrapper"
-                             data-images='[{% for img in images %}"{{ img }}"{% if not forloop.last %},{% endif %}{% endfor %}]'>
-                            <div class="image wine-detail__image" id="wine-image-wrapper">
-                                <img id="wine-image"
-                                     src="{{ whisky.image_thumbnail }}"
-                                     loading="lazy"
-                                     height="225"
-                                     width="auto"
-                                     alt="Picture of a whisky bottle">
-                            </div>
-                            {% if images|length > 1 %}
-                                <div class="image-controls"
-                                     role="group"
-                                     aria-label="Image carousel controls">
-                                    <button type="button"
-                                            class="wine-prev"
-                                            aria-label="Previous image"
-                                            title="Previous image">«</button>
-                                    <button type="button"
-                                            class="wine-next"
-                                            aria-label="Next image"
-                                            title="Next image">»</button>
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% endwith %}
-                    <div class="wine-detail__image-actions">
-                        <a href="{% url 'whisky-images' whisky.pk %}" class="pure-button button__neutral">
-                            <i class="fa-solid fa-crop"></i> Edit Images
-                        </a>
-                    </div>
-                {% else %}
-                    <div>No image</div>
-                {% endif %}
+                {% url 'whisky-images' whisky.pk as image_edit_url %}
+                {% include "includes/detail_image_viewer.html" with beverage=whisky preview_image=whisky.image_thumbnail detail_images=whisky.detail_image_urls edit_url=image_edit_url image_alt="Picture of a whisky bottle" %}
             </div>
             <div class="pure-u-1 pure-u-md-1-2">
                 <table class="wine-detail__table">

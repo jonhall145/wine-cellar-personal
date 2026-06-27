@@ -176,11 +176,12 @@ def test_image_properties_use_prefetch_cache(
     qs = Wine.objects.prefetch_related("wineimage_set").filter(pk=wine.pk)
     prefetched_wine = qs.first()
 
-    # Accessing all three image properties should use the prefetch cache (0 extra)
+    # Accessing all image properties should use the prefetch cache (0 extra)
     with CaptureQueriesContext(connection) as ctx:
         _ = prefetched_wine.image
         _ = prefetched_wine.image_thumbnail
         _ = prefetched_wine.image_thumbnails
+        _ = prefetched_wine.detail_image_urls
     assert len(ctx.captured_queries) == 0, (
         f"Expected 0 queries but got {len(ctx.captured_queries)}: "
         f"{[q['sql'] for q in ctx.captured_queries]}"

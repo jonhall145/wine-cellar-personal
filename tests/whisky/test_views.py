@@ -948,6 +948,9 @@ def test_whisky_detail_shows_carousel_controls_for_multiple_images(
     assert 'class="image-controls"' in content
     assert 'class="wine-prev"' in content
     assert 'class="wine-next"' in content
+    assert 'id="beverage-image-viewer"' in content
+    assert 'data-image-viewer-zoom-in' in content
+    assert "View Photos" in content
 
 
 @pytest.mark.django_db
