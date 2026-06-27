@@ -49,19 +49,21 @@ document.addEventListener("DOMContentLoaded", function () {
     const MAX_ZOOM = 4;
     const ZOOM_STEP = 0.5;
 
-    /** Return the URL only if it is a safe http/https or root-relative URL. */
-    function safeMediaUrl(url: string): string {
-        if (typeof url !== "string") return "";
-        if (url.startsWith("/")) return url;
+    function safeMediaUrl(url: string): string | null {
+        if (typeof url !== "string" || url.trim() === "") {
+            return null;
+        }
+
         try {
-            const parsed = new URL(url);
-            if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+            const parsed = new URL(url, window.location.origin);
+            if (parsed.protocol === "http:" || parsed.protocol === "https:") {
                 return url;
             }
         } catch {
-            // not a valid absolute URL
+            return null;
         }
-        return "";
+
+        return null;
     }
 
     function setViewerNavigationState() {
@@ -109,12 +111,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function setIndex(nextIndex: number, skipPreview = false) {
         index = (nextIndex + images.length) % images.length;
-        if (!skipPreview && previewImage) {
-            previewImage.src = safeMediaUrl(images[index]);
+        const safeUrl = safeMediaUrl(images[index]);
+
+        if (!skipPreview && safeUrl) {
+            previewImage.src = safeUrl;
         }
 
-        if (viewerImage) {
-            viewerImage.src = safeMediaUrl(images[index]);
+        if (viewerImage && safeUrl) {
+            viewerImage.src = safeUrl;
         }
 
         if (viewerCount) {
@@ -122,7 +126,11 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         if (viewerLink) {
-            viewerLink.href = safeMediaUrl(images[index]);
+            if (safeUrl) {
+                viewerLink.href = safeUrl;
+            } else {
+                viewerLink.removeAttribute("href");
+            }
         }
     }
 
@@ -152,7 +160,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         viewer.hidden = true;
         document.body.style.overflow = "";
-        lastFocusedBeforeOpen?.focus();
+        if (lastFocusedBeforeOpen?.isConnected) {
+            lastFocusedBeforeOpen.focus();
+        }
         lastFocusedBeforeOpen = null;
     }
 
@@ -247,6 +257,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     setViewerNavigationState();
-    setIndex(0, true);  // initialise viewer state without overwriting server-rendered thumbnail
+    setIndex(0, true);
     setZoomState();
 });
