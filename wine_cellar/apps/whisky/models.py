@@ -550,7 +550,7 @@ class Whisky(UserContentModel):
         return result
 
     @property
-    def detail_image_urls(self):
+    def detail_image_urls(self) -> list[str]:
         """Return the full-size image URLs for the detail-page viewer."""
         image_type_order = {
             WhiskyImage.ImageType.LABEL_FRONT: 0,

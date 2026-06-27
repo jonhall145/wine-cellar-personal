@@ -43,10 +43,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let index = 0;
     let zoom = 1;
+    let lastFocusedBeforeOpen: HTMLElement | null = null;
 
     const MIN_ZOOM = 1;
     const MAX_ZOOM = 4;
     const ZOOM_STEP = 0.5;
+
+    /** Return the URL only if it is a safe http/https or root-relative URL. */
+    function safeMediaUrl(url: string): string {
+        if (typeof url !== "string") return "";
+        if (url.startsWith("/")) return url;
+        try {
+            const parsed = new URL(url);
+            if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+                return url;
+            }
+        } catch {
+            // not a valid absolute URL
+        }
+        return "";
+    }
 
     function setViewerNavigationState() {
         if (!viewerPrev || !viewerNext) return;
@@ -91,13 +107,14 @@ document.addEventListener("DOMContentLoaded", function () {
         setZoomState();
     }
 
-    function setIndex(nextIndex: number) {
+    function setIndex(nextIndex: number, skipPreview = false) {
         index = (nextIndex + images.length) % images.length;
-        previewImage.src = images[index];
+        if (!skipPreview && previewImage) {
+            previewImage.src = safeMediaUrl(images[index]);
+        }
 
         if (viewerImage) {
-            viewerImage.src = images[index];
-            viewerImage.alt = `Photo ${index + 1}`;
+            viewerImage.src = safeMediaUrl(images[index]);
         }
 
         if (viewerCount) {
@@ -105,7 +122,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         if (viewerLink) {
-            viewerLink.href = images[index];
+            viewerLink.href = safeMediaUrl(images[index]);
         }
     }
 
@@ -122,6 +139,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function openViewer() {
         if (!viewer) return;
 
+        lastFocusedBeforeOpen = document.activeElement as HTMLElement | null;
         viewer.hidden = false;
         document.body.style.overflow = "hidden";
         setIndex(index);
@@ -134,6 +152,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         viewer.hidden = true;
         document.body.style.overflow = "";
+        lastFocusedBeforeOpen?.focus();
+        lastFocusedBeforeOpen = null;
     }
 
     if (prevBtn) {
@@ -227,6 +247,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     setViewerNavigationState();
-    setIndex(0);
+    setIndex(0, true);  // initialise viewer state without overwriting server-rendered thumbnail
     setZoomState();
 });
