@@ -465,6 +465,22 @@ class TestWineDetailView:
         assert "Producer profile" in content
         assert 'href="https://example.com/producer"' in content
 
+    def test_detail_view_renders_photo_viewer_controls(
+        self, client, user, wine_factory, wine_image_factory, clear_image_folder
+    ):
+        wine = wine_factory(user=user, name="Photo Wine")
+        wine_image_factory(user=user, wine=wine, image_type="LF")
+        client.force_login(user)
+
+        response = client.get(reverse("wine-detail", kwargs={"pk": wine.pk}))
+
+        assert response.status_code == HTTPStatus.OK
+        content = response.content.decode()
+        assert 'data-image-viewer-open' in content
+        assert 'id="beverage-image-viewer"' in content
+        assert 'data-image-viewer-zoom-in' in content
+        assert "View Photos" in content
+
     def test_can_add_price_history(self, client, user, wine_factory, source_factory):
         household = user.user_settings.active_household
         wine = wine_factory(user=user, name="Tracked Wine")

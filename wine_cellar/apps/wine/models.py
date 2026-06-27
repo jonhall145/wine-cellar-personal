@@ -551,6 +551,25 @@ class Wine(UserContentModel):
         return result
 
     @property
+    def detail_image_urls(self) -> list[str]:
+        """Return the full-size image URLs for the detail-page viewer."""
+        image_type_order = {
+            ImageType.LABEL_FRONT: 0,
+            ImageType.LABEL_BACK: 1,
+        }
+        return [
+            _versioned_media_url(image.image) or image.image.url
+            for image in sorted(
+                self._cached_images(),
+                key=lambda image: (
+                    0 if image.is_primary else 1,
+                    image_type_order.get(image.image_type, len(image_type_order)),
+                    image.pk,
+                ),
+            )
+        ]
+
+    @property
     def country_name(self):
         return pycountry.countries.get(alpha_2=self.country).name
 
