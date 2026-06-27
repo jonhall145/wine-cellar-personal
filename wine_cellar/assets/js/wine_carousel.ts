@@ -1,12 +1,11 @@
 document.addEventListener("DOMContentLoaded", function () {
     const wrapper = document.querySelector(".wine-detail__image-wrapper") as HTMLElement | null;
-    const previewImage = document.getElementById("wine-image") as HTMLImageElement | null;
-    const imageData = document.getElementById("beverage-detail-images");
+    if (!wrapper) return;
 
-    if (!wrapper || !previewImage || !imageData?.textContent) return;
-
-    const images = JSON.parse(imageData.textContent) as string[];
-    if (!Array.isArray(images) || images.length === 0) return;
+    const previewImages = Array.from(
+        wrapper.querySelectorAll("[data-preview-image]"),
+    ) as HTMLImageElement[];
+    if (previewImages.length === 0) return;
 
     const prevBtn = wrapper.querySelector(".wine-prev") as HTMLButtonElement | null;
     const nextBtn = wrapper.querySelector(".wine-next") as HTMLButtonElement | null;
@@ -15,15 +14,15 @@ document.addEventListener("DOMContentLoaded", function () {
     const viewerStage = document.getElementById(
         "beverage-image-viewer-stage",
     ) as HTMLElement | null;
-    const viewerImage = document.getElementById(
-        "beverage-image-viewer-image",
-    ) as HTMLImageElement | null;
+    const viewerImages = Array.from(
+        viewer?.querySelectorAll("[data-image-viewer-image]") ?? [],
+    ) as HTMLImageElement[];
+    const viewerLinks = Array.from(
+        viewer?.querySelectorAll("[data-image-viewer-link]") ?? [],
+    ) as HTMLAnchorElement[];
     const viewerCount = document.getElementById(
         "beverage-image-viewer-count",
     ) as HTMLElement | null;
-    const viewerLink = document.getElementById(
-        "beverage-image-viewer-link",
-    ) as HTMLAnchorElement | null;
     const viewerPrev = viewer?.querySelector(
         "[data-image-viewer-prev]",
     ) as HTMLButtonElement | null;
@@ -49,27 +48,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const MAX_ZOOM = 4;
     const ZOOM_STEP = 0.5;
 
-    function safeMediaUrl(url: string): string | null {
-        if (typeof url !== "string" || url.trim() === "") {
-            return null;
-        }
-
-        try {
-            const parsed = new URL(url, window.location.origin);
-            if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-                return url;
-            }
-        } catch {
-            return null;
-        }
-
-        return null;
+    function currentViewerImage(): HTMLImageElement | null {
+        return viewerImages[index] ?? null;
     }
 
     function setViewerNavigationState() {
         if (!viewerPrev || !viewerNext) return;
 
-        const disabled = images.length <= 1;
+        const disabled = previewImages.length <= 1;
         viewerPrev.disabled = disabled;
         viewerNext.disabled = disabled;
     }
@@ -84,6 +70,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function applyZoom(resetScroll = false) {
+        const viewerImage = currentViewerImage();
         if (!viewerStage || !viewerImage || !viewerImage.naturalWidth || !viewerImage.naturalHeight) {
             setZoomState();
             return;
@@ -109,28 +96,23 @@ document.addEventListener("DOMContentLoaded", function () {
         setZoomState();
     }
 
-    function setIndex(nextIndex: number, skipPreview = false) {
-        index = (nextIndex + images.length) % images.length;
-        const safeUrl = safeMediaUrl(images[index]);
+    function setIndex(nextIndex: number) {
+        index = (nextIndex + previewImages.length) % previewImages.length;
 
-        if (!skipPreview && safeUrl) {
-            previewImage.src = safeUrl;
-        }
+        previewImages.forEach((image, imageIndex) => {
+            image.hidden = imageIndex !== index;
+        });
 
-        if (viewerImage && safeUrl) {
-            viewerImage.src = safeUrl;
-        }
+        viewerImages.forEach((image, imageIndex) => {
+            image.hidden = imageIndex !== index;
+        });
+
+        viewerLinks.forEach((link, linkIndex) => {
+            link.hidden = linkIndex !== index;
+        });
 
         if (viewerCount) {
-            viewerCount.textContent = `Photo ${index + 1} of ${images.length}`;
-        }
-
-        if (viewerLink) {
-            if (safeUrl) {
-                viewerLink.href = safeUrl;
-            } else {
-                viewerLink.removeAttribute("href");
-            }
+            viewerCount.textContent = `Photo ${index + 1} of ${previewImages.length}`;
         }
     }
 
@@ -206,13 +188,19 @@ document.addEventListener("DOMContentLoaded", function () {
         button.addEventListener("click", closeViewer);
     });
 
-    viewerImage?.addEventListener("load", () => {
-        applyZoom(true);
+    viewerImages.forEach((image) => {
+        image.addEventListener("load", () => {
+            if (!image.hidden) {
+                applyZoom(true);
+            }
+        });
     });
 
-    viewerImage?.addEventListener("dblclick", () => {
-        zoom = zoom === 1 ? 2 : 1;
-        applyZoom();
+    viewerImages.forEach((image) => {
+        image.addEventListener("dblclick", () => {
+            zoom = zoom === 1 ? 2 : 1;
+            applyZoom();
+        });
     });
 
     window.addEventListener("resize", () => {
@@ -257,6 +245,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     setViewerNavigationState();
-    setIndex(0, true);
+    setIndex(0);
     setZoomState();
 });

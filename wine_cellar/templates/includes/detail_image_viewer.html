@@ -1,6 +1,3 @@
-{% if detail_images %}
-    {{ detail_images|json_script:"beverage-detail-images" }}
-{% endif %}
 <div class="wine-detail__image-wrapper">
     {% if detail_images %}
         <button type="button"
@@ -10,12 +7,16 @@
                 aria-haspopup="dialog"
                 aria-label="View photos for {{ beverage.name }}">
             <div class="image wine-detail__image" id="wine-image-wrapper">
-                <img id="wine-image"
-                     src="{{ preview_image }}"
-                     loading="lazy"
-                     height="225"
-                     width="auto"
-                     alt="{{ image_alt }}">
+                {% for image_url in detail_images %}
+                    <img src="{{ image_url }}"
+                         class="wine-detail__preview-image"
+                         data-preview-image
+                         loading="lazy"
+                         height="225"
+                         width="auto"
+                         alt="{{ image_alt }}"
+                         {% if not forloop.first %}hidden{% endif %}>
+                {% endfor %}
             </div>
         </button>
         {% if detail_images|length > 1 %}
@@ -105,20 +106,27 @@
                         <i class="fa-solid fa-magnifying-glass-plus"></i>
                     </button>
                 </div>
-                <a id="beverage-image-viewer-link"
-                   class="image-viewer__open-link"
-                   href="{{ detail_images.0 }}"
-                   target="_blank"
-                   rel="noopener">
-                    <i class="fa-solid fa-up-right-from-square"></i> Open original
-                </a>
+                {% for image_url in detail_images %}
+                    <a class="image-viewer__open-link"
+                       data-image-viewer-link
+                       href="{{ image_url }}"
+                       target="_blank"
+                       rel="noopener"
+                       {% if not forloop.first %}hidden{% endif %}>
+                        <i class="fa-solid fa-up-right-from-square"></i> Open original
+                    </a>
+                {% endfor %}
             </div>
             <div id="beverage-image-viewer-stage" class="image-viewer__stage">
                 <div class="image-viewer__canvas">
-                    <img id="beverage-image-viewer-image"
-                         class="image-viewer__image"
-                         src="{{ detail_images.0 }}"
-                         alt="{{ image_alt }}">
+                    {% for image_url in detail_images %}
+                        <img class="image-viewer__image"
+                             data-image-viewer-image
+                             src="{{ image_url }}"
+                             loading="lazy"
+                             alt="{{ image_alt }}"
+                             {% if not forloop.first %}hidden{% endif %}>
+                    {% endfor %}
                 </div>
             </div>
         </div>

@@ -88,6 +88,12 @@
   }
 }
 
+.wine-detail__preview-image[hidden],
+.image-viewer__image[hidden],
+.image-viewer__open-link[hidden] {
+  display: none;
+}
+
 .wine-detail__image-actions {
   display: flex;
   justify-content: center;
