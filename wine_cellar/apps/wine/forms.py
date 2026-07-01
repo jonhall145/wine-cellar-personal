@@ -57,10 +57,21 @@ class WineFormPostCleanMixin:
                     )
             grapes = self.cleaned_data.get("grapes", [])
             if grapes:
+                grape_config_raw = self.fields["grapes"].widget.attrs.get(
+                    "data-tom_config", "{}"
+                )
+                grape_config = json.loads(grape_config_raw)
+                grape_max_options = (
+                    -1
+                    if grape_config.get("maxOptions") is None
+                    and "maxOptions" in grape_config
+                    else 50
+                )
                 self.set_tom_config(
                     name="grapes",
-                    create=True,
+                    create=grape_config.get("create", True),
                     items=[g.pk for g in grapes],
+                    max_options=grape_max_options,
                     clear=False,
                 )
             attributes = self.cleaned_data.get("attributes", [])
@@ -604,7 +615,7 @@ class WineFilterForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         super().__init__(*args, **kwargs)
         self.initial["form_step"] = 0
         self.set_tom_config(name="wine_type", create=False)
-        self.set_tom_config(name="grapes", create=False)
+        self.set_tom_config(name="grapes", create=False, max_options=-1)
         self.set_tom_config(name="food_pairings", create=False)
         self.set_tom_config(name="source", create=False)
         self.set_tom_config(name="vineyard", create=False)
