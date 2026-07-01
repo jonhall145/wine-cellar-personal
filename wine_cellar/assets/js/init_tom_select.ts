@@ -3,7 +3,7 @@ import { TomSettings } from 'tom-select/dist/esm/types/settings.js';
 import { RecursivePartial, TomCreateCallback} from 'tom-select/dist/esm/types/core.js';
 
 
-// Store TomSelect instances by element ID for cross-field interaction
+// Store TomSelect instances by element name for cross-field interaction
 const tsInstances: Record<string, TomSelect> = {}
 
 function normaliseTomSelectValue(value: string | string[] | null | undefined): string[] {
@@ -135,11 +135,11 @@ function initWineTypeGrapeFilter(): void {
   if (!grapeTs || !wineTypeTs) return
 
   const grapeTypeMap: Record<string, string[]> = JSON.parse(grapeTypeMapRaw)
-  const allOptions = Object.entries(grapeTs.options)
-    .filter(([value]) => value !== '')
-    .map(([value, data]) => ({
-      value,
-      text: (data as { text?: string }).text ?? '',
+  const allOptions = Array.from(grapeSelect.options)
+    .filter((option) => option.value !== '')
+    .map((option) => ({
+      value: option.value,
+      text: option.text,
     }))
 
   function reorderGrapes(selectedWineTypes: string[]): void {
