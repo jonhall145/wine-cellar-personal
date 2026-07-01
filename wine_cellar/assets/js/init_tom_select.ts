@@ -6,6 +6,16 @@ import { RecursivePartial, TomCreateCallback} from 'tom-select/dist/esm/types/co
 // Store TomSelect instances by element ID for cross-field interaction
 const tsInstances: Record<string, TomSelect> = {}
 
+function normaliseTomSelectValue(value: string | string[] | null | undefined): string[] {
+  if (Array.isArray(value)) {
+    return value
+  }
+  if (typeof value === 'string' && value !== '') {
+    return [value]
+  }
+  return []
+}
+
 function initTomSelect (): void {
   document.querySelectorAll('select:not([data-native-select="true"])').forEach((el) => {
     const rawConfig : string | undefined = el.dataset.tom_config
@@ -50,6 +60,7 @@ function initTomSelect (): void {
 
   // Set up country-based appellation filtering
   initAppellationCountryFilter()
+  initWineTypeGrapeFilter()
 }
 
 function initAppellationCountryFilter(): void {
@@ -109,6 +120,61 @@ function initAppellationCountryFilter(): void {
   if (initialCountry) {
     filterByCountry(initialCountry)
   }
+}
+
+function initWineTypeGrapeFilter(): void {
+  const grapeSelect = document.querySelector('select[name="grapes"][data-grape-wine-types]') as HTMLSelectElement | null
+  const wineTypeSelect = document.querySelector('select[name="wine_type"]') as HTMLSelectElement | null
+  if (!grapeSelect || !wineTypeSelect) return
+
+  const grapeTypeMapRaw = grapeSelect.dataset.grapeWineTypes
+  if (!grapeTypeMapRaw) return
+
+  const grapeTs = tsInstances['grapes']
+  const wineTypeTs = tsInstances['wine_type']
+  if (!grapeTs || !wineTypeTs) return
+
+  const grapeTypeMap: Record<string, string[]> = JSON.parse(grapeTypeMapRaw)
+  const allOptions = Object.entries(grapeTs.options)
+    .filter(([value]) => value !== '')
+    .map(([value, data]) => ({
+      value,
+      text: (data as { text?: string }).text ?? '',
+    }))
+
+  function reorderGrapes(selectedWineTypes: string[]): void {
+    const selectedGrapes = normaliseTomSelectValue(grapeTs.getValue() as string | string[] | null)
+    const hasSelectedTypes = selectedWineTypes.length > 0
+
+    const prioritisedOptions = allOptions.filter((option) => {
+      const wineTypes = grapeTypeMap[option.value] ?? []
+      if (hasSelectedTypes) {
+        return wineTypes.some((wineType) => selectedWineTypes.includes(wineType))
+      }
+      return wineTypes.length > 0
+    })
+    const remainingOptions = allOptions.filter((option) => {
+      const wineTypes = grapeTypeMap[option.value] ?? []
+      if (hasSelectedTypes) {
+        return !wineTypes.some((wineType) => selectedWineTypes.includes(wineType))
+      }
+      return wineTypes.length === 0
+    })
+
+    grapeTs.clear(true)
+    grapeTs.clearOptions()
+    grapeTs.addOptions([...prioritisedOptions, ...remainingOptions])
+    if (selectedGrapes.length > 0) {
+      grapeTs.setValue(selectedGrapes, true)
+    }
+    grapeTs.refreshOptions(false)
+  }
+
+  wineTypeTs.on('change', () => {
+    reorderGrapes(normaliseTomSelectValue(wineTypeTs.getValue() as string | string[] | null))
+  })
+
+  reorderGrapes(normaliseTomSelectValue(wineTypeTs.getValue() as string | string[] | null))
 }
 
 if (document.readyState === 'loading') {

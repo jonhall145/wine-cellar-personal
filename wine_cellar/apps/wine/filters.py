@@ -1,7 +1,8 @@
+import json
 from datetime import date
 
 import django_filters
-from django.db.models import Q
+from django.db.models import Count, Q
 from django_filters import ChoiceFilter, MultipleChoiceFilter, OrderingFilter
 
 from wine_cellar.apps.core.filters import (
@@ -12,7 +13,7 @@ from wine_cellar.apps.core.filters import (
 )
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.forms import WineFilterForm
-from wine_cellar.apps.wine.models import Appellation, Collection, Wine, WineType
+from wine_cellar.apps.wine.models import Appellation, Collection, Grape, Wine, WineType
 
 
 def get_country_choices_with_favourites(user=None):
@@ -38,6 +39,55 @@ def get_appellation_choices(user=None):
         format_choice=lambda app: f"{app.name} ({app.country})",
         extra_choices=[("missing", "Missing")],
     )
+
+
+def get_grape_queryset(user=None, *, selected_wine_types=None):
+    """Order grape choices so relevant, in-stock grapes appear first."""
+    household = get_active_household(user) if user and user.is_authenticated else None
+    queryset = Grape.objects.filter(household__isnull=True).order_by("name")
+
+    if not household:
+        return queryset
+
+    queryset = Grape.objects.filter(Q(household__isnull=True) | Q(household=household))
+    held_wine_filter = Q(
+        wine__household=household,
+        wine__deleted=False,
+        wine__storageitem__isnull=False,
+        wine__storageitem__deleted=False,
+    )
+    matching_wine_filter = held_wine_filter
+    if selected_wine_types:
+        matching_wine_filter &= Q(wine__wine_type__in=selected_wine_types)
+
+    return queryset.annotate(
+        matching_wine_count=Count("wine", filter=matching_wine_filter, distinct=True),
+        held_wine_count=Count("wine", filter=held_wine_filter, distinct=True),
+    ).order_by("-matching_wine_count", "-held_wine_count", "name")
+
+
+def get_grape_wine_type_map(user=None):
+    """Map grape ids to the in-stock wine types they currently appear in."""
+    household = get_active_household(user) if user and user.is_authenticated else None
+    if not household:
+        return {}
+
+    grape_rows = (
+        Grape.objects.filter(
+            Q(household__isnull=True) | Q(household=household),
+            wine__household=household,
+            wine__deleted=False,
+            wine__storageitem__isnull=False,
+            wine__storageitem__deleted=False,
+        )
+        .values_list("pk", "wine__wine_type")
+        .distinct()
+    )
+
+    grape_wine_types = {}
+    for grape_id, wine_type in grape_rows:
+        grape_wine_types.setdefault(str(grape_id), []).append(wine_type)
+    return grape_wine_types
 
 
 class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
@@ -106,6 +156,11 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
     wine_type = django_filters.MultipleChoiceFilter(
         choices=WineType.choices,
         label="Type",
+    )
+    grapes = django_filters.ModelMultipleChoiceFilter(
+        queryset=Grape.objects.none(),
+        label="Grapes",
+        method="filter_grapes",
     )
     collection = ChoiceFilter(
         choices=[],
@@ -188,6 +243,11 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
             return queryset.filter(collections__pk=int(value)).distinct()
         return queryset
 
+    def filter_grapes(self, queryset, name, value):
+        if value:
+            return queryset.filter(grapes__in=value).distinct()
+        return queryset
+
     class Meta:
         form = WineFilterForm
         model = Wine
@@ -217,6 +277,18 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
         household = (
             get_active_household(user) if user and user.is_authenticated else None
         )
+        selected_wine_types = []
+        if data is not None:
+            if hasattr(data, "getlist"):
+                selected_wine_types = [
+                    value for value in data.getlist("wine_type") if value
+                ]
+            else:
+                wine_type_value = data.get("wine_type")
+                if isinstance(wine_type_value, (list, tuple)):
+                    selected_wine_types = [value for value in wine_type_value if value]
+                elif wine_type_value:
+                    selected_wine_types = [wine_type_value]
         user_filters = [
             "vineyard",
             "grapes",
@@ -229,6 +301,12 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
                 user_filter
             ].queryset.filter(Q(household__isnull=True) | Q(household=household))
 
+        grape_queryset = get_grape_queryset(
+            user,
+            selected_wine_types=selected_wine_types,
+        )
+        self.filters["grapes"].queryset = grape_queryset
+
         # Update country filter with favourites-ordered choices
         self.filters["country"].extra["choices"] = get_country_choices_with_favourites(
             request.user if request else None
@@ -240,4 +318,9 @@ class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
         )
         self.filters["collection"].extra["choices"] = get_collection_choices(
             request.user if request else None, collection_model=Collection
+        )
+
+        self.form.fields["grapes"].queryset = grape_queryset
+        self.form.fields["grapes"].widget.attrs["data-grape-wine-types"] = json.dumps(
+            get_grape_wine_type_map(user)
         )

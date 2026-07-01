@@ -1,11 +1,14 @@
+import json
+
 import pytest
 from django.test import RequestFactory
 
 from wine_cellar.apps.wine.filters import (
     WineFilter,
     get_appellation_choices,
+    get_grape_queryset,
 )
-from wine_cellar.apps.wine.models import Appellation, Wine
+from wine_cellar.apps.wine.models import Appellation, Grape, Wine, WineType
 
 
 @pytest.mark.django_db
@@ -81,3 +84,118 @@ def test_filter_rating_supports_multiple_selected_ratings(user, wine_factory):
     assert one_star in filt.qs
     assert unrated in filt.qs
     assert two_star not in filt.qs
+
+
+@pytest.mark.django_db
+def test_get_grape_queryset_prioritises_selected_wine_type(
+    user, wine_factory, storage_item_factory
+):
+    red_grape = Grape.objects.create(
+        name="Alpha Red",
+        user=user,
+        household=user.user_settings.active_household,
+    )
+    white_grape = Grape.objects.create(
+        name="Beta White",
+        user=user,
+        household=user.user_settings.active_household,
+    )
+    unused_grape = Grape.objects.create(
+        name="Zulu Unused",
+        user=user,
+        household=user.user_settings.active_household,
+    )
+
+    red_wine = wine_factory(user=user, wine_type=WineType.RED, grapes=[red_grape])
+    white_wine = wine_factory(user=user, wine_type=WineType.WHITE, grapes=[white_grape])
+    storage_item_factory(wine=red_wine, user=user)
+    storage_item_factory(wine=white_wine, user=user)
+
+    grapes = list(
+        get_grape_queryset(user, selected_wine_types=[WineType.RED]).values_list(
+            "name", flat=True
+        )
+    )
+
+    assert grapes == ["Alpha Red", "Beta White", "Zulu Unused"]
+    assert unused_grape.name == "Zulu Unused"
+
+
+@pytest.mark.django_db
+def test_filter_grapes_matches_any_selected_grape(user, wine_factory):
+    request = RequestFactory().get("/")
+    request.user = user
+
+    merlot = Grape.objects.create(
+        name="Merlot",
+        user=user,
+        household=user.user_settings.active_household,
+    )
+    riesling = Grape.objects.create(
+        name="Riesling",
+        user=user,
+        household=user.user_settings.active_household,
+    )
+    chardonnay = Grape.objects.create(
+        name="Chardonnay",
+        user=user,
+        household=user.user_settings.active_household,
+    )
+
+    merlot_wine = wine_factory(user=user, grapes=[merlot])
+    riesling_wine = wine_factory(user=user, grapes=[riesling])
+    other_wine = wine_factory(user=user, grapes=[chardonnay])
+
+    filt = WineFilter(
+        data={
+            "grapes": [str(merlot.pk), str(riesling.pk)],
+            "stock": "0",
+            "order": "created",
+        },
+        queryset=Wine.objects.filter(user=user),
+        request=request,
+    )
+
+    assert {wine.pk for wine in filt.qs} == {merlot_wine.pk, riesling_wine.pk}
+    assert other_wine not in filt.qs
+
+
+@pytest.mark.django_db
+def test_filter_form_grapes_include_wine_type_metadata(
+    user, wine_factory, storage_item_factory
+):
+    request = RequestFactory().get("/")
+    request.user = user
+
+    merlot = Grape.objects.create(
+        name="Merlot",
+        user=user,
+        household=user.user_settings.active_household,
+    )
+    white_grape = Grape.objects.create(
+        name="Riesling",
+        user=user,
+        household=user.user_settings.active_household,
+    )
+    red_wine = wine_factory(user=user, wine_type=WineType.RED, grapes=[merlot])
+    white_wine = wine_factory(user=user, wine_type=WineType.WHITE, grapes=[white_grape])
+    storage_item_factory(wine=red_wine, user=user)
+    storage_item_factory(wine=white_wine, user=user)
+
+    filt = WineFilter(
+        data={"wine_type": [WineType.RED], "stock": "1", "order": "created"},
+        queryset=Wine.objects.filter(user=user),
+        request=request,
+    )
+
+    grape_field = filt.form.fields["grapes"]
+    grape_config = json.loads(grape_field.widget.attrs["data-tom_config"])
+    grape_type_map = json.loads(grape_field.widget.attrs["data-grape-wine-types"])
+
+    assert list(grape_field.queryset.values_list("name", flat=True))[:2] == [
+        "Merlot",
+        "Riesling",
+    ]
+    assert grape_config["maxOptions"] is None
+    assert grape_type_map[str(merlot.pk)] == [WineType.RED]
+    assert grape_type_map[str(white_grape.pk)] == [WineType.WHITE]
