@@ -7,6 +7,7 @@ import re
 import anthropic
 import pycountry
 from django.conf import settings
+from django.db import IntegrityError
 
 from wine_cellar.apps.wine.models import Grape, ImageType, Wine
 from wine_cellar.apps.wine.services.grape_normalization import normalize_grape_list
@@ -56,10 +57,9 @@ class WineAIGrapeService:
 
         grapes = []
         for grape_name in grape_names:
-            grape, _created = Grape.objects.get_or_create(
-                name=grape_name,
-                user=wine.user,
-                defaults={"household": wine.household},
+            grape = cls._get_or_create_grape(
+                wine=wine,
+                grape_name=grape_name,
             )
             grapes.append(grape)
 
@@ -83,7 +83,9 @@ class WineAIGrapeService:
             ],
         )
 
-        response_text = response.content[0].text
+        response_text = cls._extract_response_text(
+            getattr(response, "content", []) or []
+        )
         return cls.parse_response(response_text)
 
     @staticmethod
@@ -193,3 +195,36 @@ class WineAIGrapeService:
                 )
 
         return content
+
+    @staticmethod
+    def _extract_response_text(content_blocks) -> str:
+        parts = []
+        for block in content_blocks:
+            text = getattr(block, "text", "")
+            if text:
+                parts.append(text.strip())
+        return "\n\n".join(part for part in parts if part)
+
+    @staticmethod
+    def _get_or_create_grape(*, wine: Wine, grape_name: str) -> Grape:
+        existing = Grape.objects.filter(
+            name__iexact=grape_name,
+            user=wine.user,
+        ).first()
+        if existing:
+            return existing
+
+        try:
+            return Grape.objects.create(
+                name=grape_name,
+                user=wine.user,
+                household=wine.household,
+            )
+        except IntegrityError:
+            existing = Grape.objects.filter(
+                name__iexact=grape_name,
+                user=wine.user,
+            ).first()
+            if existing:
+                return existing
+            raise

@@ -129,6 +129,45 @@ class TestWineCreateView:
         refresh_grapes.assert_not_called()
         refresh_summary.assert_called_once_with(wine.pk)
 
+    def test_existing_wine_path_skips_ai_grape_refresh(self, client, user):
+        client.force_login(user)
+        storage = user.storage_set.first()
+        first_response = client.post(
+            reverse("wine-add"), _minimal_wine_data(), follow=True
+        )
+        assert first_response.status_code == 200
+
+        wine = Wine.objects.get(name="Test Wine")
+        wine.grapes.clear()
+
+        with (
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAIGrapeService.refresh_grapes"
+                )
+            ) as refresh_grapes,
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAISummaryService.refresh_summary"
+                )
+            ) as refresh_summary,
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
+                side_effect=lambda callback: callback(),
+            ),
+        ):
+            second_response = client.post(
+                reverse("wine-add"),
+                _minimal_wine_data(storage=storage.pk, row=1, column=1),
+                follow=True,
+            )
+
+        assert second_response.status_code == 200
+        refresh_grapes.assert_not_called()
+        refresh_summary.assert_called_once_with(wine.pk)
+
     def test_create_with_optional_fields(self, client, user):
         """POST with optional fields populates them on the wine."""
         client.force_login(user)

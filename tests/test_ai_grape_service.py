@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from wine_cellar.apps.wine.models import Grape
 from wine_cellar.apps.wine.services.ai_grapes import WineAIGrapeService
 
 
@@ -31,7 +32,7 @@ def test_refresh_grapes_links_existing_and_new_grapes(
     existing_grape = grape_factory(
         user=user,
         household=user.user_settings.active_household,
-        name="Riesling",
+        name="RIESLING",
     )
 
     captured = {}
@@ -56,9 +57,10 @@ def test_refresh_grapes_links_existing_and_new_grapes(
 
     wine.refresh_from_db()
     assert set(wine.grapes.values_list("name", flat=True)) == {
-        "Riesling",
+        "RIESLING",
         "Cabernet Sauvignon",
     }
+    assert Grape.objects.filter(user=user, name__iexact="riesling").count() == 1
     assert captured["api_key"] == "test-key"
     assert captured["kwargs"]["model"] == "claude-haiku-test"
     assert "Wine Name" in captured["kwargs"]["messages"][0]["content"][0]["text"]
@@ -82,3 +84,29 @@ def test_refresh_grapes_skips_without_api_key(
 
     wine.refresh_from_db()
     assert wine.grapes.count() == 0
+
+
+@pytest.mark.django_db
+def test_refresh_grapes_reads_text_from_later_content_blocks(
+    settings, monkeypatch, user, wine_factory
+):
+    settings.ANTHROPIC_API_KEY = "test-key"
+    wine = wine_factory(user=user)
+    wine.grapes.clear()
+
+    response = SimpleNamespace(
+        content=[
+            SimpleNamespace(type="tool_use"),
+            SimpleNamespace(text="GRAPES: Riesling\nCONFIDENCE: medium"),
+        ]
+    )
+
+    monkeypatch.setattr(
+        "wine_cellar.apps.wine.services.ai_grapes.anthropic.Anthropic",
+        lambda api_key: _FakeAnthropicClient(response, {}),
+    )
+
+    assert WineAIGrapeService.refresh_grapes(wine.pk, include_images=False) is True
+
+    wine.refresh_from_db()
+    assert list(wine.grapes.values_list("name", flat=True)) == ["Riesling"]

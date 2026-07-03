@@ -241,7 +241,7 @@ class WineCreateView(BaseBeverageCreateView):
 
     def post_create(self, beverage, created):
         """Apply AI label bounds as auto-crop thumbnails if confidence is sufficient."""
-        if not beverage.grapes.exists():
+        if created and not beverage.grapes.exists():
             _schedule_ai_grape_refresh(beverage.pk)
 
         if created:
