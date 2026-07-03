@@ -37,7 +37,7 @@ from wine_cellar.apps.wine.models import (
     WineImage,
     Wishlist,
 )
-from wine_cellar.apps.wine.services import WineAISummaryService
+from wine_cellar.apps.wine.services import WineAIGrapeService, WineAISummaryService
 from wine_cellar.apps.wine.services.creation import WineCreationService
 
 logger = logging.getLogger(__name__)
@@ -61,6 +61,18 @@ def _schedule_ai_summary_refresh(wine_id):
         except Exception:
             logger.exception(
                 "Unexpected error generating AI summary for wine %s", wine_id
+            )
+
+    transaction.on_commit(_callback)
+
+
+def _schedule_ai_grape_refresh(wine_id):
+    def _callback():
+        try:
+            WineAIGrapeService.refresh_grapes(wine_id)
+        except Exception:
+            logger.exception(
+                "Unexpected error generating AI grapes for wine %s", wine_id
             )
 
     transaction.on_commit(_callback)
@@ -229,6 +241,9 @@ class WineCreateView(BaseBeverageCreateView):
 
     def post_create(self, beverage, created):
         """Apply AI label bounds as auto-crop thumbnails if confidence is sufficient."""
+        if not beverage.grapes.exists():
+            _schedule_ai_grape_refresh(beverage.pk)
+
         if created:
             extraction_result = self.request.session.get("extraction_result")
             if extraction_result:

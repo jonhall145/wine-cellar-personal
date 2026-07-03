@@ -70,6 +70,12 @@ class TestWineCreateView:
             patch(
                 (
                     "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAIGrapeService.refresh_grapes"
+                )
+            ) as refresh_grapes,
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
                     "WineAISummaryService.refresh_summary"
                 )
             ) as refresh_summary,
@@ -84,6 +90,43 @@ class TestWineCreateView:
         assert wine.wine_type == "RE"
         assert wine.country == "FR"
         assert wine.user == user
+        refresh_grapes.assert_called_once_with(wine.pk)
+        refresh_summary.assert_called_once_with(wine.pk)
+
+    def test_create_with_manual_grapes_skips_ai_grape_refresh(
+        self, client, user, grape_factory
+    ):
+        """Manual grape selections should not trigger AI grape inference."""
+        client.force_login(user)
+        grape = grape_factory(user=user, household=user.user_settings.active_household)
+        with (
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAIGrapeService.refresh_grapes"
+                )
+            ) as refresh_grapes,
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAISummaryService.refresh_summary"
+                )
+            ) as refresh_summary,
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
+                side_effect=lambda callback: callback(),
+            ),
+        ):
+            r = client.post(
+                reverse("wine-add"),
+                _minimal_wine_data(grapes=[str(grape.pk)]),
+                follow=True,
+            )
+
+        assert r.status_code == 200
+        wine = Wine.objects.get(name="Test Wine")
+        assert list(wine.grapes.values_list("pk", flat=True)) == [grape.pk]
+        refresh_grapes.assert_not_called()
         refresh_summary.assert_called_once_with(wine.pk)
 
     def test_create_with_optional_fields(self, client, user):
@@ -373,6 +416,38 @@ def test_schedule_ai_summary_refresh_swallows_exceptions(monkeypatch):
     wine_crud._schedule_ai_summary_refresh(123)
 
     assert logged == [("Unexpected error generating AI summary for wine %s", 123)]
+
+
+@pytest.mark.django_db
+def test_schedule_ai_grape_refresh_swallows_exceptions(monkeypatch):
+    module_path = (
+        Path(__file__).resolve().parents[1] / "wine_cellar/apps/wine/views/wine_crud.py"
+    )
+    spec = util.spec_from_file_location("test_wine_crud_module", module_path)
+    assert spec and spec.loader
+    wine_crud = util.module_from_spec(spec)
+    spec.loader.exec_module(wine_crud)
+    logged = []
+
+    monkeypatch.setattr(
+        wine_crud.WineAIGrapeService,
+        "refresh_grapes",
+        lambda wine_id: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+    monkeypatch.setattr(
+        wine_crud.transaction,
+        "on_commit",
+        lambda callback: callback(),
+    )
+    monkeypatch.setattr(
+        wine_crud.logger,
+        "exception",
+        lambda message, wine_id: logged.append((message, wine_id)),
+    )
+
+    wine_crud._schedule_ai_grape_refresh(123)
+
+    assert logged == [("Unexpected error generating AI grapes for wine %s", 123)]
 
 
 @pytest.mark.django_db
