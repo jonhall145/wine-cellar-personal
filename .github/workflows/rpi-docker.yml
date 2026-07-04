@@ -4,6 +4,7 @@ on:
   push:
     branches: [ "main", "next" ]
     paths:
+      - '.github/workflows/rpi-docker.yml'
       - 'wine_cellar/**'
       - 'fixtures/**'
       - 'requirements/**'
@@ -25,7 +26,6 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/next' || startsWith(github.event.head_commit.message, 'bump:')
 
     steps:
       - uses: actions/checkout@v6
