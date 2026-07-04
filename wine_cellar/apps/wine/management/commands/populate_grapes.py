@@ -1,69 +1,12 @@
 """Batch populate grape varieties for wines using Claude AI."""
 
-import re
 import time
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from wine_cellar.apps.wine.models import Grape, Wine
-from wine_cellar.apps.wine.services.grape_normalization import (
-    normalize_grape_list,
-)
-
-
-def build_grape_prompt(wine):
-    """Build a Claude prompt to identify grape varieties for a wine."""
-    import pycountry
-
-    country_name = "Unknown"
-    if wine.country:
-        country = pycountry.countries.get(alpha_2=wine.country)
-        if country:
-            country_name = country.name
-
-    wine_type_display = wine.get_wine_type_display() if wine.wine_type else "Unknown"
-
-    return f"""You are a wine expert. Given the following wine information, \
-identify the most likely grape varieties used to make this wine.
-
-Wine Name: {wine.name}
-Wine Type: {wine_type_display}
-Country: {country_name}
-Region: {wine.subregion or "Unknown"}
-Comment: {wine.comment or "None"}
-
-Rules:
-- Return ONLY grape variety names you are confident about
-- Use full canonical names in title case (e.g., "Cabernet Sauvignon")
-- For well-known regional wines, infer grapes from the appellation/region
-- If the wine name itself is a grape variety, include it
-- If you cannot determine the grapes with reasonable confidence, return "not found"
-- Do not guess wildly - only return grapes you would bet on
-
-Return in this exact format:
-GRAPES: grape1, grape2, grape3
-CONFIDENCE: high/medium/low"""
-
-
-def parse_grape_response(response_text):
-    """Parse a Claude response for grape names and confidence."""
-    grapes = []
-    confidence = "low"
-
-    grape_match = re.search(r"GRAPES:\s*(.+?)(?:\n|$)", response_text, re.IGNORECASE)
-    if grape_match:
-        raw = grape_match.group(1).strip()
-        if raw.lower() != "not found":
-            grapes = normalize_grape_list(raw.split(","))
-
-    conf_match = re.search(r"CONFIDENCE:\s*(.+?)(?:\n|$)", response_text, re.IGNORECASE)
-    if conf_match:
-        conf = conf_match.group(1).strip().lower()
-        if conf in ("high", "medium", "low"):
-            confidence = conf
-
-    return grapes, confidence
+from wine_cellar.apps.wine.services.ai_grapes import WineAIGrapeService
 
 
 class Command(BaseCommand):
@@ -105,12 +48,6 @@ class Command(BaseCommand):
             )
             return
 
-        try:
-            import anthropic
-        except ImportError:
-            self.stderr.write(self.style.ERROR("anthropic package not installed"))
-            return
-
         commit = options["commit"]
         mode = "COMMIT" if commit else "DRY RUN"
         delay = options["delay"]
@@ -134,8 +71,6 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Found {total} wines to process\n")
 
-        client = anthropic.Anthropic(api_key=api_key)
-
         wines_updated = 0
         grapes_linked = 0
         grapes_created = 0
@@ -144,55 +79,10 @@ class Command(BaseCommand):
 
         for idx, wine in enumerate(wines, 1):
             try:
-                # Build prompt
-                prompt_text = build_grape_prompt(wine)
-
-                # Build content
-                content = []
-
-                # Optionally include label images
-                if not options["skip_images"]:
-                    images = list(wine.wineimage_set.all())[:2]
-                    for img in images:
-                        try:
-                            import base64
-
-                            from wine_cellar.apps.wine.services.vision_extraction import (  # noqa: E501
-                                resize_image_for_api,
-                            )
-
-                            with img.image.open("rb") as f:
-                                image_data = f.read()
-                            b64 = base64.b64encode(image_data).decode("utf-8")
-                            resized = resize_image_for_api(b64)
-                            content.append(
-                                {
-                                    "type": "image",
-                                    "source": {
-                                        "type": "base64",
-                                        "media_type": "image/jpeg",
-                                        "data": resized,
-                                    },
-                                }
-                            )
-                        except Exception as e:
-                            self.stdout.write(
-                                self.style.WARNING(
-                                    f"  Could not load image for wine {wine.pk}: {e}"
-                                )
-                            )
-
-                content.append({"type": "text", "text": prompt_text})
-
-                # Call Claude API
-                response = client.messages.create(
-                    model="claude-haiku-4-5",
-                    max_tokens=256,
-                    messages=[{"role": "user", "content": content}],
+                grape_names, confidence = WineAIGrapeService.identify_grapes(
+                    wine,
+                    include_images=not options["skip_images"],
                 )
-
-                response_text = response.content[0].text
-                grape_names, confidence = parse_grape_response(response_text)
 
                 wine_type = wine.get_wine_type_display() if wine.wine_type else "?"
                 self.stdout.write(
