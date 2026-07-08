@@ -62,7 +62,7 @@ class WhiskyAdmin(admin.ModelAdmin):
         for whisky in queryset.filter(deleted=True):
             try:
                 whisky.deleted = False
-                whisky.save(update_fields=["deleted"])
+                whisky.save_with_modified(update_fields=["deleted"])
                 restored += 1
             except IntegrityError:
                 skipped += 1

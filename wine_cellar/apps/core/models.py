@@ -55,5 +55,10 @@ class UserContentModel(models.Model):
         verbose_name="Modified",
     )
 
+    def save_with_modified(self, *, update_fields: list[str]) -> None:
+        """Persist selected fields while forcing modified to refresh."""
+        fields = list(dict.fromkeys([*update_fields, "modified"]))
+        self.save(update_fields=fields)
+
     class Meta:
         abstract = True

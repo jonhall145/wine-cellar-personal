@@ -35,7 +35,7 @@ class HouseholdScopedViewSetMixin:
 
                 instance.finished_date = timezone.now().date()
                 update_fields.append("finished_date")
-            instance.save(update_fields=update_fields)
+            instance.save_with_modified(update_fields=update_fields)
         else:
             instance.delete()
 
