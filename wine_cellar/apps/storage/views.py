@@ -659,7 +659,7 @@ class BottleQuickLogView(BaseBottleQuickLogView):
         storage_item.given_date = None
         storage_item.recipient = ""
         storage_item.given_occasion = ""
-        storage_item.save(
+        storage_item.save_with_modified(
             update_fields=[
                 "deleted",
                 "finished_date",

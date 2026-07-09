@@ -541,7 +541,7 @@ class BaseDrinkRecordCreateView(RequireMemberMixin, FormView):
         storage_item.given_date = None
         storage_item.recipient = ""
         storage_item.given_occasion = ""
-        storage_item.save(
+        storage_item.save_with_modified(
             update_fields=[
                 "deleted",
                 "finished_date",
@@ -649,7 +649,7 @@ class BaseMarkBottleGivenView(RequireMemberMixin, FormView):
         storage_item.given_date = form.cleaned_data["given_date"]
         storage_item.given_occasion = form.cleaned_data.get("given_occasion", "")
         storage_item.finished_date = None
-        storage_item.save(
+        storage_item.save_with_modified(
             update_fields=[
                 "deleted",
                 "removal_reason",
@@ -710,7 +710,7 @@ class BaseMarkBottleBrokenOrLostView(RequireMemberMixin, TemplateView):
         self.object.given_date = None
         self.object.recipient = ""
         self.object.given_occasion = ""
-        self.object.save(
+        self.object.save_with_modified(
             update_fields=[
                 "deleted",
                 "finished_date",
@@ -812,7 +812,7 @@ class BaseBeverageDeleteView(RequireMemberMixin, DeleteView):
     def form_valid(self, form):
         log_delete(self.request.user, self.object)
         self.object.deleted = True
-        self.object.save(update_fields=["deleted"])
+        self.object.save_with_modified(update_fields=["deleted"])
         return redirect(self.get_success_url())
 
 

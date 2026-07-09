@@ -33,7 +33,7 @@ class WineAdmin(admin.ModelAdmin):
         for wine in queryset.filter(deleted=True):
             try:
                 wine.deleted = False
-                wine.save(update_fields=["deleted"])
+                wine.save_with_modified(update_fields=["deleted"])
                 restored += 1
             except IntegrityError:
                 skipped += 1
