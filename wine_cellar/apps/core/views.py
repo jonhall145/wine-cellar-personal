@@ -884,15 +884,38 @@ class BaseListView(RequireHouseholdMixin):
         context["beverage_icon"] = self.beverage_icon
         return context
 
+    @staticmethod
+    def _strip_empty_filter_values(data):
+        if hasattr(data, "getlist") and hasattr(data, "setlist"):
+            for key in list(data.keys()):
+                values = [value for value in data.getlist(key) if value != ""]
+                if values:
+                    data.setlist(key, values)
+                else:
+                    data.pop(key, None)
+            return data
+
+        cleaned_data = {}
+        for key, value in data.items():
+            if isinstance(value, (list, tuple)):
+                filtered_values = [item for item in value if item != ""]
+                if filtered_values:
+                    cleaned_data[key] = filtered_values
+            elif value != "":
+                cleaned_data[key] = value
+        return cleaned_data
+
     def get_filterset_kwargs(self, filterset_class):
         kwargs = super().get_filterset_kwargs(filterset_class)
-        if not self.default_filter_data:
-            return kwargs
         data = kwargs.get("data")
         if data is None:
             data = self.request.GET.copy()
         else:
             data = data.copy()
+        data = self._strip_empty_filter_values(data)
+        if not self.default_filter_data:
+            kwargs["data"] = data
+            return kwargs
         missing_keys = [key for key in self.default_filter_data if key not in data]
         for key in missing_keys:
             data[key] = self.default_filter_data[key]
