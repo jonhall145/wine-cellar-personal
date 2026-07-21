@@ -476,9 +476,9 @@ class TestWineDetailView:
 
         assert response.status_code == HTTPStatus.OK
         content = response.content.decode()
-        assert 'data-image-viewer-open' in content
+        assert "data-image-viewer-open" in content
         assert 'id="beverage-image-viewer"' in content
-        assert 'data-image-viewer-zoom-in' in content
+        assert "data-image-viewer-zoom-in" in content
         assert "View Photos" in content
 
     def test_can_add_price_history(self, client, user, wine_factory, source_factory):
@@ -730,6 +730,30 @@ class TestWineListView:
         assert response.context["filter"].data["order"] == "created"
         assert list(response.context["wines"]) == [oldest, newest]
         assert out_of_stock not in response.context["wines"]
+
+    def test_list_ignores_empty_filter_query_params(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        oldest = wine_factory(user=user, name="Oldest", vintage=1998)
+        newest = wine_factory(user=user, name="Newest", vintage=2021)
+        storage_item_factory(wine=oldest, user=user)
+        storage_item_factory(wine=newest, user=user)
+
+        client.force_login(user)
+        response = client.get(
+            reverse("wine-list"),
+            {
+                "search": "",
+                "wine_type": "",
+                "category": "",
+                "vintage": "",
+                "order": "vintage",
+            },
+        )
+
+        assert response.status_code == HTTPStatus.OK
+        assert list(response.context["wines"]) == [oldest, newest]
+        assert response.context["filter"].data["order"] == "vintage"
 
     def test_per_page_parameter(self, client, user, wine_factory):
         for i in range(15):
@@ -1586,3 +1610,11 @@ class TestHomePageView:
         client.force_login(user)
         r = client.get(reverse("homepage"))
         assert r.context["bottles_in_stock"] >= 1
+
+    def test_oldest_and_youngest_links_use_sort_only_urls(self, client, user):
+        client.force_login(user)
+        response = client.get(reverse("homepage"))
+        content = response.content.decode()
+
+        assert f'href="{reverse("wine-list")}?order=vintage"' in content
+        assert f'href="{reverse("wine-list")}?order=-vintage"' in content
