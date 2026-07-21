@@ -8,7 +8,7 @@ import qrcode
 from django.conf import settings
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Avg, Count, F, Q, Sum
+from django.db.models import Avg, Count, F, Min, Q, Sum
 from django.db.models.functions import Coalesce, TruncMonth
 from django.forms import model_to_dict
 from django.http import HttpResponse, JsonResponse
@@ -924,6 +924,7 @@ class BaseListView(RequireHouseholdMixin):
 
     def get_queryset(self):
         price_path = f"{self.storage_item_reverse}__price"
+        stock_filter = Q(**{f"{self.storage_item_reverse}__deleted": False})
         qs = (
             super()
             .get_queryset()
@@ -932,10 +933,14 @@ class BaseListView(RequireHouseholdMixin):
             .order_by("-created")
         )
         qs = qs.annotate(
+            stock_first_added_at=Min(
+                f"{self.storage_item_reverse}__created",
+                filter=stock_filter,
+            ),
             effective_price=Coalesce(Avg(price_path), "price"),
             stock_count=Count(
                 self.storage_item_reverse,
-                filter=Q(**{f"{self.storage_item_reverse}__deleted": False}),
+                filter=stock_filter,
                 distinct=True,
             ),
         )

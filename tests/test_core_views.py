@@ -716,11 +716,11 @@ class TestWineListView:
         out_of_stock = wine_factory(user=user, name="Out of Stock")
         old_created = timezone.now() - timezone.timedelta(days=30)
         new_created = timezone.now() - timezone.timedelta(days=1)
-        Wine.objects.filter(pk=oldest.pk).update(created=old_created)
-        Wine.objects.filter(pk=newest.pk).update(created=new_created)
 
-        storage_item_factory(wine=oldest, user=user)
-        storage_item_factory(wine=newest, user=user)
+        oldest_item = storage_item_factory(wine=oldest, user=user)
+        newest_item = storage_item_factory(wine=newest, user=user)
+        StorageItem.objects.filter(pk=oldest_item.pk).update(created=old_created)
+        StorageItem.objects.filter(pk=newest_item.pk).update(created=new_created)
 
         client.force_login(user)
         response = client.get(reverse("wine-list"))
@@ -730,6 +730,50 @@ class TestWineListView:
         assert response.context["filter"].data["order"] == "created"
         assert list(response.context["wines"]) == [oldest, newest]
         assert out_of_stock not in response.context["wines"]
+
+    def test_recently_added_uses_oldest_existing_bottle_date(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        older_wine = wine_factory(user=user, name="Older Wine")
+        newer_wine = wine_factory(user=user, name="Newer Wine")
+        misleading_old_wine_created = timezone.now() - timezone.timedelta(days=400)
+        misleading_new_wine_created = timezone.now() - timezone.timedelta(days=5)
+        Wine.objects.filter(pk=older_wine.pk).update(
+            created=misleading_old_wine_created
+        )
+        Wine.objects.filter(pk=newer_wine.pk).update(
+            created=misleading_new_wine_created
+        )
+
+        deleted_old_item = storage_item_factory(
+            wine=older_wine, user=user, deleted=True
+        )
+        older_wine_oldest_live = storage_item_factory(wine=older_wine, user=user)
+        storage_item_factory(wine=older_wine, user=user)
+        newer_wine_live = storage_item_factory(wine=newer_wine, user=user)
+
+        now = timezone.now()
+        StorageItem.objects.filter(pk=deleted_old_item.pk).update(
+            created=now - timezone.timedelta(days=120)
+        )
+        StorageItem.objects.filter(pk=older_wine_oldest_live.pk).update(
+            created=now - timezone.timedelta(days=30)
+        )
+        StorageItem.objects.filter(
+            wine=older_wine,
+            deleted=False,
+        ).exclude(
+            pk=older_wine_oldest_live.pk
+        ).update(created=now - timezone.timedelta(days=1))
+        StorageItem.objects.filter(pk=newer_wine_live.pk).update(
+            created=now - timezone.timedelta(days=10)
+        )
+
+        client.force_login(user)
+        response = client.get(reverse("wine-list"), {"order": "-created", "stock": "1"})
+
+        assert response.status_code == HTTPStatus.OK
+        assert list(response.context["wines"]) == [newer_wine, older_wine]
 
     def test_list_ignores_empty_filter_query_params(
         self, client, user, wine_factory, storage_item_factory

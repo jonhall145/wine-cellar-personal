@@ -62,7 +62,11 @@ def get_country_choices(user=None):
 
 class WhiskyFilter(BeverageFilterMixin, django_filters.FilterSet):
     storage_item_reverse = "whiskystorageitem"
-    nullable_order_fields = ("age_statement", "effective_price")
+    nullable_order_fields = ("age_statement", "effective_price", "stock_first_added_at")
+    order_field_aliases = {
+        "created": "stock_first_added_at",
+        "-created": "-stock_first_added_at",
+    }
     search_fields = (
         "name",
         "comment",

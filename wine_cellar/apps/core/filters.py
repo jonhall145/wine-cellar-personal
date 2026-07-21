@@ -22,6 +22,7 @@ class BeverageFilterMixin:
 
     storage_item_reverse = None
     nullable_order_fields = ()
+    order_field_aliases = {}
     search_fields = ()
     include_unrated_with_zero_rating = False
 
@@ -42,6 +43,7 @@ class BeverageFilterMixin:
         if not value:
             return queryset
         ordering = value[0] if isinstance(value, list) else value
+        ordering = self.order_field_aliases.get(ordering, ordering)
         if ordering.lstrip("-") in self.nullable_order_fields:
             field = F(ordering.lstrip("-"))
             if ordering.startswith("-"):
