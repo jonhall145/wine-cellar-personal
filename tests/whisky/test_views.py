@@ -373,6 +373,8 @@ def test_whisky_list_defaults_to_in_stock_and_oldest_first(
     out_of_stock = whisky_factory(user=user, name="Out of Stock")
     old_created = timezone.now() - datetime.timedelta(days=30)
     new_created = timezone.now() - datetime.timedelta(days=1)
+    Whisky.objects.filter(pk=oldest.pk).update(created=new_created)
+    Whisky.objects.filter(pk=newest.pk).update(created=old_created)
     oldest_item = whisky_storage_item_factory(
         user=user,
         household=household,

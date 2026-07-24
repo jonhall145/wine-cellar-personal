@@ -1,7 +1,7 @@
 import django_filters
 import pycountry
 from django.core.cache import cache
-from django.db.models import Count, F, Q
+from django.db.models import Count, F, Min, Q
 from django_filters import ChoiceFilter
 
 from wine_cellar.apps.storage.models import Storage, get_app_type
@@ -44,8 +44,18 @@ class BeverageFilterMixin:
             return queryset
         ordering = value[0] if isinstance(value, list) else value
         ordering = self.order_field_aliases.get(ordering, ordering)
+        ordering_field = ordering.lstrip("-")
+        if ordering_field == "stock_first_added_at":
+            annotations = getattr(queryset.query, "annotations", {})
+            if ordering_field not in annotations:
+                queryset = queryset.annotate(
+                    stock_first_added_at=Min(
+                        f"{self.storage_item_reverse}__created",
+                        filter=Q(**{f"{self.storage_item_reverse}__deleted": False}),
+                    )
+                )
         if ordering.lstrip("-") in self.nullable_order_fields:
-            field = F(ordering.lstrip("-"))
+            field = F(ordering_field)
             if ordering.startswith("-"):
                 return queryset.order_by(field.desc(nulls_last=True))
             return queryset.order_by(field.asc(nulls_last=True))

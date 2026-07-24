@@ -774,6 +774,14 @@ class TestWineListView:
 
         assert response.status_code == HTTPStatus.OK
         assert list(response.context["wines"]) == [newer_wine, older_wine]
+        older_wine_from_response = next(
+            wine for wine in response.context["wines"] if wine.pk == older_wine.pk
+        )
+        older_wine_oldest_live.refresh_from_db()
+        assert (
+            older_wine_from_response.stock_first_added_at
+            == older_wine_oldest_live.created
+        )
 
     def test_list_ignores_empty_filter_query_params(
         self, client, user, wine_factory, storage_item_factory
