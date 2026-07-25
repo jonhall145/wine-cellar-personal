@@ -92,7 +92,16 @@ def get_grape_wine_type_map(user=None):
 
 class WineFilter(BeverageFilterMixin, django_filters.FilterSet):
     storage_item_reverse = "storageitem"
-    nullable_order_fields = ("vintage", "effective_price", "drink_to")
+    nullable_order_fields = (
+        "vintage",
+        "effective_price",
+        "drink_to",
+        "stock_first_added_at",
+    )
+    order_field_aliases = {
+        "created": "stock_first_added_at",
+        "-created": "-stock_first_added_at",
+    }
     search_fields = (
         "name",
         "comment",

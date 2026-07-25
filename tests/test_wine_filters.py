@@ -2,7 +2,9 @@ import json
 
 import pytest
 from django.test import RequestFactory
+from django.utils import timezone
 
+from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.wine.filters import (
     WineFilter,
     get_appellation_choices,
@@ -84,6 +86,31 @@ def test_filter_rating_supports_multiple_selected_ratings(user, wine_factory):
     assert one_star in filt.qs
     assert unrated in filt.qs
     assert two_star not in filt.qs
+
+
+@pytest.mark.django_db
+def test_filter_order_created_annotates_stock_date_for_direct_use(
+    user, wine_factory, storage_item_factory
+):
+    request = RequestFactory().get("/")
+    request.user = user
+
+    older = wine_factory(user=user, name="Older")
+    newer = wine_factory(user=user, name="Newer")
+    older_item = storage_item_factory(wine=older, user=user)
+    newer_item = storage_item_factory(wine=newer, user=user)
+    old_created = timezone.now() - timezone.timedelta(days=20)
+    new_created = timezone.now() - timezone.timedelta(days=3)
+    StorageItem.objects.filter(pk=older_item.pk).update(created=old_created)
+    StorageItem.objects.filter(pk=newer_item.pk).update(created=new_created)
+
+    filt = WineFilter(
+        data={"stock": "0", "order": "created"},
+        queryset=Wine.objects.filter(user=user),
+        request=request,
+    )
+
+    assert list(filt.qs) == [older, newer]
 
 
 @pytest.mark.django_db

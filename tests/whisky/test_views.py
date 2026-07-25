@@ -373,23 +373,24 @@ def test_whisky_list_defaults_to_in_stock_and_oldest_first(
     out_of_stock = whisky_factory(user=user, name="Out of Stock")
     old_created = timezone.now() - datetime.timedelta(days=30)
     new_created = timezone.now() - datetime.timedelta(days=1)
-    Whisky.objects.filter(pk=oldest.pk).update(created=old_created)
-    Whisky.objects.filter(pk=newest.pk).update(created=new_created)
-
-    whisky_storage_item_factory(
+    Whisky.objects.filter(pk=oldest.pk).update(created=new_created)
+    Whisky.objects.filter(pk=newest.pk).update(created=old_created)
+    oldest_item = whisky_storage_item_factory(
         user=user,
         household=household,
         storage__user=user,
         storage__household=household,
         whisky=oldest,
     )
-    whisky_storage_item_factory(
+    newest_item = whisky_storage_item_factory(
         user=user,
         household=household,
         storage__user=user,
         storage__household=household,
         whisky=newest,
     )
+    WhiskyStorageItem.objects.filter(pk=oldest_item.pk).update(created=old_created)
+    WhiskyStorageItem.objects.filter(pk=newest_item.pk).update(created=new_created)
 
     client.force_login(user)
     response = client.get(reverse("whisky-list"))
@@ -949,7 +950,7 @@ def test_whisky_detail_shows_carousel_controls_for_multiple_images(
     assert 'class="wine-prev"' in content
     assert 'class="wine-next"' in content
     assert 'id="beverage-image-viewer"' in content
-    assert 'data-image-viewer-zoom-in' in content
+    assert "data-image-viewer-zoom-in" in content
     assert "View Photos" in content
 
 
