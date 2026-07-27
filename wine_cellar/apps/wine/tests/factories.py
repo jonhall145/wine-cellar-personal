@@ -32,7 +32,7 @@ class GrapeFactory(DjangoModelFactory):
     class Meta:
         model = Grape
 
-    name = factory.Faker("name")
+    name = factory.Sequence(lambda n: f"Grape {n}")
     # user and household are nullable - only set if explicitly passed
 
 
