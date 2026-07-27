@@ -1655,6 +1655,30 @@ class TestHomePageView:
         assert r.status_code == HTTPStatus.OK
         assert "bottles_in_stock" in r.context
 
+    def test_newly_added_wine_appears_in_recent_views(self, client, user):
+        client.force_login(user)
+
+        response = client.post(
+            reverse("wine-add"),
+            {
+                "name": "Fresh Add",
+                "wine_type": WineType.RED,
+                "country": "FR",
+                "form_step": 0,
+            },
+            follow=True,
+        )
+
+        assert response.status_code == HTTPStatus.OK
+        wine = Wine.objects.get(name="Fresh Add")
+        session = client.session
+        assert session["recent_views"][0]["pk"] == wine.pk
+
+        homepage = client.get(reverse("homepage"))
+
+        assert homepage.status_code == HTTPStatus.OK
+        assert list(homepage.context["recent_views"]) == [wine]
+
     def test_shows_stats(self, client, user, wine_factory, storage_item_factory):
         wine = wine_factory(user=user, price=Decimal("20.00"))
         storage = user.storage_set.first()
