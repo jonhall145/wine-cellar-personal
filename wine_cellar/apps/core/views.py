@@ -1775,6 +1775,8 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
         for key in ("scanned_label", "extraction_result"):
             self.request.session.pop(key, None)
 
+        _track_recent_view(self.request, beverage)
+
         if not created:
             from django.contrib import messages
 
