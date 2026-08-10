@@ -1,6 +1,7 @@
 """Tests for core shared views: QR code, random bottle, detail, list, delete, export."""
 
 import json
+import re
 from decimal import Decimal
 from http import HTTPStatus
 
@@ -650,6 +651,26 @@ class TestWineDetailView:
         assert broken_bottle in list(r.context["consumed_bottles"])
         assert "Broken or Lost Bottles" in content
         assert "Broken or lost" in content
+
+    def test_occasion_date_without_occasion_renders_without_blank_line(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user)
+        storage = user.storage_set.first()
+        storage_item_factory(
+            wine=wine,
+            storage=storage,
+            user=user,
+            occasion="",
+            occasion_date=timezone.datetime(2026, 12, 25).date(),
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("wine-detail", kwargs={"pk": wine.pk}))
+        content = response.content.decode()
+
+        assert response.status_code == HTTPStatus.OK
+        assert re.search(r"<td>\s*<small>25 Dec 2026</small>\s*</td>", content)
 
 
 # ---------------------------------------------------------------------------

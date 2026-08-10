@@ -334,7 +334,7 @@
                                     <td>
                                         {{ item.occasion|default_if_none:"" }}
                                         {% if item.occasion_date %}
-                                            <br>
+                                            {% if item.occasion %}<br>{% endif %}
                                             <small>{{ item.occasion_date|date:"j M Y" }}</small>
                                         {% endif %}
                                     </td>

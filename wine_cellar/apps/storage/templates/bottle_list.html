@@ -114,7 +114,7 @@
                                     <td>
                                         {{ bottle.occasion|default_if_none:"" }}
                                         {% if bottle.occasion_date %}
-                                            <br>
+                                            {% if bottle.occasion %}<br>{% endif %}
                                             <small>{{ bottle.occasion_date|date:"j M Y" }}</small>
                                         {% endif %}
                                     </td>

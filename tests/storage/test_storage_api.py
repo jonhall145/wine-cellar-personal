@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import timedelta
 
 import pytest
@@ -763,3 +764,22 @@ class TestBottleListView:
         r = client.get(reverse("bottle-list"))
         assert r.status_code == 200
         assert "bottles" in r.context
+
+    def test_occasion_date_without_occasion_renders_without_blank_line(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user, name="Listed Bottle")
+        storage = user.storage_set.first()
+        storage_item_factory(
+            wine=wine,
+            storage=storage,
+            occasion="",
+            occasion_date=timezone.datetime(2026, 12, 25).date(),
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("bottle-list"))
+        content = response.content.decode()
+
+        assert response.status_code == 200
+        assert re.search(r"<td>\s*<small>25 Dec 2026</small>\s*</td>", content)
