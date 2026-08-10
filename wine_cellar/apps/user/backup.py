@@ -70,6 +70,7 @@ WINE_STORAGE_ITEM_FIELDS = [
     "is_gift",
     "gift_from",
     "occasion",
+    "occasion_date",
     "rating",
     "finished_date",
     "recipient",

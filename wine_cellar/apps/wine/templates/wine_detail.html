@@ -331,7 +331,13 @@
                                     <td>{{ item.row|default_if_none:"" }}</td>
                                     <td>{{ item.column|default_if_none:"" }}</td>
                                     <td>{% if item.is_gift %}<i class="fa-solid fa-gift" title="{{ item.gift_from|default:'' }}"></i>{% if item.gift_from %} {{ item.gift_from }}{% endif %}{% endif %}</td>
-                                    <td>{{ item.occasion|default_if_none:"" }}</td>
+                                    <td>
+                                        {{ item.occasion|default_if_none:"" }}
+                                        {% if item.occasion_date %}
+                                            <br>
+                                            <small>{{ item.occasion_date|date:"j M Y" }}</small>
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         <a class="pure-button" href="{% url 'bottle-note-add' item.pk %}" title="Add note"><i class="fa-regular fa-note-sticky"></i></a>
                                         <a class="pure-button" href="{% url 'bottle-history' item.pk %}" title="History"><i class="fa-regular fa-clock-rotate-left"></i></a>

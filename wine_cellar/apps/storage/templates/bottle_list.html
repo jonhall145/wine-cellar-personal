@@ -111,7 +111,13 @@
                                             {% if bottle.gift_from %}{{ bottle.gift_from }}{% endif %}
                                         {% endif %}
                                     </td>
-                                    <td>{{ bottle.occasion|default_if_none:"" }}</td>
+                                    <td>
+                                        {{ bottle.occasion|default_if_none:"" }}
+                                        {% if bottle.occasion_date %}
+                                            <br>
+                                            <small>{{ bottle.occasion_date|date:"j M Y" }}</small>
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         <a class="pure-button"
                                            href="{% url 'bottle-history' bottle.pk %}"

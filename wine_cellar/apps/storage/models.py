@@ -142,6 +142,12 @@ class StorageItem(UserContentModel):
     occasion = models.CharField(
         max_length=100, null=True, blank=True, verbose_name="Occasion"
     )
+    occasion_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Occasion Date",
+        help_text="Date of the occasion this bottle is reserved for.",
+    )
     rating = models.PositiveIntegerField(
         null=True,
         blank=True,
@@ -188,6 +194,10 @@ class StorageItem(UserContentModel):
                 fields=["storage", "row", "column"], name="storageitem_position_idx"
             ),
             models.Index(fields=["wine", "deleted"], name="storageitem_wine_del_idx"),
+            models.Index(
+                fields=["household", "deleted", "occasion_date"],
+                name="storitem_hh_del_occas_idx",
+            ),
         ]
 
     def __str__(self):

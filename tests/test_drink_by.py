@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 import pytest
 from django.core import mail
 from django.utils import timezone
@@ -9,6 +11,7 @@ from wine_cellar.apps.wine.management.commands.send_drink_reminders import (
     drink_by_reminder,
 )
 from wine_cellar.apps.wine.models import Wine
+from wine_cellar.apps.wine.services import WineReminderService
 
 
 @pytest.mark.django_db
@@ -73,4 +76,86 @@ def test_drink_by_reminder_skips_email_for_in_app_only(user, wine_factory):
 
     drink_by_reminder()
 
+    assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+def test_occasion_date_reminder_sends_single_email_with_due_bottles(
+    user, wine_factory, monkeypatch
+):
+    today = date(2026, 8, 10)
+    monkeypatch.setattr(
+        "wine_cellar.apps.wine.services.reminders.timezone.localdate",
+        lambda: today,
+    )
+    storage = user.storage_set.first()
+    household = user.user_settings.active_household
+    one_month = wine_factory(user=user, name="Month Wine")
+    one_week = wine_factory(user=user, name="Week Wine")
+    one_day = wine_factory(user=user, name="Day Wine")
+    ignored = wine_factory(user=user, name="Ignored Wine")
+    StorageItem.objects.create(
+        wine=one_month,
+        storage=storage,
+        user=user,
+        household=household,
+        occasion_date=date(2026, 9, 10),
+    )
+    StorageItem.objects.create(
+        wine=one_week,
+        storage=storage,
+        user=user,
+        household=household,
+        occasion_date=today + timedelta(weeks=1),
+    )
+    StorageItem.objects.create(
+        wine=one_day,
+        storage=storage,
+        user=user,
+        household=household,
+        occasion_date=today + timedelta(days=1),
+    )
+    StorageItem.objects.create(
+        wine=ignored,
+        storage=storage,
+        user=user,
+        household=household,
+        occasion_date=today + timedelta(days=2),
+    )
+
+    sent = WineReminderService.send_occasion_date_reminders()
+
+    assert sent == 1
+    assert len(mail.outbox) == 1
+    assert mail.outbox[0].to == [user.email]
+    assert "Month Wine" in mail.outbox[0].body
+    assert "Week Wine" in mail.outbox[0].body
+    assert "Day Wine" in mail.outbox[0].body
+    assert "Ignored Wine" not in mail.outbox[0].body
+
+
+@pytest.mark.django_db
+def test_occasion_date_reminder_respects_email_delivery_preference(
+    user, wine_factory, monkeypatch
+):
+    today = date(2026, 8, 10)
+    monkeypatch.setattr(
+        "wine_cellar.apps.wine.services.reminders.timezone.localdate",
+        lambda: today,
+    )
+    user_settings = get_user_settings(user)
+    user_settings.drink_window_notifications = NotificationChannel.IN_APP
+    user_settings.save()
+    wine = wine_factory(user=user)
+    StorageItem.objects.create(
+        wine=wine,
+        storage=user.storage_set.first(),
+        user=user,
+        household=user.user_settings.active_household,
+        occasion_date=today + timedelta(days=1),
+    )
+
+    sent = WineReminderService.send_occasion_date_reminders()
+
+    assert sent == 0
     assert len(mail.outbox) == 0

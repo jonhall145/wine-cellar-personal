@@ -371,7 +371,7 @@ DJANGO_DEFAULT_FROM_EMAIL=Wine Cellar <your@email.com>
 
 ## Drink-By Reminders (Cron)
 
-Drink-by reminder emails are sent by the `send_drink_reminders` management command. You need to schedule this with a host cron job — it is **not** run automatically by the application server.
+Drink-by and occasion-date reminder emails are sent by the `send_drink_reminders` management command. You need to schedule this with a host cron job — it is **not** run automatically by the application server.
 
 Email configuration (see above) must be set up before reminders will be delivered.
 

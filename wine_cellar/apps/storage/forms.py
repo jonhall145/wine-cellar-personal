@@ -166,6 +166,11 @@ class StockAddForm(forms.Form):
         required=False,
         help_text="Enter a special occasion this bottle is reserved for.",
     )
+    occasion_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
+        help_text="Enter the date of the occasion this bottle is reserved for.",
+    )
     rating = forms.IntegerField(
         required=False,
         validators=[MinValueValidator(0), MaxValueValidator(3)],
@@ -285,6 +290,11 @@ class StorageItemEditForm(forms.Form):
         max_length=100,
         required=False,
         help_text="Enter a special occasion this bottle is reserved for.",
+    )
+    occasion_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
+        help_text="Enter the date of the occasion this bottle is reserved for.",
     )
     rating = forms.TypedChoiceField(
         required=False,

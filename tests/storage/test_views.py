@@ -182,6 +182,8 @@ def test_user_can_add_stock(client, user, wine_factory):
     wine = wine_factory(user=user)
     data = {
         "storage": storage.pk,
+        "occasion": "Birthday",
+        "occasion_date": "2026-12-25",
     }
     r = client.post(
         reverse("stock-add", kwargs={"pk": wine.pk}), data=data, follow=True
@@ -192,6 +194,30 @@ def test_user_can_add_stock(client, user, wine_factory):
     )
     assert storage.used_slots == 1
     assert storage.items.first().wine == wine
+    assert storage.items.first().occasion_date == date(2026, 12, 25)
+
+
+@pytest.mark.django_db
+def test_user_can_edit_bottle_occasion_date(client, user, wine_factory):
+    client.force_login(user)
+    storage = Storage.objects.first()
+    wine = wine_factory(user=user)
+    item = StorageItem.objects.create(
+        wine=wine,
+        storage=storage,
+        user=user,
+        household=user.user_settings.active_household,
+    )
+
+    r = client.post(
+        reverse("bottle-edit", kwargs={"pk": item.pk}),
+        data={"storage": storage.pk, "occasion_date": "2026-12-25"},
+        follow=True,
+    )
+
+    assert r.status_code == HTTPStatus.OK
+    item.refresh_from_db()
+    assert item.occasion_date == date(2026, 12, 25)
 
 
 @pytest.mark.django_db
