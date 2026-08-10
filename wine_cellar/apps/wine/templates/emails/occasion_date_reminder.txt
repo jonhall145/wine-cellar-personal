@@ -1,0 +1,11 @@
+{% load i18n settings %}
+{% blocktranslate %}
+Hello {{ user }},
+
+this is a reminder that the following wine bottle(s) have an occasion date approaching:
+{% endblocktranslate %}
+{% for bottle in bottles %}
+{{ bottle.wine.name }}{% if bottle.occasion %} ({{ bottle.occasion }}){% endif %}: {{ bottle.occasion_date }} ({{ bottle.occasion_reminder_timing }} {% translate "away" %})
+{% endfor %}
+
+{% blocktranslate %}You can find your cellar here:{% endblocktranslate %} {% get_setting "SITE_URL" %}

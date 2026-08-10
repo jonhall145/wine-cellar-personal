@@ -232,6 +232,9 @@ class StorageItemAddView(BaseStorageItemAddView):
             return {}
         return {"rating": wine.rating}
 
+    def get_extra_create_kwargs(self, cleaned_data):
+        return {"occasion_date": cleaned_data.get("occasion_date")}
+
 
 class StorageItemDeleteView(BaseMarkBottleBrokenOrLostView):
     storage_item_model = StorageItem
@@ -290,9 +293,13 @@ class StorageItemUpdateView(BaseStorageItemUpdateView):
     beverage_context_name = "wine"
     detail_url_name = "wine-detail"
     move_history_model = BottleMoveHistory
+    extra_initial_field_names = ("occasion_date",)
 
     def get_update_form_kwargs(self, item):
         return {"instance": item}
+
+    def apply_extra_updates(self, item, cleaned_data):
+        item.occasion_date = cleaned_data.get("occasion_date")
 
 
 @login_required
