@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class WineAISummaryService:
     """Generate and persist sourced AI summaries for wines."""
 
-    DEFAULT_MODEL = "claude-sonnet-4-6"
+    DEFAULT_MODEL = "claude-sonnet-5"
     WEB_SEARCH_TOOL = {
         "type": "web_search_20250305",
         "name": "web_search",
