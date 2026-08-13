@@ -54,6 +54,7 @@ from wine_cellar.apps.wine.views import (
     remove_wine_from_collection,
     scan_barcode_ajax,
     set_primary_image,
+    wine_ai_summary_status,
     wine_check_duplicate_ajax,
 )
 
@@ -76,6 +77,11 @@ urlpatterns = [
         name="wine-check-duplicate",
     ),
     path("wine/extract-vision/", extract_wine_vision_ajax, name="wine-extract-vision"),
+    path(
+        "wine/<int:pk>/ai-summary/",
+        wine_ai_summary_status,
+        name="wine-ai-summary-status",
+    ),
     path("wine/<int:pk>/", WineDetailView.as_view(), name="wine-detail"),
     path(
         "wine/<int:pk>/price-history/add/",

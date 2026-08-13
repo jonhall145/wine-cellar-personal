@@ -1,5 +1,6 @@
 import json
 import logging
+from threading import Thread
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -63,7 +64,14 @@ def _schedule_ai_summary_refresh(wine_id):
                 "Unexpected error generating AI summary for wine %s", wine_id
             )
 
-    transaction.on_commit(_callback)
+    def _start_background_refresh():
+        Thread(
+            target=_callback,
+            name=f"wine-ai-summary-{wine_id}",
+            daemon=True,
+        ).start()
+
+    transaction.on_commit(_start_background_refresh)
 
 
 def _schedule_ai_grape_refresh(wine_id):

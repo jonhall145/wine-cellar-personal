@@ -3,6 +3,7 @@ import logging
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.utils.dateformat import format as date_format
 from django_ratelimit.decorators import ratelimit
 
 from wine_cellar.apps.core.views import (
@@ -65,4 +66,31 @@ def wine_check_duplicate_ajax(request):
         request,
         beverage_model=Wine,
         detail_url_name="wine-detail",
+    )
+
+
+@ratelimit(key="user", rate="60/m", method="GET", block=True)
+@login_required
+def wine_ai_summary_status(request, pk):
+    """Return the generated AI summary once it is available."""
+    household = get_active_household(request.user)
+    wine = get_object_or_404(
+        Wine.objects.filter(deleted=False),
+        pk=pk,
+        household=household,
+    )
+    if not wine.ai_summary:
+        return JsonResponse({"status": "pending"})
+
+    return JsonResponse(
+        {
+            "status": "ready",
+            "summary": wine.ai_summary,
+            "sources": wine.ai_summary_sources,
+            "generated_at": (
+                date_format(wine.ai_summary_generated_at, "SHORT_DATETIME_FORMAT")
+                if wine.ai_summary_generated_at
+                else ""
+            ),
+        }
     )
