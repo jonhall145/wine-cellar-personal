@@ -3,7 +3,7 @@ import logging
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from django.utils.dateformat import format as date_format
+from django.utils.formats import date_format
 from django_ratelimit.decorators import ratelimit
 
 from wine_cellar.apps.core.views import (

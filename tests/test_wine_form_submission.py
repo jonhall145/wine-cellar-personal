@@ -47,7 +47,8 @@ class _ImmediateThread:
         self.target = target
 
     def start(self):
-        self.target()
+        with patch("wine_cellar.apps.wine.views.wine_crud.close_old_connections"):
+            self.target()
 
 
 @pytest.mark.django_db
@@ -130,6 +131,10 @@ class TestWineCreateView:
                 "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
                 side_effect=lambda callback: callback(),
             ),
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.Thread",
+                _ImmediateThread,
+            ),
         ):
             r = client.post(
                 reverse("wine-add"),
@@ -170,6 +175,10 @@ class TestWineCreateView:
             patch(
                 "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
                 side_effect=lambda callback: callback(),
+            ),
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.Thread",
+                _ImmediateThread,
             ),
         ):
             second_response = client.post(
@@ -461,6 +470,7 @@ def test_schedule_ai_summary_refresh_swallows_exceptions(monkeypatch):
         lambda callback: callback(),
     )
     monkeypatch.setattr(wine_crud, "Thread", _ImmediateThread)
+    monkeypatch.setattr(wine_crud, "close_old_connections", lambda: None)
     monkeypatch.setattr(
         wine_crud.logger,
         "exception",
