@@ -116,6 +116,7 @@ class PlannedMoveListView(LoginRequiredMixin, RequireHouseholdMixin, ListView):
                 storage_item_type=item_type,
             )
             .select_related("target_storage", "user")
+            .prefetch_related("storage_item")
             .order_by("target_storage__name", "target_row", "target_column")
         )
 
