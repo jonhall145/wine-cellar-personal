@@ -1,8 +1,11 @@
 import json
 import logging
+from collections import defaultdict
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.forms import model_to_dict
 from django.http import JsonResponse
@@ -20,15 +23,21 @@ from wine_cellar.apps.core.views import (
     BaseStorageItemAddView,
     BaseStorageItemUpdateView,
 )
-from wine_cellar.apps.household.mixins import RequireHouseholdMixin
+from wine_cellar.apps.household.mixins import (
+    RequireHouseholdMixin,
+    RequireMemberMixin,
+    require_member,
+)
 from wine_cellar.apps.storage.filters import StorageItemFilter
 from wine_cellar.apps.storage.forms import (
+    PlannedMoveForm,
     StockAddForm,
     StorageForm,
     StorageItemEditForm,
 )
 from wine_cellar.apps.storage.models import (
     BottleMoveHistory,
+    PlannedMove,
     Storage,
     StorageItem,
     get_app_type,
@@ -90,6 +99,70 @@ class StorageDetailView(DetailView, MultipleObjectMixin):
         qs = super().get_queryset()
         household = get_active_household(self.request.user)
         return qs.filter(household=household, app_type=get_app_type())
+
+
+class PlannedMoveListView(LoginRequiredMixin, RequireHouseholdMixin, ListView):
+    template_name = "planned_move_list.html"
+    context_object_name = "planned_moves"
+
+    def get_queryset(self):
+        household = get_active_household(self.request.user)
+        item_model = _get_storage_item_model()
+        item_type = ContentType.objects.get_for_model(item_model)
+        return (
+            PlannedMove.objects.filter(
+                household=household,
+                app_type=get_app_type(),
+                storage_item_type=item_type,
+            )
+            .select_related("target_storage", "user")
+            .prefetch_related("storage_item")
+            .order_by("target_storage__name", "target_row", "target_column")
+        )
+
+
+class PlannedMoveCreateView(LoginRequiredMixin, RequireMemberMixin, FormView):
+    template_name = "planned_move_form.html"
+    form_class = PlannedMoveForm
+    success_url = reverse_lazy("planned-move-list")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        household = get_active_household(self.request.user)
+        storage_item = form.cleaned_data["storage_item"]
+        item_type = ContentType.objects.get_for_model(storage_item)
+        PlannedMove.objects.update_or_create(
+            storage_item_type=item_type,
+            storage_item_id=storage_item.pk,
+            defaults={
+                "target_storage": form.cleaned_data["target_storage"],
+                "target_row": form.cleaned_data["target_row"],
+                "target_column": form.cleaned_data["target_column"],
+                "app_type": get_app_type(),
+                "user": self.request.user,
+                "household": household,
+            },
+        )
+        return super().form_valid(form)
+
+
+@login_required
+@require_POST
+@require_member
+def planned_move_delete(request, pk):
+    household = get_active_household(request.user)
+    planned_move = get_object_or_404(
+        PlannedMove,
+        pk=pk,
+        household=household,
+        app_type=get_app_type(),
+    )
+    planned_move.delete()
+    return redirect("planned-move-list")
 
 
 class StorageCreateView(FormView):
@@ -320,6 +393,32 @@ def storage_grid_data(request):
         current_storage_id = None
 
     whisky_mode = _is_whisky_mode()
+    item_model = _get_storage_item_model()
+    item_type = ContentType.objects.get_for_model(item_model)
+    planned_moves = PlannedMove.objects.filter(
+        household=household,
+        app_type=get_app_type(),
+        storage_item_type=item_type,
+    )
+    planned_items = {
+        item.pk: item
+        for item in item_model.objects.filter(
+            pk__in=planned_moves.values_list("storage_item_id", flat=True),
+            household=household,
+            deleted=False,
+        )
+    }
+    planned_by_storage = defaultdict(list)
+    for planned_move in planned_moves.select_related("target_storage"):
+        item = planned_items.get(planned_move.storage_item_id)
+        if item:
+            planned_by_storage[planned_move.target_storage_id].append(
+                {
+                    "row": planned_move.target_row,
+                    "column": planned_move.target_column,
+                    "description": str(item),
+                }
+            )
 
     storage_data = []
     for storage in storages:
@@ -392,6 +491,7 @@ def storage_grid_data(request):
                 "utilization_percent": utilization_percent,
                 "cell_mask": storage.cell_mask,
                 "items": items,
+                "planned_moves": planned_by_storage[storage.pk],
             }
         )
 
@@ -430,6 +530,7 @@ def move_bottle(request):
             item = ItemModel.objects.get(pk=item_id, household=household, deleted=False)
         except ItemModel.DoesNotExist:
             return JsonResponse({"error": "Bottle not found"}, status=404)
+        item_type = ContentType.objects.get_for_model(ItemModel)
 
         # Get target storage
         try:
@@ -495,6 +596,10 @@ def move_bottle(request):
             item.row = target_row
             item.column = target_column
             item.save(update_fields=["storage", "row", "column"])
+            PlannedMove.objects.filter(
+                storage_item_type=item_type,
+                storage_item_id=item.pk,
+            ).delete()
 
             if _is_whisky_mode():
                 from wine_cellar.apps.whisky.models import WhiskyBottleMoveHistory

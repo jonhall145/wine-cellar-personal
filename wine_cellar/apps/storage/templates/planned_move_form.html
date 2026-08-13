@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block header %}
+    <h1 class="header__title">Plan a Move</h1>
+{% endblock header %}
+{% block content %}
+    <div class="form-container">
+        <form method="post" class="pure-form pure-form-stacked">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <p>Planned moves mark their destination in the storage grid but do not reserve it.</p>
+            <button type="submit" class="pure-button button__primary">Save Planned Move</button>
+            <a href="{% url 'planned-move-list' %}" class="pure-button">Cancel</a>
+        </form>
+    </div>
+{% endblock content %}

@@ -9,7 +9,12 @@ from pytest_django.asserts import (
     assertTemplateUsed,
 )
 
-from wine_cellar.apps.storage.models import BottleMoveHistory, Storage, StorageItem
+from wine_cellar.apps.storage.models import (
+    BottleMoveHistory,
+    PlannedMove,
+    Storage,
+    StorageItem,
+)
 
 
 @pytest.mark.django_db
@@ -22,6 +27,16 @@ def test_storage_create_page_unauthenticated(client, user):
     )
     assertTemplateUsed(response=r, template_name="base.html")
     assertTemplateUsed(response=r, template_name="account/login.html")
+
+
+@pytest.mark.django_db
+def test_planned_moves_require_login(client):
+    response = client.get(reverse("planned-move-list"))
+
+    assertRedirects(
+        response,
+        reverse("account_login") + "?next=" + reverse("planned-move-list"),
+    )
 
 
 @pytest.mark.django_db
@@ -664,3 +679,40 @@ def test_broken_or_lost_bottle_history_shows_broken_or_lost_label(
 
     assert response.status_code == HTTPStatus.OK
     assert "Broken or lost" in content
+
+
+@pytest.mark.django_db
+def test_user_can_manage_household_planned_moves(
+    client, user, wine_factory, storage_factory, storage_item_factory
+):
+    source_storage = storage_factory(user=user, rows=2, columns=2)
+    target_storage = storage_factory(user=user, rows=2, columns=2)
+    item = storage_item_factory(
+        wine=wine_factory(user=user),
+        storage=source_storage,
+        row=1,
+        column=1,
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse("planned-move-add"),
+        {
+            "storage_item": item.pk,
+            "target_storage": target_storage.pk,
+            "target_row": 2,
+            "target_column": 2,
+        },
+    )
+
+    assertRedirects(response, reverse("planned-move-list"))
+    planned_move = PlannedMove.objects.get()
+    assert planned_move.household == user.user_settings.active_household
+
+    response = client.get(reverse("planned-move-list"))
+    assert response.status_code == HTTPStatus.OK
+    assert str(item) in response.content.decode()
+
+    response = client.post(reverse("planned-move-delete", args=[planned_move.pk]))
+    assertRedirects(response, reverse("planned-move-list"))
+    assert not PlannedMove.objects.exists()
