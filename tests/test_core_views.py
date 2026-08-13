@@ -447,7 +447,7 @@ class TestWineDetailView:
             {"title": "Regional guide", "url": "https://example.com/region"},
         ]
         wine.ai_summary_generated_at = timezone.now()
-        wine.ai_summary_model = "claude-sonnet-4-6"
+        wine.ai_summary_model = "claude-sonnet-5"
         wine.save(
             update_fields=[
                 "ai_summary",
