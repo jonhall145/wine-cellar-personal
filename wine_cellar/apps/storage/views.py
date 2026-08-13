@@ -4,6 +4,7 @@ from collections import defaultdict
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.forms import model_to_dict
@@ -22,7 +23,11 @@ from wine_cellar.apps.core.views import (
     BaseStorageItemAddView,
     BaseStorageItemUpdateView,
 )
-from wine_cellar.apps.household.mixins import RequireHouseholdMixin
+from wine_cellar.apps.household.mixins import (
+    RequireHouseholdMixin,
+    RequireMemberMixin,
+    require_member,
+)
 from wine_cellar.apps.storage.filters import StorageItemFilter
 from wine_cellar.apps.storage.forms import (
     PlannedMoveForm,
@@ -96,7 +101,7 @@ class StorageDetailView(DetailView, MultipleObjectMixin):
         return qs.filter(household=household, app_type=get_app_type())
 
 
-class PlannedMoveListView(ListView):
+class PlannedMoveListView(LoginRequiredMixin, RequireHouseholdMixin, ListView):
     template_name = "planned_move_list.html"
     context_object_name = "planned_moves"
 
@@ -115,7 +120,7 @@ class PlannedMoveListView(ListView):
         )
 
 
-class PlannedMoveCreateView(FormView):
+class PlannedMoveCreateView(LoginRequiredMixin, RequireMemberMixin, FormView):
     template_name = "planned_move_form.html"
     form_class = PlannedMoveForm
     success_url = reverse_lazy("planned-move-list")
@@ -146,6 +151,7 @@ class PlannedMoveCreateView(FormView):
 
 @login_required
 @require_POST
+@require_member
 def planned_move_delete(request, pk):
     household = get_active_household(request.user)
     planned_move = get_object_or_404(
@@ -523,6 +529,7 @@ def move_bottle(request):
             item = ItemModel.objects.get(pk=item_id, household=household, deleted=False)
         except ItemModel.DoesNotExist:
             return JsonResponse({"error": "Bottle not found"}, status=404)
+        item_type = ContentType.objects.get_for_model(ItemModel)
 
         # Get target storage
         try:
@@ -589,7 +596,7 @@ def move_bottle(request):
             item.column = target_column
             item.save(update_fields=["storage", "row", "column"])
             PlannedMove.objects.filter(
-                storage_item_type=ContentType.objects.get_for_model(item),
+                storage_item_type=item_type,
                 storage_item_id=item.pk,
             ).delete()
 

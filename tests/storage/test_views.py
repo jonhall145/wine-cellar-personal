@@ -30,6 +30,16 @@ def test_storage_create_page_unauthenticated(client, user):
 
 
 @pytest.mark.django_db
+def test_planned_moves_require_login(client):
+    response = client.get(reverse("planned-move-list"))
+
+    assertRedirects(
+        response,
+        reverse("account_login") + "?next=" + reverse("planned-move-list"),
+    )
+
+
+@pytest.mark.django_db
 def test_storage_create_page(client, user):
     client.force_login(user)
     r = client.get(reverse("storage-add"), follow=True)
