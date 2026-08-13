@@ -703,15 +703,25 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
         const maskSet: Set<string> | null = storage.cell_mask
             ? new Set(storage.cell_mask.map(([r, c]) => `${r},${c}`))
             : null;
+        // Pre-index items and planned_moves by "row,col" for O(1) lookups
+        const itemIndex = new Map<string, typeof storage.items[number]>();
+        for (const item of storage.items) {
+            const key = `${item.row},${item.column}`;
+            if (!itemIndex.has(key)) itemIndex.set(key, item);
+        }
+        const plannedMoveIndex = new Map<string, typeof storage.planned_moves[number]>();
+        for (const move of storage.planned_moves) {
+            const key = `${move.row},${move.column}`;
+            if (!plannedMoveIndex.has(key)) plannedMoveIndex.set(key, move);
+        }
         const grid: CellData[][] = [];
         for (let row = 1; row <= storage.rows; row++) {
             const rowCells: CellData[] = [];
             for (let col = 1; col <= storage.columns; col++) {
-                const item = storage.items.find(i => i.row === row && i.column === col);
-                const plannedMove = storage.planned_moves.find(
-                    move => move.row === row && move.column === col
-                );
-                const active = maskSet === null || maskSet.has(`${row},${col}`);
+                const key = `${row},${col}`;
+                const item = itemIndex.get(key);
+                const plannedMove = plannedMoveIndex.get(key);
+                const active = maskSet === null || maskSet.has(key);
                 rowCells.push({
                     row,
                     column: col,
