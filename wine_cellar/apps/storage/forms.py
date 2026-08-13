@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 
 from wine_cellar.apps.core.forms import native_select_widget
-from wine_cellar.apps.storage.models import Storage, get_app_type
+from wine_cellar.apps.storage.models import Storage, StorageItem, get_app_type
 from wine_cellar.apps.user.views import get_active_household, get_user_settings
 
 
@@ -368,4 +368,60 @@ class StorageItemEditForm(forms.Form):
                         code="slot_occupied",
                         params={"row": row, "column": column},
                     )
+        return cleaned_data
+
+
+class PlannedMoveForm(forms.Form):
+    storage_item = forms.ModelChoiceField(
+        queryset=StorageItem.objects.none(),
+        label="Bottle",
+    )
+    target_storage = forms.ModelChoiceField(
+        queryset=Storage.objects.none(),
+        label="Destination storage",
+    )
+    target_row = forms.IntegerField(min_value=1, label="Destination row")
+    target_column = forms.IntegerField(min_value=1, label="Destination cell")
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop("user")
+        super().__init__(*args, **kwargs)
+        household = get_active_household(self.user)
+        app_type = get_app_type()
+        if app_type == "whisky":
+            from wine_cellar.apps.whisky.models import WhiskyStorageItem
+
+            item_model = WhiskyStorageItem
+        else:
+            item_model = StorageItem
+        self.fields["storage_item"].queryset = (
+            item_model.objects.filter(household=household, deleted=False)
+            .select_related("storage")
+            .order_by("storage__name", "row", "column")
+        )
+        self.fields["target_storage"].queryset = Storage.objects.filter(
+            household=household, app_type=app_type
+        ).order_by("order", "created")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        storage = cleaned_data.get("target_storage")
+        row = cleaned_data.get("target_row")
+        column = cleaned_data.get("target_column")
+        if not storage or row is None or column is None:
+            return cleaned_data
+        if row > storage.rows:
+            self.add_error("target_row", "The selected row exceeds the number of rows.")
+        if column > storage.columns:
+            self.add_error(
+                "target_column", "The selected cell exceeds the number of cells."
+            )
+        if (
+            row <= storage.rows
+            and column <= storage.columns
+            and not storage.is_cell_active(row, column)
+        ):
+            raise forms.ValidationError(
+                "The selected destination is not active in this storage."
+            )
         return cleaned_data

@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
@@ -211,6 +213,50 @@ class StorageItem(UserContentModel):
     @property
     def removal_date(self):
         return self.given_date or self.finished_date
+
+
+class PlannedMove(UserContentModel):
+    """A bottle's intended destination, which does not reserve the target cell."""
+
+    storage_item_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    storage_item_id = models.PositiveIntegerField()
+    storage_item = GenericForeignKey("storage_item_type", "storage_item_id")
+    target_storage = models.ForeignKey(
+        Storage,
+        on_delete=models.CASCADE,
+        related_name="planned_moves",
+    )
+    target_row = models.PositiveIntegerField()
+    target_column = models.PositiveIntegerField()
+    app_type = models.CharField(max_length=10, default="wine")
+
+    class Meta:
+        verbose_name = "Planned Move"
+        verbose_name_plural = "Planned Moves"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["storage_item_type", "storage_item_id"],
+                name="plannedmove_storage_item_unique",
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=[
+                    "household",
+                    "app_type",
+                    "target_storage",
+                    "target_row",
+                    "target_column",
+                ],
+                name="planmove_target_idx",
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.storage_item} planned for {self.target_storage} "
+            f"({self.target_row}, {self.target_column})"
+        )
 
 
 class BottleMoveHistory(models.Model):

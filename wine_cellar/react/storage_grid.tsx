@@ -58,12 +58,19 @@ interface StorageItemData {
     wine: WineInfo;
 }
 
+interface PlannedMoveData {
+    row: number;
+    column: number;
+    description: string;
+}
+
 // Fully-built grid cell (with 'active' field computed client-side)
 interface CellData {
     row: number;
     column: number;
     wine: WineInfo | null;
     active: boolean;
+    plannedMove: string | null;
 }
 
 interface StorageData {
@@ -76,6 +83,7 @@ interface StorageData {
     utilization_percent: number;
     cell_mask: [number, number][] | null;
     items: StorageItemData[];
+    planned_moves: PlannedMoveData[];
 }
 
 interface AllStoragesData {
@@ -161,6 +169,7 @@ const getCellClassName = (
         const wineTypeClass = getWineTypeClass(cell.wine?.wine_type_class ?? cell.wine?.wine_type);
         if (wineTypeClass) classNames.push(`storage-grid__cell--${wineTypeClass}`);
     }
+    if (cell.plannedMove) classNames.push('storage-grid__cell--planned');
 
     if (isDragging) classNames.push('storage-grid__cell--dragging');
     if (isOver && !hasWine && !isInactive) classNames.push('storage-grid__cell--drag-over');
@@ -265,6 +274,7 @@ const getCellAriaLabel = (
         return `${location}. Unavailable cell.`;
     }
 
+    const plannedMove = cell.plannedMove ? ` Intended occupant: ${cell.plannedMove}.` : '';
     if (cell.wine) {
         const details = [
             cell.wine.name,
@@ -274,25 +284,25 @@ const getCellAriaLabel = (
         ].filter(Boolean).join(', ');
 
         if (context === 'source') {
-            return `${location}. ${details}. Press Enter to select this bottle to move.`;
+            return `${location}. ${details}.${plannedMove} Press Enter to select this bottle to move.`;
         }
 
         if (context === 'destination') {
-            return `${location}. ${details}. Destination occupied. Choose an empty cell.`;
+            return `${location}. ${details}.${plannedMove} Destination occupied. Choose an empty cell.`;
         }
 
-        return `${location}. ${details}. Press Enter to open bottle details.`;
+        return `${location}. ${details}.${plannedMove} Press Enter to open bottle details.`;
     }
 
     if (context === 'destination' && hasSelectedBottle) {
-        return `${location}. Empty cell. Press Enter to move the selected bottle here.`;
+        return `${location}. Empty cell.${plannedMove} Press Enter to move the selected bottle here.`;
     }
 
     if (context === 'source') {
-        return `${location}. Empty cell. Select a bottle to move.`;
+        return `${location}. Empty cell.${plannedMove} Select a bottle to move.`;
     }
 
-    return `${location}. Empty cell.`;
+    return `${location}. Empty cell.${plannedMove}`;
 };
 
 const Tooltip: React.FC<TooltipProps> = ({ wine, position, itemUrlPrefix }) => {
@@ -473,6 +483,9 @@ const DraggableCell: React.FC<DraggableCellProps> = ({
                     <i className="fa-solid fa-wine-bottle" aria-hidden="true" />
                     <RatingStars rating={cell.wine!.rating} />
                 </div>
+            )}
+            {cell.plannedMove && (
+                <i className="fa-solid fa-route storage-grid__planned-indicator" aria-hidden="true" />
             )}
         </button>
     );
@@ -695,12 +708,16 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
             const rowCells: CellData[] = [];
             for (let col = 1; col <= storage.columns; col++) {
                 const item = storage.items.find(i => i.row === row && i.column === col);
+                const plannedMove = storage.planned_moves.find(
+                    move => move.row === row && move.column === col
+                );
                 const active = maskSet === null || maskSet.has(`${row},${col}`);
                 rowCells.push({
                     row,
                     column: col,
                     wine: item?.wine || null,
                     active,
+                    plannedMove: plannedMove?.description || null,
                 });
             }
             grid.push(rowCells);
@@ -831,6 +848,9 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                                             <i className="fa-solid fa-wine-bottle" aria-hidden="true" />
                                             <RatingStars rating={cell.wine.rating} />
                                         </div>
+                                    )}
+                                    {cell.plannedMove && (
+                                        <i className="fa-solid fa-route storage-grid__planned-indicator" aria-hidden="true" />
                                     )}
                                 </button>
                             );

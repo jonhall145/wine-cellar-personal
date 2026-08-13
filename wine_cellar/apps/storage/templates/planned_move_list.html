@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block header %}
+    <h1 class="header__title">Planned Moves</h1>
+{% endblock header %}
+{% block content %}
+    <div class="storage-list__container">
+        <div class="pure-g">
+            <div class="storage-list__menu pure-u-1 text-align-center">
+                <a href="{% url 'planned-move-add' %}" class="pure-button button__neutral">
+                    <i class="fa-solid fa-route"></i> <span>Plan a Move</span>
+                </a>
+            </div>
+            <div class="pure-u-1 text-align-center">
+                {% if planned_moves %}
+                    <div class="storage-list__table-wrapper">
+                        <table class="storage-list__table">
+                            <tr>
+                                <th>{% if CELLAR_APP_TYPE == "whisky" %}Whisky{% else %}Wine{% endif %}</th>
+                                <th>Destination</th>
+                                <th></th>
+                            </tr>
+                            {% for planned_move in planned_moves %}
+                                <tr>
+                                    <td>{{ planned_move.storage_item }}</td>
+                                    <td>{{ planned_move.target_storage.name }}, row {{ planned_move.target_row }}, cell {{ planned_move.target_column }}</td>
+                                    <td>
+                                        <form method="post" action="{% url 'planned-move-delete' planned_move.pk %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="pure-button" title="Cancel planned move">
+                                                <i class="fa-regular fa-trash-can"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                {% else %}
+                    <p>No planned moves yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock content %}

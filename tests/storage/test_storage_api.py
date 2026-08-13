@@ -7,7 +7,12 @@ from django.urls import reverse
 from django.utils import timezone
 from pytest_django.asserts import assertTemplateUsed
 
-from wine_cellar.apps.storage.models import BottleMoveHistory, Storage, StorageItem
+from wine_cellar.apps.storage.models import (
+    BottleMoveHistory,
+    PlannedMove,
+    Storage,
+    StorageItem,
+)
 
 
 @pytest.mark.django_db
@@ -71,6 +76,33 @@ class TestStorageGridData:
         assert storage_data["total_slots"] == 4
         assert storage_data["utilization_percent"] == 50
 
+    def test_includes_planned_destination(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        storage = user.storage_set.first()
+        storage.rows = 2
+        storage.columns = 2
+        storage.save(update_fields=["rows", "columns"])
+        item = storage_item_factory(
+            wine=wine_factory(user=user), storage=storage, row=1, column=1
+        )
+        PlannedMove.objects.create(
+            storage_item=item,
+            target_storage=storage,
+            target_row=2,
+            target_column=2,
+            user=user,
+            household=user.user_settings.active_household,
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("storage-grid-data"))
+        storage_data = json.loads(response.content)["storages"][0]
+
+        assert storage_data["planned_moves"] == [
+            {"row": 2, "column": 2, "description": str(item)}
+        ]
+
 
 @pytest.mark.django_db
 class TestMoveBottle:
@@ -101,6 +133,40 @@ class TestMoveBottle:
         item.refresh_from_db()
         assert item.row == 2
         assert item.column == 3
+
+    def test_move_clears_planned_move(
+        self, client, user, wine_factory, storage_item_factory, storage_factory
+    ):
+        wine = wine_factory(user=user)
+        storage = storage_factory(user=user, rows=3, columns=3)
+        item = storage_item_factory(
+            wine=wine, storage=storage, row=1, column=1, user=user
+        )
+        PlannedMove.objects.create(
+            storage_item=item,
+            target_storage=storage,
+            target_row=2,
+            target_column=3,
+            user=user,
+            household=user.user_settings.active_household,
+        )
+        client.force_login(user)
+
+        response = client.post(
+            reverse("storage-move-bottle"),
+            json.dumps(
+                {
+                    "item_id": item.pk,
+                    "target_storage_id": storage.pk,
+                    "target_row": 2,
+                    "target_column": 3,
+                }
+            ),
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert not PlannedMove.objects.exists()
 
     def test_missing_fields(self, client, user):
         client.force_login(user)
