@@ -1,9 +1,10 @@
 import json
 import logging
+from threading import Thread
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django.db import close_old_connections, transaction
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
@@ -56,14 +57,24 @@ def _format_price_delta(beverage, amount):
 
 def _schedule_ai_summary_refresh(wine_id):
     def _callback():
+        close_old_connections()
         try:
             WineAISummaryService.refresh_summary(wine_id)
         except Exception:
             logger.exception(
                 "Unexpected error generating AI summary for wine %s", wine_id
             )
+        finally:
+            close_old_connections()
 
-    transaction.on_commit(_callback)
+    def _start_background_refresh():
+        Thread(
+            target=_callback,
+            name=f"wine-ai-summary-{wine_id}",
+            daemon=True,
+        ).start()
+
+    transaction.on_commit(_start_background_refresh)
 
 
 def _schedule_ai_grape_refresh(wine_id):

@@ -40,6 +40,17 @@ def _test_image_upload(name="front.jpg"):
     return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/jpeg")
 
 
+class _ImmediateThread:
+    """Test double that runs a background target synchronously."""
+
+    def __init__(self, *, target, **kwargs):
+        self.target = target
+
+    def start(self):
+        with patch("wine_cellar.apps.wine.views.wine_crud.close_old_connections"):
+            self.target()
+
+
 @pytest.mark.django_db
 def test_wine_form_storage_fields_use_native_select_widgets(user):
     form = WineForm(user=user)
@@ -83,6 +94,10 @@ class TestWineCreateView:
                 "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
                 side_effect=lambda callback: callback(),
             ),
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.Thread",
+                _ImmediateThread,
+            ),
         ):
             r = client.post(reverse("wine-add"), _minimal_wine_data(), follow=True)
         assert r.status_code == 200
@@ -115,6 +130,10 @@ class TestWineCreateView:
             patch(
                 "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
                 side_effect=lambda callback: callback(),
+            ),
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.Thread",
+                _ImmediateThread,
             ),
         ):
             r = client.post(
@@ -156,6 +175,10 @@ class TestWineCreateView:
             patch(
                 "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
                 side_effect=lambda callback: callback(),
+            ),
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.Thread",
+                _ImmediateThread,
             ),
         ):
             second_response = client.post(
@@ -446,6 +469,8 @@ def test_schedule_ai_summary_refresh_swallows_exceptions(monkeypatch):
         "on_commit",
         lambda callback: callback(),
     )
+    monkeypatch.setattr(wine_crud, "Thread", _ImmediateThread)
+    monkeypatch.setattr(wine_crud, "close_old_connections", lambda: None)
     monkeypatch.setattr(
         wine_crud.logger,
         "exception",
@@ -510,6 +535,10 @@ class TestWineUpdateView:
             patch(
                 "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
                 side_effect=lambda callback: callback(),
+            ),
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.Thread",
+                _ImmediateThread,
             ),
         ):
             r = client.post(

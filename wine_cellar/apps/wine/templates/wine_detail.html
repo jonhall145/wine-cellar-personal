@@ -504,11 +504,15 @@
                 </div>
             </div>
             {% endif %}
-            {% if wine.ai_summary %}
-                <div class="pure-u-1 pure-u-md-1 mt-12" id="ai-summary">
+            <div
+                class="pure-u-1 pure-u-md-1 mt-12"
+                id="ai-summary"
+                {% if not wine.ai_summary %}data-status-url="{% url 'wine-ai-summary-status' wine.pk %}"{% endif %}
+            >
                     <details>
                         <summary>AI Summary</summary>
-                        <div class="mt-12">
+                        <div class="mt-12" id="ai-summary-content">
+                            {% if wine.ai_summary %}
                             <p>{{ wine.ai_summary|linebreaksbr }}</p>
                             {% if wine.ai_summary_generated_at %}
                                 <p class="text--gray text--small">
@@ -527,16 +531,95 @@
                                     {% endfor %}
                                 </ul>
                             {% endif %}
+                            {% else %}
+                            <p role="status">Generating AI summary...</p>
+                            {% endif %}
                         </div>
                     </details>
-                </div>
-            {% endif %}
+            </div>
         </div>
     </div>
 {% endblock content %}
 
 {% block extra_js %}
     {{ block.super }}
+    {% if not wine.ai_summary %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const summary = document.getElementById('ai-summary');
+                const content = document.getElementById('ai-summary-content');
+                const statusUrl = summary && summary.dataset.statusUrl;
+
+                if (!statusUrl || !content) {
+                    return;
+                }
+
+                function renderSummary(data) {
+                    content.replaceChildren();
+                    const text = document.createElement('p');
+                    text.textContent = data.summary;
+                    text.style.whiteSpace = 'pre-line';
+                    content.appendChild(text);
+
+                    if (data.generated_at) {
+                        const generated = document.createElement('p');
+                        generated.className = 'text--gray text--small';
+                        generated.textContent = 'Generated ' + data.generated_at;
+                        content.appendChild(generated);
+                    }
+
+                    if (data.sources.length) {
+                        const heading = document.createElement('h4');
+                        heading.textContent = 'Sources';
+                        content.appendChild(heading);
+
+                        const sources = document.createElement('ul');
+                        data.sources.forEach(function(source) {
+                            const item = document.createElement('li');
+                            const link = document.createElement('a');
+                            link.href = source.url;
+                            link.target = '_blank';
+                            link.rel = 'noopener noreferrer';
+                            link.textContent = source.title || source.url;
+                            item.appendChild(link);
+                            sources.appendChild(item);
+                        });
+                        content.appendChild(sources);
+                    }
+                }
+
+                var pollAttempts = 0;
+                var maxPollAttempts = 30;
+
+                function pollForSummary() {
+                    if (pollAttempts >= maxPollAttempts) {
+                        content.innerHTML = '<p class="ai-summary-error">AI summary is taking longer than expected. Please refresh the page to try again.</p>';
+                        return;
+                    }
+                    pollAttempts++;
+                    fetch(statusUrl, { credentials: 'same-origin' })
+                        .then(function(response) {
+                            if (!response.ok) {
+                                throw new Error('Unable to retrieve AI summary status');
+                            }
+                            return response.json();
+                        })
+                        .then(function(data) {
+                            if (data.status === 'ready') {
+                                renderSummary(data);
+                                return;
+                            }
+                            window.setTimeout(pollForSummary, 2000);
+                        })
+                        .catch(function() {
+                            window.setTimeout(pollForSummary, 5000);
+                        });
+                }
+
+                window.setTimeout(pollForSummary, 1000);
+            });
+        </script>
+    {% endif %}
     {% if has_price_chart %}
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" integrity="sha384-T/4KgSWuZEPozpPz7rnnp/5lDSnpY1VPJCojf1S81uTHS1E38qgLfMgVsAeRCWc4" crossorigin="anonymous" defer></script>
         <script>

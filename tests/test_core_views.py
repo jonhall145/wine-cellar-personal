@@ -466,6 +466,47 @@ class TestWineDetailView:
         assert "Producer profile" in content
         assert 'href="https://example.com/producer"' in content
 
+    def test_ai_summary_status_returns_generated_summary(
+        self, client, user, wine_factory
+    ):
+        wine = wine_factory(user=user, name="Summarised Wine")
+        wine.ai_summary = "A concise sourced summary."
+        wine.ai_summary_sources = [
+            {"title": "Producer profile", "url": "https://example.com/producer"}
+        ]
+        wine.ai_summary_generated_at = timezone.now()
+        wine.save(
+            update_fields=[
+                "ai_summary",
+                "ai_summary_sources",
+                "ai_summary_generated_at",
+            ]
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("wine-ai-summary-status", kwargs={"pk": wine.pk}))
+
+        assert response.status_code == HTTPStatus.OK
+        assert response.json()["status"] == "ready"
+        assert response.json()["summary"] == "A concise sourced summary."
+        assert response.json()["sources"] == wine.ai_summary_sources
+
+    def test_ai_summary_status_is_pending_until_generated(
+        self, client, user, wine_factory
+    ):
+        wine = wine_factory(user=user)
+        client.force_login(user)
+
+        response = client.get(reverse("wine-ai-summary-status", kwargs={"pk": wine.pk}))
+        detail_response = client.get(reverse("wine-detail", kwargs={"pk": wine.pk}))
+
+        assert response.status_code == HTTPStatus.OK
+        assert response.json() == {"status": "pending"}
+        assert "Generating AI summary..." in detail_response.content.decode()
+        assert reverse("wine-ai-summary-status", kwargs={"pk": wine.pk}) in (
+            detail_response.content.decode()
+        )
+
     def test_detail_view_renders_photo_viewer_controls(
         self, client, user, wine_factory, wine_image_factory, clear_image_folder
     ):
