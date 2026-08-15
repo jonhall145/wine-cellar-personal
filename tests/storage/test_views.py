@@ -716,3 +716,16 @@ def test_user_can_manage_household_planned_moves(
     response = client.post(reverse("planned-move-delete", args=[planned_move.pk]))
     assertRedirects(response, reverse("planned-move-list"))
     assert not PlannedMove.objects.exists()
+
+
+@pytest.mark.django_db
+def test_planned_move_form_uses_the_storage_grid_picker(client, user):
+    client.force_login(user)
+
+    response = client.get(reverse("planned-move-add"))
+    content = response.content.decode()
+
+    assert response.status_code == HTTPStatus.OK
+    assert 'id="storage-grid-container" data-planned-move-form="true"' in content
+    assert 'id="planned-move-submit"' in content
+    assert 'name="storage_item"' in content

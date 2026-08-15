@@ -3,42 +3,43 @@
     <h1 class="header__title">Planned Moves</h1>
 {% endblock header %}
 {% block content %}
-    <div class="storage-list__container">
-        <div class="pure-g">
-            <div class="storage-list__menu pure-u-1 text-align-center">
-                <a href="{% url 'planned-move-add' %}" class="pure-button button__neutral">
-                    <i class="fa-solid fa-route"></i> <span>Plan a Move</span>
-                </a>
+    <div class="planned-moves">
+        <div class="planned-moves__header">
+            <div>
+                <p class="planned-moves__eyebrow">Storage planning</p>
+                <p class="planned-moves__description">Keep track of each bottle's intended destination.</p>
             </div>
-            <div class="pure-u-1 text-align-center">
-                {% if planned_moves %}
-                    <div class="storage-list__table-wrapper">
-                        <table class="storage-list__table">
-                            <tr>
-                                <th>{% if CELLAR_APP_TYPE == "whisky" %}Whisky{% else %}Wine{% endif %}</th>
-                                <th>Destination</th>
-                                <th></th>
-                            </tr>
-                            {% for planned_move in planned_moves %}
-                                <tr>
-                                    <td>{{ planned_move.storage_item }}</td>
-                                    <td>{{ planned_move.target_storage.name }}, row {{ planned_move.target_row }}, cell {{ planned_move.target_column }}</td>
-                                    <td>
-                                        <form method="post" action="{% url 'planned-move-delete' planned_move.pk %}">
-                                            {% csrf_token %}
-                                            <button type="submit" class="pure-button" title="Cancel planned move">
-                                                <i class="fa-regular fa-trash-can"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </table>
-                    </div>
-                {% else %}
-                    <p>No planned moves yet.</p>
-                {% endif %}
-            </div>
+            <a href="{% url 'planned-move-add' %}" class="pure-button button__primary">
+                <i class="fa-solid fa-route" aria-hidden="true"></i> <span>Plan a Move</span>
+            </a>
         </div>
+        {% if planned_moves %}
+            <ol class="planned-moves__list">
+                {% for planned_move in planned_moves %}
+                    <li class="planned-moves__card">
+                        <div class="planned-moves__bottle">
+                            <i class="fa-solid fa-wine-bottle" aria-hidden="true"></i>
+                            <span>{{ planned_move.storage_item }}</span>
+                        </div>
+                        <div class="planned-moves__destination">
+                            <span class="planned-moves__label">Intended destination</span>
+                            <span>{{ planned_move.target_storage.name }} &middot; Row {{ planned_move.target_row }}, cell {{ planned_move.target_column }}</span>
+                        </div>
+                        <form method="post" action="{% url 'planned-move-delete' planned_move.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="planned-moves__remove" title="Cancel planned move" aria-label="Cancel planned move for {{ planned_move.storage_item }}">
+                                <i class="fa-regular fa-trash-can" aria-hidden="true"></i>
+                            </button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ol>
+        {% else %}
+            <div class="planned-moves__empty">
+                <i class="fa-solid fa-route" aria-hidden="true"></i>
+                <p>No planned moves yet.</p>
+                <p>Choose a bottle and its intended destination from the storage grid.</p>
+            </div>
+        {% endif %}
     </div>
 {% endblock content %}
