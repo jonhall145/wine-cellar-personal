@@ -18,12 +18,16 @@
                 {% for planned_move in planned_moves %}
                     <li class="planned-moves__card">
                         <div class="planned-moves__bottle">
-                            <i class="fa-solid fa-wine-bottle" aria-hidden="true"></i>
+                            {% if CELLAR_APP_TYPE == "whisky" %}
+                                <i class="fa-solid fa-whiskey-glass" aria-hidden="true"></i>
+                            {% else %}
+                                <i class="fa-solid fa-wine-bottle" aria-hidden="true"></i>
+                            {% endif %}
                             <span>{{ planned_move.storage_item }}</span>
                         </div>
                         <div class="planned-moves__destination">
                             <span class="planned-moves__label">Intended destination</span>
-                            <span>{{ planned_move.target_storage.name }} &middot; Row {{ planned_move.target_row }}, cell {{ planned_move.target_column }}</span>
+                            <span>{{ planned_move.target_storage.name }} · Row {{ planned_move.target_row }}, cell {{ planned_move.target_column }}</span>
                         </div>
                         <form method="post" action="{% url 'planned-move-delete' planned_move.pk %}">
                             {% csrf_token %}

@@ -298,6 +298,10 @@ const getCellAriaLabel = (
             return `${location}. ${details}.${plannedMove} Press Enter to select this intended destination.`;
         }
 
+        if (context === 'planned-destination') {
+            return `${location}. ${details}.${plannedMove} Select a bottle in the source grid first.`;
+        }
+
         return `${location}. ${details}.${plannedMove} Press Enter to open bottle details.`;
     }
 
@@ -660,7 +664,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId, plannedMove
     React.useEffect(() => {
         if (!plannedMoveMode) return;
 
-        const form = document.getElementById('planned-move-form');
+        const form = document.getElementById('planned-move-form') as HTMLFormElement | null;
         const bottleInput = form?.elements.namedItem('storage_item') as HTMLInputElement | null;
         const storageInput = form?.elements.namedItem('target_storage') as HTMLInputElement | null;
         const rowInput = form?.elements.namedItem('target_row') as HTMLInputElement | null;
@@ -1048,8 +1052,8 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId, plannedMove
                     )}
                 </div>
                 <p id="storage-grid-move-instructions" className="visually-hidden">
-                    Use Tab or the arrow keys to move between cells. Press Enter to select a bottle in
-                    the source grid, then press Enter on a destination cell to select it.
+                    Use Tab or the arrow keys to move between cells. Select a bottle in the source grid
+                    first, then press Enter on a destination cell to select it.
                 </p>
 
                 {/* Dual pane layout */}
