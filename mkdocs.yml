@@ -5,6 +5,7 @@ nav:
   - Development:
     - Setup: setup.md
     - Testing: testing.md
+    - Gemini Flash Evaluation: gemini-flash-evaluation.md
     - Deduplication Refactor Plan: deduplication-refactor-plan.md
   - Database:
     - Models: models.md
