@@ -21,10 +21,13 @@ const translated = {
     overviewHint: 'Tap a mini-grid to switch storages',
     moveMode: 'Move Mode',
     moveModeHint: 'Select a bottle, then select destination',
+    planMove: 'Plan a Move',
+    planMoveHint: 'Select a bottle, then select its intended destination',
     source: 'Source',
     destination: 'Destination',
     selectBottle: 'Select a bottle to move',
     selectDestination: 'Now select an empty cell in the destination',
+    selectPlannedDestination: 'Now select the intended destination',
     cancelMove: 'Cancel',
     tapToSeeDetails: 'Tap a bottle to see details',
     dragToMove: 'Long press and drag to move bottles',
@@ -265,7 +268,7 @@ const handleGridKeyDown = (
 const getCellAriaLabel = (
     cell: CellData,
     storageName: string,
-    context: 'browse' | 'source' | 'destination',
+    context: 'browse' | 'source' | 'destination' | 'planned-destination',
     hasSelectedBottle = false,
 ): string => {
     const location = `${storageName}, row ${cell.row}, column ${cell.column}`;
@@ -291,7 +294,19 @@ const getCellAriaLabel = (
             return `${location}. ${details}.${plannedMove} Destination occupied. Choose an empty cell.`;
         }
 
+        if (context === 'planned-destination' && hasSelectedBottle) {
+            return `${location}. ${details}.${plannedMove} Press Enter to select this intended destination.`;
+        }
+
+        if (context === 'planned-destination') {
+            return `${location}. ${details}.${plannedMove} Select a bottle in the source grid first.`;
+        }
+
         return `${location}. ${details}.${plannedMove} Press Enter to open bottle details.`;
+    }
+
+    if (context === 'planned-destination' && hasSelectedBottle) {
+        return `${location}. Empty cell.${plannedMove} Press Enter to select this intended destination.`;
     }
 
     if (context === 'destination' && hasSelectedBottle) {
@@ -506,9 +521,10 @@ const DragOverlayContent: React.FC<{ wine: WineInfo }> = ({ wine }) => {
 
 interface StorageGridProps {
     initialStorageId?: number;
+    plannedMoveMode?: boolean;
 }
 
-const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
+const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId, plannedMoveMode = false }) => {
     const [data, setData] = useState<AllStoragesData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -518,6 +534,11 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [moveMode, setMoveMode] = useState(false);
     const [selectedBottle, setSelectedBottle] = useState<{ cell: CellData; storageId: number } | null>(null);
+    const [selectedDestination, setSelectedDestination] = useState<{
+        storageId: number;
+        row: number;
+        column: number;
+    } | null>(null);
     const [activeItem, setActiveItem] = useState<{ cell: CellData; storageId: number } | null>(null);
     const [itemUrlPrefix, setItemUrlPrefix] = useState('/wine/');
 
@@ -640,12 +661,34 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
         }
     };
 
+    React.useEffect(() => {
+        if (!plannedMoveMode) return;
+
+        const form = document.getElementById('planned-move-form') as HTMLFormElement | null;
+        const bottleInput = form?.elements.namedItem('storage_item') as HTMLInputElement | null;
+        const storageInput = form?.elements.namedItem('target_storage') as HTMLInputElement | null;
+        const rowInput = form?.elements.namedItem('target_row') as HTMLInputElement | null;
+        const columnInput = form?.elements.namedItem('target_column') as HTMLInputElement | null;
+        const submitButton = document.getElementById('planned-move-submit') as HTMLButtonElement | null;
+
+        if (bottleInput) bottleInput.value = selectedBottle?.cell.wine?.item_id.toString() ?? '';
+        if (storageInput) storageInput.value = selectedDestination?.storageId.toString() ?? '';
+        if (rowInput) rowInput.value = selectedDestination?.row.toString() ?? '';
+        if (columnInput) columnInput.value = selectedDestination?.column.toString() ?? '';
+        if (submitButton) submitButton.disabled = !selectedBottle || !selectedDestination;
+    }, [plannedMoveMode, selectedBottle, selectedDestination]);
+
     // Handle click in move mode - select bottle from source, then destination cell
     const handleMoveModeClick = useCallback(async (cell: CellData, storageId: number, isSource: boolean) => {
         if (isSource) {
             // Clicking on source grid - select a bottle
             if (cell.wine) {
                 setSelectedBottle({ cell, storageId });
+                setSelectedDestination(null);
+            }
+        } else if (plannedMoveMode) {
+            if (selectedBottle) {
+                setSelectedDestination({ storageId, row: cell.row, column: cell.column });
             }
         } else {
             // Clicking on destination grid - move the selected bottle here
@@ -662,7 +705,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                 setMessage({ type: 'error', text: translated.cellOccupied });
             }
         }
-    }, [selectedBottle]);
+    }, [plannedMoveMode, selectedBottle]);
 
     const handleShowTooltip = useCallback((wine: WineInfo, e: { clientX: number; clientY: number }) => {
         setTooltip({ wine, position: { x: e.clientX, y: e.clientY } });
@@ -675,6 +718,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
     const toggleMoveMode = () => {
         setMoveMode(!moveMode);
         setSelectedBottle(null);
+        setSelectedDestination(null);
     };
 
     // Clear message after 3 seconds
@@ -772,6 +816,8 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                         const id = Number(e.target.value);
                         if (isSource) {
                             setSourceStorageId(id);
+                            setSelectedBottle(null);
+                            setSelectedDestination(null);
                         } else {
                             setTargetStorageId(id);
                             localStorage.setItem('storage_grid_target_id', String(id));
@@ -803,10 +849,15 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                             const isSelectedForMove = selectedBottle?.cell.row === cell.row &&
                                 selectedBottle?.cell.column === cell.column &&
                                 selectedBottle?.storageId === storage.id;
+                            const isSelectedDestination = !isSource &&
+                                selectedDestination?.row === cell.row &&
+                                selectedDestination?.column === cell.column &&
+                                selectedDestination?.storageId === storage.id;
 
                             const extraClasses = [];
                             if (isSelectedForMove) extraClasses.push('storage-grid__cell--selected-for-move');
-                            if (!isSource && !cell.wine && !isInactive && selectedBottle) {
+                            if (isSelectedDestination) extraClasses.push('storage-grid__cell--selected-planned-destination');
+                            if (!plannedMoveMode && !isSource && !cell.wine && !isInactive && selectedBottle) {
                                 extraClasses.push('storage-grid__cell--drop-target');
                             }
 
@@ -842,11 +893,17 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                                     aria-label={getCellAriaLabel(
                                         cell,
                                         storage.name,
-                                        isSource ? 'source' : 'destination',
+                                        isSource ? 'source' : plannedMoveMode ? 'planned-destination' : 'destination',
                                         Boolean(selectedBottle),
                                     )}
                                     aria-describedby="storage-grid-move-instructions"
-                                    aria-pressed={isSource && isSelectedForMove ? true : undefined}
+                                    aria-pressed={
+                                        isSource && isSelectedForMove
+                                            ? true
+                                            : isSelectedDestination
+                                                ? true
+                                                : undefined
+                                    }
                                     data-grid-id={`${isSource ? 'source' : 'destination'}-${storage.id}`}
                                     data-row={cell.row}
                                     data-column={cell.column}
@@ -931,28 +988,34 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
     };
 
     // Move mode: dual pane view (without dnd-kit, uses click-based selection)
-    if (moveMode && targetStorage) {
+    if ((moveMode || plannedMoveMode) && targetStorage) {
         return (
             <div className="storage-grid storage-grid--move-mode">
-                {/* Move mode toggle */}
-                <div className="storage-grid__controls">
-                    <button
-                        type="button"
-                        className="storage-grid__mode-btn storage-grid__mode-btn--active"
-                        onClick={toggleMoveMode}
-                    >
-                        <i className="fa-solid fa-arrows-left-right" /> {translated.moveMode}
-                    </button>
-                    {selectedBottle && (
+                {plannedMoveMode ? (
+                    <div className="storage-grid__plan-intro">
+                        <h2>{translated.planMove}</h2>
+                        <p>{translated.planMoveHint}</p>
+                    </div>
+                ) : (
+                    <div className="storage-grid__controls">
                         <button
                             type="button"
-                            className="storage-grid__cancel-btn"
-                            onClick={() => setSelectedBottle(null)}
+                            className="storage-grid__mode-btn storage-grid__mode-btn--active"
+                            onClick={toggleMoveMode}
                         >
-                            {translated.cancelMove}
+                            <i className="fa-solid fa-arrows-left-right" /> {translated.moveMode}
                         </button>
-                    )}
-                </div>
+                        {selectedBottle && (
+                            <button
+                                type="button"
+                                className="storage-grid__cancel-btn"
+                                onClick={() => setSelectedBottle(null)}
+                            >
+                                {translated.cancelMove}
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {/* Message */}
                 {message && (
@@ -967,14 +1030,30 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId }) => {
                 {/* Move mode hint */}
                 <div className="storage-grid__move-hint">
                     {selectedBottle ? (
-                        <><i className="fa-solid fa-hand-pointer" aria-hidden="true" /> {translated.selectDestination}</>
+                        <>
+                            <i className="fa-solid fa-hand-pointer" aria-hidden="true" />{' '}
+                            {plannedMoveMode ? translated.selectPlannedDestination : translated.selectDestination}
+                            {plannedMoveMode && <strong> {selectedBottle.cell.wine?.name}</strong>}
+                            {plannedMoveMode && (
+                                <button
+                                    type="button"
+                                    className="storage-grid__cancel-btn"
+                                    onClick={() => {
+                                        setSelectedBottle(null);
+                                        setSelectedDestination(null);
+                                    }}
+                                >
+                                    {translated.cancelMove}
+                                </button>
+                            )}
+                        </>
                     ) : (
                         <><i className="fa-solid fa-wine-bottle" aria-hidden="true" /> {translated.selectBottle}</>
                     )}
                 </div>
                 <p id="storage-grid-move-instructions" className="visually-hidden">
-                    Use Tab or the arrow keys to move between cells. Press Enter to select a bottle in
-                    the source grid, then press Enter on an empty destination cell to move it.
+                    Use Tab or the arrow keys to move between cells. Select a bottle in the source grid
+                    first, then press Enter on a destination cell to select it.
                 </p>
 
                 {/* Dual pane layout */}
@@ -1102,8 +1181,13 @@ const initStorageGrid = () => {
         // Get initial storage ID from data attribute
         const storageIdAttr = container.getAttribute('data-storage-id');
         const initialStorageId = storageIdAttr ? parseInt(storageIdAttr, 10) : undefined;
+        const plannedMoveMode = container.dataset.plannedMoveForm === 'true';
         const root = createRoot(container);
-        root.render(<ErrorBoundary><StorageGrid initialStorageId={initialStorageId} /></ErrorBoundary>);
+        root.render(
+            <ErrorBoundary>
+                <StorageGrid initialStorageId={initialStorageId} plannedMoveMode={plannedMoveMode} />
+            </ErrorBoundary>
+        );
     }
 };
 
