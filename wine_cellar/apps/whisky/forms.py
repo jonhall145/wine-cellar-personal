@@ -390,6 +390,32 @@ class WhiskyBaseForm(
         label="Fill Level",
         help_text="Current fill level of the bottle.",
     )
+    miniature_number = forms.IntegerField(
+        required=False,
+        min_value=1,
+        label="Miniature Label Number",
+        help_text=(
+            "For miniatures only. Leave blank to assign the next available number."
+        ),
+    )
+
+    def clean_miniature_number(self):
+        number = self.cleaned_data.get("miniature_number")
+        if number and self.cleaned_data.get("size") != BottleSize.MINIATURE:
+            raise forms.ValidationError(
+                "Miniature label numbers can only be used for miniatures."
+            )
+        if (
+            number
+            and self.cleaned_data.get("storage")
+            and WhiskyStorageItem.objects.filter(
+                household=self.household, miniature_number=number
+            ).exists()
+        ):
+            raise forms.ValidationError(
+                "This miniature label number is already in use."
+            )
+        return number
 
     def clean_cask_type(self):
         """Accept user-created cask types from TomSelect (supports multiple)."""
@@ -736,7 +762,10 @@ class WhiskyStockAddForm(TomSelectMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user")
         whisky = kwargs.pop("whisky", None)
+        storage_item = kwargs.pop("storage_item", None)
         super().__init__(*args, **kwargs)
+        self.whisky = whisky
+        self.storage_item = storage_item
 
         # Default bottle price from whisky price
         if whisky and not self.initial.get("price"):
@@ -774,6 +803,14 @@ class WhiskyStockAddForm(TomSelectMixin, forms.Form):
         min_value=1,
         label="Column",
         widget=native_select_widget(),
+    )
+    miniature_number = forms.IntegerField(
+        required=False,
+        min_value=1,
+        label="Miniature Label Number",
+        help_text=(
+            "For miniatures only. Leave blank to assign the next available number."
+        ),
     )
     price = forms.DecimalField(
         required=False,
@@ -816,6 +853,25 @@ class WhiskyStockAddForm(TomSelectMixin, forms.Form):
         label="Owner",
         widget=forms.Select(),
     )
+
+    def clean_miniature_number(self):
+        number = self.cleaned_data.get("miniature_number")
+        if number and self.whisky.size != BottleSize.MINIATURE:
+            raise forms.ValidationError(
+                "Miniature label numbers can only be used for miniatures."
+            )
+        if (
+            number
+            and WhiskyStorageItem.objects.filter(
+                household=self.whisky.household, miniature_number=number
+            )
+            .exclude(pk=self.storage_item.pk if self.storage_item else None)
+            .exists()
+        ):
+            raise forms.ValidationError(
+                "This miniature label number is already in use."
+            )
+        return number
 
     def clean_owner(self):
         """Accept user-created owner values from TomSelect."""

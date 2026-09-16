@@ -87,6 +87,7 @@ from wine_cellar.apps.whisky.forms import (
 from wine_cellar.apps.whisky.importing import WhiskyCsvImporter
 from wine_cellar.apps.whisky.models import (
     Bottler,
+    BottleSize,
     Collection,
     Distillery,
     FillLevel,
@@ -381,7 +382,7 @@ class WhiskyCreateView(BaseBeverageCreateView):
             "fields": ("rating", "owner", "comment"),
         },
     )
-    cellar_extra_field_names = ("fill_level",)
+    cellar_extra_field_names = ("fill_level", "miniature_number")
     wishlist_model = WhiskyWishlist
     wishlist_initial_field_map = {
         "name": "name",
@@ -456,6 +457,30 @@ class WhiskyCreateView(BaseBeverageCreateView):
         return WhiskyCreationService.create_or_update_whisky(
             user, household, cleaned_data
         )
+
+
+class MiniatureCreateView(WhiskyCreateView):
+    success_url = reverse_lazy("miniature-list")
+    page_title = "Add Miniature"
+    save_button_label = "Save Miniature"
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields["size"].disabled = True
+        return form
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["size"] = BottleSize.MINIATURE
+        initial["miniature_number"] = WhiskyStorageItem.next_miniature_number(
+            get_active_household(self.request.user)
+        )
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["is_miniature"] = True
+        return context
 
 
 class WhiskyUpdateView(BaseBeverageUpdateView):
@@ -1163,10 +1188,24 @@ class StorageItemAddView(BaseStorageItemAddView):
     beverage_context_name = "whisky"
     beverage_label = "whisky"
     detail_url_name = "whisky-detail"
-    extra_stock_field_names = ("owner", "fill_level")
+    extra_stock_field_names = ("owner", "fill_level", "miniature_number")
 
     def get_add_form_kwargs(self, whisky):
         return {"whisky": whisky}
+
+    def get_add_initial(self, whisky):
+        if whisky.size == BottleSize.MINIATURE:
+            return {
+                "miniature_number": WhiskyStorageItem.next_miniature_number(
+                    get_active_household(self.request.user)
+                )
+            }
+        return {}
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["is_miniature"] = self.get_beverage().size == BottleSize.MINIATURE
+        return context
 
     def get_extra_create_kwargs(self, cleaned_data):
         fill_level = cleaned_data["fill_level"]
@@ -1174,6 +1213,24 @@ class StorageItemAddView(BaseStorageItemAddView):
             "fill_level": fill_level,
             "dreg_date": timezone.localdate() if fill_level == FillLevel.DREG else None,
             "owner": cleaned_data.get("owner", ""),
+            "row": (
+                None
+                if self.get_beverage().size == BottleSize.MINIATURE
+                else cleaned_data.get("row")
+            ),
+            "column": (
+                None
+                if self.get_beverage().size == BottleSize.MINIATURE
+                else cleaned_data.get("column")
+            ),
+            "miniature_number": (
+                cleaned_data.get("miniature_number")
+                or WhiskyStorageItem.next_miniature_number(
+                    get_active_household(self.request.user)
+                )
+                if self.get_beverage().size == BottleSize.MINIATURE
+                else None
+            ),
         }
 
 
@@ -1211,6 +1268,17 @@ class StorageItemListView(RequireHouseholdMixin, FilterView):
         )
 
 
+class WhiskyMiniatureListView(StorageItemListView):
+    def get_queryset(self):
+        return super().get_queryset().filter(whisky__size=BottleSize.MINIATURE)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = "Whisky Miniatures"
+        context["is_miniature_list"] = True
+        return context
+
+
 class StorageItemUpdateView(BaseStorageItemUpdateView):
     """Edit a bottle (e.g., update fill level)."""
 
@@ -1221,10 +1289,15 @@ class StorageItemUpdateView(BaseStorageItemUpdateView):
     beverage_context_name = "whisky"
     detail_url_name = "whisky-detail"
     move_history_model = WhiskyBottleMoveHistory
-    extra_initial_field_names = ("fill_level", "owner")
+    extra_initial_field_names = ("fill_level", "owner", "miniature_number")
 
     def get_update_form_kwargs(self, item):
-        return {"whisky": item.whisky}
+        return {"whisky": item.whisky, "storage_item": item}
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["is_miniature"] = self.get_beverage().size == BottleSize.MINIATURE
+        return context
 
     def apply_extra_updates(self, item, cleaned_data):
         old_fill_level = item.fill_level
@@ -1237,6 +1310,11 @@ class StorageItemUpdateView(BaseStorageItemUpdateView):
             item.dreg_date = None
 
         item.owner = cleaned_data.get("owner", "")
+        item.miniature_number = cleaned_data.get("miniature_number")
+
+        if item.whisky.size == BottleSize.MINIATURE:
+            item.row = None
+            item.column = None
 
 
 class StorageItemHistoryView(RequireHouseholdMixin, ListView):

@@ -5,6 +5,7 @@ from django.db import transaction
 from PIL import Image
 
 from wine_cellar.apps.whisky.models import (
+    BottleSize,
     FillLevel,
     Whisky,
     WhiskyBarcode,
@@ -102,8 +103,15 @@ class WhiskyCreationService:
 
         storage = cleaned_data.get("storage")
         if storage:
-            row = cleaned_data.get("row")
-            column = cleaned_data.get("column")
+            is_miniature = size == BottleSize.MINIATURE
+            row = None if is_miniature else cleaned_data.get("row")
+            column = None if is_miniature else cleaned_data.get("column")
+            miniature_number = (
+                cleaned_data.get("miniature_number")
+                or WhiskyStorageItem.next_miniature_number(household)
+                if is_miniature
+                else None
+            )
             bottle_price = cleaned_data.get("bottle_price") or price
             is_gift = cleaned_data.get("is_gift", False)
             gift_from = cleaned_data.get("gift_from")
@@ -115,6 +123,7 @@ class WhiskyCreationService:
                 whisky=whisky,
                 row=row,
                 column=column,
+                miniature_number=miniature_number,
                 user=user,
                 household=household,
                 price=bottle_price,

@@ -6,6 +6,7 @@ from wine_cellar.apps.whisky.models import (
     FillLevel,
     PreviousContents,
     WhiskyRegion,
+    WhiskyStorageItem,
     WhiskyType,
 )
 
@@ -224,6 +225,19 @@ def test_whisky_storage_item_str_unassigned(
     result = str(item)
     assert "Oban 14" in result
     assert "Unassigned" in result
+
+
+@pytest.mark.django_db
+def test_miniature_label_numbers_are_unique_and_incremented(
+    whisky_factory, whisky_storage_item_factory, user
+):
+    whisky = whisky_factory(user=user, size="0.05")
+    storage = user.storage_set.first()
+    whisky_storage_item_factory(whisky=whisky, storage=storage, miniature_number=1)
+
+    assert WhiskyStorageItem.next_miniature_number(whisky.household) == 2
+    with pytest.raises(IntegrityError):
+        whisky_storage_item_factory(whisky=whisky, storage=storage, miniature_number=1)
 
 
 @pytest.mark.django_db
