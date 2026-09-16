@@ -5,7 +5,7 @@
     <script src="{% static 'tom_select.js' %}" type="module" defer></script>
 {% endblock extra_js %}
 {% block header %}
-    <h1 class="header__title">All Bottles</h1>
+    <h1 class="header__title">{{ page_title|default:"All Bottles" }}</h1>
 {% endblock header %}
 {% block content %}
     <div class="pure-g">
@@ -67,6 +67,7 @@
                                 <th>Whisky</th>
                                 <th>Storage</th>
                                 <th>Position</th>
+                                <th>Label #</th>
                                 <th>Fill Level</th>
                                 <th>Rating</th>
                                 <th>Gift</th>
@@ -90,6 +91,7 @@
                                             -
                                         {% endif %}
                                     </td>
+                                    <td>{{ bottle.miniature_number|default:"-" }}</td>
                                     <td>
                                         {% if bottle.fill_level %}
                                             {% fill_level_display bottle.fill_level %}
@@ -146,10 +148,10 @@
             {% else %}
                 <div class="empty-state">
                     <div class="empty-state__icon"><i class="fa-solid fa-whiskey-glass"></i></div>
-                    <h3 class="empty-state__title">No bottles found</h3>
+                    <h3 class="empty-state__title">No {% if is_miniature_list %}miniatures{% else %}bottles{% endif %} found</h3>
                     <p class="empty-state__message">Add whiskies to your collection and stock bottles to see them here.</p>
-                    <a href="{% url 'whisky-add' %}" class="pure-button button__primary empty-state__action">
-                        <i class="fa-solid fa-plus"></i> Add Whisky
+                    <a href="{% if is_miniature_list %}{% url 'miniature-add' %}{% else %}{% url 'whisky-add' %}{% endif %}" class="pure-button button__primary empty-state__action">
+                        <i class="fa-solid fa-plus"></i> Add {% if is_miniature_list %}Miniature{% else %}Whisky{% endif %}
                     </a>
                 </div>
             {% endif %}

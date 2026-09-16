@@ -777,6 +777,12 @@ class WhiskyStorageItem(UserContentModel):
     whisky = models.ForeignKey(Whisky, on_delete=models.CASCADE)
     row = models.PositiveIntegerField(null=True, blank=True)
     column = models.PositiveIntegerField(null=True, blank=True)
+    miniature_number = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Miniature Label Number",
+        help_text="The handwritten number on this miniature.",
+    )
     deleted = models.BooleanField(default=False, db_index=True)
     price = models.DecimalField(
         max_digits=8,
@@ -858,6 +864,12 @@ class WhiskyStorageItem(UserContentModel):
             models.Index(fields=["storage", "row", "column"], name="wsi_position_idx"),
             models.Index(fields=["whisky", "deleted"], name="wsi_whisky_del_idx"),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["household", "miniature_number"],
+                name="unique_whisky_miniature_label",
+            )
+        ]
 
     def __str__(self):
         location = (
@@ -866,6 +878,16 @@ class WhiskyStorageItem(UserContentModel):
             else "Unassigned"
         )
         return f"{self.whisky.name} - {self.storage.name} ({location})"
+
+    @classmethod
+    def next_miniature_number(cls, household):
+        return (
+            cls.objects.filter(
+                household=household,
+                whisky__size=BottleSize.MINIATURE,
+            ).aggregate(max_number=models.Max("miniature_number"))["max_number"]
+            or 0
+        ) + 1
 
     @property
     def dreg_warning(self):

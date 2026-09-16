@@ -13,6 +13,7 @@ from PIL import Image
 from pytest_django.asserts import assertRedirects, assertTemplateUsed
 
 from wine_cellar.apps.whisky.models import (
+    BottleSize,
     Collection,
     FillLevel,
     Whisky,
@@ -1420,6 +1421,7 @@ def test_whisky_wishlist_list_shows_convert_and_purchase_links(client, user):
     assert "https://example.com/buy-whisky" in content
 
 
+@pytest.mark.django_db
 def test_whisky_stock_add_uses_shared_template(client, user, whisky_factory):
     whisky = whisky_factory(user=user)
     client.force_login(user)
@@ -1430,6 +1432,71 @@ def test_whisky_stock_add_uses_shared_template(client, user, whisky_factory):
     assertTemplateUsed(response, "whisky/stock_add.html")
     assertTemplateUsed(response, "core/stock_add.html")
     assert response.context["whisky"].pk == whisky.pk
+
+
+@pytest.mark.django_db
+def test_miniature_list_only_shows_miniatures(
+    client, user, whisky_factory, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    miniature = whisky_factory(
+        user=user, household=household, size=BottleSize.MINIATURE
+    )
+    miniature_item = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        whisky=miniature,
+        miniature_number=12,
+    )
+    regular = whisky_factory(user=user, household=household, size=BottleSize.STANDARD)
+    whisky_storage_item_factory(
+        user=user,
+        household=household,
+        whisky=regular,
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("miniature-list"))
+
+    assert response.status_code == HTTPStatus.OK
+    assertTemplateUsed(response, "whisky/bottle_list.html")
+    assert list(response.context["bottles"]) == [miniature_item]
+    assert "Whisky Miniatures" in response.content.decode()
+    assert "12" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_miniature_add_assigns_a_label_number_and_no_shelf_position(
+    client, user, storage_factory
+):
+    household = user.user_settings.active_household
+    storage = storage_factory(
+        user=user,
+        household=household,
+        app_type="whisky",
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse("miniature-add"),
+        {
+            "name": "Talisker Miniature",
+            "whisky_type": "SM",
+            "size": BottleSize.STANDARD,
+            "country": "GB",
+            "storage": storage.pk,
+            "fill_level": FillLevel.UNOPENED,
+        },
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.redirect_chain[-1][0].endswith(reverse("miniature-list"))
+    bottle = WhiskyStorageItem.objects.get(whisky__name="Talisker Miniature")
+    assert bottle.whisky.size == BottleSize.MINIATURE
+    assert bottle.miniature_number == 1
+    assert bottle.row is None
+    assert bottle.column is None
 
 
 @pytest.mark.django_db
