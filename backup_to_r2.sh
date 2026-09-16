@@ -129,22 +129,22 @@ if mountpoint -q /mnt/usb 2>/dev/null; then
         cp "${TMP_DIR}/whisky_media_${TIMESTAMP}.tar.gz" "${USB_BACKUP_DIR}/whisky_media/"
     fi
 
-    # Prune local USB backups older than 7 days
-    find "${USB_BACKUP_DIR}" -type f -mtime +7 -delete 2>/dev/null || true
+    # Prune local USB media backups older than 7 days
+    find "${USB_BACKUP_DIR}/media" "${USB_BACKUP_DIR}/whisky_media" -type f -mtime +7 -delete 2>/dev/null || true
 else
     echo "  Warning: USB not mounted, skipping local backup copy"
 fi
 
-# ─── Prune old backups ───────────────────────────────────────────────
+# ─── Prune old media backups ─────────────────────────────────────────
 
-echo "  Pruning backups older than ${KEEP_DAYS} days..."
+echo "  Pruning media backups older than ${KEEP_DAYS} days..."
 cutoff=$(date -d "-${KEEP_DAYS} days" +%Y%m%d 2>/dev/null || date -v-${KEEP_DAYS}d +%Y%m%d)
 
-for prefix in db media whisky_media; do
+for prefix in media whisky_media; do
     aws s3 ls "s3://${BUCKET}/${prefix}/" \
         --endpoint-url "$R2_ENDPOINT" --profile "$AWS_PROFILE" 2>/dev/null \
     | awk '{print $4}' | while read -r file; do
-        # Extract date from filename (e.g., db_20260204_030000.pg.sql.gz -> 20260204)
+        # Extract date from filename (e.g., media_20260204_030000.tar.gz -> 20260204)
         file_date=$(echo "$file" | grep -oP '\d{8}' | head -1)
         if [ -n "$file_date" ] && [ "$file_date" -lt "$cutoff" ]; then
             echo "    Deleting old backup: ${prefix}/${file}"
