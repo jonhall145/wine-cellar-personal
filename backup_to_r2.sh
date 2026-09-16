@@ -21,6 +21,7 @@ MEDIA_PATH="${PROJECT_DIR}/media"
 BUCKET="wine-cellar-backups"
 R2_ENDPOINT="https://f129ddee08c640885efbc88d7d79c0a0.r2.cloudflarestorage.com"
 AWS_PROFILE="r2"
+KEEP_DAYS=30
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 TMP_DIR=$(mktemp -d)
 
@@ -104,13 +105,13 @@ aws s3 cp "$DB_BACKUP" \
 
 if [ -f "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" ]; then
     aws s3 cp "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" \
-        "s3://${BUCKET}/media/media.tar.gz" \
+        "s3://${BUCKET}/media/media_${TIMESTAMP}.tar.gz" \
         --endpoint-url "$R2_ENDPOINT" --profile "$AWS_PROFILE"
 fi
 
 if [ -f "${TMP_DIR}/whisky_media_${TIMESTAMP}.tar.gz" ]; then
     aws s3 cp "${TMP_DIR}/whisky_media_${TIMESTAMP}.tar.gz" \
-        "s3://${BUCKET}/whisky_media/whisky_media.tar.gz" \
+        "s3://${BUCKET}/whisky_media/whisky_media_${TIMESTAMP}.tar.gz" \
         --endpoint-url "$R2_ENDPOINT" --profile "$AWS_PROFILE"
 fi
 
@@ -122,13 +123,35 @@ if mountpoint -q /mnt/usb 2>/dev/null; then
     mkdir -p "${USB_BACKUP_DIR}/db" "${USB_BACKUP_DIR}/media" "${USB_BACKUP_DIR}/whisky_media"
     cp "$DB_BACKUP" "${USB_BACKUP_DIR}/db/"
     if [ -f "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" ]; then
-        cp "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" "${USB_BACKUP_DIR}/media/media.tar.gz"
+        cp "${TMP_DIR}/media_${TIMESTAMP}.tar.gz" "${USB_BACKUP_DIR}/media/"
     fi
     if [ -f "${TMP_DIR}/whisky_media_${TIMESTAMP}.tar.gz" ]; then
-        cp "${TMP_DIR}/whisky_media_${TIMESTAMP}.tar.gz" "${USB_BACKUP_DIR}/whisky_media/whisky_media.tar.gz"
+        cp "${TMP_DIR}/whisky_media_${TIMESTAMP}.tar.gz" "${USB_BACKUP_DIR}/whisky_media/"
     fi
+
+    # Prune local USB media backups older than 7 days
+    find "${USB_BACKUP_DIR}/media" "${USB_BACKUP_DIR}/whisky_media" -type f -mtime +7 -delete 2>/dev/null || true
 else
     echo "  Warning: USB not mounted, skipping local backup copy"
 fi
+
+# ─── Prune old media backups ─────────────────────────────────────────
+
+echo "  Pruning media backups older than ${KEEP_DAYS} days..."
+cutoff=$(date -d "-${KEEP_DAYS} days" +%Y%m%d 2>/dev/null || date -v-${KEEP_DAYS}d +%Y%m%d)
+
+for prefix in media whisky_media; do
+    aws s3 ls "s3://${BUCKET}/${prefix}/" \
+        --endpoint-url "$R2_ENDPOINT" --profile "$AWS_PROFILE" 2>/dev/null \
+    | awk '{print $4}' | while read -r file; do
+        # Extract date from filename (e.g., media_20260204_030000.tar.gz -> 20260204)
+        file_date=$(echo "$file" | grep -oP '\d{8}' | head -1)
+        if [ -n "$file_date" ] && [ "$file_date" -lt "$cutoff" ]; then
+            echo "    Deleting old backup: ${prefix}/${file}"
+            aws s3 rm "s3://${BUCKET}/${prefix}/${file}" \
+                --endpoint-url "$R2_ENDPOINT" --profile "$AWS_PROFILE"
+        fi
+    done
+done
 
 echo "[$(date)] Backup complete: ${TIMESTAMP}"
