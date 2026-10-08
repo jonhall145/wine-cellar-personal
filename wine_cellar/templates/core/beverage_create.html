@@ -23,7 +23,7 @@
 {% block content %}
     <div class="pure-g">
         <div class="pure-u-1 pure-u-lg-1-2 m-auto">
-            {% if not scanned_image %}
+            {% if not scanned_image and not hide_quick_add %}
                 <div class="quick-add-section">
                     <div class="card quick-add-card">
                         <h2 class="card__title">
@@ -192,16 +192,20 @@
                         <h2 class="form-subhead text--gray">Add to Cellar <span class="text--small">(optional)</span></h2>
                     </legend>
                     {% include 'forms/form_field.html' with field=form.storage %}
-                    {% include 'forms/form_field.html' with field=form.row %}
-                    <ul id="storage__error-full"
-                        class="form-errorlist hidden"
-                        aria-live="assertive"
-                        aria-atomic="true">
-                        <li>
-                            <span>This row of the shelf is full. Please choose another one.</span>
-                        </li>
-                    </ul>
-                    {% include 'forms/form_field.html' with field=form.column %}
+                    {% if is_miniature %}
+                        <p class="form-hint">Miniatures are stored by label number rather than shelf position.</p>
+                    {% else %}
+                        {% include 'forms/form_field.html' with field=form.row %}
+                        <ul id="storage__error-full"
+                            class="form-errorlist hidden"
+                            aria-live="assertive"
+                            aria-atomic="true">
+                            <li>
+                                <span>This row of the shelf is full. Please choose another one.</span>
+                            </li>
+                        </ul>
+                        {% include 'forms/form_field.html' with field=form.column %}
+                    {% endif %}
                     {% include 'forms/form_field.html' with field=form.bottle_price %}
                     {% include 'forms/form_field.html' with field=form.is_gift %}
                     {% include 'forms/form_field.html' with field=form.gift_from %}

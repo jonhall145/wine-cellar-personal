@@ -4,7 +4,7 @@ import pycountry
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.formats import number_format
@@ -15,6 +15,7 @@ from wine_cellar.apps.core.models import (
     user_directory_path,
     versioned_media_url,
 )
+from wine_cellar.apps.household.models import Household
 
 # ---------------------------------------------------------------------------
 # Custom country codes for UK nations (X prefix = ISO private use)
@@ -777,6 +778,12 @@ class WhiskyStorageItem(UserContentModel):
     whisky = models.ForeignKey(Whisky, on_delete=models.CASCADE)
     row = models.PositiveIntegerField(null=True, blank=True)
     column = models.PositiveIntegerField(null=True, blank=True)
+    miniature_number = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Miniature Label Number",
+        help_text="The handwritten number on this miniature.",
+    )
     deleted = models.BooleanField(default=False, db_index=True)
     price = models.DecimalField(
         max_digits=8,
@@ -858,6 +865,12 @@ class WhiskyStorageItem(UserContentModel):
             models.Index(fields=["storage", "row", "column"], name="wsi_position_idx"),
             models.Index(fields=["whisky", "deleted"], name="wsi_whisky_del_idx"),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["household", "miniature_number"],
+                name="unique_whisky_miniature_label",
+            )
+        ]
 
     def __str__(self):
         location = (
@@ -866,6 +879,56 @@ class WhiskyStorageItem(UserContentModel):
             else "Unassigned"
         )
         return f"{self.whisky.name} - {self.storage.name} ({location})"
+
+    def save(self, *args, **kwargs):
+        if self.whisky_id and self.whisky.size == BottleSize.MINIATURE:
+            with transaction.atomic():
+                if self.household_id:
+                    Household.objects.select_for_update().get(pk=self.household_id)
+                self.row = None
+                self.column = None
+                if not self.miniature_number:
+                    self.miniature_number = self.next_miniature_number(self.household)
+
+                update_fields = kwargs.get("update_fields")
+                if update_fields is not None:
+                    kwargs["update_fields"] = set(update_fields) | {
+                        "row",
+                        "column",
+                        "miniature_number",
+                    }
+                return super().save(*args, **kwargs)
+
+        return super().save(*args, **kwargs)
+
+    @classmethod
+    def next_miniature_number(cls, household):
+        return (
+            cls.objects.filter(
+                household=household,
+                miniature_number__isnull=False,
+            ).aggregate(max_number=models.Max("miniature_number"))["max_number"]
+            or 0
+        ) + 1
+
+    @classmethod
+    def allocate_miniature_number(cls, household, requested_number=None, exclude=None):
+        """Allocate a unique miniature label while locking its household row.
+
+        Call inside a transaction that continues through saving the storage item.
+        """
+        if household is not None:
+            Household.objects.select_for_update().get(pk=household.pk)
+        if requested_number is not None and requested_number > 0:
+            existing = cls.objects.filter(
+                household=household,
+                miniature_number=requested_number,
+            )
+            if exclude is not None:
+                existing = existing.exclude(pk=exclude.pk)
+            if not existing.exists():
+                return requested_number
+        return cls.next_miniature_number(household)
 
     @property
     def dreg_warning(self):

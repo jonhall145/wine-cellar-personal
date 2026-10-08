@@ -9,6 +9,16 @@ urlpatterns = [
     path("random/", views.RandomBottleView.as_view(), name="random-bottle"),
     # Whisky CRUD
     path("whiskies/", views.WhiskyListView.as_view(), name="whisky-list"),
+    path(
+        "miniatures/",
+        views.WhiskyMiniatureListView.as_view(),
+        name="miniature-list",
+    ),
+    path(
+        "miniatures/add/",
+        views.MiniatureCreateView.as_view(),
+        name="miniature-add",
+    ),
     path("whiskies/import/", views.WhiskyImportView.as_view(), name="whisky-import"),
     path("whisky/add/", views.WhiskyCreateView.as_view(), name="whisky-add"),
     path("whisky/<int:pk>/", views.WhiskyDetailView.as_view(), name="whisky-detail"),
