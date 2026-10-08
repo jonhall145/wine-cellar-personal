@@ -59,6 +59,13 @@
             </form>
         </div>
         <div class="pure-u-1 pure-u-sm-15-24 pure-u-md-17-24">
+            {% if is_miniature_list %}
+                <p>
+                    <a href="{% url 'miniature-add' %}" class="pure-button button__primary">
+                        <i class="fa-solid fa-plus"></i> Add Miniature
+                    </a>
+                </p>
+            {% endif %}
             {% if bottles %}
                 <div class="table-responsive">
                     <table class="pure-table pure-table-horizontal pure-table-striped">

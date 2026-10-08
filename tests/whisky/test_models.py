@@ -241,6 +241,32 @@ def test_miniature_label_numbers_are_unique_and_incremented(
 
 
 @pytest.mark.django_db
+def test_miniature_storage_items_clear_positions_and_assign_missing_labels(
+    whisky_factory, whisky_storage_item_factory, user
+):
+    whisky = whisky_factory(user=user, size="0.05")
+    storage = user.storage_set.first()
+    item = whisky_storage_item_factory(
+        whisky=whisky,
+        storage=storage,
+        row=2,
+        column=3,
+        miniature_number=None,
+    )
+
+    assert item.row is None
+    assert item.column is None
+    assert item.miniature_number == 1
+
+    item.row = 1
+    item.column = 2
+    item.save(update_fields=["row"])
+    item.refresh_from_db()
+    assert item.row is None
+    assert item.column is None
+
+
+@pytest.mark.django_db
 def test_cask_history_creation(cask_history_factory, whisky_factory, user):
     """Test CaskHistory creation."""
     whisky = whisky_factory(user=user)

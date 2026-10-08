@@ -1463,6 +1463,7 @@ def test_miniature_list_only_shows_miniatures(
     assert list(response.context["bottles"]) == [miniature_item]
     assert "Whisky Miniatures" in response.content.decode()
     assert "12" in response.content.decode()
+    assert "Add Miniature" in response.content.decode()
 
 
 @pytest.mark.django_db
@@ -1476,6 +1477,10 @@ def test_miniature_add_assigns_a_label_number_and_no_shelf_position(
         app_type="whisky",
     )
     client.force_login(user)
+
+    create_page = client.get(reverse("miniature-add"))
+    assert create_page.status_code == HTTPStatus.OK
+    assert "Quick Add" not in create_page.content.decode()
 
     response = client.post(
         reverse("miniature-add"),

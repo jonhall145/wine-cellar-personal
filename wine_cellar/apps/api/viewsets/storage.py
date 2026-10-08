@@ -17,7 +17,11 @@ from wine_cellar.apps.api.serializers.storage import (
     WhiskyStorageItemWriteSerializer,
 )
 from wine_cellar.apps.storage.models import BottleMoveHistory, Storage, StorageItem
-from wine_cellar.apps.whisky.models import WhiskyBottleMoveHistory, WhiskyStorageItem
+from wine_cellar.apps.whisky.models import (
+    BottleSize,
+    WhiskyBottleMoveHistory,
+    WhiskyStorageItem,
+)
 
 
 def _validate_storage_position(storage, row, column, exclude_item=None):
@@ -157,6 +161,21 @@ class WhiskyStorageItemViewSet(HouseholdScopedModelViewSet):
         storage = serializer.validated_data.get("storage")
         row = serializer.validated_data.get("row")
         column = serializer.validated_data.get("column")
+        whisky = serializer.validated_data["whisky"]
+        if whisky.size == BottleSize.MINIATURE:
+            household = self.request.api_key.household
+            with transaction.atomic():
+                miniature_number = WhiskyStorageItem.allocate_miniature_number(
+                    household, serializer.validated_data.get("miniature_number")
+                )
+                serializer.save(
+                    user=self.request.user,
+                    household=household,
+                    row=None,
+                    column=None,
+                    miniature_number=miniature_number,
+                )
+            return
         if storage:
             _validate_storage_position(storage, row, column)
         super().perform_create(serializer)
@@ -188,9 +207,22 @@ class WhiskyStorageItemViewSet(HouseholdScopedModelViewSet):
                 .order_by("pk")
             )
 
-            _validate_storage_position(storage, row, column, exclude_item=item)
-
-            instance = serializer.save()
+            if item.whisky.size == BottleSize.MINIATURE:
+                miniature_number = WhiskyStorageItem.allocate_miniature_number(
+                    item.household,
+                    serializer.validated_data.get(
+                        "miniature_number", item.miniature_number
+                    ),
+                    exclude=item,
+                )
+                instance = serializer.save(
+                    row=None,
+                    column=None,
+                    miniature_number=miniature_number,
+                )
+            else:
+                _validate_storage_position(storage, row, column, exclude_item=item)
+                instance = serializer.save()
             moved = (
                 old_storage.pk != instance.storage_id
                 or old_row != instance.row

@@ -480,6 +480,7 @@ class MiniatureCreateView(WhiskyCreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["is_miniature"] = True
+        context["hide_quick_add"] = True
         return context
 
 
@@ -1202,6 +1203,10 @@ class StorageItemAddView(BaseStorageItemAddView):
             }
         return {}
 
+    @transaction.atomic
+    def form_valid(self, form):
+        return super().form_valid(form)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["is_miniature"] = self.get_beverage().size == BottleSize.MINIATURE
@@ -1224,9 +1229,9 @@ class StorageItemAddView(BaseStorageItemAddView):
                 else cleaned_data.get("column")
             ),
             "miniature_number": (
-                cleaned_data.get("miniature_number")
-                or WhiskyStorageItem.next_miniature_number(
-                    get_active_household(self.request.user)
+                WhiskyStorageItem.allocate_miniature_number(
+                    get_active_household(self.request.user),
+                    cleaned_data.get("miniature_number"),
                 )
                 if self.get_beverage().size == BottleSize.MINIATURE
                 else None
@@ -1294,6 +1299,10 @@ class StorageItemUpdateView(BaseStorageItemUpdateView):
     def get_update_form_kwargs(self, item):
         return {"whisky": item.whisky, "storage_item": item}
 
+    @transaction.atomic
+    def form_valid(self, form):
+        return super().form_valid(form)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["is_miniature"] = self.get_beverage().size == BottleSize.MINIATURE
@@ -1310,11 +1319,17 @@ class StorageItemUpdateView(BaseStorageItemUpdateView):
             item.dreg_date = None
 
         item.owner = cleaned_data.get("owner", "")
-        item.miniature_number = cleaned_data.get("miniature_number")
 
         if item.whisky.size == BottleSize.MINIATURE:
+            item.miniature_number = WhiskyStorageItem.allocate_miniature_number(
+                item.household,
+                cleaned_data.get("miniature_number"),
+                exclude=item,
+            )
             item.row = None
             item.column = None
+        else:
+            item.miniature_number = cleaned_data.get("miniature_number")
 
 
 class StorageItemHistoryView(RequireHouseholdMixin, ListView):

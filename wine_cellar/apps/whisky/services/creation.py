@@ -107,8 +107,9 @@ class WhiskyCreationService:
             row = None if is_miniature else cleaned_data.get("row")
             column = None if is_miniature else cleaned_data.get("column")
             miniature_number = (
-                cleaned_data.get("miniature_number")
-                or WhiskyStorageItem.next_miniature_number(household)
+                WhiskyStorageItem.allocate_miniature_number(
+                    household, cleaned_data.get("miniature_number")
+                )
                 if is_miniature
                 else None
             )
