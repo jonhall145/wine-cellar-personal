@@ -890,7 +890,7 @@ class VisionExtractionLog(UserContentModel):
     )
     model_used = models.CharField(
         max_length=50,
-        default="claude-haiku-4-5",
+        default="claude-haiku-5-5",
         verbose_name="Model Used",
         help_text="AI model used for extraction",
     )
