@@ -339,7 +339,7 @@ Session Storage (base64)
 WineVisionExtractor Service
       │
       ▼
-Claude Haiku 4.5 API
+Claude Haiku 5.5 API
 ├── Image resized (max 1568px)
 ├── Structured prompt
 └── Field extraction
@@ -355,7 +355,7 @@ Extracted Data
 Form Pre-fill
 ```
 
-**Model**: Claude Haiku 4.5 (`claude-haiku-4-5`)
+**Model**: Claude Haiku 5.5 (`claude-haiku-5-5`)
 **Fallback**: Regex extraction if API unavailable
 
 ## Future Considerations

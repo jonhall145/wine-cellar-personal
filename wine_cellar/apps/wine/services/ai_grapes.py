@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class WineAIGrapeService:
     """Infer and persist grape varieties for wines."""
 
-    DEFAULT_MODEL = "claude-haiku-4-5"
+    DEFAULT_MODEL = "claude-haiku-5-5"
 
     @classmethod
     def refresh_grapes(cls, wine_id: int, *, include_images: bool = True) -> bool:

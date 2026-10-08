@@ -130,9 +130,8 @@ class WineReminderService:
         from wine_cellar.apps.user.models import UserSettings
 
         User = get_user_model()
-        users = (
-            User.objects.exclude(user_settings__notifications=False)
-            .exclude(user_settings__reminder_enabled=False)
+        users = User.objects.exclude(user_settings__notifications=False).exclude(
+            user_settings__reminder_enabled=False
         )
         today = timezone.localdate()
         reminder_dates = {
@@ -148,9 +147,8 @@ class WineReminderService:
             except UserSettings.DoesNotExist:
                 continue
 
-            if (
-                not user.email
-                or not user_settings.allows_email_notifications("drink_window")
+            if not user.email or not user_settings.allows_email_notifications(
+                "drink_window"
             ):
                 continue
 

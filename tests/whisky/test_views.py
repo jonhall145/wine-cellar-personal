@@ -1420,6 +1420,7 @@ def test_whisky_wishlist_list_shows_convert_and_purchase_links(client, user):
     assert "https://example.com/buy-whisky" in content
 
 
+@pytest.mark.django_db
 def test_whisky_stock_add_uses_shared_template(client, user, whisky_factory):
     whisky = whisky_factory(user=user)
     client.force_login(user)

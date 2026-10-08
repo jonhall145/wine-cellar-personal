@@ -22,7 +22,7 @@ def log_extraction(
     confidence: str,
     extracted_fields: list,
     errors: list | None = None,
-    model_used: str = "claude-haiku-4-5",
+    model_used: str = "claude-haiku-5-5",
     processing_time_ms: int | None = None,
 ):
     """
@@ -540,7 +540,7 @@ class WineVisionExtractor:
 
             # Call the API
             response = client.messages.create(
-                model="claude-haiku-4-5",
+                model="claude-haiku-5-5",
                 max_tokens=2048,
                 messages=[
                     {

@@ -21,7 +21,7 @@ def log_extraction(
     confidence: str,
     extracted_fields: list,
     errors: list | None = None,
-    model_used: str = "claude-haiku-4-5",
+    model_used: str = "claude-haiku-5-5",
     processing_time_ms: int | None = None,
 ):
     """Log a whisky vision extraction attempt for analysis."""
@@ -216,7 +216,7 @@ class WhiskyVisionExtractor:
             content.append({"type": "text", "text": prompt})
 
             response = client.messages.create(
-                model="claude-haiku-4-5",
+                model="claude-haiku-5-5",
                 max_tokens=2048,
                 messages=[{"role": "user", "content": content}],
             )
