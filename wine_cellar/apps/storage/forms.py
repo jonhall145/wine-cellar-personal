@@ -385,6 +385,7 @@ class PlannedMoveForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop("user")
+        self.beverage_pk = kwargs.pop("beverage_pk", None)
         super().__init__(*args, **kwargs)
         household = get_active_household(self.user)
         app_type = get_app_type()
@@ -399,6 +400,13 @@ class PlannedMoveForm(forms.Form):
             .select_related("storage")
             .order_by("storage__name", "row", "column")
         )
+        if self.beverage_pk is not None:
+            beverage_field = "whisky_id" if app_type == "whisky" else "wine_id"
+            self.fields["storage_item"].queryset = (
+                self.fields["storage_item"]
+                .queryset.filter(**{beverage_field: self.beverage_pk})
+                .filter(row__isnull=False, column__isnull=False)
+            )
         self.fields["target_storage"].queryset = Storage.objects.filter(
             household=household, app_type=app_type
         ).order_by("order", "created")

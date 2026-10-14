@@ -150,6 +150,70 @@ class PlannedMoveCreateView(LoginRequiredMixin, RequireMemberMixin, FormView):
         return super().form_valid(form)
 
 
+class PlannedMoveBeverageCreateView(PlannedMoveCreateView):
+    """Plan a move from a wine/whisky page, with sensible defaults."""
+
+    template_name = "planned_move_beverage_form.html"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["beverage_pk"] = self.kwargs["beverage_pk"]
+        return kwargs
+
+    def _first_free_cells(self, form):
+        """Return {storage_pk: [row, column]} of the first free cell per storage.
+
+        Cells already targeted by another planned move are skipped when possible.
+        """
+        planned = set(
+            PlannedMove.objects.filter(
+                household=get_active_household(self.request.user),
+                app_type=get_app_type(),
+            ).values_list("target_storage_id", "target_row", "target_column")
+        )
+        result = {}
+        for storage in form.fields["target_storage"].queryset:
+            cells = [
+                [row, column]
+                for row, columns in storage.get_free_cells_by_row().items()
+                for column in columns
+            ]
+            unplanned = [c for c in cells if (storage.pk, *c) not in planned]
+            chosen = (unplanned or cells or [None])[0]
+            if chosen:
+                result[storage.pk] = chosen
+        return result
+
+    def get_initial(self):
+        initial = dict(super().get_initial())
+        form = self.get_form_class()(
+            user=self.request.user, beverage_pk=self.kwargs["beverage_pk"]
+        )
+        items = list(form.fields["storage_item"].queryset[:2])
+        free_cells = self._first_free_cells(form)
+        current_storage_id = None
+        if len(items) == 1:
+            initial["storage_item"] = items[0].pk
+            current_storage_id = items[0].storage_id
+        target = next(
+            (pk for pk in free_cells if pk != current_storage_id),
+            next(iter(free_cells), None),
+        )
+        if target is not None:
+            initial["target_storage"] = target
+            initial["target_row"], initial["target_column"] = free_cells[target]
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["free_cells"] = {
+            str(pk): cell
+            for pk, cell in self._first_free_cells(context["form"]).items()
+        }
+        context["beverage_pk"] = self.kwargs["beverage_pk"]
+        return context
+
+
 @login_required
 @require_POST
 @require_member

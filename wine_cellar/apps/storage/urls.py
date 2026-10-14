@@ -1,6 +1,7 @@
 from django.urls import path
 
 from wine_cellar.apps.storage.views import (
+    PlannedMoveBeverageCreateView,
     PlannedMoveCreateView,
     PlannedMoveListView,
     StorageCreateView,
@@ -34,6 +35,11 @@ urlpatterns = [
         "storage/planned-moves/add/",
         PlannedMoveCreateView.as_view(),
         name="planned-move-add",
+    ),
+    path(
+        "storage/planned-moves/add/<int:beverage_pk>/",
+        PlannedMoveBeverageCreateView.as_view(),
+        name="planned-move-add-for",
     ),
     path(
         "storage/planned-moves/delete/<int:pk>/",
