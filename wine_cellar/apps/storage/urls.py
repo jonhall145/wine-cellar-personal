@@ -10,6 +10,7 @@ from wine_cellar.apps.storage.views import (
     StorageListView,
     StorageUpdateView,
     move_bottle,
+    plan_cold_storage,
     planned_move_complete,
     planned_move_delete,
     storage_grid_data,
@@ -41,6 +42,11 @@ urlpatterns = [
         "storage/planned-moves/add/<int:beverage_pk>/",
         PlannedMoveBeverageCreateView.as_view(),
         name="planned-move-add-for",
+    ),
+    path(
+        "storage/planned-moves/cold/<int:pk>/",
+        plan_cold_storage,
+        name="planned-move-cold-storage",
     ),
     path(
         "storage/planned-moves/delete/<int:pk>/",

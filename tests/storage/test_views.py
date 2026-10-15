@@ -864,3 +864,71 @@ def test_planned_move_for_wine_only_lists_that_wines_bottles(
     storage_item_factory(wine=other, storage=storage, row=1, column=2)
     r = client.get(reverse("planned-move-add-for", args=[wine.pk]))
     assert r.context["form"].fields["storage_item"].queryset.count() == 1
+
+
+@pytest.mark.django_db
+def test_user_can_plan_a_cold_storage_move_in_preferred_order(
+    client, user, wine_factory, storage_factory, storage_item_factory
+):
+    wine = wine_factory(user=user)
+    source = storage_factory(user=user, rows=2, columns=1)
+    second_cold = storage_factory(user=user, is_cold=True, order=2, rows=1, columns=1)
+    first_cold = storage_factory(user=user, is_cold=True, order=1, rows=1, columns=2)
+    item = storage_item_factory(wine=wine, storage=source, row=1, column=1)
+    existing_item = storage_item_factory(
+        wine=wine_factory(user=user), storage=source, row=2, column=1
+    )
+    PlannedMove.objects.create(
+        storage_item=existing_item,
+        target_storage=first_cold,
+        target_row=1,
+        target_column=1,
+        user=user,
+        household=user.user_settings.active_household,
+    )
+    client.force_login(user)
+
+    detail_response = client.get(reverse("wine-detail", args=[wine.pk]))
+    response = client.post(reverse("planned-move-cold-storage", args=[item.pk]))
+
+    assert (
+        reverse("planned-move-cold-storage", args=[item.pk])
+        in detail_response.content.decode()
+    )
+    assert "Plan Cold Storage" in detail_response.content.decode()
+    assertRedirects(response, reverse("wine-detail", args=[wine.pk]))
+    planned_move = PlannedMove.objects.get(storage_item_id=item.pk)
+    assert (
+        planned_move.target_storage,
+        planned_move.target_row,
+        planned_move.target_column,
+    ) == (
+        first_cold,
+        1,
+        2,
+    )
+    assert not PlannedMove.objects.filter(
+        storage_item_id=item.pk, target_storage=second_cold
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_planning_a_cold_storage_move_requires_an_available_cold_slot(
+    client, user, wine_factory, storage_factory, storage_item_factory
+):
+    wine = wine_factory(user=user)
+    source = storage_factory(user=user, rows=1, columns=1)
+    cold_storage = storage_factory(user=user, is_cold=True, rows=1, columns=1)
+    item = storage_item_factory(wine=wine, storage=source, row=1, column=1)
+    storage_item_factory(
+        wine=wine_factory(user=user),
+        storage=cold_storage,
+        row=1,
+        column=1,
+    )
+    client.force_login(user)
+
+    response = client.post(reverse("planned-move-cold-storage", args=[item.pk]))
+
+    assertRedirects(response, reverse("wine-detail", args=[wine.pk]))
+    assert not PlannedMove.objects.filter(storage_item_id=item.pk).exists()
