@@ -2,6 +2,7 @@
 
 import json
 import re
+from datetime import timedelta
 from decimal import Decimal
 from http import HTTPStatus
 
@@ -1756,3 +1757,56 @@ class TestHomePageView:
 
         assert f'href="{reverse("wine-list")}?order=vintage"' in content
         assert f'href="{reverse("wine-list")}?order=-vintage"' in content
+
+    def test_occasion_dashboard_separates_upcoming_and_overdue_bottles(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        today = timezone.localdate()
+        storage = user.storage_set.first()
+        upcoming = wine_factory(user=user, name="Upcoming Wine")
+        overdue = wine_factory(user=user, name="Overdue Wine")
+        deleted = wine_factory(user=user, name="Deleted Wine")
+        upcoming_bottle = storage_item_factory(
+            wine=upcoming,
+            storage=storage,
+            user=user,
+            occasion_date=today,
+        )
+        overdue_bottle = storage_item_factory(
+            wine=overdue,
+            storage=storage,
+            user=user,
+            occasion_date=today - timedelta(days=1),
+        )
+        storage_item_factory(
+            wine=deleted,
+            storage=storage,
+            user=user,
+            deleted=True,
+            occasion_date=today + timedelta(days=1),
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("occasion-dashboard"))
+
+        assert response.status_code == HTTPStatus.OK
+        assert list(response.context["upcoming_bottles"]) == [upcoming_bottle]
+        assert list(response.context["overdue_bottles"]) == [overdue_bottle]
+        assert "Deleted Wine" not in response.content.decode()
+
+    def test_homepage_links_to_occasion_dashboard_for_dated_bottles(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user)
+        storage_item_factory(
+            wine=wine,
+            storage=user.storage_set.first(),
+            user=user,
+            occasion_date=timezone.localdate() + timedelta(days=1),
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("homepage"))
+
+        assert response.context["occasion_upcoming_count"] == 1
+        assert reverse("occasion-dashboard") in response.content.decode()

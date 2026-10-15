@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}
+    Occasion Dates
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">Occasion Dates</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g j-center">
+        <div class="pure-u-1 pure-u-md-2-3">
+            <section class="mb-12">
+                <h2>Upcoming</h2>
+                {% include "includes/occasion_bottle_table.html" with bottles=upcoming_bottles empty_message="No upcoming occasion dates." %}
+            </section>
+            <section>
+                <h2>Overdue</h2>
+                {% include "includes/occasion_bottle_table.html" with bottles=overdue_bottles empty_message="No overdue occasion dates." %}
+            </section>
+        </div>
+    </div>
+{% endblock content %}

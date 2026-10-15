@@ -1,0 +1,26 @@
+{% if bottles %}
+    <div class="table-responsive">
+        <table class="pure-table pure-table-horizontal pure-table-striped">
+            <thead>
+                <tr>
+                    <th>Wine</th>
+                    <th>Occasion</th>
+                    <th>Date</th>
+                    <th>Storage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bottle in bottles %}
+                    <tr>
+                        <td><a href="{% url 'wine-detail' bottle.wine.pk %}">{{ bottle.wine.name }}</a></td>
+                        <td>{{ bottle.occasion|default:"-" }}</td>
+                        <td>{{ bottle.occasion_date|date:"j M Y" }}</td>
+                        <td>{{ bottle.storage.name }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <p class="text--gray">{{ empty_message }}</p>
+{% endif %}
