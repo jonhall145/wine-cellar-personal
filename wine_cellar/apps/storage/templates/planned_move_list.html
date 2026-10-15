@@ -29,12 +29,18 @@
                             <span class="planned-moves__label">Intended destination</span>
                             <span>{{ planned_move.target_storage.name }} · Row {{ planned_move.target_row }}, cell {{ planned_move.target_column }}</span>
                         </div>
-                        <form method="post" action="{% url 'planned-move-delete' planned_move.pk %}">
-                            {% csrf_token %}
-                            <button type="submit" class="planned-moves__remove" title="Cancel planned move" aria-label="Cancel planned move for {{ planned_move.storage_item }}">
-                                <i class="fa-regular fa-trash-can" aria-hidden="true"></i>
-                            </button>
-                        </form>
+                        <div class="planned-moves__actions">
+                            <form method="post" action="{% url 'planned-move-complete' planned_move.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="pure-button button__primary planned-moves__record">Record move</button>
+                            </form>
+                            <form method="post" action="{% url 'planned-move-delete' planned_move.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="planned-moves__remove" title="Cancel planned move" aria-label="Cancel planned move for {{ planned_move.storage_item }}">
+                                    <i class="fa-regular fa-trash-can" aria-hidden="true"></i>
+                                </button>
+                            </form>
+                        </div>
                     </li>
                 {% endfor %}
             </ol>

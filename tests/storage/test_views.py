@@ -719,6 +719,96 @@ def test_user_can_manage_household_planned_moves(
 
 
 @pytest.mark.django_db
+def test_user_can_record_a_planned_move(
+    client, user, wine_factory, storage_factory, storage_item_factory
+):
+    source_storage = storage_factory(user=user, rows=2, columns=2)
+    target_storage = storage_factory(user=user, rows=2, columns=2)
+    item = storage_item_factory(
+        wine=wine_factory(user=user),
+        storage=source_storage,
+        row=1,
+        column=1,
+    )
+    planned_move = PlannedMove.objects.create(
+        storage_item=item,
+        target_storage=target_storage,
+        target_row=2,
+        target_column=2,
+        user=user,
+        household=user.user_settings.active_household,
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("planned-move-list"))
+    assert (
+        reverse("planned-move-complete", args=[planned_move.pk])
+        in response.content.decode()
+    )
+
+    response = client.post(
+        reverse("planned-move-complete", args=[planned_move.pk]), follow=True
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert "Planned move recorded." in response.content.decode()
+    assert not PlannedMove.objects.exists()
+    item.refresh_from_db()
+    assert (item.storage, item.row, item.column) == (target_storage, 2, 2)
+    history = BottleMoveHistory.objects.get(storage_item=item)
+    assert (history.from_storage, history.from_row, history.from_column) == (
+        source_storage,
+        1,
+        1,
+    )
+    assert (history.to_storage, history.to_row, history.to_column) == (
+        target_storage,
+        2,
+        2,
+    )
+
+
+@pytest.mark.django_db
+def test_recording_planned_move_keeps_plan_when_destination_is_occupied(
+    client, user, wine_factory, storage_factory, storage_item_factory
+):
+    source_storage = storage_factory(user=user, rows=2, columns=2)
+    target_storage = storage_factory(user=user, rows=2, columns=2)
+    item = storage_item_factory(
+        wine=wine_factory(user=user),
+        storage=source_storage,
+        row=1,
+        column=1,
+    )
+    storage_item_factory(
+        wine=wine_factory(user=user),
+        storage=target_storage,
+        row=2,
+        column=2,
+    )
+    planned_move = PlannedMove.objects.create(
+        storage_item=item,
+        target_storage=target_storage,
+        target_row=2,
+        target_column=2,
+        user=user,
+        household=user.user_settings.active_household,
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse("planned-move-complete", args=[planned_move.pk]), follow=True
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert "planned destination is occupied" in response.content.decode()
+    assert PlannedMove.objects.filter(pk=planned_move.pk).exists()
+    item.refresh_from_db()
+    assert (item.storage, item.row, item.column) == (source_storage, 1, 1)
+    assert not BottleMoveHistory.objects.filter(storage_item=item).exists()
+
+
+@pytest.mark.django_db
 def test_planned_move_form_uses_the_storage_grid_picker(client, user):
     client.force_login(user)
 
