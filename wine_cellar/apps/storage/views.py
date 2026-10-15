@@ -228,6 +228,61 @@ class PlannedMoveBeverageCreateView(PlannedMoveCreateView):
 @login_required
 @require_POST
 @require_member
+def plan_cold_storage(request, pk):
+    household = get_active_household(request.user)
+    item = get_object_or_404(
+        StorageItem,
+        pk=pk,
+        household=household,
+        deleted=False,
+    )
+    if item.storage.is_cold:
+        messages.info(request, "This bottle is already in cold storage.")
+        return redirect("wine-detail", pk=item.wine_id)
+
+    item_type = ContentType.objects.get_for_model(item)
+    planned_cells = set(
+        PlannedMove.objects.filter(
+            household=household,
+            app_type=get_app_type(),
+        )
+        .exclude(storage_item_type=item_type, storage_item_id=item.pk)
+        .values_list("target_storage_id", "target_row", "target_column")
+    )
+    cold_storages = Storage.objects.filter(
+        household=household,
+        app_type=get_app_type(),
+        is_cold=True,
+    ).order_by("order", "created")
+    for storage in cold_storages:
+        for row, columns in storage.get_free_cells_by_row().items():
+            for column in columns:
+                if (storage.pk, row, column) not in planned_cells:
+                    PlannedMove.objects.update_or_create(
+                        storage_item_type=item_type,
+                        storage_item_id=item.pk,
+                        defaults={
+                            "target_storage": storage,
+                            "target_row": row,
+                            "target_column": column,
+                            "app_type": get_app_type(),
+                            "user": request.user,
+                            "household": household,
+                        },
+                    )
+                    messages.success(
+                        request,
+                        f"Planned move to {storage.name}, row {row}, cell {column}.",
+                    )
+                    return redirect("wine-detail", pk=item.wine_id)
+
+    messages.error(request, "No cold storage slots are currently available.")
+    return redirect("wine-detail", pk=item.wine_id)
+
+
+@login_required
+@require_POST
+@require_member
 def planned_move_delete(request, pk):
     household = get_active_household(request.user)
     planned_move = get_object_or_404(

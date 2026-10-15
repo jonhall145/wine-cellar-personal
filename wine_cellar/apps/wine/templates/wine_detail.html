@@ -344,6 +344,10 @@
                                         <a class="pure-button" href="{% url 'bottle-note-add' item.pk %}" title="Add note"><i class="fa-regular fa-note-sticky"></i></a>
                                         <a class="pure-button" href="{% url 'bottle-history' item.pk %}" title="History"><i class="fa-regular fa-clock-rotate-left"></i></a>
                                         <a class="pure-button" href="{% url 'bottle-edit' item.pk %}" title="Edit bottle"><i class="fa-regular fa-pen-to-square"></i></a>
+                                        <form action="{% url 'planned-move-cold-storage' item.pk %}" method="post" class="display-inline-block">
+                                            {% csrf_token %}
+                                            <button type="submit" class="pure-button" title="Plan cold storage move"><i class="fa-solid fa-snowflake"></i> Plan Cold Storage</button>
+                                        </form>
                                         <a class="pure-button" href="{% url 'stock-give' item.pk %}" title="Mark as given"><i class="fa-solid fa-gift"></i></a>
                                         <a class="pure-button" href="{% url 'stock-delete' item.pk %}" title="Mark as broken or lost"><i class="fa-regular fa-trash-can"></i></a>
                                     </td>
