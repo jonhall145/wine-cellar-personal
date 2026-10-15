@@ -276,6 +276,8 @@
                            class="pure-button button__neutral"><i class="fa-solid fa-wine-glass"></i> <span>Record Drink</span></a>
                         <a href="{% url 'reorder-reminder-add' wine.pk %}"
                            class="pure-button button__neutral"><i class="fa-solid fa-bell"></i> <span>Reorder Alert</span></a>
+                        <a href="{% url 'planned-move-add-for' wine.pk %}"
+                           class="pure-button button__neutral"><i class="fa-solid fa-arrows-up-down-left-right"></i> <span>Plan Move</span></a>
                     </div>
                 </div>
                 {% if consumed_bottle_count or gifted_bottle_count %}

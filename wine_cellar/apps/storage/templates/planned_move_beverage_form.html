@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block header %}
+    <h1 class="header__title">Plan a Move</h1>
+{% endblock header %}
+{% block content %}
+    <div class="planned-move-form">
+        <p class="planned-move-form__description">
+            Choose the bottle and where it should go. Planned moves do not reserve the destination.
+        </p>
+        <form method="post" class="pure-form pure-form-stacked">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="form-errorlist" role="alert">{{ form.non_field_errors }}</div>
+            {% endif %}
+            {% for field in form %}
+                <div class="form-field">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.errors %}<div class="form-errorlist" role="alert">{{ field.errors }}</div>{% endif %}
+                </div>
+            {% endfor %}
+            <div class="planned-move-form__actions">
+                <button type="submit" class="pure-button button__primary">Save Planned Move</button>
+                <a href="{% url 'planned-move-list' %}" class="pure-button button__neutral">Cancel</a>
+            </div>
+        </form>
+        {{ free_cells|json_script:"free-cells-data" }}
+        <script>
+            (function () {
+                var freeCells = JSON.parse(document.getElementById("free-cells-data").textContent);
+                var storage = document.getElementById("{{ form.target_storage.id_for_label }}");
+                var row = document.getElementById("{{ form.target_row.id_for_label }}");
+                var column = document.getElementById("{{ form.target_column.id_for_label }}");
+                storage.addEventListener("change", function () {
+                    var cell = freeCells[storage.value];
+                    if (cell) {
+                        row.value = cell[0];
+                        column.value = cell[1];
+                    }
+                });
+            })();
+        </script>
+    </div>
+{% endblock content %}

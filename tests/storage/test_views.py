@@ -729,3 +729,48 @@ def test_planned_move_form_uses_the_storage_grid_picker(client, user):
     assert 'id="storage-grid-container" data-planned-move-form="true"' in content
     assert 'id="planned-move-submit"' in content
     assert 'name="storage_item"' in content
+
+
+@pytest.mark.django_db
+def test_planned_move_for_wine_defaults(
+    client, user, wine_factory, storage_factory, storage_item_factory
+):
+    client.force_login(user)
+    wine = wine_factory(user=user)
+    source = storage_factory(user=user, rows=2, columns=2)
+    target = storage_factory(user=user, rows=2, columns=2)
+    item = storage_item_factory(wine=wine, storage=source, row=1, column=1)
+    url = reverse("planned-move-add-for", args=[wine.pk])
+
+    r = client.get(url)
+    assert r.status_code == HTTPStatus.OK
+    form = r.context["form"]
+    assert form.initial["storage_item"] == item.pk
+    assert form.initial["target_storage"] == target.pk
+    assert (form.initial["target_row"], form.initial["target_column"]) == (1, 1)
+
+    r = client.post(
+        url,
+        {
+            "storage_item": item.pk,
+            "target_storage": target.pk,
+            "target_row": 1,
+            "target_column": 1,
+        },
+    )
+    assertRedirects(r, reverse("planned-move-list"))
+    assert PlannedMove.objects.filter(target_storage=target).count() == 1
+
+
+@pytest.mark.django_db
+def test_planned_move_for_wine_only_lists_that_wines_bottles(
+    client, user, wine_factory, storage_factory, storage_item_factory
+):
+    client.force_login(user)
+    wine = wine_factory(user=user)
+    other = wine_factory(user=user)
+    storage = storage_factory(user=user, rows=2, columns=2)
+    storage_item_factory(wine=wine, storage=storage, row=1, column=1)
+    storage_item_factory(wine=other, storage=storage, row=1, column=2)
+    r = client.get(reverse("planned-move-add-for", args=[wine.pk]))
+    assert r.context["form"].fields["storage_item"].queryset.count() == 1
