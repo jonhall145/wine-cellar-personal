@@ -113,6 +113,7 @@ class BaseNotificationStatusUpdateView(LoginRequiredMixin, View):
     action = None
     allowed_notification_types = {
         "drink_window",
+        "occasion_date",
         "low_stock",
         "household_invitation",
         "price_alert",
