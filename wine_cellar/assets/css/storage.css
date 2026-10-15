@@ -1078,6 +1078,20 @@
   text-transform: uppercase;
 }
 
+.planned-moves__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.planned-moves__actions form {
+  margin: 0;
+}
+
+.planned-moves__record {
+  min-height: 44px;
+}
+
 .planned-moves__remove {
   display: inline-flex;
   width: 44px;
@@ -1153,7 +1167,7 @@
     grid-column: 1;
   }
 
-  .planned-moves__card form {
+  .planned-moves__actions {
     grid-column: 2;
     grid-row: 1 / span 2;
   }

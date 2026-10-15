@@ -3,6 +3,7 @@ import logging
 from collections import defaultdict
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
@@ -226,6 +227,148 @@ def planned_move_delete(request, pk):
         app_type=get_app_type(),
     )
     planned_move.delete()
+    return redirect("planned-move-list")
+
+
+@login_required
+@require_POST
+@require_member
+def planned_move_complete(request, pk):
+    household = get_active_household(request.user)
+    item_model = _get_storage_item_model()
+    item_type = ContentType.objects.get_for_model(item_model)
+    planned_move = get_object_or_404(
+        PlannedMove,
+        pk=pk,
+        household=household,
+        app_type=get_app_type(),
+        storage_item_type=item_type,
+    )
+
+    with transaction.atomic():
+        item = (
+            item_model.objects.select_for_update()
+            .filter(
+                pk=planned_move.storage_item_id,
+                household=household,
+                deleted=False,
+            )
+            .first()
+        )
+        planned_move = (
+            PlannedMove.objects.select_for_update()
+            .filter(
+                pk=planned_move.pk,
+                household=household,
+                app_type=get_app_type(),
+                storage_item_type=item_type,
+                storage_item_id=planned_move.storage_item_id,
+            )
+            .first()
+        )
+        if not planned_move:
+            messages.warning(
+                request,
+                "The planned move was already completed or cancelled.",
+            )
+            return redirect("planned-move-list")
+        if not item:
+            messages.warning(
+                request,
+                "Cannot record move because the planned item is no longer in stock.",
+            )
+            return redirect("planned-move-list")
+
+        target_storage = (
+            Storage.objects.select_for_update()
+            .filter(
+                pk=planned_move.target_storage_id,
+                household=household,
+                app_type=get_app_type(),
+            )
+            .first()
+        )
+        if not target_storage:
+            messages.warning(
+                request,
+                "Cannot record move because the planned destination is no longer"
+                " available.",
+            )
+            return redirect("planned-move-list")
+        if (
+            not 1 <= planned_move.target_row <= target_storage.rows
+            or not 1 <= planned_move.target_column <= target_storage.columns
+            or not target_storage.is_cell_active(
+                planned_move.target_row, planned_move.target_column
+            )
+        ):
+            messages.warning(
+                request,
+                "Cannot record move because the planned destination is no longer"
+                " valid.",
+            )
+            return redirect("planned-move-list")
+
+        if (
+            item.storage_id == target_storage.pk
+            and item.row == planned_move.target_row
+            and item.column == planned_move.target_column
+        ):
+            planned_move.delete()
+            messages.success(request, "The item is already at its planned destination.")
+            return redirect("planned-move-list")
+
+        if (
+            item_model.objects.filter(
+                storage=target_storage,
+                row=planned_move.target_row,
+                column=planned_move.target_column,
+                deleted=False,
+            )
+            .exclude(pk=item.pk)
+            .exists()
+        ):
+            messages.warning(
+                request,
+                "Cannot record move because the planned destination is occupied.",
+            )
+            return redirect("planned-move-list")
+
+        old_storage = item.storage
+        old_row = item.row
+        old_column = item.column
+        item.storage = target_storage
+        item.row = planned_move.target_row
+        item.column = planned_move.target_column
+        item.save(update_fields=["storage", "row", "column"])
+        planned_move.delete()
+
+        if _is_whisky_mode():
+            from wine_cellar.apps.whisky.models import WhiskyBottleMoveHistory
+
+            WhiskyBottleMoveHistory.objects.create(
+                storage_item=item,
+                from_storage=old_storage,
+                from_row=old_row,
+                from_column=old_column,
+                to_storage=target_storage,
+                to_row=item.row,
+                to_column=item.column,
+                user=request.user,
+            )
+        else:
+            BottleMoveHistory.objects.create(
+                storage_item=item,
+                from_storage=old_storage,
+                from_row=old_row,
+                from_column=old_column,
+                to_storage=target_storage,
+                to_row=item.row,
+                to_column=item.column,
+                user=request.user,
+            )
+
+    messages.success(request, "Planned move recorded.")
     return redirect("planned-move-list")
 
 
