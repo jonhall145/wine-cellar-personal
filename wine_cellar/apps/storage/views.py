@@ -68,6 +68,16 @@ def _get_storage_item_model():
     return StorageItem
 
 
+def _lock_storages(*storage_ids):
+    storage_ids = sorted({storage_id for storage_id in storage_ids if storage_id})
+    return {
+        storage.pk: storage
+        for storage in Storage.objects.select_for_update()
+        .filter(pk__in=storage_ids)
+        .order_by("pk")
+    }
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -279,16 +289,27 @@ def planned_move_complete(request, pk):
             )
             return redirect("planned-move-list")
 
-        target_storage = (
-            Storage.objects.select_for_update()
-            .filter(
-                pk=planned_move.target_storage_id,
-                household=household,
-                app_type=get_app_type(),
-            )
-            .first()
+        if _is_whisky_mode():
+            from wine_cellar.apps.whisky.models import BottleSize
+
+            if item.whisky.size == BottleSize.MINIATURE:
+                messages.warning(
+                    request,
+                    "Cannot record move because whisky miniatures cannot be placed"
+                    " in storage cells.",
+                )
+                return redirect("planned-move-list")
+
+        locked_storages = _lock_storages(
+            item.storage_id, planned_move.target_storage_id
         )
-        if not target_storage:
+        old_storage = locked_storages.get(item.storage_id)
+        target_storage = locked_storages.get(planned_move.target_storage_id)
+        if (
+            not target_storage
+            or target_storage.household_id != household.pk
+            or target_storage.app_type != get_app_type()
+        ):
             messages.warning(
                 request,
                 "Cannot record move because the planned destination is no longer"
@@ -334,7 +355,6 @@ def planned_move_complete(request, pk):
             )
             return redirect("planned-move-list")
 
-        old_storage = item.storage
         old_row = item.row
         old_column = item.column
         item.storage = target_storage
@@ -758,21 +778,13 @@ def move_bottle(request):
             return JsonResponse({"error": "Target cell is not active"}, status=400)
 
         with transaction.atomic():
-            item = (
-                ItemModel.objects.select_for_update()
-                .select_related("storage")
-                .get(pk=item.pk, household=household, deleted=False)
+            item = ItemModel.objects.select_for_update().get(
+                pk=item.pk, household=household, deleted=False
             )
-            storage_ids = {target_storage.pk}
-            if item.storage_id is not None:
-                storage_ids.add(item.storage_id)
-            locked_storages = {
-                storage.pk: storage
-                for storage in Storage.objects.select_for_update()
-                .filter(pk__in=storage_ids)
-                .order_by("pk")
-            }
-            target_storage = locked_storages[target_storage.pk]
+            locked_storages = _lock_storages(item.storage_id, target_storage.pk)
+            target_storage = locked_storages.get(target_storage.pk)
+            if not target_storage:
+                return JsonResponse({"error": "Storage not found"}, status=404)
 
             if (
                 item.storage_id == target_storage_id
@@ -795,7 +807,7 @@ def move_bottle(request):
                     {"error": "Target position is occupied"}, status=400
                 )
 
-            old_storage = item.storage
+            old_storage = locked_storages.get(item.storage_id)
             old_row = item.row
             old_column = item.column
 

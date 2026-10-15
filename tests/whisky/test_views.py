@@ -12,6 +12,7 @@ from django.utils import timezone
 from PIL import Image
 from pytest_django.asserts import assertRedirects, assertTemplateUsed
 
+from wine_cellar.apps.storage.models import PlannedMove
 from wine_cellar.apps.whisky.models import (
     BottleSize,
     Collection,
@@ -1464,6 +1465,50 @@ def test_miniature_list_only_shows_miniatures(
     assert "Whisky Miniatures" in response.content.decode()
     assert "12" in response.content.decode()
     assert "Add Miniature" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_recording_planned_move_rejects_whisky_miniatures(
+    client, user, whisky_factory, whisky_storage_item_factory, storage_factory
+):
+    household = user.user_settings.active_household
+    source = storage_factory(
+        user=user, household=household, app_type="whisky", rows=2, columns=2
+    )
+    target = storage_factory(
+        user=user, household=household, app_type="whisky", rows=2, columns=2
+    )
+    miniature = whisky_factory(
+        user=user, household=household, size=BottleSize.MINIATURE
+    )
+    item = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        whisky=miniature,
+        storage=source,
+        row=None,
+        column=None,
+    )
+    planned_move = PlannedMove.objects.create(
+        storage_item=item,
+        target_storage=target,
+        target_row=1,
+        target_column=1,
+        user=user,
+        household=household,
+        app_type="whisky",
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse("planned-move-complete", args=[planned_move.pk]), follow=True
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert "whisky miniatures cannot be placed" in response.content.decode()
+    assert PlannedMove.objects.filter(pk=planned_move.pk).exists()
+    item.refresh_from_db()
+    assert (item.storage, item.row, item.column) == (source, None, None)
 
 
 @pytest.mark.django_db
