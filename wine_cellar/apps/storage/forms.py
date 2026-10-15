@@ -405,6 +405,7 @@ class PlannedMoveForm(forms.Form):
             self.fields["storage_item"].queryset = (
                 self.fields["storage_item"]
                 .queryset.filter(**{beverage_field: self.beverage_pk})
+                .select_related("whisky" if app_type == "whisky" else "wine")
                 .filter(row__isnull=False, column__isnull=False)
             )
         self.fields["target_storage"].queryset = Storage.objects.filter(
