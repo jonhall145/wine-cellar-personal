@@ -2,10 +2,12 @@ from django.urls import path
 
 from wine_cellar.apps.storage.views import (
     BottleHistoryView,
+    BottleQuickLogView,
     StorageItemAddView,
     StorageItemDeleteView,
     StorageItemHistoryView,
     StorageItemListView,
+    StorageItemMarkGivenView,
     StorageItemUpdateView,
 )
 from wine_cellar.apps.wine.views import (
@@ -30,6 +32,7 @@ from wine_cellar.apps.wine.views import (
     WineDeleteView,
     WineDetailView,
     WineImagesView,
+    WineImportView,
     WineListView,
     WineMapView,
     WineMergeConfirmView,
@@ -40,6 +43,7 @@ from wine_cellar.apps.wine.views import (
     WishlistDeleteView,
     WishlistListView,
     WishlistPurchasedView,
+    add_price_history,
     add_wine_to_collection,
     bulk_action_view,
     crop_wine_image,
@@ -50,6 +54,7 @@ from wine_cellar.apps.wine.views import (
     remove_wine_from_collection,
     scan_barcode_ajax,
     set_primary_image,
+    wine_ai_summary_status,
     wine_check_duplicate_ajax,
 )
 
@@ -59,6 +64,7 @@ urlpatterns = [
     path(
         "stock/delete/<int:pk>/", StorageItemDeleteView.as_view(), name="stock-delete"
     ),
+    path("stock/give/<int:pk>/", StorageItemMarkGivenView.as_view(), name="stock-give"),
     path("bottles/", StorageItemListView.as_view(), name="bottle-list"),
     path("bottle/edit/<int:pk>/", StorageItemUpdateView.as_view(), name="bottle-edit"),
     path("storage/history/", StorageItemHistoryView.as_view(), name="stock-history"),
@@ -71,7 +77,17 @@ urlpatterns = [
         name="wine-check-duplicate",
     ),
     path("wine/extract-vision/", extract_wine_vision_ajax, name="wine-extract-vision"),
+    path(
+        "wine/<int:pk>/ai-summary/",
+        wine_ai_summary_status,
+        name="wine-ai-summary-status",
+    ),
     path("wine/<int:pk>/", WineDetailView.as_view(), name="wine-detail"),
+    path(
+        "wine/<int:pk>/price-history/add/",
+        add_price_history,
+        name="wine-price-history-add",
+    ),
     path(
         "wine/<int:pk>/collections/add/",
         add_wine_to_collection,
@@ -99,6 +115,7 @@ urlpatterns = [
         "wine/<int:pk>/drink/", DrinkRecordCreateView.as_view(), name="drink-record-add"
     ),
     path("wines/", WineListView.as_view(), name="wine-list"),
+    path("wines/import/", WineImportView.as_view(), name="wine-import"),
     path("wines/export/csv/", export_wines_csv_view, name="wine-export-csv"),
     path("wines/export/json/", export_wines_json_view, name="wine-export-json"),
     path("wines/bulk/", bulk_action_view, name="wine-bulk-action"),
@@ -167,6 +184,11 @@ urlpatterns = [
         "bottle/<int:pk>/history/",
         BottleHistoryView.as_view(),
         name="bottle-history",
+    ),
+    path(
+        "bottle/<int:pk>/quick-log/",
+        BottleQuickLogView.as_view(),
+        name="bottle-quick-log",
     ),
     # Homepage
     path("", HomePageView.as_view(), name="homepage"),

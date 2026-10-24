@@ -31,6 +31,20 @@ from wine_cellar.apps.whisky.models import (
 from wine_cellar.apps.wine.widgets import NoFilenameClearableFileInput
 
 
+def get_whisky_owner_choices(household):
+    whisky_owners = Whisky.objects.filter(household=household, deleted=False).exclude(
+        owner=""
+    )
+    storage_item_owners = WhiskyStorageItem.objects.filter(household=household).exclude(
+        owner=""
+    )
+    owners = sorted(
+        set(whisky_owners.values_list("owner", flat=True).distinct())
+        | set(storage_item_owners.values_list("owner", flat=True).distinct())
+    )
+    return [("", "---------")] + [(owner, owner) for owner in owners]
+
+
 class CreatableModelChoiceField(forms.ModelChoiceField):
     """ModelChoiceField that allows TomSelect-created values."""
 
@@ -136,16 +150,7 @@ class WhiskyBaseForm(
             household=self.household
         ).order_by("name")
 
-        # Whisky-specific: owner choices from existing values
-        existing_owners = (
-            Whisky.objects.filter(household=self.household, deleted=False)
-            .exclude(owner="")
-            .values_list("owner", flat=True)
-            .distinct()
-            .order_by("owner")
-        )
-        owner_choices = [("", "---------")] + [(o, o) for o in existing_owners]
-        self.fields["owner"].widget.choices = owner_choices
+        self.fields["owner"].widget.choices = get_whisky_owner_choices(self.household)
 
     name = forms.CharField(
         max_length=200,
@@ -385,6 +390,32 @@ class WhiskyBaseForm(
         label="Fill Level",
         help_text="Current fill level of the bottle.",
     )
+    miniature_number = forms.IntegerField(
+        required=False,
+        min_value=1,
+        label="Miniature Label Number",
+        help_text=(
+            "For miniatures only. Leave blank to assign the next available number."
+        ),
+    )
+
+    def clean_miniature_number(self):
+        number = self.cleaned_data.get("miniature_number")
+        if number and self.cleaned_data.get("size") != BottleSize.MINIATURE:
+            raise forms.ValidationError(
+                "Miniature label numbers can only be used for miniatures."
+            )
+        if (
+            number
+            and self.cleaned_data.get("storage")
+            and WhiskyStorageItem.objects.filter(
+                household=self.household, miniature_number=number
+            ).exists()
+        ):
+            raise forms.ValidationError(
+                "This miniature label number is already in use."
+            )
+        return number
 
     def clean_cask_type(self):
         """Accept user-created cask types from TomSelect (supports multiple)."""
@@ -684,7 +715,14 @@ class WhiskyEditForm(WhiskyBaseForm):
 class WhiskyFilterForm(TomSelectMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field_name in ("distillery", "region", "country", "collection", "owner"):
+        for field_name in (
+            "distillery",
+            "region",
+            "country",
+            "collection",
+            "owner",
+            "rating",
+        ):
             if field_name in self.fields:
                 self.set_tom_config(
                     name=field_name,
@@ -709,13 +747,25 @@ class WhiskyStorageItemFilterForm(TomSelectMixin, forms.Form):
                     placeholder="",
                     search=True,
                 )
+        if "fill_level" in self.fields:
+            self.set_tom_config(
+                name="fill_level",
+                create=False,
+                max_options=-1,
+                clear=False,
+                placeholder="",
+                closeAfterSelect=False,
+            )
 
 
 class WhiskyStockAddForm(TomSelectMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user")
         whisky = kwargs.pop("whisky", None)
+        storage_item = kwargs.pop("storage_item", None)
         super().__init__(*args, **kwargs)
+        self.whisky = whisky
+        self.storage_item = storage_item
 
         # Default bottle price from whisky price
         if whisky and not self.initial.get("price"):
@@ -726,27 +776,7 @@ class WhiskyStockAddForm(TomSelectMixin, forms.Form):
             household=household, app_type=get_app_type()
         ).order_by("order", "created")
 
-        # Populate owner choices from existing values
-        existing_owners = (
-            WhiskyStorageItem.objects.filter(household=household)
-            .exclude(owner="")
-            .values_list("owner", flat=True)
-            .distinct()
-            .order_by("owner")
-        )
-        owner_choices = [("", "---------")] + [(o, o) for o in existing_owners]
-        self.fields["owner"].widget.choices = owner_choices
-
-        # Also include owners from Whisky model
-        whisky_owners = (
-            Whisky.objects.filter(household=household, deleted=False)
-            .exclude(owner="")
-            .values_list("owner", flat=True)
-            .distinct()
-        )
-        all_owners = sorted(set(existing_owners) | set(whisky_owners))
-        owner_choices = [("", "---------")] + [(o, o) for o in all_owners]
-        self.fields["owner"].widget.choices = owner_choices
+        self.fields["owner"].widget.choices = get_whisky_owner_choices(household)
 
         owner_val = self.initial.get("owner", "")
         owner_items = [owner_val] if owner_val else []
@@ -773,6 +803,14 @@ class WhiskyStockAddForm(TomSelectMixin, forms.Form):
         min_value=1,
         label="Column",
         widget=native_select_widget(),
+    )
+    miniature_number = forms.IntegerField(
+        required=False,
+        min_value=1,
+        label="Miniature Label Number",
+        help_text=(
+            "For miniatures only. Leave blank to assign the next available number."
+        ),
     )
     price = forms.DecimalField(
         required=False,
@@ -815,6 +853,25 @@ class WhiskyStockAddForm(TomSelectMixin, forms.Form):
         label="Owner",
         widget=forms.Select(),
     )
+
+    def clean_miniature_number(self):
+        number = self.cleaned_data.get("miniature_number")
+        if number and self.whisky.size != BottleSize.MINIATURE:
+            raise forms.ValidationError(
+                "Miniature label numbers can only be used for miniatures."
+            )
+        if (
+            number
+            and WhiskyStorageItem.objects.filter(
+                household=self.whisky.household, miniature_number=number
+            )
+            .exclude(pk=self.storage_item.pk if self.storage_item else None)
+            .exists()
+        ):
+            raise forms.ValidationError(
+                "This miniature label number is already in use."
+            )
+        return number
 
     def clean_owner(self):
         """Accept user-created owner values from TomSelect."""
@@ -943,6 +1000,15 @@ class WhiskyWishlistForm(forms.Form):
         required=False,
         help_text="Region.",
     )
+    country = forms.CharField(
+        max_length=2,
+        required=False,
+        widget=forms.Select(
+            choices=[("", "---------")]
+            + [(c.alpha_2, c.name) for c in pycountry.countries],
+        ),
+        help_text="Country of origin.",
+    )
     age_statement = forms.IntegerField(
         required=False,
         help_text="Desired age in years.",
@@ -953,13 +1019,50 @@ class WhiskyWishlistForm(forms.Form):
         decimal_places=2,
         help_text="Maximum price you want to pay.",
     )
+    external_url = forms.URLField(
+        required=False,
+        max_length=500,
+        assume_scheme="https",
+        help_text="Link to where this whisky can be purchased.",
+    )
     notes = forms.CharField(
         required=False,
         widget=forms.Textarea,
         help_text="Any notes about why you want this whisky.",
+    )
+    external_url = forms.URLField(
+        required=False,
+        max_length=500,
+        help_text="URL where you can purchase this whisky.",
     )
     priority = forms.IntegerField(
         initial=1,
         validators=[validators.MinValueValidator(1), validators.MaxValueValidator(5)],
         help_text="Priority from 1 (low) to 5 (high).",
     )
+
+
+class WhiskyPriceHistoryForm(forms.Form):
+    price = forms.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        min_value=0.01,
+        localize=True,
+        widget=forms.TextInput(
+            attrs={"inputmode": "decimal", "placeholder": "e.g. 54.99"}
+        ),
+        help_text="Current market price.",
+    )
+    source = forms.ModelChoiceField(
+        queryset=WhiskySource.objects.none(),
+        required=False,
+        empty_label="Manual / no source",
+        help_text="Optional retailer or source for this price.",
+    )
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        household = get_active_household(user)
+        self.fields["source"].queryset = WhiskySource.objects.filter(
+            household=household
+        ).order_by("name")

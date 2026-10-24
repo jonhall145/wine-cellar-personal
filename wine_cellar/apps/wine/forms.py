@@ -57,10 +57,21 @@ class WineFormPostCleanMixin:
                     )
             grapes = self.cleaned_data.get("grapes", [])
             if grapes:
+                grape_config_raw = self.fields["grapes"].widget.attrs.get(
+                    "data-tom_config", "{}"
+                )
+                grape_config = json.loads(grape_config_raw)
+                grape_max_options = (
+                    -1
+                    if grape_config.get("maxOptions") is None
+                    and "maxOptions" in grape_config
+                    else 50
+                )
                 self.set_tom_config(
                     name="grapes",
-                    create=True,
+                    create=grape_config.get("create", True),
                     items=[g.pk for g in grapes],
+                    max_options=grape_max_options,
                     clear=False,
                 )
             attributes = self.cleaned_data.get("attributes", [])
@@ -115,6 +126,15 @@ class WineFormPostCleanMixin:
                     max_options=-1,
                     clear=False,
                 )
+            rating = self.cleaned_data.get("rating")
+            if rating and "rating" in self.fields:
+                rating_items = rating if isinstance(rating, list) else [rating]
+                self.set_tom_config(
+                    name="rating",
+                    items=[str(item) for item in rating_items],
+                    create=False,
+                    clear=False,
+                )
 
 
 class WineBaseForm(
@@ -166,6 +186,52 @@ class WineBaseForm(
             self.fields["appellation"].widget.attrs["data-appellation-countries"] = (
                 json.dumps(country_map)
             )
+
+    def _get_creatable_initial_items(self, field_name):
+        values = self.initial.get(field_name)
+        if not values:
+            return []
+
+        if not isinstance(values, (list, tuple, set)):
+            values = [values]
+
+        field = self.fields[field_name]
+        query_field = getattr(field, "field_name", "name")
+        items = []
+        extra_choices = []
+
+        for value in values:
+            if hasattr(value, "pk"):
+                items.append(str(value.pk))
+                continue
+
+            normalized_value = str(value).strip()
+            if not normalized_value:
+                continue
+
+            existing_choice = field.queryset.filter(
+                **{f"{query_field}__iexact": normalized_value}
+            ).first()
+            if existing_choice:
+                items.append(str(existing_choice.pk))
+                continue
+
+            token = f"tom_new_opt{normalized_value}"
+            items.append(token)
+            extra_choices.append((token, normalized_value))
+
+        if extra_choices:
+            field.choices = list(field.choices) + extra_choices
+
+        return items
+
+    def _get_choice_initial_items(self, field_name):
+        value = self.initial.get(field_name)
+        if value in (None, ""):
+            return []
+        if hasattr(value, "pk"):
+            return [str(value.pk)]
+        return [str(value)]
 
     class Meta:
         abstract = True
@@ -392,17 +458,32 @@ class WineForm(WineBaseForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.initial["form_step"] = 0
-        self.set_tom_config(name="grapes", create=True)
+        initial_grapes = self._get_creatable_initial_items("grapes")
+        self.set_tom_config(
+            name="grapes",
+            create=True,
+            items=initial_grapes or None,
+            clear=not bool(initial_grapes),
+        )
         self.set_tom_config(name="attributes", create=True)
         self.set_tom_config(name="food_pairings", create=True)
         self.set_tom_config(name="source", create=True)
-        self.set_tom_config(name="vineyard", create=True)
+        initial_vineyard = self._get_creatable_initial_items("vineyard")
+        self.set_tom_config(
+            name="vineyard",
+            create=True,
+            items=initial_vineyard or None,
+            clear=not bool(initial_vineyard),
+        )
+        initial_appellation = self._get_choice_initial_items("appellation")
         self.set_tom_config(
             name="appellation",
+            items=initial_appellation or None,
             max_items=1,
             max_options=-1,
             search=True,
             placeholder="Search appellations...",
+            clear=not bool(initial_appellation),
         )
 
         # Include initial country value in TomSelect config to preserve it
@@ -534,11 +615,12 @@ class WineFilterForm(TomSelectMixin, WineFormPostCleanMixin, forms.Form):
         super().__init__(*args, **kwargs)
         self.initial["form_step"] = 0
         self.set_tom_config(name="wine_type", create=False)
-        self.set_tom_config(name="grapes", create=False)
+        self.set_tom_config(name="grapes", create=False, max_options=-1)
         self.set_tom_config(name="food_pairings", create=False)
         self.set_tom_config(name="source", create=False)
         self.set_tom_config(name="vineyard", create=False)
         self.set_tom_config(name="attributes", create=False)
+        self.set_tom_config(name="rating", create=False, clear=False)
         self.set_tom_config(
             name="country", create=False, max_options=-1, placeholder="", search=True
         )
@@ -585,16 +667,55 @@ class WishlistForm(forms.Form):
         decimal_places=2,
         help_text="Maximum price you want to pay.",
     )
+    external_url = forms.URLField(
+        required=False,
+        max_length=500,
+        assume_scheme="https",
+        help_text="Link to where this wine can be purchased.",
+    )
     notes = forms.CharField(
         required=False,
         widget=forms.Textarea,
         help_text="Any notes about why you want this wine.",
+    )
+    external_url = forms.URLField(
+        required=False,
+        max_length=500,
+        help_text="URL where you can purchase this wine.",
     )
     priority = forms.IntegerField(
         initial=1,
         validators=[MinValueValidator(1), MaxValueValidator(5)],
         help_text="Priority from 1 (low) to 5 (high).",
     )
+
+
+class WinePriceHistoryForm(forms.Form):
+    price = forms.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        min_value=0.01,
+        localize=True,
+        widget=forms.TextInput(
+            attrs={"inputmode": "decimal", "placeholder": "e.g. 19.99"}
+        ),
+        help_text="Current market price.",
+    )
+    source = forms.ModelChoiceField(
+        queryset=Source.objects.none(),
+        required=False,
+        empty_label="Manual / no source",
+        help_text="Optional retailer or source for this price.",
+    )
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        household = None
+        if hasattr(user, "user_settings") and user.user_settings:
+            household = user.user_settings.active_household
+        self.fields["source"].queryset = Source.objects.filter(
+            Q(household__isnull=True) | Q(household=household)
+        ).order_by("name")
 
 
 class LabelScanForm(forms.Form):

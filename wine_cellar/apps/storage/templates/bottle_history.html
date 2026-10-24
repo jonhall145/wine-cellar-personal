@@ -15,6 +15,21 @@
                     <a href="{{ beverage_detail_url }}" class="pure-button button__neutral">
                         <i class="fa-solid fa-arrow-left"></i> Back to {{ beverage.name }}
                     </a>
+                    {% if not item.deleted %}
+                        <form method="post"
+                              action="{% url 'bottle-quick-log' item.pk %}"
+                              class="display-inline-block">
+                            {% csrf_token %}
+                            <button type="submit" class="pure-button button__secondary">
+                                {% if CELLAR_APP_TYPE == "whisky" %}
+                                    <i class="fa-solid fa-whiskey-glass"></i>
+                                {% else %}
+                                    <i class="fa-solid fa-wine-glass"></i>
+                                {% endif %}
+                                Just drank this
+                            </button>
+                        </form>
+                    {% endif %}
                 </div>
 
                 <h2>Bottle History</h2>
@@ -47,6 +62,10 @@
                                         <i class="fa-solid fa-droplet"></i>
                                     {% elif event.type == "finished" %}
                                         <i class="fa-solid fa-check"></i>
+                                    {% elif event.type == "removed" %}
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                    {% elif event.type == "given" %}
+                                        <i class="fa-solid fa-gift"></i>
                                     {% endif %}
                                 </div>
                                 <div class="bottle-history-event__body">
@@ -106,6 +125,8 @@
         .bottle-history-event--opened .bottle-history-event__icon { background: #fd7e14; }
         .bottle-history-event--dreg .bottle-history-event__icon { background: #dc3545; }
         .bottle-history-event--finished .bottle-history-event__icon { background: #343a40; }
+        .bottle-history-event--removed .bottle-history-event__icon { background: #c0392b; }
+        .bottle-history-event--given .bottle-history-event__icon { background: #e83e8c; }
         .bottle-history-event__body {
             background: #f8f9fa;
             border: 1px solid #dee2e6;

@@ -1,9 +1,24 @@
+import io
+import json
+from importlib import util
+from pathlib import Path
+from unittest.mock import patch
+
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from PIL import Image
 
 from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.wine.forms import WineForm
-from wine_cellar.apps.wine.models import Wine, WineBarcode
+from wine_cellar.apps.wine.models import (
+    Appellation,
+    VisionExtractionLog,
+    Wine,
+    WineBarcode,
+    WineImage,
+    Wishlist,
+)
 
 
 def _minimal_wine_data(**overrides):
@@ -16,6 +31,24 @@ def _minimal_wine_data(**overrides):
     }
     data.update(overrides)
     return data
+
+
+def _test_image_upload(name="front.jpg"):
+    buffer = io.BytesIO()
+    Image.new("RGB", (20, 20), color="red").save(buffer, format="JPEG")
+    buffer.seek(0)
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/jpeg")
+
+
+class _ImmediateThread:
+    """Test double that runs a background target synchronously."""
+
+    def __init__(self, *, target, **kwargs):
+        self.target = target
+
+    def start(self):
+        with patch("wine_cellar.apps.wine.views.wine_crud.close_old_connections"):
+            self.target()
 
 
 @pytest.mark.django_db
@@ -44,12 +77,119 @@ class TestWineCreateView:
     def test_create_minimal(self, client, user):
         """POST with only required fields creates a wine."""
         client.force_login(user)
-        r = client.post(reverse("wine-add"), _minimal_wine_data(), follow=True)
+        with (
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAIGrapeService.refresh_grapes"
+                )
+            ) as refresh_grapes,
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAISummaryService.refresh_summary"
+                )
+            ) as refresh_summary,
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
+                side_effect=lambda callback: callback(),
+            ),
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.Thread",
+                _ImmediateThread,
+            ),
+        ):
+            r = client.post(reverse("wine-add"), _minimal_wine_data(), follow=True)
         assert r.status_code == 200
         wine = Wine.objects.get(name="Test Wine")
         assert wine.wine_type == "RE"
         assert wine.country == "FR"
         assert wine.user == user
+        refresh_grapes.assert_called_once_with(wine.pk)
+        refresh_summary.assert_called_once_with(wine.pk)
+
+    def test_create_with_manual_grapes_skips_ai_grape_refresh(
+        self, client, user, grape_factory
+    ):
+        """Manual grape selections should not trigger AI grape inference."""
+        client.force_login(user)
+        grape = grape_factory(user=user, household=user.user_settings.active_household)
+        with (
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAIGrapeService.refresh_grapes"
+                )
+            ) as refresh_grapes,
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAISummaryService.refresh_summary"
+                )
+            ) as refresh_summary,
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
+                side_effect=lambda callback: callback(),
+            ),
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.Thread",
+                _ImmediateThread,
+            ),
+        ):
+            r = client.post(
+                reverse("wine-add"),
+                _minimal_wine_data(grapes=[str(grape.pk)]),
+                follow=True,
+            )
+
+        assert r.status_code == 200
+        wine = Wine.objects.get(name="Test Wine")
+        assert list(wine.grapes.values_list("pk", flat=True)) == [grape.pk]
+        refresh_grapes.assert_not_called()
+        refresh_summary.assert_called_once_with(wine.pk)
+
+    def test_existing_wine_path_skips_ai_grape_refresh(self, client, user):
+        client.force_login(user)
+        storage = user.storage_set.first()
+        first_response = client.post(
+            reverse("wine-add"), _minimal_wine_data(), follow=True
+        )
+        assert first_response.status_code == 200
+
+        wine = Wine.objects.get(name="Test Wine")
+        wine.grapes.clear()
+
+        with (
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAIGrapeService.refresh_grapes"
+                )
+            ) as refresh_grapes,
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAISummaryService.refresh_summary"
+                )
+            ) as refresh_summary,
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
+                side_effect=lambda callback: callback(),
+            ),
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.Thread",
+                _ImmediateThread,
+            ),
+        ):
+            second_response = client.post(
+                reverse("wine-add"),
+                _minimal_wine_data(storage=storage.pk, row=1, column=1),
+                follow=True,
+            )
+
+        assert second_response.status_code == 200
+        refresh_grapes.assert_not_called()
+        refresh_summary.assert_called_once_with(wine.pk)
 
     def test_create_with_optional_fields(self, client, user):
         """POST with optional fields populates them on the wine."""
@@ -68,6 +208,35 @@ class TestWineCreateView:
         assert wine.abv == 13.5
         assert wine.rating == 2
         assert wine.comment == "Lovely nose"
+
+    def test_create_from_wishlist_marks_item_purchased(self, client, user):
+        client.force_login(user)
+        household = user.user_settings.active_household
+        wish = Wishlist.objects.create(
+            name="Wishlist Wine",
+            user=user,
+            household=household,
+            wine_type="RE",
+            country="FR",
+            external_url="https://example.com/wines/wishlist-wine",
+        )
+
+        r = client.post(
+            reverse("wine-add"),
+            _minimal_wine_data(
+                name="Wishlist Wine",
+                wine_type="RE",
+                country="FR",
+                wishlist_item=wish.pk,
+            ),
+            follow=True,
+        )
+
+        assert r.status_code == 200
+        wish.refresh_from_db()
+        assert wish.purchased is True
+        wine = Wine.objects.get(name="Wishlist Wine")
+        assert wine.price_url == "https://example.com/wines/wishlist-wine"
 
     def test_create_with_storage(self, client, user):
         """POST with storage fields creates a StorageItem."""
@@ -96,6 +265,38 @@ class TestWineCreateView:
         bc = WineBarcode.objects.get(wine=wine)
         assert bc.barcode == "1234567890123"
         assert bc.user == user
+
+    def test_create_links_extraction_log_and_saves_label_image(
+        self, client, user, clear_image_folder
+    ):
+        client.force_login(user)
+        household = user.user_settings.active_household
+        log = VisionExtractionLog.objects.create(
+            user=user,
+            household=household,
+            image_count=1,
+            raw_response="{}",
+            extracted_data={"name": "Test Wine"},
+            confidence="high",
+            extracted_fields=["name"],
+        )
+        session = client.session
+        session["extraction_result"] = {"extracted_data": {"name": "Test Wine"}}
+        session.save()
+        image = _test_image_upload()
+
+        r = client.post(
+            reverse("wine-add"),
+            _minimal_wine_data(image_front_label=image),
+            follow=True,
+        )
+
+        assert r.status_code == 200
+        wine = Wine.objects.get(name="Test Wine")
+        log.refresh_from_db()
+        assert log.wine == wine
+        assert log.was_successful is True
+        assert WineImage.objects.filter(wine=wine, image_type="LF").count() == 1
 
     def test_missing_name_returns_form_error(self, client, user):
         """POST without required `name` field re-renders the form with errors."""
@@ -139,6 +340,179 @@ class TestWineCreateView:
         assert "form" in r.context
         assert "wine_create.html" in [t.name for t in r.templates]
 
+    def test_extracted_grapes_are_preserved_in_create_form(self, client, user):
+        client.force_login(user)
+        session = client.session
+        session["extraction_result"] = {
+            "extracted_data": {
+                "name": "Vision Wine",
+                "wine_type": "WH",
+                "country": "FR",
+                "grapes": ["Riesling"],
+            }
+        }
+        session.save()
+
+        response = client.get(reverse("wine-add"))
+
+        assert response.status_code == 200
+        grapes_config = json.loads(
+            response.context["form"].fields["grapes"].widget.attrs["data-tom_config"]
+        )
+        assert grapes_config["items"] == ["tom_new_optRiesling"]
+        assert response.context["form"].fields["grapes"].widget.attrs["data-clear"] == (
+            "false"
+        )
+
+    def test_extracted_appellation_is_preserved_in_create_form(self, client, user):
+        client.force_login(user)
+        appellation = Appellation.objects.create(
+            name="Vision Test Appellation",
+            country="FR",
+            latitude=44.8378,
+            longitude=-0.5792,
+        )
+        session = client.session
+        session["extraction_result"] = {
+            "extracted_data": {
+                "name": "Vision Wine",
+                "wine_type": "RE",
+                "country": "FR",
+                "subregion": "Bordeaux",
+                "appellation": appellation.pk,
+            }
+        }
+        session.save()
+
+        response = client.get(reverse("wine-add"))
+
+        assert response.status_code == 200
+        assert response.context["form"].initial["subregion"] == "Bordeaux"
+        appellation_config = json.loads(
+            response.context["form"]
+            .fields["appellation"]
+            .widget.attrs["data-tom_config"]
+        )
+        assert appellation_config["items"] == [str(appellation.pk)]
+        assert (
+            response.context["form"].fields["appellation"].widget.attrs["data-clear"]
+            == "false"
+        )
+
+    def test_get_from_wishlist_prefills_form(self, client, user):
+        household = user.user_settings.active_household
+        wishlist_item = Wishlist.objects.create(
+            name="Wishlist Wine",
+            user=user,
+            household=household,
+            wine_type="RE",
+            country="FR",
+            subregion="Bordeaux",
+            vintage=2018,
+            notes="Birthday bottle",
+            external_url="https://example.com/wishlist-wine",
+        )
+        client.force_login(user)
+
+        response = client.get(
+            reverse("wine-add") + f"?wishlist_item={wishlist_item.pk}"
+        )
+
+        assert response.status_code == 200
+        assert response.context["form"].initial["name"] == "Wishlist Wine"
+        assert response.context["form"].initial["wine_type"] == "RE"
+        assert response.context["form"].initial["country"] == "FR"
+        assert response.context["form"].initial["subregion"] == "Bordeaux"
+        assert response.context["form"].initial["vintage"] == 2018
+        assert response.context["form"].initial["comment"] == "Birthday bottle"
+        assert (
+            response.context["form"].initial["price_url"]
+            == "https://example.com/wishlist-wine"
+        )
+
+    def test_wishlist_list_shows_convert_and_purchase_links(self, client, user):
+        household = user.user_settings.active_household
+        wishlist_item = Wishlist.objects.create(
+            name="Wishlist Link Wine",
+            user=user,
+            household=household,
+            external_url="https://example.com/buy-wine",
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("wishlist-list"))
+        content = response.content.decode()
+
+        assert response.status_code == 200
+        assert (reverse("wine-add") + f"?wishlist_item={wishlist_item.pk}") in content
+        assert "https://example.com/buy-wine" in content
+
+
+@pytest.mark.django_db
+def test_schedule_ai_summary_refresh_swallows_exceptions(monkeypatch):
+    module_path = (
+        Path(__file__).resolve().parents[1] / "wine_cellar/apps/wine/views/wine_crud.py"
+    )
+    spec = util.spec_from_file_location("test_wine_crud_module", module_path)
+    assert spec and spec.loader
+    wine_crud = util.module_from_spec(spec)
+    spec.loader.exec_module(wine_crud)
+    logged = []
+
+    monkeypatch.setattr(
+        wine_crud.WineAISummaryService,
+        "refresh_summary",
+        lambda wine_id: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+    monkeypatch.setattr(
+        wine_crud.transaction,
+        "on_commit",
+        lambda callback: callback(),
+    )
+    monkeypatch.setattr(wine_crud, "Thread", _ImmediateThread)
+    monkeypatch.setattr(wine_crud, "close_old_connections", lambda: None)
+    monkeypatch.setattr(
+        wine_crud.logger,
+        "exception",
+        lambda message, wine_id: logged.append((message, wine_id)),
+    )
+
+    wine_crud._schedule_ai_summary_refresh(123)
+
+    assert logged == [("Unexpected error generating AI summary for wine %s", 123)]
+
+
+@pytest.mark.django_db
+def test_schedule_ai_grape_refresh_swallows_exceptions(monkeypatch):
+    module_path = (
+        Path(__file__).resolve().parents[1] / "wine_cellar/apps/wine/views/wine_crud.py"
+    )
+    spec = util.spec_from_file_location("test_wine_crud_module", module_path)
+    assert spec and spec.loader
+    wine_crud = util.module_from_spec(spec)
+    spec.loader.exec_module(wine_crud)
+    logged = []
+
+    monkeypatch.setattr(
+        wine_crud.WineAIGrapeService,
+        "refresh_grapes",
+        lambda wine_id: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+    monkeypatch.setattr(
+        wine_crud.transaction,
+        "on_commit",
+        lambda callback: callback(),
+    )
+    monkeypatch.setattr(
+        wine_crud.logger,
+        "exception",
+        lambda message, wine_id: logged.append((message, wine_id)),
+    )
+
+    wine_crud._schedule_ai_grape_refresh(123)
+
+    assert logged == [("Unexpected error generating AI grapes for wine %s", 123)]
+
 
 @pytest.mark.django_db
 class TestWineUpdateView:
@@ -151,10 +525,29 @@ class TestWineUpdateView:
             wine_type=wine.wine_type,
             country=wine.country,
         )
-        r = client.post(reverse("wine-edit", kwargs={"pk": wine.pk}), data, follow=True)
+        with (
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAISummaryService.refresh_summary"
+                )
+            ) as refresh_summary,
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
+                side_effect=lambda callback: callback(),
+            ),
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.Thread",
+                _ImmediateThread,
+            ),
+        ):
+            r = client.post(
+                reverse("wine-edit", kwargs={"pk": wine.pk}), data, follow=True
+            )
         assert r.status_code == 200
         wine.refresh_from_db()
         assert wine.name == "Updated Name"
+        refresh_summary.assert_called_once_with(wine.pk)
 
     def test_update_wine_type(self, client, user, wine_factory):
         """POST to wine-edit updates the wine type."""
@@ -193,3 +586,24 @@ class TestWineUpdateView:
         r = client.post(reverse("wine-edit", kwargs={"pk": wine.pk}), data)
         assert r.status_code == 302
         assert r.url == reverse("wine-detail", kwargs={"pk": wine.pk})
+
+    def test_update_replaces_front_label_image(
+        self, client, user, wine_factory, wine_image_factory, clear_image_folder
+    ):
+        wine = wine_factory(user=user)
+        existing_image = wine_image_factory(user=user, wine=wine, image_type="LF")
+        client.force_login(user)
+        replacement_image = _test_image_upload("replacement.jpg")
+        data = _minimal_wine_data(
+            name=wine.name,
+            wine_type=wine.wine_type,
+            country=wine.country,
+            image_front_label=replacement_image,
+        )
+
+        r = client.post(reverse("wine-edit", kwargs={"pk": wine.pk}), data, follow=True)
+
+        assert r.status_code == 200
+        front_images = WineImage.objects.filter(wine=wine, image_type="LF")
+        assert front_images.count() == 1
+        assert front_images.get().pk != existing_image.pk

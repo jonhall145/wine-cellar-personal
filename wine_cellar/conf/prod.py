@@ -56,6 +56,7 @@ from wine_cellar.conf.settings import (  # noqa: F401
     VAPID_PRIVATE_KEY,
     VAPID_PUBLIC_KEY,
     VERSION,
+    WINE_AI_SUMMARY_MODEL,
     WSGI_APPLICATION,
     X_FRAME_OPTIONS,
 )

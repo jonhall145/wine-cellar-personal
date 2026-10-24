@@ -1,7 +1,10 @@
+import django_filters
 import pycountry
 from django.core.cache import cache
-from django.db.models import Count, F, Q
+from django.db.models import Count, F, Min, Q
+from django_filters import ChoiceFilter
 
+from wine_cellar.apps.storage.models import Storage, get_app_type
 from wine_cellar.apps.user.views import get_active_household
 
 # Cache timeout for filter choices (5 minutes)
@@ -19,13 +22,20 @@ class BeverageFilterMixin:
 
     storage_item_reverse = None
     nullable_order_fields = ()
+    order_field_aliases = {}
     search_fields = ()
+    include_unrated_with_zero_rating = False
 
     def filter_rating(self, queryset, name, value):
-        if value == "0":
-            return queryset.filter(Q(rating=0) | Q(rating__isnull=True))
-        if value:
-            return queryset.filter(rating=int(value))
+        if not value:
+            return queryset
+        values = value if isinstance(value, (list, tuple, set)) else [value]
+        ratings = [int(v) for v in values if v not in ("", None)]
+        if ratings:
+            query = Q(rating__in=ratings)
+            if self.include_unrated_with_zero_rating and 0 in ratings:
+                query |= Q(rating__isnull=True)
+            return queryset.filter(query)
         return queryset
 
     def filter_order(self, queryset, name, value):
@@ -33,8 +43,19 @@ class BeverageFilterMixin:
         if not value:
             return queryset
         ordering = value[0] if isinstance(value, list) else value
+        ordering = self.order_field_aliases.get(ordering, ordering)
+        ordering_field = ordering.lstrip("-")
+        if ordering_field == "stock_first_added_at":
+            annotations = getattr(queryset.query, "annotations", {})
+            if ordering_field not in annotations:
+                queryset = queryset.annotate(
+                    stock_first_added_at=Min(
+                        f"{self.storage_item_reverse}__created",
+                        filter=Q(**{f"{self.storage_item_reverse}__deleted": False}),
+                    )
+                )
         if ordering.lstrip("-") in self.nullable_order_fields:
-            field = F(ordering.lstrip("-"))
+            field = F(ordering_field)
             if ordering.startswith("-"):
                 return queryset.order_by(field.desc(nulls_last=True))
             return queryset.order_by(field.asc(nulls_last=True))
@@ -57,6 +78,60 @@ class BeverageFilterMixin:
                 **{f"{reverse}__isnull": False, f"{reverse}__deleted": False}
             ).distinct()
         return queryset
+
+
+class BaseStockItemFilter(django_filters.FilterSet):
+    storage = django_filters.ModelChoiceFilter(
+        queryset=Storage.objects.none(),
+        label="Storage",
+    )
+    has_occasion = ChoiceFilter(
+        method="filter_has_occasion",
+        choices=(("", "All"), ("1", "Yes"), ("0", "No")),
+        label="Has Occasion",
+    )
+    show_used = ChoiceFilter(
+        method="filter_show_used",
+        choices=(("0", "In stock only"), ("1", "Show all (incl. finished)")),
+        label="Show used",
+        empty_label=None,
+    )
+
+    def filter_show_used(self, queryset, name, value):
+        if value == "1":
+            return queryset
+        return queryset.filter(deleted=False)
+
+    def filter_has_occasion(self, queryset, name, value):
+        if value == "1":
+            return queryset.exclude(occasion__isnull=True).exclude(occasion="")
+        if value == "0":
+            return queryset.filter(Q(occasion__isnull=True) | Q(occasion=""))
+        return queryset
+
+    def __init__(self, data=None, queryset=None, *, request=None, prefix=None):
+        if data is not None and "show_used" not in data:
+            data = data.copy()
+            data["show_used"] = "0"
+        super().__init__(data, queryset, request=request, prefix=prefix)
+        if request and request.user.is_authenticated:
+            household = get_active_household(request.user)
+            if household:
+                self.filters["storage"].queryset = Storage.objects.filter(
+                    household=household, app_type=get_app_type()
+                ).order_by("order", "created")
+
+
+def get_stock_ordering_choices(beverage_field, beverage_label):
+    return (
+        ("-created", "Recently Added"),
+        ("created", "Oldest First"),
+        (beverage_field, f"{beverage_label} Name A-Z"),
+        (f"-{beverage_field}", f"{beverage_label} Name Z-A"),
+        ("storage__name", "Storage A-Z"),
+        ("-price", "Highest Price"),
+        ("price", "Lowest Price"),
+    )
 
 
 def get_related_model_choices_cached(

@@ -3,6 +3,7 @@
 from django.conf import settings
 
 from wine_cellar.apps.household.models import HouseholdMembership
+from wine_cellar.apps.user.notifications import get_notification_summary
 
 
 def _get_bottle_count(household):
@@ -40,10 +41,12 @@ def household_context(request):
 
     # Bottle count for nav bar
     bottle_count = _get_bottle_count(active_household) if active_household else 0
+    notification_summary = get_notification_summary(request)
 
     return {
         "active_household": active_household,
         "user_households": households,
         "has_multiple_households": has_multiple_households,
         "nav_bottle_count": bottle_count,
+        "notification_unread_count": notification_summary["notification_unread_count"],
     }

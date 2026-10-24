@@ -8,12 +8,12 @@ import qrcode
 from django.conf import settings
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Avg, Count, F, Q, Sum
+from django.db.models import Avg, Count, F, Min, Q, Sum
 from django.db.models.functions import Coalesce, TruncMonth
 from django.forms import model_to_dict
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.formats import number_format
 from django.views.generic import DeleteView, DetailView, FormView, TemplateView, View
@@ -27,6 +27,25 @@ logger = logging.getLogger(__name__)
 
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
 
+
+def _parse_taste_descriptors(descriptors_str):
+    """Parse JSON taste descriptors from form input. Returns a list or []."""
+    if not descriptors_str:
+        return []
+    try:
+        descriptors = json.loads(descriptors_str)
+        return descriptors if isinstance(descriptors, list) else []
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+
+def _has_selected_taste_descriptors(descriptors):
+    """Return whether the form currently has any selected taste descriptors."""
+    if isinstance(descriptors, list):
+        return bool(descriptors)
+    return bool(_parse_taste_descriptors(descriptors))
+
+
 # --- Wishlist views ---
 
 
@@ -34,6 +53,7 @@ class BaseWishlistListView(RequireHouseholdMixin, TemplateView):
     wishlist_model = None  # Set by subclass
     wishlist_columns_header = None  # Template path for column headers
     wishlist_columns_row = None  # Template path for column cells
+    wishlist_convert_url_name = None  # Beverage create route for wishlist conversion
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -43,6 +63,7 @@ class BaseWishlistListView(RequireHouseholdMixin, TemplateView):
         )
         context["wishlist_columns_header"] = self.wishlist_columns_header
         context["wishlist_columns_row"] = self.wishlist_columns_row
+        context["wishlist_convert_url_name"] = self.wishlist_convert_url_name
         return context
 
 
@@ -248,15 +269,23 @@ class BaseDrinkRecordEditView(RequireMemberMixin, FormView):
             "rating": record.rating,
             "shared_with": record.shared_with,
             "occasion": record.occasion,
+            "photo": record.photo,
+            "taste_descriptors": json.dumps(record.taste_descriptors),
         }
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         record = self.get_object()
+        form = context.get("form")
         context["record"] = record
         beverage = getattr(record, self.beverage_fk_name)
         context[self.beverage_fk_name] = beverage
         context["beverage"] = beverage
+        context["show_taste_descriptors"] = bool(
+            form
+            and "taste_descriptors" in form.fields
+            and _has_selected_taste_descriptors(form["taste_descriptors"].value())
+        )
         return context
 
     def form_valid(self, form):
@@ -266,6 +295,11 @@ class BaseDrinkRecordEditView(RequireMemberMixin, FormView):
         record.rating = form.cleaned_data.get("rating")
         record.shared_with = form.cleaned_data.get("shared_with")
         record.occasion = form.cleaned_data.get("occasion")
+        record.taste_descriptors = _parse_taste_descriptors(
+            form.cleaned_data.get("taste_descriptors")
+        )
+        if form.cleaned_data.get("photo"):
+            record.photo = form.cleaned_data["photo"]
         record.save()
         self.success_url = reverse_lazy("drink-history")
         return super().form_valid(form)
@@ -330,10 +364,11 @@ class BaseReorderRemindersView(RequireHouseholdMixin, TemplateView):
     beverage_fk_name = None  # "wine" or "whisky"
     stock_reverse_path = None  # e.g. "wine__storageitem" or "whisky__whiskystorageitem"
     beverage_icon = None  # e.g. "wine-bottle" or "whiskey-glass"
+    reminder_service = None
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
+    def get_reminder_context(self, household):
+        if self.reminder_service:
+            return self.reminder_service.get_reorder_context(household)
 
         reminders = (
             self.reminder_model.objects.filter(household=household, is_active=True)
@@ -345,20 +380,22 @@ class BaseReorderRemindersView(RequireHouseholdMixin, TemplateView):
                 )
             )
         )
+        needs_reorder = [
+            {
+                self.beverage_fk_name: getattr(reminder, self.beverage_fk_name),
+                "current_stock": reminder.current_stock,
+                "min_stock": reminder.min_stock,
+                "reminder": reminder,
+            }
+            for reminder in reminders
+            if reminder.current_stock <= reminder.min_stock
+        ]
+        return reminders, needs_reorder
 
-        needs_reorder = []
-        for reminder in reminders:
-            if reminder.current_stock <= reminder.min_stock:
-                beverage = getattr(reminder, self.beverage_fk_name)
-                needs_reorder.append(
-                    {
-                        self.beverage_fk_name: beverage,
-                        "current_stock": reminder.current_stock,
-                        "min_stock": reminder.min_stock,
-                        "reminder": reminder,
-                    }
-                )
-
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        household = get_active_household(self.request.user)
+        reminders, needs_reorder = self.get_reminder_context(household)
         context.update(
             {
                 "reminders": reminders,
@@ -375,6 +412,7 @@ class BaseReorderReminderCreateView(RequireMemberMixin, FormView):
     reminder_model = None  # Set by subclass
     beverage_fk_name = None  # "wine" or "whisky"
     detail_url_name = None  # e.g. "wine-detail" or "whisky-detail"
+    reminder_service = None
 
     def get_form_class(self):
         from wine_cellar.apps.core.forms import ReorderReminderForm
@@ -396,19 +434,31 @@ class BaseReorderReminderCreateView(RequireMemberMixin, FormView):
         beverage = get_object_or_404(
             self.beverage_model, pk=self.kwargs["pk"], household=household
         )
-        self.reminder_model.objects.update_or_create(
-            **{self.beverage_fk_name: beverage},
-            user=self.request.user,
+        self.save_reorder_reminder(
+            beverage=beverage,
             household=household,
-            defaults={
-                "min_stock": form.cleaned_data["min_stock"],
-                "is_active": True,
-            },
+            min_stock=form.cleaned_data["min_stock"],
         )
         self.success_url = reverse_lazy(
             self.detail_url_name, kwargs={"pk": beverage.pk}
         )
         return super().form_valid(form)
+
+    def save_reorder_reminder(self, *, beverage, household, min_stock):
+        if self.reminder_service:
+            return self.reminder_service.save_reorder_reminder(
+                **{self.beverage_fk_name: beverage},
+                user=self.request.user,
+                household=household,
+                min_stock=min_stock,
+            )
+
+        return self.reminder_model.objects.update_or_create(
+            **{self.beverage_fk_name: beverage},
+            user=self.request.user,
+            household=household,
+            defaults={"min_stock": min_stock, "is_active": True},
+        )
 
 
 # --- Drink record create view ---
@@ -419,6 +469,16 @@ class BaseDrinkRecordCreateView(RequireMemberMixin, FormView):
     drink_record_model = None  # Set by subclass
     beverage_fk_name = None  # "wine" or "whisky"
     detail_url_name = None  # e.g. "wine-detail" or "whisky-detail"
+
+    def get_initial(self):
+        initial = super().get_initial()
+        storage_item_pk = self.request.GET.get("storage_item")
+        if storage_item_pk:
+            try:
+                initial["storage_item"] = int(storage_item_pk)
+            except (TypeError, ValueError):
+                pass
+        return initial
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -457,6 +517,10 @@ class BaseDrinkRecordCreateView(RequireMemberMixin, FormView):
             shared_with=form.cleaned_data.get("shared_with"),
             occasion=form.cleaned_data.get("occasion"),
             storage_item=storage_item,
+            photo=form.cleaned_data.get("photo"),
+            taste_descriptors=_parse_taste_descriptors(
+                form.cleaned_data.get("taste_descriptors")
+            ),
         )
 
         if storage_item:
@@ -473,11 +537,194 @@ class BaseDrinkRecordCreateView(RequireMemberMixin, FormView):
         storage_item.finished_date = (
             form.cleaned_data.get("date_consumed") or timezone.localdate()
         )
-        storage_item.save(update_fields=["deleted", "finished_date"])
+        storage_item.removal_reason = storage_item.RemovalReason.CONSUMED
+        storage_item.given_date = None
+        storage_item.recipient = ""
+        storage_item.given_occasion = ""
+        storage_item.save_with_modified(
+            update_fields=[
+                "deleted",
+                "finished_date",
+                "removal_reason",
+                "given_date",
+                "recipient",
+                "given_occasion",
+            ]
+        )
+
+
+class BaseBottleQuickLogView(RequireMemberMixin, View):
+    storage_item_model = None
+    drink_record_model = None
+    beverage_fk_name = None  # "wine" or "whisky"
+
+    def get_object(self):
+        household = get_active_household(self.request.user)
+        return get_object_or_404(
+            self.storage_item_model,
+            pk=self.kwargs["pk"],
+            household=household,
+            deleted=False,
+        )
+
+    def get_locked_object(self):
+        household = get_active_household(self.request.user)
+        queryset = self.storage_item_model.objects.select_for_update().select_related(
+            self.beverage_fk_name
+        )
+        return get_object_or_404(
+            queryset,
+            pk=self.kwargs["pk"],
+            household=household,
+            deleted=False,
+        )
+
+    def post(self, request, *args, **kwargs):
+        household = get_active_household(request.user)
+        date_consumed = timezone.localdate()
+
+        with transaction.atomic():
+            storage_item = self.get_locked_object()
+            beverage = getattr(storage_item, self.beverage_fk_name)
+            self.drink_record_model.objects.create(
+                **{self.beverage_fk_name: beverage},
+                user=request.user,
+                household=household,
+                date_consumed=date_consumed,
+                storage_item=storage_item,
+            )
+            self.handle_bottle_update(storage_item, date_consumed)
+
+        messages.success(request, "Drink logged.")
+        return redirect("bottle-history", pk=storage_item.pk)
+
+    def handle_bottle_update(self, storage_item, date_consumed):
+        raise NotImplementedError
+
+
+class BaseMarkBottleGivenView(RequireMemberMixin, FormView):
+    template_name = "core/bottle_mark_given.html"
+    storage_item_model = None
+    beverage_fk_name = None
+    detail_url_name = None
+    list_url_name = None
+
+    def get_form_class(self):
+        from wine_cellar.apps.core.forms import MarkBottleGivenForm
+
+        return MarkBottleGivenForm
+
+    def get_object(self):
+        household = get_active_household(self.request.user)
+        return get_object_or_404(
+            self.storage_item_model,
+            pk=self.kwargs["pk"],
+            household=household,
+            deleted=False,
+        )
+
+    def get_success_url(self):
+        if self.request.GET.get("next") == "list" and self.list_url_name:
+            return reverse_lazy(self.list_url_name)
+        storage_item = getattr(self, "object", None) or self.get_object()
+        beverage = getattr(storage_item, self.beverage_fk_name)
+        return reverse_lazy(self.detail_url_name, kwargs={"pk": beverage.pk})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        storage_item = self.get_object()
+        beverage = getattr(storage_item, self.beverage_fk_name)
+        context["storage_item"] = storage_item
+        context["beverage"] = beverage
+        context[self.beverage_fk_name] = beverage
+        context["cancel_url"] = self.get_success_url()
+        return context
+
+    def form_valid(self, form):
+        storage_item = self.get_object()
+        self.object = storage_item
+        storage_item.deleted = True
+        storage_item.removal_reason = storage_item.RemovalReason.GIVEN
+        storage_item.recipient = form.cleaned_data["recipient"]
+        storage_item.given_date = form.cleaned_data["given_date"]
+        storage_item.given_occasion = form.cleaned_data.get("given_occasion", "")
+        storage_item.finished_date = None
+        storage_item.save_with_modified(
+            update_fields=[
+                "deleted",
+                "removal_reason",
+                "recipient",
+                "given_date",
+                "given_occasion",
+                "finished_date",
+            ]
+        )
+        return redirect(self.get_success_url())
+
+
+class BaseMarkBottleBrokenOrLostView(RequireMemberMixin, TemplateView):
+    template_name = "core/bottle_mark_broken_lost.html"
+    storage_item_model = None
+    beverage_fk_name = None
+    detail_url_name = None
+    list_url_name = None
+    storage_detail_url_name = None
+
+    def dispatch(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_object(self):
+        household = get_active_household(self.request.user)
+        return get_object_or_404(
+            self.storage_item_model,
+            pk=self.kwargs["pk"],
+            household=household,
+            deleted=False,
+        )
+
+    def get_success_url(self):
+        next_view = self.request.GET.get("next")
+        if next_view == "list" and self.list_url_name:
+            return reverse_lazy(self.list_url_name)
+        if next_view == "storage" and self.storage_detail_url_name:
+            return reverse_lazy(
+                self.storage_detail_url_name, kwargs={"pk": self.object.storage.pk}
+            )
+        beverage = getattr(self.object, self.beverage_fk_name)
+        return reverse_lazy(self.detail_url_name, kwargs={"pk": beverage.pk})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        beverage = getattr(self.object, self.beverage_fk_name)
+        context["storage_item"] = self.object
+        context["beverage"] = beverage
+        context[self.beverage_fk_name] = beverage
+        context["cancel_url"] = self.get_success_url()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        self.object.deleted = True
+        self.object.finished_date = timezone.localdate()
+        self.object.removal_reason = self.object.RemovalReason.REMOVED
+        self.object.given_date = None
+        self.object.recipient = ""
+        self.object.given_occasion = ""
+        self.object.save_with_modified(
+            update_fields=[
+                "deleted",
+                "finished_date",
+                "removal_reason",
+                "given_date",
+                "recipient",
+                "given_occasion",
+            ]
+        )
+        return redirect(self.get_success_url())
 
 
 class BaseReorderReminderDeleteView(RequireMemberMixin, DeleteView):
-    success_url = reverse_lazy("reorder-reminders")
+    success_url = reverse_lazy("notifications")
 
     def get_queryset(self):
         household = get_active_household(self.request.user)
@@ -565,7 +812,7 @@ class BaseBeverageDeleteView(RequireMemberMixin, DeleteView):
     def form_valid(self, form):
         log_delete(self.request.user, self.object)
         self.object.deleted = True
-        self.object.save(update_fields=["deleted"])
+        self.object.save_with_modified(update_fields=["deleted"])
         return redirect(self.get_success_url())
 
 
@@ -613,6 +860,7 @@ class BaseListView(RequireHouseholdMixin):
     card_template = None  # e.g. "wine_card.html"
     filter_field_template = None  # e.g. "wine_filter_field.html"
     beverage_icon = None  # e.g. "wine-glass"
+    default_filter_data = {}
 
     def get_paginate_by(self, queryset):
         """Allow user to select number of items per page via URL parameter."""
@@ -636,8 +884,47 @@ class BaseListView(RequireHouseholdMixin):
         context["beverage_icon"] = self.beverage_icon
         return context
 
+    @staticmethod
+    def _strip_empty_filter_values(data):
+        if hasattr(data, "getlist") and hasattr(data, "setlist"):
+            for key in list(data.keys()):
+                values = [value for value in data.getlist(key) if value != ""]
+                if values:
+                    data.setlist(key, values)
+                else:
+                    data.pop(key, None)
+            return data
+
+        cleaned_data = {}
+        for key, value in data.items():
+            if isinstance(value, (list, tuple)):
+                filtered_values = [item for item in value if item != ""]
+                if filtered_values:
+                    cleaned_data[key] = filtered_values
+            elif value != "":
+                cleaned_data[key] = value
+        return cleaned_data
+
+    def get_filterset_kwargs(self, filterset_class):
+        kwargs = super().get_filterset_kwargs(filterset_class)
+        data = kwargs.get("data")
+        if data is None:
+            data = self.request.GET.copy()
+        else:
+            data = data.copy()
+        data = self._strip_empty_filter_values(data)
+        if not self.default_filter_data:
+            kwargs["data"] = data
+            return kwargs
+        missing_keys = [key for key in self.default_filter_data if key not in data]
+        for key in missing_keys:
+            data[key] = self.default_filter_data[key]
+        kwargs["data"] = data
+        return kwargs
+
     def get_queryset(self):
         price_path = f"{self.storage_item_reverse}__price"
+        stock_filter = Q(**{f"{self.storage_item_reverse}__deleted": False})
         qs = (
             super()
             .get_queryset()
@@ -646,10 +933,14 @@ class BaseListView(RequireHouseholdMixin):
             .order_by("-created")
         )
         qs = qs.annotate(
+            stock_first_added_at=Min(
+                f"{self.storage_item_reverse}__created",
+                filter=stock_filter,
+            ),
             effective_price=Coalesce(Avg(price_path), "price"),
             stock_count=Count(
                 self.storage_item_reverse,
-                filter=Q(**{f"{self.storage_item_reverse}__deleted": False}),
+                filter=stock_filter,
                 distinct=True,
             ),
         )
@@ -666,6 +957,8 @@ class BaseDetailView(RequireHouseholdMixin, DetailView):
     select_related_fields = ()
     prefetch_related_fields = ()
     storage_item_reverse = None  # e.g. "storageitem" or "whiskystorageitem"
+    extraction_log_model = None
+    extraction_log_fk_name = None
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -703,11 +996,26 @@ class BaseDetailView(RequireHouseholdMixin, DetailView):
             )
         )
         context["duplicates"] = duplicates
+        extraction_log = self.get_extraction_log(beverage)
+        if extraction_log:
+            context["extraction_log"] = extraction_log
 
         # Track recently viewed beverages in session
         _track_recent_view(self.request, beverage)
 
         return context
+
+    def get_extraction_log(self, beverage):
+        if not self.extraction_log_model or not self.extraction_log_fk_name:
+            return None
+
+        return (
+            self.extraction_log_model.objects.filter(
+                **{self.extraction_log_fk_name: beverage, "was_successful": True}
+            )
+            .order_by("-created")
+            .first()
+        )
 
 
 MAX_RECENT_VIEWS = 8
@@ -825,6 +1133,14 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
         """Return country display name for the beverage. Override per app."""
         raise NotImplementedError
 
+    def get_item_price(self, item, beverage):
+        """Return the best available purchase price for a stored bottle."""
+        if item.price is not None:
+            return item.price
+        if beverage.price is not None:
+            return beverage.price
+        return Decimal("0")
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         household = get_active_household(self.request.user)
@@ -833,8 +1149,8 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
             getattr(user_settings, "currency", "EUR"), "€"
         )
 
-        items_qs = self.storage_item_model.objects.filter(
-            household=household, deleted=False
+        all_items_qs = self.storage_item_model.objects.filter(
+            household=household
         ).select_related(*self.select_related_fields, "storage")
 
         # --- By type (count in stock) ---
@@ -843,23 +1159,38 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
         by_country = defaultdict(int)
         # --- Value by storage location ---
         by_storage = {}
+        spend_by_month = defaultdict(lambda: Decimal("0"))
+        spend_by_year = defaultdict(lambda: Decimal("0"))
 
-        for item in items_qs:
+        # --- Rating distribution ---
+        by_rating = {0: 0, 1: 0, 2: 0, 3: 0}
+
+        # Single consolidated iteration over all items. Spending trends include
+        # deleted bottles to reflect purchase history.
+        for item in all_items_qs:
             beverage = getattr(item, self.beverage_fk_name)
-            by_type[self.get_type_display(beverage)] += 1
-            by_country[self.get_country_name(beverage)] += 1
 
-            storage_name = item.storage.name if item.storage else "Unknown"
-            if storage_name not in by_storage:
-                by_storage[storage_name] = {"count": 0, "value": Decimal("0")}
-            by_storage[storage_name]["count"] += 1
-            if item.price is not None:
-                item_price = item.price
-            elif beverage.price is not None:
-                item_price = beverage.price
-            else:
-                item_price = Decimal("0")
-            by_storage[storage_name]["value"] += item_price
+            # In-stock aggregates (skip deleted items)
+            if not item.deleted:
+                by_type[self.get_type_display(beverage)] += 1
+                by_country[self.get_country_name(beverage)] += 1
+
+                storage_name = item.storage.name if item.storage else "Unknown"
+                if storage_name not in by_storage:
+                    by_storage[storage_name] = {"count": 0, "value": Decimal("0")}
+                by_storage[storage_name]["count"] += 1
+                item_price = self.get_item_price(item, beverage)
+                by_storage[storage_name]["value"] += item_price
+
+                # Rating distribution (in-stock items only)
+                if hasattr(beverage, "rating") and beverage.rating is not None:
+                    by_rating[beverage.rating] += 1
+
+            # Spending trends (all items including deleted, for true purchase history)
+            item_price = self.get_item_price(item, beverage)
+            item_date = timezone.localtime(item.created).date()
+            spend_by_month[item_date.replace(day=1)] += item_price
+            spend_by_year[item_date.year] += item_price
 
         for data in by_storage.values():
             data["value"] = int(data["value"])
@@ -880,6 +1211,14 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
             .annotate(count=Count("id"))
             .order_by("month")
         )
+        spend_by_month = [
+            {"month": month, "amount": amount.quantize(Decimal("0.01"))}
+            for month, amount in sorted(spend_by_month.items())
+        ]
+        spend_by_year = [
+            {"year": year, "amount": amount.quantize(Decimal("0.01"))}
+            for year, amount in sorted(spend_by_year.items())
+        ]
 
         context.update(
             {
@@ -887,6 +1226,9 @@ class BaseStatsDashboardView(RequireHouseholdMixin, TemplateView):
                 "by_country": by_country,
                 "by_storage": by_storage,
                 "by_month": list(by_month),
+                "spend_by_month": spend_by_month,
+                "spend_by_year": spend_by_year,
+                "by_rating": by_rating,
                 "currency": currency,
                 "total_in_stock": sum(by_type.values()),
             }
@@ -920,6 +1262,7 @@ class BaseWishlistCreateView(RequireMemberMixin, FormView):
             price_limit=form.cleaned_data.get("price_limit"),
             notes=form.cleaned_data.get("notes"),
             priority=form.cleaned_data.get("priority", 1),
+            external_url=form.cleaned_data.get("external_url", ""),
             **self.get_extra_create_kwargs(form),
         )
         return super().form_valid(form)
@@ -1016,6 +1359,48 @@ class BaseBeverageUpdateView(RequireMemberMixin, FormView):
     image_related_name = None  # e.g. "wineimage_set" or "images"
     detail_url_name = None  # e.g. "wine-detail" or "whisky-detail"
 
+    def get_form_image_config(self):
+        form_class = self.get_form_class()
+        return (
+            getattr(form_class, "image_model", None),
+            getattr(form_class, "image_fields_map", {}),
+            getattr(form_class, "beverage_fk_name", None),
+        )
+
+    def sync_form_images(self, beverage, user, cleaned_data):
+        image_model, image_fields_map, beverage_fk_name = self.get_form_image_config()
+        if not image_model or not beverage_fk_name:
+            return
+
+        for field_name, image_type in image_fields_map.items():
+            image = cleaned_data.get(field_name)
+            existing_image = image_model.objects.filter(
+                **{
+                    beverage_fk_name: beverage,
+                    "user": user,
+                    "image_type": image_type,
+                }
+            ).first()
+
+            if image is False:
+                if existing_image:
+                    existing_image.image.delete()
+                    existing_image.delete()
+                continue
+
+            if image and not hasattr(image, "instance"):
+                if existing_image:
+                    existing_image.image.delete()
+                    existing_image.delete()
+                image_model.objects.create(
+                    **{
+                        beverage_fk_name: beverage,
+                        "image": image,
+                        "user": user,
+                        "image_type": image_type,
+                    }
+                )
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         if "user" not in kwargs:
@@ -1058,8 +1443,11 @@ class BaseBeverageUpdateView(RequireMemberMixin, FormView):
             pk=self.kwargs["pk"],
             household=household,
         )
-        self.process_form_data(beverage, self.request.user, form.cleaned_data)
-        log_update(self.request.user, beverage)
+        with transaction.atomic():
+            self.process_form_data(beverage, self.request.user, form.cleaned_data)
+            self.sync_form_images(beverage, self.request.user, form.cleaned_data)
+            log_update(self.request.user, beverage)
+            self.post_save_beverage(beverage)
         self.success_url = reverse_lazy(
             self.detail_url_name, kwargs={"pk": beverage.pk}
         )
@@ -1067,6 +1455,10 @@ class BaseBeverageUpdateView(RequireMemberMixin, FormView):
 
     def process_form_data(self, beverage, user, cleaned_data):
         raise NotImplementedError
+
+    def post_save_beverage(self, beverage):
+        """Hook for post-save processing. Override per app."""
+        pass
 
 
 # --- Beverage create view ---
@@ -1087,6 +1479,27 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
     vision_extractor_path = None  # dotted path for lazy import
     add_url_name = None  # e.g. "wine-add" or "whisky-add"
     beverage_label = None  # "wine" or "whisky"
+    page_title = None
+    scan_url_name = None
+    rescan_url_name = None
+    duplicate_check_url_name = None
+    extract_vision_url_name = None
+    quick_add_description = None
+    image_autofill_hint = None
+    image_extract_hint = None
+    scanned_label_alt = None
+    save_button_label = None
+    field_section_definitions = ()
+    cellar_extra_field_names = ()
+    confidence_badge_labels = None
+    vision_field_map = {}
+    vision_confidence_field_map = {}
+    vision_create_fields = ()
+    vision_fk_name_fields = {}
+    extraction_log_model = None
+    extraction_log_fk_name = None
+    wishlist_model = None  # Set by subclass
+    wishlist_initial_field_map = {}
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -1156,7 +1569,31 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
                 self.resolve_extracted_data(result_data, initial)
                 initial.update(result_data)
 
+        self.apply_wishlist_values(initial, overwrite=True, serialize_related=True)
         return initial
+
+    def get_wishlist_item(self):
+        if hasattr(self, "_wishlist_item_cache"):
+            return self._wishlist_item_cache
+
+        if not self.wishlist_model:
+            self._wishlist_item_cache = None
+            return self._wishlist_item_cache
+
+        wishlist_item_id = self.request.GET.get(
+            "wishlist_item"
+        ) or self.request.POST.get("wishlist_item")
+        if not wishlist_item_id:
+            self._wishlist_item_cache = None
+            return self._wishlist_item_cache
+
+        household = get_active_household(self.request.user)
+        self._wishlist_item_cache = get_object_or_404(
+            self.wishlist_model,
+            pk=wishlist_item_id,
+            household=household,
+        )
+        return self._wishlist_item_cache
 
     def _get_extractor(self):
         """Lazy-import the vision extractor from the dotted path."""
@@ -1171,14 +1608,96 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
         """Resolve FK fields in extracted data. Override per app."""
         pass
 
+    def _bind_form_fields(self, form, field_names):
+        return [form[field_name] for field_name in field_names]
+
+    def get_create_sections(self, form):
+        return [
+            {
+                "title": section["title"],
+                "fields": self._bind_form_fields(form, section["fields"]),
+            }
+            for section in self.field_section_definitions
+        ]
+
+    def get_vision_extraction_config(self):
+        return {
+            "endpointUrl": reverse(self.extract_vision_url_name),
+            "beverageLabel": self.beverage_label,
+            "fieldMap": self.vision_field_map,
+            "confidenceFieldMap": self.vision_confidence_field_map,
+            "createFields": list(self.vision_create_fields),
+            "fkNameFields": self.vision_fk_name_fields,
+        }
+
+    def apply_wishlist_values(
+        self, values, *, overwrite=False, serialize_related=False
+    ):
+        wishlist_item = self.get_wishlist_item()
+        if not wishlist_item:
+            return
+
+        for form_field, wishlist_field in self.wishlist_initial_field_map.items():
+            if not overwrite and values.get(form_field) not in (None, "", []):
+                continue
+            value = getattr(wishlist_item, wishlist_field)
+            if value in (None, ""):
+                continue
+            if serialize_related and hasattr(value, "pk"):
+                values[form_field] = value.pk
+            else:
+                values[form_field] = value
+
+    def mark_wishlist_item_purchased(self, wishlist_item):
+        if wishlist_item.purchased:
+            return
+
+        wishlist_item.purchased = True
+        wishlist_item.save(update_fields=["purchased"])
+        messages.success(
+            self.request,
+            f'Wishlist item "{wishlist_item.name}" marked as purchased.',
+        )
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        form = context["form"]
         household = get_active_household(self.request.user)
+        wishlist_item = self.get_wishlist_item()
         user_storages = Storage.objects.filter(
             household=household, app_type=get_app_type()
         )
         free_cells_by_storage = {s.pk: s.get_free_cells_by_row() for s in user_storages}
         context["free_cells_by_storage"] = free_cells_by_storage
+        context.update(
+            {
+                "create_page_title": self.page_title
+                or f"Add {self.beverage_label.title()}",
+                "beverage_label": self.beverage_label,
+                "create_scan_url": reverse(self.scan_url_name),
+                "create_scan_button_label": f"Scan {self.beverage_label.title()}",
+                "create_rescan_url": reverse(self.rescan_url_name),
+                "create_duplicate_check_url": reverse(self.duplicate_check_url_name),
+                "create_quick_add_description": self.quick_add_description,
+                "create_image_autofill_hint": self.image_autofill_hint,
+                "create_image_extract_hint": self.image_extract_hint,
+                "create_scanned_label_alt": self.scanned_label_alt,
+                "create_save_button_label": self.save_button_label
+                or f"Save {self.beverage_label.title()}",
+                "create_form_sections": self.get_create_sections(form),
+                "create_cellar_extra_fields": self._bind_form_fields(
+                    form, self.cellar_extra_field_names
+                ),
+                "create_confidence_badges": self.confidence_badge_labels
+                or {
+                    "high": "High Confidence",
+                    "medium": "Please Verify",
+                    "low": "Low Confidence",
+                },
+                "vision_extraction_config": self.get_vision_extraction_config(),
+                "wishlist_source_item": wishlist_item,
+            }
+        )
 
         extraction_result = self.request.session.get("extraction_result")
         if extraction_result:
@@ -1204,6 +1723,7 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
 
         # Attach scanned images if user hasn't uploaded their own
         scanned_label = self.request.session.get("scanned_label")
+        wishlist_item = self.get_wishlist_item()
         if scanned_label:
             image_data = scanned_label.get("data")
             if isinstance(image_data, list):
@@ -1229,23 +1749,33 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
                     )
 
         household = get_active_household(self.request.user)
-        beverage, created = self.process_form_data(
-            self.request.user, household, form.cleaned_data
-        )
+        self.apply_wishlist_values(form.cleaned_data)
+        with transaction.atomic():
+            beverage, created = self.process_form_data(
+                self.request.user, household, form.cleaned_data
+            )
+            self.create_form_images(beverage, self.request.user, form.cleaned_data)
 
-        if created:
-            log_create(self.request.user, beverage)
+            if created:
+                log_create(self.request.user, beverage)
 
-        self.post_create(beverage, created)
+            self.post_create(beverage, created)
+            if wishlist_item:
+                self.mark_wishlist_item_purchased(wishlist_item)
 
-        # Link extraction log to created beverage and record corrections
-        extraction_result = self.request.session.get("extraction_result")
-        if extraction_result and created:
-            self._link_extraction_log(beverage, form.cleaned_data, extraction_result)
+            # Link extraction log to created beverage and record corrections
+            extraction_result = self.request.session.get("extraction_result")
+            if extraction_result and created:
+                self._link_extraction_log(
+                    beverage, form.cleaned_data, extraction_result
+                )
+            self.post_save_beverage(beverage)
 
         # Clear session data
         for key in ("scanned_label", "extraction_result"):
             self.request.session.pop(key, None)
+
+        _track_recent_view(self.request, beverage)
 
         if not created:
             from django.contrib import messages
@@ -1271,14 +1801,78 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
     def process_form_data(self, user, household, cleaned_data):
         raise NotImplementedError
 
+    def get_form_image_config(self):
+        form_class = self.get_form_class()
+        return (
+            getattr(form_class, "image_model", None),
+            getattr(form_class, "image_fields_map", {}),
+            getattr(form_class, "beverage_fk_name", None),
+        )
+
+    def create_form_images(self, beverage, user, cleaned_data):
+        image_model, image_fields_map, beverage_fk_name = self.get_form_image_config()
+        if not image_model or not beverage_fk_name:
+            return
+
+        for field_name, image_type in image_fields_map.items():
+            image = cleaned_data.get(field_name)
+            if not image:
+                continue
+
+            image_model.objects.get_or_create(
+                **{
+                    beverage_fk_name: beverage,
+                    "image": image,
+                    "user": user,
+                    "image_type": image_type,
+                }
+            )
+
     def post_create(self, beverage, created):
         """Hook for post-creation processing. Override per app."""
+        pass
+
+    def post_save_beverage(self, beverage):
+        """Hook for post-save processing. Override per app."""
         pass
 
     def _link_extraction_log(self, beverage, cleaned_data, extraction_result):
         """Link the most recent extraction log to the created beverage
         and record any user corrections."""
-        pass  # Override per app
+        if not self.extraction_log_model or not self.extraction_log_fk_name:
+            return
+
+        try:
+            log = (
+                self.extraction_log_model.objects.filter(
+                    **{
+                        "user": self.request.user,
+                        f"{self.extraction_log_fk_name}__isnull": True,
+                    }
+                )
+                .order_by("-created")
+                .first()
+            )
+            if log:
+                extracted_data = extraction_result.get("extracted_data", {})
+                corrections = self._detect_corrections(cleaned_data, extracted_data)
+                setattr(log, self.extraction_log_fk_name, beverage)
+                log.was_successful = True
+                if corrections:
+                    log.user_corrections = corrections
+                log.save(
+                    update_fields=[
+                        self.extraction_log_fk_name,
+                        "was_successful",
+                        "user_corrections",
+                    ]
+                )
+        except Exception:
+            logger.exception(
+                "Failed to link extraction log to %s %s",
+                self.beverage_label,
+                beverage.pk,
+            )
 
     @staticmethod
     def _detect_corrections(cleaned_data, extracted_data):
@@ -1324,6 +1918,277 @@ class BaseBeverageCreateView(RequireMemberMixin, FormView):
                     ),
                 }
         return corrections
+
+
+class StorageItemFormLayoutMixin:
+    extra_stock_field_names = ()
+
+    def get_free_cells_by_storage(self, *, exclude_item=None):
+        household = get_active_household(self.request.user)
+        user_storages = Storage.objects.filter(
+            household=household, app_type=get_app_type()
+        )
+        return {
+            storage.pk: storage.get_free_cells_by_row(exclude_item=exclude_item)
+            for storage in user_storages
+        }
+
+    def get_stock_extra_fields(self, form):
+        return [form[field_name] for field_name in self.extra_stock_field_names]
+
+
+class BaseStorageItemAddView(StorageItemFormLayoutMixin, RequireMemberMixin, FormView):
+    beverage_model = None
+    storage_item_model = None
+    beverage_fk_name = None
+    beverage_context_name = None
+    beverage_label = None
+    detail_url_name = None
+    show_storage_suggestions = False
+
+    def get_beverage(self):
+        if not hasattr(self, "_beverage"):
+            household = get_active_household(self.request.user)
+            self._beverage = get_object_or_404(
+                self.beverage_model, pk=self.kwargs["pk"], household=household
+            )
+        return self._beverage
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        kwargs.update(self.get_add_form_kwargs(self.get_beverage()))
+        return kwargs
+
+    def get_add_form_kwargs(self, beverage):
+        return {}
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial.update(self.get_add_initial(self.get_beverage()))
+        return initial
+
+    def get_add_initial(self, beverage):
+        return {}
+
+    def get_storage_suggestions(self):
+        if not self.show_storage_suggestions:
+            return []
+
+        beverage = self.get_beverage()
+        household = get_active_household(self.request.user)
+        storage_related_name = self.storage_item_model._meta.get_field(
+            "storage"
+        ).remote_field.related_name
+        storage_item_pk = f"{storage_related_name}__pk"
+        beverage_filter = Q(
+            **{
+                f"{storage_related_name}__household": household,
+                f"{storage_related_name}__deleted": False,
+                f"{storage_related_name}__{self.beverage_fk_name}": beverage,
+            }
+        )
+        used_slots_filter = Q(
+            **{
+                f"{storage_related_name}__household": household,
+                f"{storage_related_name}__deleted": False,
+            }
+        )
+        suggested_storages = (
+            Storage.objects.filter(household=household, app_type=get_app_type())
+            .annotate(
+                bottle_count=Count(
+                    storage_item_pk,
+                    filter=beverage_filter,
+                    distinct=True,
+                ),
+                occupied_slots=Count(
+                    storage_item_pk,
+                    filter=used_slots_filter,
+                    distinct=True,
+                ),
+            )
+            .filter(bottle_count__gt=0)
+            .order_by("name", "pk")
+        )
+
+        suggestions = []
+        for storage in suggested_storages:
+            total_slots = storage.total_slots
+            if total_slots == 0:
+                free_slots = None
+            else:
+                free_slots = total_slots - storage.occupied_slots
+
+            suggestions.append(
+                {
+                    "storage_id": storage.pk,
+                    "storage_name": storage.name,
+                    "bottle_count": storage.bottle_count,
+                    "free_slots": free_slots,
+                }
+            )
+
+        return suggestions
+
+    def get_common_create_kwargs(self, cleaned_data):
+        return {
+            "storage": cleaned_data["storage"],
+            "row": cleaned_data.get("row"),
+            "column": cleaned_data.get("column"),
+            "price": cleaned_data.get("price"),
+            "is_gift": cleaned_data.get("is_gift", False),
+            "gift_from": cleaned_data.get("gift_from"),
+            "occasion": cleaned_data.get("occasion"),
+            "rating": cleaned_data.get("rating"),
+        }
+
+    def get_extra_create_kwargs(self, cleaned_data):
+        return {}
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        beverage = self.get_beverage()
+        context[self.beverage_context_name] = beverage
+        context["free_cells_by_storage"] = self.get_free_cells_by_storage()
+        context["storage_suggestions"] = self.get_storage_suggestions()
+        context["stock_suggestions_title"] = (
+            f"This {self.beverage_label} is already in:"
+        )
+        context["stock_extra_fields"] = self.get_stock_extra_fields(context["form"])
+        return context
+
+    def form_valid(self, form):
+        beverage = self.get_beverage()
+        household = get_active_household(self.request.user)
+        create_kwargs = self.get_common_create_kwargs(form.cleaned_data)
+        create_kwargs.update(
+            {
+                self.beverage_fk_name: beverage,
+                "user": self.request.user,
+                "household": household,
+            }
+        )
+        create_kwargs.update(self.get_extra_create_kwargs(form.cleaned_data))
+        self.storage_item_model.objects.create(**create_kwargs)
+        self.success_url = reverse_lazy(
+            self.detail_url_name, kwargs={"pk": beverage.pk}
+        )
+        return super().form_valid(form)
+
+
+class BaseStorageItemUpdateView(
+    StorageItemFormLayoutMixin, RequireMemberMixin, FormView
+):
+    storage_item_model = None
+    beverage_fk_name = None
+    beverage_context_name = None
+    detail_url_name = None
+    list_url_name = "bottle-list"
+    move_history_model = None
+    extra_initial_field_names = ()
+    common_edit_field_names = (
+        "storage",
+        "row",
+        "column",
+        "price",
+        "is_gift",
+        "gift_from",
+        "occasion",
+        "rating",
+    )
+
+    def get_object(self):
+        if not hasattr(self, "_object"):
+            household = get_active_household(self.request.user)
+            self._object = get_object_or_404(
+                self.storage_item_model,
+                pk=self.kwargs["pk"],
+                household=household,
+                deleted=False,
+            )
+        return self._object
+
+    def get_beverage(self):
+        return getattr(self.get_object(), self.beverage_fk_name)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        kwargs.update(self.get_update_form_kwargs(self.get_object()))
+        return kwargs
+
+    def get_update_form_kwargs(self, item):
+        return {}
+
+    def get_initial(self):
+        initial = super().get_initial()
+        item = self.get_object()
+        for field_name in self.common_edit_field_names + self.extra_initial_field_names:
+            initial[field_name] = getattr(item, field_name)
+        return initial
+
+    def get_cancel_url(self, item):
+        if self.request.GET.get("next") == "list":
+            return reverse_lazy(self.list_url_name)
+        beverage = getattr(item, self.beverage_fk_name)
+        return reverse_lazy(self.detail_url_name, kwargs={"pk": beverage.pk})
+
+    def get_success_url_for_item(self, item):
+        return self.get_cancel_url(item)
+
+    def item_has_moved(self, item, cleaned_data):
+        new_storage = cleaned_data["storage"]
+        new_row = cleaned_data.get("row")
+        new_column = cleaned_data.get("column")
+        return (
+            item.storage_id != new_storage.pk
+            or item.row != new_row
+            or item.column != new_column
+        )
+
+    def create_move_history(self, item, cleaned_data):
+        self.move_history_model.objects.create(
+            storage_item=item,
+            from_storage=item.storage,
+            from_row=item.row,
+            from_column=item.column,
+            to_storage=cleaned_data["storage"],
+            to_row=cleaned_data.get("row"),
+            to_column=cleaned_data.get("column"),
+            user=self.request.user,
+        )
+
+    def apply_common_updates(self, item, cleaned_data):
+        for field_name in self.common_edit_field_names:
+            setattr(item, field_name, cleaned_data.get(field_name))
+
+    def apply_extra_updates(self, item, cleaned_data):
+        return None
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        item = self.get_object()
+        context[self.beverage_context_name] = self.get_beverage()
+        context["item"] = item
+        context["storage_item"] = item
+        context["free_cells_by_storage"] = self.get_free_cells_by_storage(
+            exclude_item=item
+        )
+        context["cancel_url"] = self.get_cancel_url(item)
+        return context
+
+    def form_valid(self, form):
+        item = self.get_object()
+        if self.item_has_moved(item, form.cleaned_data):
+            self.create_move_history(item, form.cleaned_data)
+
+        self.apply_common_updates(item, form.cleaned_data)
+        self.apply_extra_updates(item, form.cleaned_data)
+        item.save()
+
+        self.success_url = self.get_success_url_for_item(item)
+        return super().form_valid(form)
 
 
 # --- Shared duplicate check AJAX ---
@@ -1609,10 +2474,27 @@ class BaseHomePageView(RequireHouseholdMixin, TemplateView):
     stats_template = None  # e.g. "includes/homepage_stats.html"
     alerts_template = None  # e.g. "includes/homepage_alerts.html"
     beverage_icon = None  # e.g. "wine-glass"
+    reminder_service = None
 
     def get_app_specific_context(self, household, user):
         """Return app-specific context dict. Override per app."""
         return {}
+
+    def get_low_stock_count(self, household):
+        if self.reminder_service:
+            return self.reminder_service.count_low_stock_reminders(household)
+
+        return (
+            self.reminder_model.objects.filter(household=household, is_active=True)
+            .annotate(
+                current_stock=Count(
+                    self.stock_reverse_path,
+                    filter=Q(**{f"{self.stock_reverse_path}__deleted": False}),
+                )
+            )
+            .filter(current_stock__lte=F("min_stock"))
+            .count()
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1642,17 +2524,7 @@ class BaseHomePageView(RequireHouseholdMixin, TemplateView):
         ).count()
 
         # Low stock reminders
-        low_stock_count = (
-            self.reminder_model.objects.filter(household=household, is_active=True)
-            .annotate(
-                current_stock=Count(
-                    self.stock_reverse_path,
-                    filter=Q(**{f"{self.stock_reverse_path}__deleted": False}),
-                )
-            )
-            .filter(current_stock__lte=F("min_stock"))
-            .count()
-        )
+        low_stock_count = self.get_low_stock_count(household)
 
         # Recent drinks
         recent_drinks = (

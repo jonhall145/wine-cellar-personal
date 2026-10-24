@@ -3,12 +3,18 @@ from http import HTTPStatus
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 from pytest_django.asserts import (
     assertRedirects,
     assertTemplateUsed,
 )
 
-from wine_cellar.apps.storage.models import BottleMoveHistory, Storage, StorageItem
+from wine_cellar.apps.storage.models import (
+    BottleMoveHistory,
+    PlannedMove,
+    Storage,
+    StorageItem,
+)
 
 
 @pytest.mark.django_db
@@ -21,6 +27,16 @@ def test_storage_create_page_unauthenticated(client, user):
     )
     assertTemplateUsed(response=r, template_name="base.html")
     assertTemplateUsed(response=r, template_name="account/login.html")
+
+
+@pytest.mark.django_db
+def test_planned_moves_require_login(client):
+    response = client.get(reverse("planned-move-list"))
+
+    assertRedirects(
+        response,
+        reverse("account_login") + "?next=" + reverse("planned-move-list"),
+    )
 
 
 @pytest.mark.django_db
@@ -181,6 +197,8 @@ def test_user_can_add_stock(client, user, wine_factory):
     wine = wine_factory(user=user)
     data = {
         "storage": storage.pk,
+        "occasion": "Birthday",
+        "occasion_date": "2026-12-25",
     }
     r = client.post(
         reverse("stock-add", kwargs={"pk": wine.pk}), data=data, follow=True
@@ -191,6 +209,30 @@ def test_user_can_add_stock(client, user, wine_factory):
     )
     assert storage.used_slots == 1
     assert storage.items.first().wine == wine
+    assert storage.items.first().occasion_date == date(2026, 12, 25)
+
+
+@pytest.mark.django_db
+def test_user_can_edit_bottle_occasion_date(client, user, wine_factory):
+    client.force_login(user)
+    storage = Storage.objects.first()
+    wine = wine_factory(user=user)
+    item = StorageItem.objects.create(
+        wine=wine,
+        storage=storage,
+        user=user,
+        household=user.user_settings.active_household,
+    )
+
+    r = client.post(
+        reverse("bottle-edit", kwargs={"pk": item.pk}),
+        data={"storage": storage.pk, "occasion_date": "2026-12-25"},
+        follow=True,
+    )
+
+    assert r.status_code == HTTPStatus.OK
+    item.refresh_from_db()
+    assert item.occasion_date == date(2026, 12, 25)
 
 
 @pytest.mark.django_db
@@ -246,6 +288,11 @@ def test_user_can_delete_stock(client, user, wine_factory, storage_item_factory)
     assert StorageItem.objects.count() == 1
     item.refresh_from_db()
     assert item.deleted is True
+    assert item.removal_reason == StorageItem.RemovalReason.REMOVED
+    assert item.finished_date == timezone.localdate()
+    assert item.given_date is None
+    assert item.recipient == ""
+    assert item.given_occasion == ""
 
 
 @pytest.mark.django_db
@@ -480,3 +527,340 @@ def test_consumed_bottle_history_links_back_to_consumed_bottles(
 
     assert r.status_code == HTTPStatus.OK
     assert expected_href in content
+
+
+@pytest.mark.django_db
+def test_bottle_history_shows_quick_log_for_active_bottle(
+    client, user, wine_factory, storage_item_factory
+):
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(wine=wine, storage=storage, user=user)
+
+    client.force_login(user)
+    response = client.get(reverse("bottle-history", kwargs={"pk": bottle.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assert (
+        reverse("bottle-quick-log", kwargs={"pk": bottle.pk})
+        in response.content.decode()
+    )
+    assert "Just drank this" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_bottle_quick_log_creates_record_and_consumes_bottle(
+    client, user, wine_factory, storage_item_factory
+):
+    from wine_cellar.apps.wine.models import DrinkRecord
+
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(wine=wine, storage=storage, user=user)
+
+    client.force_login(user)
+    response = client.post(reverse("bottle-quick-log", kwargs={"pk": bottle.pk}))
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert response.url == reverse("bottle-history", kwargs={"pk": bottle.pk})
+
+    record = DrinkRecord.objects.get(storage_item=bottle)
+    assert record.wine == wine
+    assert record.user == user
+    assert record.household == user.user_settings.active_household
+    assert record.date_consumed == timezone.localdate()
+    assert record.rating is None
+    assert record.tasting_notes in (None, "")
+
+    bottle.refresh_from_db()
+    assert bottle.deleted is True
+    assert bottle.finished_date == timezone.localdate()
+    assert bottle.removal_reason == StorageItem.RemovalReason.CONSUMED
+
+
+@pytest.mark.django_db
+def test_bottle_quick_log_rejects_repeat_posts_for_consumed_bottle(
+    client, user, wine_factory, storage_item_factory
+):
+    from wine_cellar.apps.wine.models import DrinkRecord
+
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(wine=wine, storage=storage, user=user)
+
+    client.force_login(user)
+    first_response = client.post(reverse("bottle-quick-log", kwargs={"pk": bottle.pk}))
+    second_response = client.post(reverse("bottle-quick-log", kwargs={"pk": bottle.pk}))
+
+    assert first_response.status_code == HTTPStatus.FOUND
+    assert second_response.status_code == HTTPStatus.NOT_FOUND
+    assert DrinkRecord.objects.filter(storage_item=bottle).count() == 1
+
+
+@pytest.mark.django_db
+def test_mark_bottle_as_given_records_recipient_and_date(
+    client, user, wine_factory, storage_item_factory
+):
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(wine=wine, storage=storage, user=user)
+
+    client.force_login(user)
+    response = client.post(
+        reverse("stock-give", kwargs={"pk": bottle.pk}),
+        {
+            "recipient": "Alex",
+            "given_date": "2026-04-16",
+            "given_occasion": "Birthday",
+        },
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert response.url == reverse("wine-detail", kwargs={"pk": wine.pk})
+
+    bottle.refresh_from_db()
+    assert bottle.deleted is True
+    assert bottle.removal_reason == StorageItem.RemovalReason.GIVEN
+    assert bottle.recipient == "Alex"
+    assert bottle.given_date == date(2026, 4, 16)
+    assert bottle.given_occasion == "Birthday"
+    assert bottle.finished_date is None
+
+
+@pytest.mark.django_db
+def test_given_bottle_history_links_back_to_gifted_bottles(
+    client, user, wine_factory, storage_item_factory
+):
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(
+        wine=wine,
+        storage=storage,
+        user=user,
+        deleted=True,
+        removal_reason=StorageItem.RemovalReason.GIVEN,
+        recipient="Chris",
+        given_occasion="Retirement",
+        given_date=date(2025, 1, 5),
+    )
+
+    client.force_login(user)
+    r = client.get(reverse("bottle-history", kwargs={"pk": bottle.pk}))
+    content = r.content.decode()
+    expected_href = (
+        f'href="{reverse("wine-detail", kwargs={"pk": wine.pk})}'
+        "?show_consumed=1#gifted-bottles"
+    )
+
+    assert r.status_code == HTTPStatus.OK
+    assert expected_href in content
+    assert "Given away" in content
+    assert "Chris" in content
+
+
+@pytest.mark.django_db
+def test_broken_or_lost_bottle_history_shows_broken_or_lost_label(
+    client, user, wine_factory, storage_item_factory
+):
+    wine = wine_factory(user=user)
+    storage = user.storage_set.first()
+    bottle = storage_item_factory(
+        wine=wine,
+        storage=storage,
+        user=user,
+        deleted=True,
+        removal_reason=StorageItem.RemovalReason.REMOVED,
+        finished_date=date(2025, 1, 5),
+    )
+
+    client.force_login(user)
+    response = client.get(reverse("bottle-history", kwargs={"pk": bottle.pk}))
+    content = response.content.decode()
+
+    assert response.status_code == HTTPStatus.OK
+    assert "Broken or lost" in content
+
+
+@pytest.mark.django_db
+def test_user_can_manage_household_planned_moves(
+    client, user, wine_factory, storage_factory, storage_item_factory
+):
+    source_storage = storage_factory(user=user, rows=2, columns=2)
+    target_storage = storage_factory(user=user, rows=2, columns=2)
+    item = storage_item_factory(
+        wine=wine_factory(user=user),
+        storage=source_storage,
+        row=1,
+        column=1,
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse("planned-move-add"),
+        {
+            "storage_item": item.pk,
+            "target_storage": target_storage.pk,
+            "target_row": 2,
+            "target_column": 2,
+        },
+    )
+
+    assertRedirects(response, reverse("planned-move-list"))
+    planned_move = PlannedMove.objects.get()
+    assert planned_move.household == user.user_settings.active_household
+
+    response = client.get(reverse("planned-move-list"))
+    assert response.status_code == HTTPStatus.OK
+    assert str(item) in response.content.decode()
+
+    response = client.post(reverse("planned-move-delete", args=[planned_move.pk]))
+    assertRedirects(response, reverse("planned-move-list"))
+    assert not PlannedMove.objects.exists()
+
+
+@pytest.mark.django_db
+def test_user_can_record_a_planned_move(
+    client, user, wine_factory, storage_factory, storage_item_factory
+):
+    source_storage = storage_factory(user=user, rows=2, columns=2)
+    target_storage = storage_factory(user=user, rows=2, columns=2)
+    item = storage_item_factory(
+        wine=wine_factory(user=user),
+        storage=source_storage,
+        row=1,
+        column=1,
+    )
+    planned_move = PlannedMove.objects.create(
+        storage_item=item,
+        target_storage=target_storage,
+        target_row=2,
+        target_column=2,
+        user=user,
+        household=user.user_settings.active_household,
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("planned-move-list"))
+    assert (
+        reverse("planned-move-complete", args=[planned_move.pk])
+        in response.content.decode()
+    )
+
+    response = client.post(
+        reverse("planned-move-complete", args=[planned_move.pk]), follow=True
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert "Planned move recorded." in response.content.decode()
+    assert not PlannedMove.objects.exists()
+    item.refresh_from_db()
+    assert (item.storage, item.row, item.column) == (target_storage, 2, 2)
+    history = BottleMoveHistory.objects.get(storage_item=item)
+    assert (history.from_storage, history.from_row, history.from_column) == (
+        source_storage,
+        1,
+        1,
+    )
+    assert (history.to_storage, history.to_row, history.to_column) == (
+        target_storage,
+        2,
+        2,
+    )
+
+
+@pytest.mark.django_db
+def test_recording_planned_move_keeps_plan_when_destination_is_occupied(
+    client, user, wine_factory, storage_factory, storage_item_factory
+):
+    source_storage = storage_factory(user=user, rows=2, columns=2)
+    target_storage = storage_factory(user=user, rows=2, columns=2)
+    item = storage_item_factory(
+        wine=wine_factory(user=user),
+        storage=source_storage,
+        row=1,
+        column=1,
+    )
+    storage_item_factory(
+        wine=wine_factory(user=user),
+        storage=target_storage,
+        row=2,
+        column=2,
+    )
+    planned_move = PlannedMove.objects.create(
+        storage_item=item,
+        target_storage=target_storage,
+        target_row=2,
+        target_column=2,
+        user=user,
+        household=user.user_settings.active_household,
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse("planned-move-complete", args=[planned_move.pk]), follow=True
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert "planned destination is occupied" in response.content.decode()
+    assert PlannedMove.objects.filter(pk=planned_move.pk).exists()
+    item.refresh_from_db()
+    assert (item.storage, item.row, item.column) == (source_storage, 1, 1)
+    assert not BottleMoveHistory.objects.filter(storage_item=item).exists()
+
+
+@pytest.mark.django_db
+def test_planned_move_form_uses_the_storage_grid_picker(client, user):
+    client.force_login(user)
+
+    response = client.get(reverse("planned-move-add"))
+    content = response.content.decode()
+
+    assert response.status_code == HTTPStatus.OK
+    assert 'id="storage-grid-container" data-planned-move-form="true"' in content
+    assert 'id="planned-move-submit"' in content
+    assert 'name="storage_item"' in content
+
+
+@pytest.mark.django_db
+def test_planned_move_for_wine_defaults(
+    client, user, wine_factory, storage_factory, storage_item_factory
+):
+    client.force_login(user)
+    wine = wine_factory(user=user)
+    source = storage_factory(user=user, rows=2, columns=2)
+    target = storage_factory(user=user, rows=2, columns=2)
+    item = storage_item_factory(wine=wine, storage=source, row=1, column=1)
+    url = reverse("planned-move-add-for", args=[wine.pk])
+
+    r = client.get(url)
+    assert r.status_code == HTTPStatus.OK
+    form = r.context["form"]
+    assert form.initial["storage_item"] == item.pk
+    assert form.initial["target_storage"] == target.pk
+    assert (form.initial["target_row"], form.initial["target_column"]) == (1, 1)
+
+    r = client.post(
+        url,
+        {
+            "storage_item": item.pk,
+            "target_storage": target.pk,
+            "target_row": 1,
+            "target_column": 1,
+        },
+    )
+    assertRedirects(r, reverse("planned-move-list"))
+    assert PlannedMove.objects.filter(target_storage=target).count() == 1
+
+
+@pytest.mark.django_db
+def test_planned_move_for_wine_only_lists_that_wines_bottles(
+    client, user, wine_factory, storage_factory, storage_item_factory
+):
+    client.force_login(user)
+    wine = wine_factory(user=user)
+    other = wine_factory(user=user)
+    storage = storage_factory(user=user, rows=2, columns=2)
+    storage_item_factory(wine=wine, storage=storage, row=1, column=1)
+    storage_item_factory(wine=other, storage=storage, row=1, column=2)
+    r = client.get(reverse("planned-move-add-for", args=[wine.pk]))
+    assert r.context["form"].fields["storage_item"].queryset.count() == 1

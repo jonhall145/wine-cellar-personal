@@ -1,36 +1,57 @@
 import json
 import logging
+from collections import defaultdict
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db import models, transaction
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
-from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.generic import DeleteView, DetailView, FormView, ListView
 from django.views.generic.list import MultipleObjectMixin
 from django_filters.views import FilterView
 
-from wine_cellar.apps.household.mixins import RequireHouseholdMixin
+from wine_cellar.apps.core.views import (
+    BaseBottleQuickLogView,
+    BaseMarkBottleBrokenOrLostView,
+    BaseMarkBottleGivenView,
+    BaseStorageItemAddView,
+    BaseStorageItemUpdateView,
+)
+from wine_cellar.apps.household.mixins import (
+    RequireHouseholdMixin,
+    RequireMemberMixin,
+    require_member,
+)
 from wine_cellar.apps.storage.filters import StorageItemFilter
 from wine_cellar.apps.storage.forms import (
+    PlannedMoveForm,
     StockAddForm,
     StorageForm,
     StorageItemEditForm,
 )
 from wine_cellar.apps.storage.models import (
     BottleMoveHistory,
+    PlannedMove,
     Storage,
     StorageItem,
     get_app_type,
 )
-from wine_cellar.apps.storage.utils import format_bottle_location, format_move_detail
+from wine_cellar.apps.storage.utils import (
+    format_bottle_location,
+    format_given_detail,
+    format_move_detail,
+    with_removal_sort_date,
+)
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.utils import classify_cask_type
-from wine_cellar.apps.wine.models import Wine
+from wine_cellar.apps.wine.models import DrinkRecord, Wine
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +66,16 @@ def _get_storage_item_model():
 
         return WhiskyStorageItem
     return StorageItem
+
+
+def _lock_storages(*storage_ids):
+    storage_ids = sorted({storage_id for storage_id in storage_ids if storage_id})
+    return {
+        storage.pk: storage
+        for storage in Storage.objects.select_for_update()
+        .filter(pk__in=storage_ids)
+        .order_by("pk")
+    }
 
 
 logger = logging.getLogger(__name__)
@@ -79,6 +110,286 @@ class StorageDetailView(DetailView, MultipleObjectMixin):
         qs = super().get_queryset()
         household = get_active_household(self.request.user)
         return qs.filter(household=household, app_type=get_app_type())
+
+
+class PlannedMoveListView(LoginRequiredMixin, RequireHouseholdMixin, ListView):
+    template_name = "planned_move_list.html"
+    context_object_name = "planned_moves"
+
+    def get_queryset(self):
+        household = get_active_household(self.request.user)
+        item_model = _get_storage_item_model()
+        item_type = ContentType.objects.get_for_model(item_model)
+        return (
+            PlannedMove.objects.filter(
+                household=household,
+                app_type=get_app_type(),
+                storage_item_type=item_type,
+            )
+            .select_related("target_storage", "user")
+            .prefetch_related("storage_item")
+            .order_by("target_storage__name", "target_row", "target_column")
+        )
+
+
+class PlannedMoveCreateView(LoginRequiredMixin, RequireMemberMixin, FormView):
+    template_name = "planned_move_form.html"
+    form_class = PlannedMoveForm
+    success_url = reverse_lazy("planned-move-list")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        household = get_active_household(self.request.user)
+        storage_item = form.cleaned_data["storage_item"]
+        item_type = ContentType.objects.get_for_model(storage_item)
+        PlannedMove.objects.update_or_create(
+            storage_item_type=item_type,
+            storage_item_id=storage_item.pk,
+            defaults={
+                "target_storage": form.cleaned_data["target_storage"],
+                "target_row": form.cleaned_data["target_row"],
+                "target_column": form.cleaned_data["target_column"],
+                "app_type": get_app_type(),
+                "user": self.request.user,
+                "household": household,
+            },
+        )
+        return super().form_valid(form)
+
+
+class PlannedMoveBeverageCreateView(PlannedMoveCreateView):
+    """Plan a move from a wine/whisky page, with sensible defaults."""
+
+    template_name = "planned_move_beverage_form.html"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["beverage_pk"] = self.kwargs["beverage_pk"]
+        return kwargs
+
+    def _first_free_cells(self, form):
+        """Return {storage_pk: [row, column]} of the first free cell per storage.
+
+        Cells already targeted by another planned move are skipped when possible.
+        """
+        planned = set(
+            PlannedMove.objects.filter(
+                household=get_active_household(self.request.user),
+                app_type=get_app_type(),
+            ).values_list("target_storage_id", "target_row", "target_column")
+        )
+        result = {}
+        for storage in form.fields["target_storage"].queryset:
+            cells = [
+                [row, column]
+                for row, columns in storage.get_free_cells_by_row().items()
+                for column in columns
+            ]
+            unplanned = [c for c in cells if (storage.pk, *c) not in planned]
+            chosen = (unplanned or cells or [None])[0]
+            if chosen:
+                result[storage.pk] = chosen
+        return result
+
+    def get_initial(self):
+        initial = dict(super().get_initial())
+        form = self.get_form_class()(
+            user=self.request.user, beverage_pk=self.kwargs["beverage_pk"]
+        )
+        items = list(form.fields["storage_item"].queryset[:2])
+        free_cells = self._first_free_cells(form)
+        current_storage_id = None
+        if len(items) == 1:
+            initial["storage_item"] = items[0].pk
+            current_storage_id = items[0].storage_id
+        target = next(
+            (pk for pk in free_cells if pk != current_storage_id),
+            next(iter(free_cells), None),
+        )
+        if target is not None:
+            initial["target_storage"] = target
+            initial["target_row"], initial["target_column"] = free_cells[target]
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["free_cells"] = {
+            str(pk): cell
+            for pk, cell in self._first_free_cells(context["form"]).items()
+        }
+        context["beverage_pk"] = self.kwargs["beverage_pk"]
+        return context
+
+
+@login_required
+@require_POST
+@require_member
+def planned_move_delete(request, pk):
+    household = get_active_household(request.user)
+    planned_move = get_object_or_404(
+        PlannedMove,
+        pk=pk,
+        household=household,
+        app_type=get_app_type(),
+    )
+    planned_move.delete()
+    return redirect("planned-move-list")
+
+
+@login_required
+@require_POST
+@require_member
+def planned_move_complete(request, pk):
+    household = get_active_household(request.user)
+    item_model = _get_storage_item_model()
+    item_type = ContentType.objects.get_for_model(item_model)
+    planned_move = get_object_or_404(
+        PlannedMove,
+        pk=pk,
+        household=household,
+        app_type=get_app_type(),
+        storage_item_type=item_type,
+    )
+
+    with transaction.atomic():
+        item = (
+            item_model.objects.select_for_update()
+            .filter(
+                pk=planned_move.storage_item_id,
+                household=household,
+                deleted=False,
+            )
+            .first()
+        )
+        planned_move = (
+            PlannedMove.objects.select_for_update()
+            .filter(
+                pk=planned_move.pk,
+                household=household,
+                app_type=get_app_type(),
+                storage_item_type=item_type,
+                storage_item_id=planned_move.storage_item_id,
+            )
+            .first()
+        )
+        if not planned_move:
+            messages.warning(
+                request,
+                "The planned move was already completed or cancelled.",
+            )
+            return redirect("planned-move-list")
+        if not item:
+            messages.warning(
+                request,
+                "Cannot record move because the planned item is no longer in stock.",
+            )
+            return redirect("planned-move-list")
+
+        if _is_whisky_mode():
+            from wine_cellar.apps.whisky.models import BottleSize
+
+            if item.whisky.size == BottleSize.MINIATURE:
+                messages.warning(
+                    request,
+                    "Cannot record move because whisky miniatures cannot be placed"
+                    " in storage cells.",
+                )
+                return redirect("planned-move-list")
+
+        locked_storages = _lock_storages(
+            item.storage_id, planned_move.target_storage_id
+        )
+        old_storage = locked_storages.get(item.storage_id)
+        target_storage = locked_storages.get(planned_move.target_storage_id)
+        if (
+            not target_storage
+            or target_storage.household_id != household.pk
+            or target_storage.app_type != get_app_type()
+        ):
+            messages.warning(
+                request,
+                "Cannot record move because the planned destination is no longer"
+                " available.",
+            )
+            return redirect("planned-move-list")
+        if (
+            not 1 <= planned_move.target_row <= target_storage.rows
+            or not 1 <= planned_move.target_column <= target_storage.columns
+            or not target_storage.is_cell_active(
+                planned_move.target_row, planned_move.target_column
+            )
+        ):
+            messages.warning(
+                request,
+                "Cannot record move because the planned destination is no longer"
+                " valid.",
+            )
+            return redirect("planned-move-list")
+
+        if (
+            item.storage_id == target_storage.pk
+            and item.row == planned_move.target_row
+            and item.column == planned_move.target_column
+        ):
+            planned_move.delete()
+            messages.success(request, "The item is already at its planned destination.")
+            return redirect("planned-move-list")
+
+        if (
+            item_model.objects.filter(
+                storage=target_storage,
+                row=planned_move.target_row,
+                column=planned_move.target_column,
+                deleted=False,
+            )
+            .exclude(pk=item.pk)
+            .exists()
+        ):
+            messages.warning(
+                request,
+                "Cannot record move because the planned destination is occupied.",
+            )
+            return redirect("planned-move-list")
+
+        old_row = item.row
+        old_column = item.column
+        item.storage = target_storage
+        item.row = planned_move.target_row
+        item.column = planned_move.target_column
+        item.save(update_fields=["storage", "row", "column"])
+        planned_move.delete()
+
+        if _is_whisky_mode():
+            from wine_cellar.apps.whisky.models import WhiskyBottleMoveHistory
+
+            WhiskyBottleMoveHistory.objects.create(
+                storage_item=item,
+                from_storage=old_storage,
+                from_row=old_row,
+                from_column=old_column,
+                to_storage=target_storage,
+                to_row=item.row,
+                to_column=item.column,
+                user=request.user,
+            )
+        else:
+            BottleMoveHistory.objects.create(
+                storage_item=item,
+                from_storage=old_storage,
+                from_row=old_row,
+                from_column=old_column,
+                to_storage=target_storage,
+                to_row=item.row,
+                to_column=item.column,
+                user=request.user,
+            )
+
+    messages.success(request, "Planned move recorded.")
+    return redirect("planned-move-list")
 
 
 class StorageCreateView(FormView):
@@ -205,132 +516,39 @@ class StorageDeleteView(DeleteView):
         return qs.filter(household=household, app_type=get_app_type())
 
 
-class StorageItemAddView(FormView):
+class StorageItemAddView(BaseStorageItemAddView):
     template_name = "stock_add.html"
     form_class = StockAddForm
+    beverage_model = Wine
+    storage_item_model = StorageItem
+    beverage_fk_name = "wine"
+    beverage_context_name = "wine"
+    beverage_label = "wine"
+    detail_url_name = "wine-detail"
+    show_storage_suggestions = True
 
-    def get_wine(self):
-        if not hasattr(self, "_wine"):
-            household = get_active_household(self.request.user)
-            self._wine = get_object_or_404(
-                Wine, pk=self.kwargs["pk"], household=household
-            )
-        return self._wine
+    def get_add_initial(self, wine):
+        if wine.rating is None:
+            return {}
+        return {"rating": wine.rating}
 
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        if "user" not in kwargs:
-            kwargs["user"] = self.request.user
-        return kwargs
-
-    def get_initial(self):
-        initial = super().get_initial()
-        wine = self.get_wine()
-        # Pre-populate rating from wine's default rating
-        if wine.rating is not None:
-            initial["rating"] = wine.rating
-        return initial
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        wine = self.get_wine()
-        context["wine"] = wine
-        household = get_active_household(self.request.user)
-        user_storages = Storage.objects.filter(
-            household=household, app_type=get_app_type()
-        )
-        free_cells_by_storage = {
-            storage.pk: storage.get_free_cells_by_row() for storage in user_storages
-        }
-        context["free_cells_by_storage"] = free_cells_by_storage
-
-        # Storage suggestions: find where this wine already has bottles
-        existing_bottles = (
-            StorageItem.objects.filter(wine=wine, household=household, deleted=False)
-            .select_related("storage")
-            .values("storage__pk", "storage__name", "storage__rows", "storage__columns")
-            .annotate(bottle_count=models.Count("pk"))
-        )
-
-        storage_suggestions = []
-        for item in existing_bottles:
-            storage_pk = item["storage__pk"]
-            total_slots = item["storage__rows"] * item["storage__columns"]
-            # For unlimited shelves (rows=0), show as "unlimited"
-            if total_slots == 0:
-                free_slots = None  # Unlimited
-            else:
-                used_slots = StorageItem.objects.filter(
-                    storage_id=storage_pk, household=household, deleted=False
-                ).count()
-                free_slots = total_slots - used_slots
-
-            storage_suggestions.append(
-                {
-                    "storage_id": storage_pk,
-                    "storage_name": item["storage__name"],
-                    "bottle_count": item["bottle_count"],
-                    "free_slots": free_slots,
-                }
-            )
-
-        context["storage_suggestions"] = storage_suggestions
-        return context
-
-    def form_valid(self, form):
-        wine = self.get_wine()
-        household = get_active_household(self.request.user)
-        self.process_form_data(wine, self.request.user, household, form.cleaned_data)
-        self.success_url = reverse_lazy("wine-detail", kwargs={"pk": wine.pk})
-        return super().form_valid(form)
-
-    @staticmethod
-    def process_form_data(wine, user, household, cleaned_data):
-        storage = cleaned_data["storage"]
-        row = cleaned_data["row"]
-        column = cleaned_data["column"]
-        price = cleaned_data.get("price")
-        is_gift = cleaned_data.get("is_gift", False)
-        gift_from = cleaned_data.get("gift_from")
-        occasion = cleaned_data.get("occasion")
-        rating = cleaned_data.get("rating")
-
-        StorageItem.objects.create(
-            storage=storage,
-            wine=wine,
-            row=row,
-            column=column,
-            user=user,
-            household=household,
-            price=price,
-            is_gift=is_gift,
-            gift_from=gift_from,
-            occasion=occasion,
-            rating=rating,
-        )
+    def get_extra_create_kwargs(self, cleaned_data):
+        return {"occasion_date": cleaned_data.get("occasion_date")}
 
 
-class StorageItemDeleteView(DeleteView):
-    model = StorageItem
-    template_name = "storage_item_confirm_delete.html"
+class StorageItemDeleteView(BaseMarkBottleBrokenOrLostView):
+    storage_item_model = StorageItem
+    beverage_fk_name = "wine"
+    detail_url_name = "wine-detail"
+    list_url_name = "bottle-list"
+    storage_detail_url_name = "storage-detail"
 
-    def get_success_url(self):
-        next = self.request.GET.get("next")
-        if next == "storage":
-            return reverse_lazy("storage-detail", kwargs={"pk": self.object.storage.pk})
-        return reverse_lazy("wine-detail", kwargs={"pk": self.object.wine.pk})
 
-    def get_queryset(self):
-        qs = super().get_queryset()
-        household = get_active_household(self.request.user)
-        return qs.filter(household=household, deleted=False)
-
-    def form_valid(self, form):
-        self.object = self.get_object()
-        self.object.deleted = True
-        self.object.finished_date = timezone.localdate()
-        self.object.save(update_fields=["deleted", "finished_date"])
-        return redirect(self.get_success_url())
+class StorageItemMarkGivenView(BaseMarkBottleGivenView):
+    storage_item_model = StorageItem
+    beverage_fk_name = "wine"
+    detail_url_name = "wine-detail"
+    list_url_name = "bottle-list"
 
 
 class StorageItemHistoryView(ListView):
@@ -340,12 +558,9 @@ class StorageItemHistoryView(ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        qs = (
-            super()
-            .get_queryset()
-            .select_related("wine", "storage")
-            .order_by("-created")
-        )
+        qs = with_removal_sort_date(
+            super().get_queryset().select_related("wine", "storage")
+        ).order_by("-removal_sort_date", "-created", "-pk")
         household = get_active_household(self.request.user)
         return qs.filter(household=household, deleted=True)
 
@@ -368,115 +583,23 @@ class StorageItemListView(RequireHouseholdMixin, FilterView):
         )
 
 
-class StorageItemUpdateView(FormView):
+class StorageItemUpdateView(BaseStorageItemUpdateView):
     """Edit an existing bottle (StorageItem)."""
 
     template_name = "bottle_edit.html"
     form_class = StorageItemEditForm
+    storage_item_model = StorageItem
+    beverage_fk_name = "wine"
+    beverage_context_name = "wine"
+    detail_url_name = "wine-detail"
+    move_history_model = BottleMoveHistory
+    extra_initial_field_names = ("occasion_date",)
 
-    def get_object(self):
-        if not hasattr(self, "_object"):
-            household = get_active_household(self.request.user)
-            self._object = get_object_or_404(
-                StorageItem,
-                pk=self.kwargs["pk"],
-                household=household,
-                deleted=False,
-            )
-        return self._object
+    def get_update_form_kwargs(self, item):
+        return {"instance": item}
 
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs["user"] = self.request.user
-        kwargs["instance"] = self.get_object()
-        return kwargs
-
-    def get_initial(self):
-        initial = super().get_initial()
-        item = self.get_object()
-        initial.update(
-            {
-                "storage": item.storage,
-                "row": item.row,
-                "column": item.column,
-                "price": item.price,
-                "is_gift": item.is_gift,
-                "gift_from": item.gift_from,
-                "occasion": item.occasion,
-                "rating": item.rating,
-            }
-        )
-        return initial
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        item = self.get_object()
-        context["wine"] = item.wine
-        context["item"] = item
-
-        # Free cells calculation - exclude current item so it can be moved
-        household = get_active_household(self.request.user)
-        user_storages = Storage.objects.filter(
-            household=household, app_type=get_app_type()
-        )
-        free_cells_by_storage = {
-            storage.pk: storage.get_free_cells_by_row(exclude_item=item)
-            for storage in user_storages
-        }
-        context["free_cells_by_storage"] = free_cells_by_storage
-
-        # Cancel URL - return to wine detail or bottle list
-        next_url = self.request.GET.get("next")
-        if next_url == "list":
-            context["cancel_url"] = reverse_lazy("bottle-list")
-        else:
-            context["cancel_url"] = reverse_lazy(
-                "wine-detail", kwargs={"pk": item.wine.pk}
-            )
-
-        return context
-
-    def form_valid(self, form):
-        item = self.get_object()
-        new_storage = form.cleaned_data["storage"]
-        new_row = form.cleaned_data["row"]
-        new_column = form.cleaned_data["column"]
-
-        moved = (
-            item.storage_id != new_storage.pk
-            or item.row != new_row
-            or item.column != new_column
-        )
-
-        if moved:
-            BottleMoveHistory.objects.create(
-                storage_item=item,
-                from_storage=item.storage,
-                from_row=item.row,
-                from_column=item.column,
-                to_storage=new_storage,
-                to_row=new_row,
-                to_column=new_column,
-                user=self.request.user,
-            )
-
-        item.storage = new_storage
-        item.row = new_row
-        item.column = new_column
-        item.price = form.cleaned_data["price"]
-        item.is_gift = form.cleaned_data["is_gift"]
-        item.gift_from = form.cleaned_data["gift_from"]
-        item.occasion = form.cleaned_data["occasion"]
-        item.rating = form.cleaned_data["rating"]
-        item.save()
-
-        next_url = self.request.GET.get("next")
-        if next_url == "list":
-            self.success_url = reverse_lazy("bottle-list")
-        else:
-            self.success_url = reverse_lazy("wine-detail", kwargs={"pk": item.wine.pk})
-
-        return super().form_valid(form)
+    def apply_extra_updates(self, item, cleaned_data):
+        item.occasion_date = cleaned_data.get("occasion_date")
 
 
 @login_required
@@ -497,10 +620,41 @@ def storage_grid_data(request):
         current_storage_id = None
 
     whisky_mode = _is_whisky_mode()
+    item_model = _get_storage_item_model()
+    item_type = ContentType.objects.get_for_model(item_model)
+    planned_moves = PlannedMove.objects.filter(
+        household=household,
+        app_type=get_app_type(),
+        storage_item_type=item_type,
+    )
+    planned_items = {
+        item.pk: item
+        for item in item_model.objects.filter(
+            pk__in=planned_moves.values_list("storage_item_id", flat=True),
+            household=household,
+            deleted=False,
+        )
+    }
+    planned_by_storage = defaultdict(list)
+    for planned_move in planned_moves.select_related("target_storage"):
+        item = planned_items.get(planned_move.storage_item_id)
+        if item:
+            planned_by_storage[planned_move.target_storage_id].append(
+                {
+                    "row": planned_move.target_row,
+                    "column": planned_move.target_column,
+                    "description": str(item),
+                }
+            )
 
     storage_data = []
     for storage in storages:
         items = []
+        used_slots = storage.used_slots
+        total_slots = storage.total_slots
+        utilization_percent = (
+            round((used_slots / total_slots) * 100) if total_slots else 0
+        )
         item_qs = storage._get_items().filter(deleted=False)
         if whisky_mode:
             item_qs = item_qs.select_related("whisky")
@@ -559,8 +713,12 @@ def storage_grid_data(request):
                 "name": storage.name,
                 "rows": storage.rows,
                 "columns": storage.columns,
+                "used_slots": used_slots,
+                "total_slots": total_slots,
+                "utilization_percent": utilization_percent,
                 "cell_mask": storage.cell_mask,
                 "items": items,
+                "planned_moves": planned_by_storage[storage.pk],
             }
         )
 
@@ -599,6 +757,7 @@ def move_bottle(request):
             item = ItemModel.objects.get(pk=item_id, household=household, deleted=False)
         except ItemModel.DoesNotExist:
             return JsonResponse({"error": "Bottle not found"}, status=404)
+        item_type = ContentType.objects.get_for_model(ItemModel)
 
         # Get target storage
         try:
@@ -619,21 +778,13 @@ def move_bottle(request):
             return JsonResponse({"error": "Target cell is not active"}, status=400)
 
         with transaction.atomic():
-            item = (
-                ItemModel.objects.select_for_update()
-                .select_related("storage")
-                .get(pk=item.pk, household=household, deleted=False)
+            item = ItemModel.objects.select_for_update().get(
+                pk=item.pk, household=household, deleted=False
             )
-            storage_ids = {target_storage.pk}
-            if item.storage_id is not None:
-                storage_ids.add(item.storage_id)
-            locked_storages = {
-                storage.pk: storage
-                for storage in Storage.objects.select_for_update()
-                .filter(pk__in=storage_ids)
-                .order_by("pk")
-            }
-            target_storage = locked_storages[target_storage.pk]
+            locked_storages = _lock_storages(item.storage_id, target_storage.pk)
+            target_storage = locked_storages.get(target_storage.pk)
+            if not target_storage:
+                return JsonResponse({"error": "Storage not found"}, status=404)
 
             if (
                 item.storage_id == target_storage_id
@@ -656,7 +807,7 @@ def move_bottle(request):
                     {"error": "Target position is occupied"}, status=400
                 )
 
-            old_storage = item.storage
+            old_storage = locked_storages.get(item.storage_id)
             old_row = item.row
             old_column = item.column
 
@@ -664,6 +815,10 @@ def move_bottle(request):
             item.row = target_row
             item.column = target_column
             item.save(update_fields=["storage", "row", "column"])
+            PlannedMove.objects.filter(
+                storage_item_type=item_type,
+                storage_item_id=item.pk,
+            ).delete()
 
             if _is_whisky_mode():
                 from wine_cellar.apps.whisky.models import WhiskyBottleMoveHistory
@@ -783,12 +938,29 @@ class BottleHistoryView(RequireHouseholdMixin, DetailView):
                 }
             )
 
-        if item.finished_date:
+        if item.removal_reason == StorageItem.RemovalReason.GIVEN and item.given_date:
             events.append(
                 {
-                    "type": "finished",
+                    "type": "given",
+                    "date": item.given_date,
+                    "label": "Given away",
+                    "detail": format_given_detail(item.recipient, item.given_occasion),
+                }
+            )
+        elif item.finished_date:
+            event_type = "finished"
+            label = "Broken or lost"
+            if item.removal_reason in ("", StorageItem.RemovalReason.CONSUMED):
+                label = "Finished"
+            elif item.removal_reason != StorageItem.RemovalReason.REMOVED:
+                label = "Removed from inventory"
+            else:
+                event_type = "removed"
+            events.append(
+                {
+                    "type": event_type,
                     "date": item.finished_date,
-                    "label": "Finished",
+                    "label": label,
                     "detail": "",
                 }
             )
@@ -799,8 +971,35 @@ class BottleHistoryView(RequireHouseholdMixin, DetailView):
             "wine-detail", kwargs={"pk": item.wine.pk}
         )
         if item.deleted:
-            context["beverage_detail_url"] += "?show_consumed=1#consumed-bottles"
+            if item.removal_reason == StorageItem.RemovalReason.GIVEN:
+                context["beverage_detail_url"] += "?show_consumed=1#gifted-bottles"
+            else:
+                context["beverage_detail_url"] += "?show_consumed=1#consumed-bottles"
         return context
+
+
+class BottleQuickLogView(BaseBottleQuickLogView):
+    storage_item_model = StorageItem
+    drink_record_model = DrinkRecord
+    beverage_fk_name = "wine"
+
+    def handle_bottle_update(self, storage_item, date_consumed):
+        storage_item.deleted = True
+        storage_item.finished_date = date_consumed
+        storage_item.removal_reason = StorageItem.RemovalReason.CONSUMED
+        storage_item.given_date = None
+        storage_item.recipient = ""
+        storage_item.given_occasion = ""
+        storage_item.save_with_modified(
+            update_fields=[
+                "deleted",
+                "finished_date",
+                "removal_reason",
+                "given_date",
+                "recipient",
+                "given_occasion",
+            ]
+        )
 
 
 @login_required

@@ -1,5 +1,5 @@
 import L from 'leaflet'
-import '@maplibre/maplibre-gl-leaflet'
+import '@maplibre/maplibre-gl-leaflet/dist/leaflet-maplibre-gl.mjs'
 import {
   createElementObject,
   createTileLayerComponent, updateGridLayer

@@ -1,14 +1,17 @@
 """Tests for core shared views: QR code, random bottle, detail, list, delete, export."""
 
 import json
+import re
 from decimal import Decimal
 from http import HTTPStatus
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from django.utils import timezone
 
-from wine_cellar.apps.wine.models import Wine, WineType
+from wine_cellar.apps.storage.models import StorageItem
+from wine_cellar.apps.wine.models import PriceHistory, Wine, WineType
 
 # ---------------------------------------------------------------------------
 # QR Code view
@@ -130,6 +133,177 @@ class TestExportViews:
         assert r.status_code == HTTPStatus.FOUND  # redirect to login
 
 
+@pytest.mark.django_db
+class TestWineImportView:
+    def test_import_creates_wine_and_stock(self, client, user, storage_factory):
+        storage = storage_factory(
+            user=user,
+            household=user.user_settings.active_household,
+            rows=0,
+            columns=0,
+            app_type="wine",
+        )
+        client.force_login(user)
+
+        csv_file = SimpleUploadedFile(
+            "wines.csv",
+            (
+                "name,type,country,stock,price,grapes\n"
+                "Imported Riesling,White,DE,2,12.50,Riesling\n"
+            ).encode("utf-8"),
+            content_type="text/csv",
+        )
+
+        preview = client.post(
+            reverse("wine-import"),
+            {"action": "upload", "file": csv_file},
+        )
+        assert preview.status_code == HTTPStatus.OK
+        assert "Step 2: Map columns" in preview.content.decode()
+
+        response = client.post(
+            reverse("wine-import"),
+            {
+                "action": "import",
+                "default_storage": storage.pk,
+                "map_name": "name",
+                "map_wine_type": "type",
+                "map_country": "country",
+                "map_stock_count": "stock",
+                "map_price": "price",
+                "map_grapes": "grapes",
+            },
+            follow=True,
+        )
+
+        assert response.status_code == HTTPStatus.OK
+        wine = Wine.objects.get(name="Imported Riesling")
+        assert wine.grapes.filter(name="Riesling").exists()
+        assert StorageItem.objects.filter(wine=wine, deleted=False).count() == 2
+
+    def test_import_with_storage_name_mapping(self, client, user, storage_factory):
+        """Test that storage name mapping creates stock in correct storage."""
+        storage1 = storage_factory(
+            user=user,
+            household=user.user_settings.active_household,
+            name="Cellar A",
+            rows=0,
+            columns=0,
+            app_type="wine",
+        )
+        storage2 = storage_factory(
+            user=user,
+            household=user.user_settings.active_household,
+            name="Cellar B",
+            rows=0,
+            columns=0,
+            app_type="wine",
+        )
+        client.force_login(user)
+
+        csv_file = SimpleUploadedFile(
+            "wines.csv",
+            (
+                "name,type,country,storage,stock\n"
+                "Wine A,White,FR,Cellar A,1\n"
+                "Wine B,Red,IT,Cellar B,1\n"
+            ).encode("utf-8"),
+            content_type="text/csv",
+        )
+
+        preview = client.post(
+            reverse("wine-import"),
+            {"action": "upload", "file": csv_file},
+        )
+        assert preview.status_code == HTTPStatus.OK
+
+        response = client.post(
+            reverse("wine-import"),
+            {
+                "action": "import",
+                "map_name": "name",
+                "map_wine_type": "type",
+                "map_country": "country",
+                "map_stock_count": "stock",
+                "map_storage_name": "storage",
+            },
+            follow=True,
+        )
+
+        assert response.status_code == HTTPStatus.OK
+        wine_a = Wine.objects.get(name="Wine A")
+        wine_b = Wine.objects.get(name="Wine B")
+        assert (
+            StorageItem.objects.filter(
+                wine=wine_a,
+                storage=storage1,
+                deleted=False,
+            ).count()
+            == 1
+        )
+        assert (
+            StorageItem.objects.filter(
+                wine=wine_b,
+                storage=storage2,
+                deleted=False,
+            ).count()
+            == 1
+        )
+
+    def test_import_with_bottle_price_mapping(self, client, user, storage_factory):
+        """Test that bottle price is correctly parsed and stored."""
+        from decimal import Decimal
+
+        storage = storage_factory(
+            user=user,
+            household=user.user_settings.active_household,
+            rows=0,
+            columns=0,
+            app_type="wine",
+        )
+        client.force_login(user)
+
+        csv_file = SimpleUploadedFile(
+            "wines.csv",
+            (
+                "name,type,country,stock,bottle_price\n"
+                "Expensive Wine,Red,FR,2,45.99\n"
+                "Cheap Wine,White,PT,1,8.50\n"
+            ).encode("utf-8"),
+            content_type="text/csv",
+        )
+
+        preview = client.post(
+            reverse("wine-import"),
+            {"action": "upload", "file": csv_file},
+        )
+        assert preview.status_code == HTTPStatus.OK
+
+        response = client.post(
+            reverse("wine-import"),
+            {
+                "action": "import",
+                "default_storage": storage.pk,
+                "map_name": "name",
+                "map_wine_type": "type",
+                "map_country": "country",
+                "map_stock_count": "stock",
+                "map_bottle_price": "bottle_price",
+            },
+            follow=True,
+        )
+
+        assert response.status_code == HTTPStatus.OK
+        expensive = Wine.objects.get(name="Expensive Wine")
+        cheap = Wine.objects.get(name="Cheap Wine")
+
+        expensive_items = StorageItem.objects.filter(wine=expensive, deleted=False)
+        cheap_items = StorageItem.objects.filter(wine=cheap, deleted=False)
+
+        assert all(Decimal("45.99") == item.price for item in expensive_items)
+        assert all(Decimal("8.50") == item.price for item in cheap_items)
+
+
 # ---------------------------------------------------------------------------
 # Wine delete view (soft delete)
 # ---------------------------------------------------------------------------
@@ -229,6 +403,149 @@ class TestWineDetailView:
         recent = session.get("recent_views", [])
         assert any(r["pk"] == wine.pk for r in recent)
 
+    def test_includes_price_tracking_context(
+        self, client, user, wine_factory, source_factory
+    ):
+        household = user.user_settings.active_household
+        wine = wine_factory(user=user, name="Tracked Wine", price=Decimal("14.00"))
+        source = source_factory(user=user, household=household, name="Merchant")
+        PriceHistory.objects.create(
+            wine=wine,
+            source=source,
+            price=Decimal("16.00"),
+            user=user,
+            household=household,
+        )
+        PriceHistory.objects.create(
+            wine=wine,
+            price=Decimal("18.00"),
+            user=user,
+            household=household,
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("wine-detail", kwargs={"pk": wine.pk}))
+
+        assert response.status_code == HTTPStatus.OK
+        assert response.context["price_history_latest"].price == Decimal("18.00")
+        assert len(response.context["price_history_entries"]) == 2
+        assert (
+            response.context["price_history_form"]
+            .fields["source"]
+            .queryset.filter(pk=source.pk)
+            .exists()
+        )
+
+    def test_renders_ai_summary_with_sources(self, client, user, wine_factory):
+        wine = wine_factory(user=user, name="Summarised Wine")
+        wine.ai_summary = (
+            "This is a concentrated red from a well-known producer "
+            "with a long ageing window."
+        )
+        wine.ai_summary_sources = [
+            {"title": "Producer profile", "url": "https://example.com/producer"},
+            {"title": "Regional guide", "url": "https://example.com/region"},
+        ]
+        wine.ai_summary_generated_at = timezone.now()
+        wine.ai_summary_model = "claude-sonnet-5"
+        wine.save(
+            update_fields=[
+                "ai_summary",
+                "ai_summary_sources",
+                "ai_summary_generated_at",
+                "ai_summary_model",
+            ]
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("wine-detail", kwargs={"pk": wine.pk}))
+        content = response.content.decode()
+
+        assert response.status_code == HTTPStatus.OK
+        assert "<summary>AI Summary</summary>" in content
+        assert "Producer profile" in content
+        assert 'href="https://example.com/producer"' in content
+
+    def test_ai_summary_status_returns_generated_summary(
+        self, client, user, wine_factory
+    ):
+        wine = wine_factory(user=user, name="Summarised Wine")
+        wine.ai_summary = "A concise sourced summary."
+        wine.ai_summary_sources = [
+            {"title": "Producer profile", "url": "https://example.com/producer"}
+        ]
+        wine.ai_summary_generated_at = timezone.now()
+        wine.save(
+            update_fields=[
+                "ai_summary",
+                "ai_summary_sources",
+                "ai_summary_generated_at",
+            ]
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("wine-ai-summary-status", kwargs={"pk": wine.pk}))
+
+        assert response.status_code == HTTPStatus.OK
+        assert response.json()["status"] == "ready"
+        assert response.json()["summary"] == "A concise sourced summary."
+        assert response.json()["sources"] == wine.ai_summary_sources
+
+    def test_ai_summary_status_is_pending_until_generated(
+        self, client, user, wine_factory
+    ):
+        wine = wine_factory(user=user)
+        client.force_login(user)
+
+        response = client.get(reverse("wine-ai-summary-status", kwargs={"pk": wine.pk}))
+        detail_response = client.get(reverse("wine-detail", kwargs={"pk": wine.pk}))
+
+        assert response.status_code == HTTPStatus.OK
+        assert response.json() == {"status": "pending"}
+        assert "Generating AI summary..." in detail_response.content.decode()
+        assert reverse("wine-ai-summary-status", kwargs={"pk": wine.pk}) in (
+            detail_response.content.decode()
+        )
+
+    def test_detail_view_renders_photo_viewer_controls(
+        self, client, user, wine_factory, wine_image_factory, clear_image_folder
+    ):
+        wine = wine_factory(user=user, name="Photo Wine")
+        wine_image_factory(user=user, wine=wine, image_type="LF")
+        client.force_login(user)
+
+        response = client.get(reverse("wine-detail", kwargs={"pk": wine.pk}))
+
+        assert response.status_code == HTTPStatus.OK
+        content = response.content.decode()
+        assert "data-image-viewer-open" in content
+        assert 'id="beverage-image-viewer"' in content
+        assert "data-image-viewer-zoom-in" in content
+        assert "View Photos" in content
+
+    def test_can_add_price_history(self, client, user, wine_factory, source_factory):
+        household = user.user_settings.active_household
+        wine = wine_factory(user=user, name="Tracked Wine")
+        source = source_factory(user=user, household=household, name="Merchant")
+        client.force_login(user)
+
+        response = client.post(
+            reverse("wine-price-history-add", kwargs={"pk": wine.pk}),
+            {"price": "19.50", "source": source.pk},
+        )
+
+        assert response.status_code == HTTPStatus.FOUND
+        assert (
+            response.url
+            == reverse("wine-detail", kwargs={"pk": wine.pk}) + "#price-tracking"
+        )
+        history_entry = PriceHistory.objects.get(wine=wine)
+        assert history_entry.price == Decimal("19.50")
+        assert history_entry.source == source
+        assert history_entry.user == user
+        assert history_entry.household == household
+        assert source in wine.source.all()
+
     def test_consumed_bottles_are_hidden_by_default(
         self, client, user, wine_factory, storage_item_factory
     ):
@@ -287,6 +604,115 @@ class TestWineDetailView:
         assert "Hide consumed bottles" in content
         assert reverse("bottle-history", kwargs={"pk": consumed_bottle.pk}) in content
 
+    def test_given_bottles_are_shown_separately(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user)
+        storage = user.storage_set.first()
+        gifted_bottle = storage_item_factory(
+            wine=wine,
+            storage=storage,
+            user=user,
+            row=1,
+            column=2,
+            deleted=True,
+            removal_reason=StorageItem.RemovalReason.GIVEN,
+            recipient="Dana",
+            given_occasion="Wedding",
+            given_date=timezone.localdate(),
+        )
+        client.force_login(user)
+
+        r = client.get(
+            f"{reverse('wine-detail', kwargs={'pk': wine.pk})}?show_consumed=1"
+        )
+        content = r.content.decode()
+
+        assert r.status_code == HTTPStatus.OK
+        assert r.context["gifted_bottle_count"] == 1
+        assert gifted_bottle in list(r.context["gifted_bottles"])
+        assert "Given Bottles" in content
+        assert "Dana" in content
+
+    def test_given_bottles_toggle_links_to_gifted_section(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user)
+        storage = user.storage_set.first()
+        storage_item_factory(
+            wine=wine,
+            storage=storage,
+            user=user,
+            deleted=True,
+            removal_reason=StorageItem.RemovalReason.GIVEN,
+            recipient="Dana",
+            given_date=timezone.localdate(),
+        )
+        client.force_login(user)
+
+        r = client.get(reverse("wine-detail", kwargs={"pk": wine.pk}))
+        content = r.content.decode()
+
+        assert r.status_code == HTTPStatus.OK
+        assert (
+            f'href="{reverse("wine-detail", kwargs={"pk": wine.pk})}'
+            "?show_consumed=1#gifted-bottles"
+        ) in content
+
+    def test_broken_or_lost_bottles_use_broken_or_lost_copy(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user)
+        storage = user.storage_set.first()
+        broken_bottle = storage_item_factory(
+            wine=wine,
+            storage=storage,
+            user=user,
+            deleted=True,
+            removal_reason=StorageItem.RemovalReason.REMOVED,
+            finished_date=timezone.localdate(),
+        )
+        client.force_login(user)
+
+        r = client.get(reverse("wine-detail", kwargs={"pk": wine.pk}))
+        content = r.content.decode()
+
+        assert r.status_code == HTTPStatus.OK
+        assert r.context["broken_lost_bottle_count"] == 1
+        assert r.context["actual_consumed_bottle_count"] == 0
+        assert "Show broken or lost bottles (1)" in content
+        assert reverse("bottle-history", kwargs={"pk": broken_bottle.pk}) not in content
+
+        r = client.get(
+            f"{reverse('wine-detail', kwargs={'pk': wine.pk})}?show_consumed=1"
+        )
+        content = r.content.decode()
+
+        assert r.status_code == HTTPStatus.OK
+        assert broken_bottle in list(r.context["consumed_bottles"])
+        assert "Broken or Lost Bottles" in content
+        assert "Broken or lost" in content
+
+    def test_occasion_date_without_occasion_renders_without_blank_line(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user)
+        storage = user.storage_set.first()
+        storage_item_factory(
+            wine=wine,
+            storage=storage,
+            user=user,
+            occasion="",
+            occasion_date=timezone.datetime(2026, 12, 25).date(),
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("wine-detail", kwargs={"pk": wine.pk}))
+        content = response.content.decode()
+
+        assert response.status_code == HTTPStatus.OK
+        assert re.search(r"<td>\s*<small>25 Dec 2026</small>\s*</td>", content)
+
 
 # ---------------------------------------------------------------------------
 # Wine list view
@@ -295,8 +721,11 @@ class TestWineDetailView:
 
 @pytest.mark.django_db
 class TestWineListView:
-    def test_returns_200_with_wines(self, client, user, wine_factory):
-        wine_factory(user=user, name="Listed Wine")
+    def test_returns_200_with_wines(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user, name="Listed Wine")
+        storage_item_factory(wine=wine, user=user)
         client.force_login(user)
         r = client.get(reverse("wine-list"))
         assert r.status_code == HTTPStatus.OK
@@ -310,9 +739,13 @@ class TestWineListView:
         assert r.status_code == HTTPStatus.OK
         assert r.context["paginator"].per_page == 10
 
-    def test_filter_by_wine_type(self, client, user, wine_factory):
-        wine_factory(user=user, wine_type=WineType.RED, name="Red One")
-        wine_factory(user=user, wine_type=WineType.WHITE, name="White One")
+    def test_filter_by_wine_type(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        red = wine_factory(user=user, wine_type=WineType.RED, name="Red One")
+        white = wine_factory(user=user, wine_type=WineType.WHITE, name="White One")
+        storage_item_factory(wine=red, user=user)
+        storage_item_factory(wine=white, user=user)
         client.force_login(user)
         r = client.get(reverse("wine-list") + "?wine_type=RE")
         assert r.status_code == HTTPStatus.OK
@@ -320,10 +753,15 @@ class TestWineListView:
         assert "Red One" in names
         assert "White One" not in names
 
-    def test_filter_by_multiple_wine_types(self, client, user, wine_factory):
-        wine_factory(user=user, wine_type=WineType.RED, name="Red One")
-        wine_factory(user=user, wine_type=WineType.WHITE, name="White One")
-        wine_factory(user=user, wine_type=WineType.ROSE, name="Rose One")
+    def test_filter_by_multiple_wine_types(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        red = wine_factory(user=user, wine_type=WineType.RED, name="Red One")
+        white = wine_factory(user=user, wine_type=WineType.WHITE, name="White One")
+        rose = wine_factory(user=user, wine_type=WineType.ROSE, name="Rose One")
+        storage_item_factory(wine=red, user=user)
+        storage_item_factory(wine=white, user=user)
+        storage_item_factory(wine=rose, user=user)
         client.force_login(user)
         r = client.get(reverse("wine-list") + "?wine_type=RE&wine_type=WH")
         assert r.status_code == HTTPStatus.OK
@@ -331,6 +769,105 @@ class TestWineListView:
         assert "Red One" in names
         assert "White One" in names
         assert "Rose One" not in names
+
+    def test_list_defaults_to_in_stock_and_oldest_first(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        oldest = wine_factory(user=user, name="Oldest")
+        newest = wine_factory(user=user, name="Newest")
+        out_of_stock = wine_factory(user=user, name="Out of Stock")
+        old_created = timezone.now() - timezone.timedelta(days=30)
+        new_created = timezone.now() - timezone.timedelta(days=1)
+
+        oldest_item = storage_item_factory(wine=oldest, user=user)
+        newest_item = storage_item_factory(wine=newest, user=user)
+        StorageItem.objects.filter(pk=oldest_item.pk).update(created=old_created)
+        StorageItem.objects.filter(pk=newest_item.pk).update(created=new_created)
+
+        client.force_login(user)
+        response = client.get(reverse("wine-list"))
+
+        assert response.status_code == HTTPStatus.OK
+        assert response.context["filter"].data["stock"] == "1"
+        assert response.context["filter"].data["order"] == "created"
+        assert list(response.context["wines"]) == [oldest, newest]
+        assert out_of_stock not in response.context["wines"]
+
+    def test_recently_added_uses_oldest_existing_bottle_date(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        older_wine = wine_factory(user=user, name="Older Wine")
+        newer_wine = wine_factory(user=user, name="Newer Wine")
+        misleading_old_wine_created = timezone.now() - timezone.timedelta(days=400)
+        misleading_new_wine_created = timezone.now() - timezone.timedelta(days=5)
+        Wine.objects.filter(pk=older_wine.pk).update(
+            created=misleading_old_wine_created
+        )
+        Wine.objects.filter(pk=newer_wine.pk).update(
+            created=misleading_new_wine_created
+        )
+
+        deleted_old_item = storage_item_factory(
+            wine=older_wine, user=user, deleted=True
+        )
+        older_wine_oldest_live = storage_item_factory(wine=older_wine, user=user)
+        storage_item_factory(wine=older_wine, user=user)
+        newer_wine_live = storage_item_factory(wine=newer_wine, user=user)
+
+        now = timezone.now()
+        StorageItem.objects.filter(pk=deleted_old_item.pk).update(
+            created=now - timezone.timedelta(days=120)
+        )
+        StorageItem.objects.filter(pk=older_wine_oldest_live.pk).update(
+            created=now - timezone.timedelta(days=30)
+        )
+        StorageItem.objects.filter(
+            wine=older_wine,
+            deleted=False,
+        ).exclude(
+            pk=older_wine_oldest_live.pk
+        ).update(created=now - timezone.timedelta(days=1))
+        StorageItem.objects.filter(pk=newer_wine_live.pk).update(
+            created=now - timezone.timedelta(days=10)
+        )
+
+        client.force_login(user)
+        response = client.get(reverse("wine-list"), {"order": "-created", "stock": "1"})
+
+        assert response.status_code == HTTPStatus.OK
+        assert list(response.context["wines"]) == [newer_wine, older_wine]
+        older_wine_from_response = next(
+            wine for wine in response.context["wines"] if wine.pk == older_wine.pk
+        )
+        older_wine_oldest_live.refresh_from_db()
+        assert (
+            older_wine_from_response.stock_first_added_at
+            == older_wine_oldest_live.created
+        )
+
+    def test_list_ignores_empty_filter_query_params(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        oldest = wine_factory(user=user, name="Oldest", vintage=1998)
+        newest = wine_factory(user=user, name="Newest", vintage=2021)
+        storage_item_factory(wine=oldest, user=user)
+        storage_item_factory(wine=newest, user=user)
+
+        client.force_login(user)
+        response = client.get(
+            reverse("wine-list"),
+            {
+                "search": "",
+                "wine_type": "",
+                "category": "",
+                "vintage": "",
+                "order": "vintage",
+            },
+        )
+
+        assert response.status_code == HTTPStatus.OK
+        assert list(response.context["wines"]) == [oldest, newest]
+        assert response.context["filter"].data["order"] == "vintage"
 
     def test_per_page_parameter(self, client, user, wine_factory):
         for i in range(15):
@@ -575,6 +1112,22 @@ class TestDrinkRecordCreateView:
         assert r.status_code == HTTPStatus.OK
         assert r.context["beverage"].pk == wine.pk
 
+    def test_get_preselects_storage_item_from_query_param(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user)
+        storage = user.storage_set.first()
+        item = storage_item_factory(wine=wine, storage=storage, user=user)
+        client.force_login(user)
+
+        r = client.get(
+            reverse("drink-record-add", kwargs={"pk": wine.pk}),
+            {"storage_item": item.pk},
+        )
+
+        assert r.status_code == HTTPStatus.OK
+        assert r.context["form"]["storage_item"].value() == item.pk
+
     def test_get_defaults_date_consumed_to_today(self, client, user, wine_factory):
         wine = wine_factory(user=user)
         client.force_login(user)
@@ -644,6 +1197,51 @@ class TestDrinkRecordCreateView:
         client.force_login(other)
         r = client.get(reverse("drink-record-add", kwargs={"pk": wine.pk}))
         assert r.status_code == HTTPStatus.NOT_FOUND
+
+    def test_post_with_photo(self, client, user, wine_factory):
+        """Test that photos can be uploaded with drink records."""
+        from datetime import date
+        from io import BytesIO
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        from wine_cellar.apps.wine.models import DrinkRecord
+
+        wine = wine_factory(user=user)
+        client.force_login(user)
+
+        # Create a valid JPEG image
+        image = Image.new("RGB", (100, 100), color="red")
+        image_io = BytesIO()
+        image.save(image_io, format="JPEG")
+        image_io.seek(0)
+        uploaded_file = SimpleUploadedFile(
+            name="test.jpg",
+            content=image_io.getvalue(),
+            content_type="image/jpeg",
+        )
+
+        response = client.post(
+            reverse("drink-record-add", kwargs={"pk": wine.pk}),
+            {
+                "date_consumed": date.today().isoformat(),
+                "photo": uploaded_file,
+            },
+        )
+
+        assert response.status_code == HTTPStatus.FOUND
+        record = DrinkRecord.objects.get(wine=wine)
+        assert record.photo
+        assert "test.jpg" in record.photo.name
+
+    def test_get_renders_photo_field(self, client, user, wine_factory):
+        """Test that the photo field is rendered in the form."""
+        wine = wine_factory(user=user)
+        client.force_login(user)
+        response = client.get(reverse("drink-record-add", kwargs={"pk": wine.pk}))
+        assert response.status_code == HTTPStatus.OK
+        assert "photo" in response.context["form"].fields
 
 
 # ---------------------------------------------------------------------------
@@ -764,6 +1362,50 @@ class TestDrinkRecordEditView:
         assert record.tasting_notes == "Updated notes"
         assert record.rating == 2
 
+    def test_post_updates_photo(self, client, user, wine_factory):
+        """Test that photos can be updated on drink records."""
+        from datetime import date
+        from io import BytesIO
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from PIL import Image
+
+        from wine_cellar.apps.wine.models import DrinkRecord
+
+        wine = wine_factory(user=user)
+        household = user.user_settings.active_household
+        record = DrinkRecord.objects.create(
+            wine=wine,
+            user=user,
+            household=household,
+            date_consumed=date.today(),
+        )
+        client.force_login(user)
+
+        # Create a valid JPEG image
+        image = Image.new("RGB", (100, 100), color="blue")
+        image_io = BytesIO()
+        image.save(image_io, format="JPEG")
+        image_io.seek(0)
+        uploaded_file = SimpleUploadedFile(
+            name="updated.jpg",
+            content=image_io.getvalue(),
+            content_type="image/jpeg",
+        )
+
+        response = client.post(
+            reverse("drink-record-edit", kwargs={"pk": record.pk}),
+            {
+                "date_consumed": date.today().isoformat(),
+                "photo": uploaded_file,
+            },
+        )
+
+        assert response.status_code == HTTPStatus.FOUND
+        record.refresh_from_db()
+        assert record.photo
+        assert "updated.jpg" in record.photo.name
+
 
 # ---------------------------------------------------------------------------
 # Drink record delete view
@@ -772,6 +1414,23 @@ class TestDrinkRecordEditView:
 
 @pytest.mark.django_db
 class TestDrinkRecordDeleteView:
+    def test_get_renders_confirmation_page(self, client, user, wine_factory):
+        from datetime import date
+
+        from wine_cellar.apps.wine.models import DrinkRecord
+
+        wine = wine_factory(user=user)
+        household = user.user_settings.active_household
+        record = DrinkRecord.objects.create(
+            wine=wine, user=user, household=household, date_consumed=date.today()
+        )
+        client.force_login(user)
+
+        r = client.get(reverse("drink-record-delete", kwargs={"pk": record.pk}))
+
+        assert r.status_code == HTTPStatus.OK
+        assert "Delete Drink Record" in r.content.decode()
+
     def test_post_deletes_record(self, client, user, wine_factory):
         from datetime import date
 
@@ -802,6 +1461,134 @@ class TestDrinkRecordDeleteView:
         client.force_login(other)
         r = client.post(reverse("drink-record-delete", kwargs={"pk": record.pk}))
         assert r.status_code == HTTPStatus.NOT_FOUND
+
+
+# ---------------------------------------------------------------------------
+# Tasting wheel tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestTastingWheel:
+    def test_drink_record_create_hides_taste_descriptors_by_default(
+        self, client, user, wine_factory
+    ):
+        wine = wine_factory(user=user)
+        client.force_login(user)
+
+        response = client.get(reverse("drink-record-add", kwargs={"pk": wine.pk}))
+        html = response.content.decode()
+
+        assert response.status_code == HTTPStatus.OK
+        assert '<details id="taste-descriptors-toggle">' in html
+        assert '<details id="taste-descriptors-toggle" open>' not in html
+
+    def test_drink_record_edit_shows_taste_descriptors_when_present(
+        self, client, user, wine_factory
+    ):
+        from datetime import date
+
+        from wine_cellar.apps.wine.models import DrinkRecord
+
+        wine = wine_factory(user=user)
+        household = user.user_settings.active_household
+        record = DrinkRecord.objects.create(
+            wine=wine,
+            user=user,
+            household=household,
+            date_consumed=date.today(),
+            taste_descriptors=["Apple"],
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("drink-record-edit", kwargs={"pk": record.pk}))
+
+        assert response.status_code == HTTPStatus.OK
+        assert (
+            '<details id="taste-descriptors-toggle" open>' in response.content.decode()
+        )
+
+    def test_drink_record_create_with_taste_descriptors(
+        self, client, user, wine_factory
+    ):
+        """Test that taste descriptors can be saved on drink record creation."""
+        import json
+        from datetime import date
+
+        wine = wine_factory(user=user)
+        client.force_login(user)
+        descriptors = ["Apple", "Citrus", "Pepper"]
+        r = client.post(
+            reverse("drink-record-add", kwargs={"pk": wine.pk}),
+            {
+                "date_consumed": date.today().isoformat(),
+                "tasting_notes": "Great flavors",
+                "rating": "3",
+                "taste_descriptors": json.dumps(descriptors),
+            },
+        )
+        assert r.status_code == HTTPStatus.FOUND
+
+        from wine_cellar.apps.wine.models import DrinkRecord
+
+        record = DrinkRecord.objects.filter(wine=wine).first()
+        assert record is not None
+        assert record.taste_descriptors == descriptors
+
+    def test_drink_record_edit_with_taste_descriptors(self, client, user, wine_factory):
+        """Test that taste descriptors can be updated on drink record edit."""
+        import json
+        from datetime import date
+
+        from wine_cellar.apps.wine.models import DrinkRecord
+
+        wine = wine_factory(user=user)
+        household = user.user_settings.active_household
+        record = DrinkRecord.objects.create(
+            wine=wine,
+            user=user,
+            household=household,
+            date_consumed=date.today(),
+            taste_descriptors=["Apple"],
+        )
+        client.force_login(user)
+        new_descriptors = ["Citrus", "Floral"]
+        r = client.post(
+            reverse("drink-record-edit", kwargs={"pk": record.pk}),
+            {
+                "date_consumed": date.today().isoformat(),
+                "tasting_notes": "Updated notes",
+                "rating": "2",
+                "taste_descriptors": json.dumps(new_descriptors),
+            },
+        )
+        assert r.status_code == HTTPStatus.FOUND
+        record.refresh_from_db()
+        assert record.taste_descriptors == new_descriptors
+
+    def test_drink_record_taste_descriptors_default_empty(
+        self, client, user, wine_factory
+    ):
+        """Test that taste descriptors default to empty list."""
+        from datetime import date
+
+        from wine_cellar.apps.wine.models import DrinkRecord
+
+        wine = wine_factory(user=user)
+        client.force_login(user)
+        r = client.post(
+            reverse("drink-record-add", kwargs={"pk": wine.pk}),
+            {
+                "date_consumed": date.today().isoformat(),
+                "tasting_notes": "No descriptors",
+                "rating": "2",
+            },
+        )
+        assert r.status_code == HTTPStatus.FOUND
+
+        record = DrinkRecord.objects.filter(wine=wine).first()
+        assert record is not None
+        assert record.taste_descriptors == []
 
 
 # ---------------------------------------------------------------------------
@@ -930,6 +1717,30 @@ class TestHomePageView:
         assert r.status_code == HTTPStatus.OK
         assert "bottles_in_stock" in r.context
 
+    def test_newly_added_wine_appears_in_recent_views(self, client, user):
+        client.force_login(user)
+
+        response = client.post(
+            reverse("wine-add"),
+            {
+                "name": "Fresh Add",
+                "wine_type": WineType.RED,
+                "country": "FR",
+                "form_step": 0,
+            },
+            follow=True,
+        )
+
+        assert response.status_code == HTTPStatus.OK
+        wine = Wine.objects.get(name="Fresh Add")
+        session = client.session
+        assert session["recent_views"][0]["pk"] == wine.pk
+
+        homepage = client.get(reverse("homepage"))
+
+        assert homepage.status_code == HTTPStatus.OK
+        assert list(homepage.context["recent_views"]) == [wine]
+
     def test_shows_stats(self, client, user, wine_factory, storage_item_factory):
         wine = wine_factory(user=user, price=Decimal("20.00"))
         storage = user.storage_set.first()
@@ -937,3 +1748,11 @@ class TestHomePageView:
         client.force_login(user)
         r = client.get(reverse("homepage"))
         assert r.context["bottles_in_stock"] >= 1
+
+    def test_oldest_and_youngest_links_use_sort_only_urls(self, client, user):
+        client.force_login(user)
+        response = client.get(reverse("homepage"))
+        content = response.content.decode()
+
+        assert f'href="{reverse("wine-list")}?order=vintage"' in content
+        assert f'href="{reverse("wine-list")}?order=-vintage"' in content

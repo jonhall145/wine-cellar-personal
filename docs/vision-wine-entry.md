@@ -159,11 +159,11 @@ If the Anthropic API is unavailable:
 
 ### Claude Vision API Pricing
 
-Using **Claude Haiku 4.5** (optimized for speed and cost):
+Using **Claude Haiku 5.5** (optimized for speed and cost):
 
-- **Cost per scan**: ~$0.001-$0.003
-- **50 scans/month**: ~$0.05-$0.15
-- **Annual cost**: ~$0.60-$1.80
+- **Cost per scan**: ~$0.00025-$0.00075
+- **50 scans/month**: ~$0.01-$0.04
+- **Annual cost**: ~$0.15-$0.45
 
 Extremely affordable for personal use!
 

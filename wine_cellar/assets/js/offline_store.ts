@@ -9,12 +9,15 @@
 
 const DB_NAME = 'cellar-offline';
 const DB_VERSION = 2;
+const SYNC_STATE_VERSION = '2';
 
 interface CellarSyncResponse {
   app_type: string;
   currency: string;
   beverages: Record<string, unknown>[];
+  deleted_beverage_ids: number[];
   stock_items: Record<string, unknown>[];
+  deleted_stock_item_ids: number[];
   storages: Record<string, unknown>[];
   is_incremental: boolean;
 }
@@ -85,6 +88,22 @@ async function clearAndPutAll(
   });
 }
 
+async function deleteAll(
+  db: IDBDatabase,
+  storeName: string,
+  ids: number[]
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    for (const id of ids) {
+      store.delete(id);
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 async function getMeta(db: IDBDatabase, key: string): Promise<string | null> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction('meta', 'readonly');
@@ -112,9 +131,11 @@ export async function syncCellarData(): Promise<boolean> {
   try {
     const db = await openDB();
     const lastSync = await getMeta(db, 'last_sync');
+    const syncVersion = await getMeta(db, 'sync_version');
+    const useIncrementalSync = lastSync && syncVersion === SYNC_STATE_VERSION;
 
     let url = '/api/cellar/sync/';
-    if (lastSync) {
+    if (useIncrementalSync) {
       url += `?since=${encodeURIComponent(lastSync)}`;
     }
 
@@ -130,12 +151,16 @@ export async function syncCellarData(): Promise<boolean> {
 
     const data: CellarSyncResponse = await response.json();
     const syncTime = new Date().toISOString();
+    const deletedBeverageIds = data.deleted_beverage_ids ?? [];
+    const deletedStockItemIds = data.deleted_stock_item_ids ?? [];
 
     if (data.is_incremental) {
       // Incremental: merge new/updated records
       await putAll(db, 'beverages', data.beverages);
       await putAll(db, 'stock_items', data.stock_items);
       await putAll(db, 'storages', data.storages);
+      await deleteAll(db, 'beverages', deletedBeverageIds);
+      await deleteAll(db, 'stock_items', deletedStockItemIds);
     } else {
       // Full sync: replace everything
       await clearAndPutAll(db, 'beverages', data.beverages);
@@ -146,6 +171,7 @@ export async function syncCellarData(): Promise<boolean> {
     await setMeta(db, 'last_sync', syncTime);
     await setMeta(db, 'app_type', data.app_type);
     await setMeta(db, 'currency', data.currency);
+    await setMeta(db, 'sync_version', SYNC_STATE_VERSION);
 
     db.close();
     return true;

@@ -1,9 +1,18 @@
 import json
+import re
+from datetime import timedelta
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
+from pytest_django.asserts import assertTemplateUsed
 
-from wine_cellar.apps.storage.models import BottleMoveHistory, Storage, StorageItem
+from wine_cellar.apps.storage.models import (
+    BottleMoveHistory,
+    PlannedMove,
+    Storage,
+    StorageItem,
+)
 
 
 @pytest.mark.django_db
@@ -47,6 +56,53 @@ class TestStorageGridData:
         data = json.loads(r.content)
         assert data["current_storage_id"] == s2.pk
 
+    def test_includes_utilization_stats(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        storage = user.storage_set.first()
+        storage.rows = 2
+        storage.columns = 3
+        storage.cell_mask = [[1, 1], [1, 2], [2, 1], [2, 2]]
+        storage.save(update_fields=["rows", "columns", "cell_mask"])
+        wine = wine_factory(user=user)
+        storage_item_factory(wine=wine, storage=storage, row=1, column=1)
+        storage_item_factory(wine=wine, storage=storage, row=1, column=2)
+        storage_item_factory(wine=wine, storage=storage, row=2, column=1, deleted=True)
+        client.force_login(user)
+        r = client.get(reverse("storage-grid-data"), {"storage_id": storage.pk})
+        data = json.loads(r.content)
+        storage_data = next(s for s in data["storages"] if s["id"] == storage.pk)
+        assert storage_data["used_slots"] == 2
+        assert storage_data["total_slots"] == 4
+        assert storage_data["utilization_percent"] == 50
+
+    def test_includes_planned_destination(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        storage = user.storage_set.first()
+        storage.rows = 2
+        storage.columns = 2
+        storage.save(update_fields=["rows", "columns"])
+        item = storage_item_factory(
+            wine=wine_factory(user=user), storage=storage, row=1, column=1
+        )
+        PlannedMove.objects.create(
+            storage_item=item,
+            target_storage=storage,
+            target_row=2,
+            target_column=2,
+            user=user,
+            household=user.user_settings.active_household,
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("storage-grid-data"))
+        storage_data = json.loads(response.content)["storages"][0]
+
+        assert storage_data["planned_moves"] == [
+            {"row": 2, "column": 2, "description": str(item)}
+        ]
+
 
 @pytest.mark.django_db
 class TestMoveBottle:
@@ -77,6 +133,40 @@ class TestMoveBottle:
         item.refresh_from_db()
         assert item.row == 2
         assert item.column == 3
+
+    def test_move_clears_planned_move(
+        self, client, user, wine_factory, storage_item_factory, storage_factory
+    ):
+        wine = wine_factory(user=user)
+        storage = storage_factory(user=user, rows=3, columns=3)
+        item = storage_item_factory(
+            wine=wine, storage=storage, row=1, column=1, user=user
+        )
+        PlannedMove.objects.create(
+            storage_item=item,
+            target_storage=storage,
+            target_row=2,
+            target_column=3,
+            user=user,
+            household=user.user_settings.active_household,
+        )
+        client.force_login(user)
+
+        response = client.post(
+            reverse("storage-move-bottle"),
+            json.dumps(
+                {
+                    "item_id": item.pk,
+                    "target_storage_id": storage.pk,
+                    "target_row": 2,
+                    "target_column": 3,
+                }
+            ),
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert not PlannedMove.objects.exists()
 
     def test_missing_fields(self, client, user):
         client.force_login(user)
@@ -293,6 +383,57 @@ class TestStorageItemHistory:
         r = client.get(reverse("stock-history"))
         assert r.status_code == 200
 
+    def test_orders_removed_bottles_by_removal_date(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        storage = user.storage_set.first()
+        older_consumed = storage_item_factory(
+            wine=wine_factory(user=user, name="Older Consumed"),
+            storage=storage,
+            user=user,
+            deleted=True,
+            finished_date=timezone.localdate() - timedelta(days=10),
+        )
+        newest_given = storage_item_factory(
+            wine=wine_factory(user=user, name="Newest Given"),
+            storage=storage,
+            user=user,
+            deleted=True,
+            removal_reason=StorageItem.RemovalReason.GIVEN,
+            recipient="Alex",
+            given_date=timezone.localdate() - timedelta(days=1),
+        )
+        middle_removed = storage_item_factory(
+            wine=wine_factory(user=user, name="Middle Removed"),
+            storage=storage,
+            user=user,
+            deleted=True,
+            removal_reason=StorageItem.RemovalReason.REMOVED,
+            finished_date=timezone.localdate() - timedelta(days=5),
+        )
+        undated_removed = storage_item_factory(
+            wine=wine_factory(user=user, name="Undated Removed"),
+            storage=storage,
+            user=user,
+            deleted=True,
+            removal_reason=StorageItem.RemovalReason.REMOVED,
+        )
+        StorageItem.objects.filter(pk=undated_removed.pk).update(
+            created=timezone.now() - timedelta(days=20)
+        )
+        undated_removed.refresh_from_db()
+
+        client.force_login(user)
+        r = client.get(reverse("stock-history"))
+
+        assert r.status_code == 200
+        assert list(r.context["storage_items"])[:4] == [
+            newest_given,
+            middle_removed,
+            older_consumed,
+            undated_removed,
+        ]
+
 
 # ---------------------------------------------------------------------------
 # Storage CRUD views
@@ -430,6 +571,21 @@ class TestStorageDetailView:
         r = client.get(reverse("storage-detail", kwargs={"pk": storage.pk}))
         assert r.status_code == 200
 
+    def test_bottles_summary_renders_after_storage_content(
+        self, client, user, storage_factory
+    ):
+        storage = storage_factory(user=user, rows=2, columns=2)
+        client.force_login(user)
+        r = client.get(reverse("storage-detail", kwargs={"pk": storage.pk}))
+        assert r.status_code == 200
+        content = r.content.decode()
+        assert content.index('id="storage-grid-container"') < content.index(
+            "storage-detail__summary"
+        )
+        assert content.index("storage-detail__location") < content.index(
+            "storage-detail__summary"
+        )
+
     def test_shows_wines(self, client, user, wine_factory, storage_item_factory):
         wine = wine_factory(user=user, name="Detail Wine")
         storage = user.storage_set.first()
@@ -475,6 +631,8 @@ class TestStorageItemAddView:
         client.force_login(user)
         r = client.get(reverse("stock-add", kwargs={"pk": wine.pk}))
         assert r.status_code == 200
+        assertTemplateUsed(r, "stock_add.html")
+        assertTemplateUsed(r, "core/stock_add.html")
         assert r.context["wine"].pk == wine.pk
         assert "free_cells_by_storage" in r.context
 
@@ -521,6 +679,48 @@ class TestStorageItemAddView:
         r = client.get(reverse("stock-add", kwargs={"pk": wine.pk}))
         assert r.status_code == 404
 
+    def test_storage_suggestions_respect_masks_and_used_slots(
+        self, client, user, wine_factory, storage_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user)
+        other_wine = wine_factory(user=user, name="Other Wine")
+        storage = storage_factory(
+            user=user,
+            name="Masked Rack",
+            rows=3,
+            columns=3,
+            cell_mask=[[1, 1], [1, 2]],
+        )
+        storage_item_factory(wine=wine, storage=storage, row=1, column=1, user=user)
+        storage_item_factory(
+            wine=other_wine,
+            storage=storage,
+            row=1,
+            column=2,
+            user=user,
+        )
+        storage_item_factory(
+            wine=wine,
+            storage=storage,
+            row=2,
+            column=2,
+            user=user,
+            deleted=True,
+        )
+
+        client.force_login(user)
+        r = client.get(reverse("stock-add", kwargs={"pk": wine.pk}))
+
+        assert r.status_code == 200
+        assert r.context["storage_suggestions"] == [
+            {
+                "storage_id": storage.pk,
+                "storage_name": "Masked Rack",
+                "bottle_count": 1,
+                "free_slots": 0,
+            }
+        ]
+
 
 @pytest.mark.django_db
 class TestStorageItemUpdateView:
@@ -534,9 +734,11 @@ class TestStorageItemUpdateView:
         assert r.context["item"].pk == item.pk
         assert r.context["wine"].pk == wine.pk
 
-    def test_post_updates_item(self, client, user, wine_factory, storage_item_factory):
+    def test_post_updates_item(
+        self, client, user, wine_factory, storage_item_factory, storage_factory
+    ):
         wine = wine_factory(user=user)
-        storage = user.storage_set.first()
+        storage = storage_factory(user=user, rows=3, columns=3)
         item = storage_item_factory(wine=wine, storage=storage, row=1, column=1)
         client.force_login(user)
         r = client.post(
@@ -551,10 +753,16 @@ class TestStorageItemUpdateView:
             follow=True,
         )
         assert r.status_code == 200
+        item.refresh_from_db()
+        assert item.row == 2
+        assert item.column == 2
+        assert str(item.price) == "15.00"
 
-    def test_next_list_redirect(self, client, user, wine_factory, storage_item_factory):
+    def test_next_list_redirect(
+        self, client, user, wine_factory, storage_item_factory, storage_factory
+    ):
         wine = wine_factory(user=user)
-        storage = user.storage_set.first()
+        storage = storage_factory(user=user, rows=3, columns=3)
         item = storage_item_factory(wine=wine, storage=storage, row=1, column=1)
         client.force_login(user)
         r = client.post(
@@ -563,11 +771,15 @@ class TestStorageItemUpdateView:
                 "storage": storage.pk,
                 "row": 1,
                 "column": 1,
+                "price": "",
+                "is_gift": "",
+                "gift_from": "",
+                "occasion": "",
                 "rating": "",
             },
-            follow=True,
         )
-        assert r.status_code == 200
+        assert r.status_code == 302
+        assert r.url.endswith(reverse("bottle-list"))
 
     def test_scoped_to_household(
         self, client, user_factory, wine_factory, storage_item_factory
@@ -618,3 +830,22 @@ class TestBottleListView:
         r = client.get(reverse("bottle-list"))
         assert r.status_code == 200
         assert "bottles" in r.context
+
+    def test_occasion_date_without_occasion_renders_without_blank_line(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user, name="Listed Bottle")
+        storage = user.storage_set.first()
+        storage_item_factory(
+            wine=wine,
+            storage=storage,
+            occasion="",
+            occasion_date=timezone.datetime(2026, 12, 25).date(),
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("bottle-list"))
+        content = response.content.decode()
+
+        assert response.status_code == 200
+        assert re.search(r"<td>\s*<small>25 Dec 2026</small>\s*</td>", content)

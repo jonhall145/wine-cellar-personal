@@ -1,19 +1,40 @@
 import datetime
+import io
 import json
+from decimal import Decimal
 from http import HTTPStatus
 from unittest.mock import MagicMock, patch
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from django.utils import timezone
+from PIL import Image
 from pytest_django.asserts import assertRedirects, assertTemplateUsed
 
+from wine_cellar.apps.storage.models import PlannedMove
 from wine_cellar.apps.whisky.models import (
+    BottleSize,
     Collection,
     FillLevel,
     Whisky,
     WhiskyDrinkRecord,
+    WhiskyImage,
+    WhiskyPriceHistory,
+    WhiskyReorderReminder,
+    WhiskySource,
+    WhiskyStorageItem,
+    WhiskyVisionExtractionLog,
+    WhiskyWishlist,
 )
+from wine_cellar.apps.whisky.services import WhiskyReminderService
+
+
+def _test_image_upload(name="front.jpg"):
+    buffer = io.BytesIO()
+    Image.new("RGB", (20, 20), color="red").save(buffer, format="JPEG")
+    buffer.seek(0)
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/jpeg")
 
 
 @pytest.mark.django_db
@@ -32,6 +53,39 @@ def test_homepage_authenticated(client, user):
     r = client.get(reverse("homepage"), follow=True)
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="core/homepage.html")
+
+
+@pytest.mark.django_db
+def test_homepage_uses_reminder_service(client, user):
+    client.force_login(user)
+    household = user.user_settings.active_household
+    with patch.object(
+        WhiskyReminderService,
+        "count_low_stock_reminders",
+        wraps=WhiskyReminderService.count_low_stock_reminders,
+    ) as count_low_stock_reminders:
+        r = client.get(reverse("homepage"), follow=True)
+    assert r.status_code == HTTPStatus.OK
+    count_low_stock_reminders.assert_called_once_with(household)
+
+
+@pytest.mark.django_db
+def test_reorder_reminders_uses_service(client, user, whisky_factory):
+    client.force_login(user)
+    household = user.user_settings.active_household
+    whisky = whisky_factory(user=user)
+    WhiskyReorderReminder.objects.create(
+        whisky=whisky, user=user, household=household, min_stock=2, is_active=True
+    )
+    with patch.object(
+        WhiskyReminderService,
+        "get_reorder_context",
+        wraps=WhiskyReminderService.get_reorder_context,
+    ) as get_reorder_context:
+        r = client.get(reverse("reorder-reminders"))
+    assert r.status_code == HTTPStatus.OK
+    assert len(r.context["reminders"]) == 1
+    get_reorder_context.assert_called_once_with(household)
 
 
 @pytest.mark.django_db
@@ -55,9 +109,67 @@ def test_whisky_list_loads(client, user):
 
 
 @pytest.mark.django_db
-def test_whisky_list_shows_user_whiskies(client, user, whisky_factory):
+def test_whisky_import_creates_whisky_and_stock(client, user, storage_factory):
+    storage = storage_factory(
+        user=user,
+        household=user.user_settings.active_household,
+        rows=0,
+        columns=0,
+        app_type="whisky",
+    )
+    client.force_login(user)
+
+    csv_file = SimpleUploadedFile(
+        "whiskies.csv",
+        (
+            "name,whisky_type,country,stock,distillery\n"
+            "Imported Dram,Single Malt,Scotland,1,New Distillery\n"
+        ).encode("utf-8"),
+        content_type="text/csv",
+    )
+
+    preview = client.post(
+        reverse("whisky-import"),
+        {"action": "upload", "file": csv_file},
+    )
+    assert preview.status_code == HTTPStatus.OK
+    assert "Step 2: Map columns" in preview.content.decode()
+
+    response = client.post(
+        reverse("whisky-import"),
+        {
+            "action": "import",
+            "default_storage": storage.pk,
+            "map_name": "name",
+            "map_whisky_type": "whisky_type",
+            "map_country": "country",
+            "map_stock_count": "stock",
+            "map_distillery": "distillery",
+        },
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    whisky = Whisky.objects.get(name="Imported Dram")
+    assert whisky.distillery is not None
+    assert whisky.distillery.name == "New Distillery"
+    assert WhiskyStorageItem.objects.filter(whisky=whisky, deleted=False).count() == 1
+
+
+@pytest.mark.django_db
+def test_whisky_list_shows_user_whiskies(
+    client, user, whisky_factory, whisky_storage_item_factory
+):
     """Test that whisky list shows whiskies belonging to the user."""
+    household = user.user_settings.active_household
     whisky = whisky_factory(user=user, name="Lagavulin 16")
+    whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky=whisky,
+    )
     client.force_login(user)
     r = client.get(reverse("whisky-list"))
     assert r.status_code == HTTPStatus.OK
@@ -65,9 +177,26 @@ def test_whisky_list_shows_user_whiskies(client, user, whisky_factory):
 
 
 @pytest.mark.django_db
-def test_whisky_filter_by_collection(client, user, whisky_factory):
+def test_whisky_filter_by_collection(
+    client, user, whisky_factory, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
     whisky_in_collection = whisky_factory(user=user)
     whisky_outside_collection = whisky_factory(user=user)
+    whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky=whisky_in_collection,
+    )
+    whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky=whisky_outside_collection,
+    )
     collection = Collection.objects.create(
         name="Investment Bottles",
         user=user,
@@ -187,6 +316,333 @@ def test_bottle_list_filters_by_whisky_name(client, user, whisky_storage_item_fa
     bottles = list(r.context["bottles"])
     assert matching in bottles
     assert non_matching not in bottles
+
+
+@pytest.mark.django_db
+def test_bottle_list_filters_by_multiple_fill_levels(
+    client, user, whisky_storage_item_factory
+):
+    """Bottle list should allow multiple fill level selections."""
+    household = user.user_settings.active_household
+    unopened = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.UNOPENED,
+    )
+    opened = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.OPENED,
+    )
+    dreg = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.DREG,
+    )
+
+    client.force_login(user)
+    r = client.get(
+        reverse("bottle-list"),
+        {"fill_level": [FillLevel.UNOPENED, FillLevel.OPENED]},
+    )
+
+    assert r.status_code == HTTPStatus.OK
+    bottles = list(r.context["bottles"])
+    assert unopened in bottles
+    assert opened in bottles
+    assert dreg not in bottles
+
+
+@pytest.mark.django_db
+def test_whisky_list_defaults_to_in_stock_and_oldest_first(
+    client, user, whisky_factory, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    oldest = whisky_factory(user=user, name="Oldest")
+    newest = whisky_factory(user=user, name="Newest")
+    out_of_stock = whisky_factory(user=user, name="Out of Stock")
+    old_created = timezone.now() - datetime.timedelta(days=30)
+    new_created = timezone.now() - datetime.timedelta(days=1)
+    Whisky.objects.filter(pk=oldest.pk).update(created=new_created)
+    Whisky.objects.filter(pk=newest.pk).update(created=old_created)
+    oldest_item = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky=oldest,
+    )
+    newest_item = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky=newest,
+    )
+    WhiskyStorageItem.objects.filter(pk=oldest_item.pk).update(created=old_created)
+    WhiskyStorageItem.objects.filter(pk=newest_item.pk).update(created=new_created)
+
+    client.force_login(user)
+    response = client.get(reverse("whisky-list"))
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.context["filter"].data["has_stock"] == "1"
+    assert response.context["filter"].data["order"] == "created"
+    assert list(response.context["whiskies"]) == [oldest, newest]
+    assert out_of_stock not in response.context["whiskies"]
+
+
+@pytest.mark.django_db
+def test_mark_whisky_bottle_as_given_records_recipient_and_date(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+    )
+
+    client.force_login(user)
+    response = client.post(
+        reverse("stock-give", kwargs={"pk": bottle.pk}),
+        {
+            "recipient": "Jamie",
+            "given_date": "2026-04-16",
+            "given_occasion": "Thank you",
+        },
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert response.url == reverse("whisky-detail", kwargs={"pk": bottle.whisky.pk})
+
+    bottle.refresh_from_db()
+    assert bottle.deleted is True
+    assert bottle.removal_reason == WhiskyStorageItem.RemovalReason.GIVEN
+    assert bottle.recipient == "Jamie"
+    assert bottle.given_date == datetime.date(2026, 4, 16)
+    assert bottle.given_occasion == "Thank you"
+    assert bottle.finished_date is None
+
+
+@pytest.mark.django_db
+def test_mark_whisky_bottle_as_broken_or_lost_records_removal_reason(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+    )
+
+    client.force_login(user)
+    response = client.post(reverse("stock-delete", kwargs={"pk": bottle.pk}))
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert response.url == reverse("whisky-detail", kwargs={"pk": bottle.whisky.pk})
+
+    bottle.refresh_from_db()
+    assert bottle.deleted is True
+    assert bottle.removal_reason == WhiskyStorageItem.RemovalReason.REMOVED
+    assert bottle.finished_date == timezone.localdate()
+    assert bottle.given_date is None
+    assert bottle.recipient == ""
+    assert bottle.given_occasion == ""
+
+
+@pytest.mark.django_db
+def test_given_whisky_bottle_history_shows_recipient_and_occasion(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        deleted=True,
+        removal_reason=WhiskyStorageItem.RemovalReason.GIVEN,
+        recipient="Jamie",
+        given_occasion="Thank you",
+        given_date=datetime.date(2026, 4, 16),
+    )
+
+    client.force_login(user)
+    response = client.get(reverse("bottle-history", kwargs={"pk": bottle.pk}))
+    content = response.content.decode()
+
+    assert response.status_code == HTTPStatus.OK
+    assert "Given away" in content
+    assert "Jamie" in content
+    assert "Thank you" in content
+
+
+@pytest.mark.django_db
+def test_whisky_bottle_history_shows_quick_log_for_active_bottle(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+    )
+
+    client.force_login(user)
+    response = client.get(reverse("bottle-history", kwargs={"pk": bottle.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assert (
+        reverse("bottle-quick-log", kwargs={"pk": bottle.pk})
+        in response.content.decode()
+    )
+    assert "Just drank this" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_whisky_bottle_quick_log_creates_record_and_marks_bottle_opened(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        fill_level=FillLevel.UNOPENED,
+        opened_date=None,
+    )
+
+    client.force_login(user)
+    response = client.post(reverse("bottle-quick-log", kwargs={"pk": bottle.pk}))
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert response.url == reverse("bottle-history", kwargs={"pk": bottle.pk})
+
+    record = WhiskyDrinkRecord.objects.get(storage_item=bottle)
+    assert record.whisky == bottle.whisky
+    assert record.user == user
+    assert record.household == household
+    assert record.date_consumed == timezone.localdate()
+    assert record.rating is None
+    assert record.tasting_notes in (None, "")
+
+    bottle.refresh_from_db()
+    assert bottle.deleted is False
+    assert bottle.fill_level == FillLevel.OPENED
+    assert bottle.opened_date == timezone.localdate()
+
+
+@pytest.mark.django_db
+def test_broken_or_lost_whisky_bottle_history_shows_broken_or_lost_label(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+        deleted=True,
+        removal_reason=WhiskyStorageItem.RemovalReason.REMOVED,
+        finished_date=datetime.date(2026, 4, 16),
+    )
+
+    client.force_login(user)
+    response = client.get(reverse("bottle-history", kwargs={"pk": bottle.pk}))
+    content = response.content.decode()
+
+    assert response.status_code == HTTPStatus.OK
+    assert "Broken or lost" in content
+
+
+@pytest.mark.django_db
+def test_whisky_stock_history_orders_by_removal_date(
+    client, user, whisky_factory, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    older_consumed = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky=whisky_factory(user=user, name="Older Consumed"),
+        deleted=True,
+        finished_date=timezone.localdate() - datetime.timedelta(days=10),
+    )
+    newest_given = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky=whisky_factory(user=user, name="Newest Given"),
+        deleted=True,
+        removal_reason=WhiskyStorageItem.RemovalReason.GIVEN,
+        recipient="Jamie",
+        given_date=timezone.localdate() - datetime.timedelta(days=1),
+    )
+    middle_removed = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky=whisky_factory(user=user, name="Middle Removed"),
+        deleted=True,
+        removal_reason=WhiskyStorageItem.RemovalReason.REMOVED,
+        finished_date=timezone.localdate() - datetime.timedelta(days=5),
+    )
+    undated_removed = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky=whisky_factory(user=user, name="Undated Removed"),
+        deleted=True,
+        removal_reason=WhiskyStorageItem.RemovalReason.REMOVED,
+    )
+    WhiskyStorageItem.objects.filter(pk=undated_removed.pk).update(
+        created=timezone.now() - datetime.timedelta(days=20)
+    )
+    undated_removed.refresh_from_db()
+
+    client.force_login(user)
+    response = client.get(reverse("stock-history"))
+
+    assert response.status_code == HTTPStatus.OK
+    assert list(response.context["storage_items"])[:4] == [
+        newest_given,
+        middle_removed,
+        older_consumed,
+        undated_removed,
+    ]
 
 
 @pytest.mark.django_db
@@ -403,6 +859,173 @@ def test_whisky_detail_loads(client, user, whisky_factory):
 
 
 @pytest.mark.django_db
+def test_whisky_detail_includes_price_tracking_context(client, user, whisky_factory):
+    household = user.user_settings.active_household
+    whisky = whisky_factory(user=user, name="Tracked Whisky", price=Decimal("50.00"))
+    source = WhiskySource.objects.create(
+        name="Retailer",
+        user=user,
+        household=household,
+        url="https://example.com",
+    )
+    WhiskyPriceHistory.objects.create(
+        whisky=whisky,
+        source=source,
+        price=Decimal("55.00"),
+        user=user,
+        household=household,
+    )
+    WhiskyPriceHistory.objects.create(
+        whisky=whisky,
+        price=Decimal("60.00"),
+        user=user,
+        household=household,
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("whisky-detail", kwargs={"pk": whisky.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.context["price_history_latest"].price == Decimal("60.00")
+    assert len(response.context["price_history_entries"]) == 2
+    assert (
+        response.context["price_history_form"]
+        .fields["source"]
+        .queryset.filter(pk=source.pk)
+        .exists()
+    )
+
+
+@pytest.mark.django_db
+def test_can_add_whisky_price_history(client, user, whisky_factory):
+    household = user.user_settings.active_household
+    whisky = whisky_factory(user=user, name="Tracked Whisky")
+    source = WhiskySource.objects.create(
+        name="Retailer",
+        user=user,
+        household=household,
+        url="https://example.com",
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse("whisky-price-history-add", kwargs={"pk": whisky.pk}),
+        {"price": "62.50", "source": source.pk},
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert (
+        response.url
+        == reverse("whisky-detail", kwargs={"pk": whisky.pk}) + "#price-tracking"
+    )
+    history_entry = WhiskyPriceHistory.objects.get(whisky=whisky)
+    assert history_entry.price == Decimal("62.50")
+    assert history_entry.source == source
+    assert history_entry.user == user
+    assert history_entry.household == household
+
+
+@pytest.mark.django_db
+def test_whisky_detail_shows_carousel_controls_for_multiple_images(
+    client, user, whisky_factory, clear_image_folder
+):
+    whisky = whisky_factory(user=user)
+    WhiskyImage.objects.create(
+        whisky=whisky,
+        user=user,
+        image=_test_image_upload("front.jpg"),
+        image_type=WhiskyImage.ImageType.LABEL_FRONT,
+    )
+    WhiskyImage.objects.create(
+        whisky=whisky,
+        user=user,
+        image=_test_image_upload("back.jpg"),
+        image_type=WhiskyImage.ImageType.LABEL_BACK,
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("whisky-detail", kwargs={"pk": whisky.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    content = response.content.decode()
+    assert 'class="image-controls"' in content
+    assert 'class="wine-prev"' in content
+    assert 'class="wine-next"' in content
+    assert 'id="beverage-image-viewer"' in content
+    assert "data-image-viewer-zoom-in" in content
+    assert "View Photos" in content
+
+
+@pytest.mark.django_db
+def test_whisky_detail_record_drink_link_preserves_selected_storage_item(
+    client, user, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    bottle = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        storage__user=user,
+        storage__household=household,
+        whisky__user=user,
+        whisky__household=household,
+    )
+    client.force_login(user)
+
+    response = client.get(
+        reverse("whisky-detail", kwargs={"pk": bottle.whisky.pk}),
+        {"storage_item": bottle.pk},
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    expected_drink_url = (
+        reverse("drink-record-add", kwargs={"pk": bottle.whisky.pk})
+        + f"?storage_item={bottle.pk}"
+    )
+    assert f'href="{expected_drink_url}"' in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_whisky_detail_uses_latest_successful_extraction_log(
+    client, user, whisky_factory
+):
+    whisky = whisky_factory(user=user, name="Ardbeg 10")
+    household = whisky.household
+    WhiskyVisionExtractionLog.objects.create(
+        user=user,
+        household=household,
+        whisky=whisky,
+        extracted_data={"name": whisky.name},
+        confidence="medium",
+        extracted_fields=["name"],
+        was_successful=True,
+    )
+    latest_success = WhiskyVisionExtractionLog.objects.create(
+        user=user,
+        household=household,
+        whisky=whisky,
+        extracted_data={"name": whisky.name},
+        confidence="high",
+        extracted_fields=["name"],
+        was_successful=True,
+    )
+    WhiskyVisionExtractionLog.objects.create(
+        user=user,
+        household=household,
+        whisky=whisky,
+        extracted_data={"name": whisky.name},
+        confidence="low",
+        extracted_fields=["name"],
+        was_successful=False,
+    )
+
+    client.force_login(user)
+    r = client.get(reverse("whisky-detail", kwargs={"pk": whisky.pk}))
+
+    assert r.status_code == HTTPStatus.OK
+    assert r.context["extraction_log"].pk == latest_success.pk
+
+
+@pytest.mark.django_db
 def test_whisky_detail_unauthenticated(client, whisky_factory, user):
     """Test that unauthenticated users are redirected from whisky detail."""
     whisky = whisky_factory(user=user)
@@ -418,7 +1041,19 @@ def test_whisky_create_get(client, user):
     r = client.get(reverse("whisky-add"))
     assert r.status_code == HTTPStatus.OK
     assertTemplateUsed(response=r, template_name="whisky/whisky_create.html")
+    assertTemplateUsed(response=r, template_name="core/beverage_create.html")
     assert "form" in r.context
+
+
+@pytest.mark.django_db
+def test_whisky_create_marks_cask_type_as_creatable_for_vision_autofill(client, user):
+    """Whisky vision autofill should mark cask type as a creatable select."""
+    client.force_login(user)
+
+    response = client.get(reverse("whisky-add"))
+
+    assert response.status_code == HTTPStatus.OK
+    assert "cask_type" in response.context["vision_extraction_config"]["createFields"]
 
 
 @pytest.mark.django_db
@@ -588,6 +1223,36 @@ def test_whisky_create_post_valid(client, user):
 
 
 @pytest.mark.django_db
+def test_whisky_create_saves_front_label_image(client, user, clear_image_folder):
+    client.force_login(user)
+    response = client.post(
+        reverse("whisky-add"),
+        {
+            "name": "Lagavulin 16",
+            "whisky_type": "SM",
+            "abv": 43.0,
+            "size": "0.70",
+            "country": "GB",
+            "comment": "",
+            "price": "",
+            "rating": "",
+            "image_front_label": _test_image_upload(),
+        },
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    whisky = Whisky.objects.get(user=user, name="Lagavulin 16")
+    assert (
+        WhiskyImage.objects.filter(
+            whisky=whisky,
+            image_type=WhiskyImage.ImageType.LABEL_FRONT,
+        ).count()
+        == 1
+    )
+
+
+@pytest.mark.django_db
 def test_whisky_create_post_empty(client, user):
     """Test that submitting an empty form shows validation errors."""
     client.force_login(user)
@@ -664,6 +1329,307 @@ def test_whisky_create_post_with_distillery(client, user, distillery_factory):
     whisky = Whisky.objects.get(user=user, name="Laphroaig 10")
     assert whisky.distillery == distillery
     assert whisky.age_statement == 10
+
+
+@pytest.mark.django_db
+def test_whisky_wishlist_create_saves_country_and_external_url(client, user):
+    client.force_login(user)
+
+    response = client.post(
+        reverse("wishlist-add"),
+        {
+            "name": "Wishlist Whisky",
+            "whisky_type": "SM",
+            "country": "GB",
+            "priority": 2,
+            "external_url": "https://example.com/whisky",
+        },
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    wishlist_item = WhiskyWishlist.objects.get(name="Wishlist Whisky")
+    assert wishlist_item.country == "GB"
+    assert wishlist_item.external_url == "https://example.com/whisky"
+
+
+@pytest.mark.django_db
+def test_whisky_create_from_wishlist_prefills_and_marks_purchased(
+    client, user, distillery_factory, whisky_region_factory
+):
+    distillery = distillery_factory(name="Talisker")
+    region = whisky_region_factory(name="Islands")
+    household = user.user_settings.active_household
+    wishlist_item = WhiskyWishlist.objects.create(
+        name="Talisker 10",
+        user=user,
+        household=household,
+        whisky_type="SM",
+        distillery=distillery,
+        region=region,
+        country="GB",
+        age_statement=10,
+        external_url="https://example.com/whisky/talisker-10",
+        notes="Birthday dram",
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("whisky-add") + f"?wishlist_item={wishlist_item.pk}")
+
+    assert response.status_code == HTTPStatus.OK
+    form = response.context["form"]
+    assert form.initial["name"] == "Talisker 10"
+    assert form.initial["distillery"] == distillery.pk
+    assert form.initial["region"] == region.pk
+    assert form.initial["country"] == "GB"
+    assert form.initial["comment"] == "Birthday dram"
+
+    post_response = client.post(
+        reverse("whisky-add"),
+        {
+            "name": "Talisker 10",
+            "whisky_type": "SM",
+            "abv": 45.8,
+            "size": "0.70",
+            "country": "GB",
+            "wishlist_item": wishlist_item.pk,
+        },
+        follow=True,
+    )
+
+    assert post_response.status_code == HTTPStatus.OK
+    wishlist_item.refresh_from_db()
+    assert Whisky.objects.filter(user=user, name="Talisker 10").exists()
+    assert wishlist_item.purchased is True
+
+
+@pytest.mark.django_db
+def test_whisky_wishlist_list_shows_convert_and_purchase_links(client, user):
+    household = user.user_settings.active_household
+    wishlist_item = WhiskyWishlist.objects.create(
+        name="Wishlist Link Whisky",
+        user=user,
+        household=household,
+        external_url="https://example.com/buy-whisky",
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("wishlist-list"))
+    content = response.content.decode()
+
+    assert response.status_code == HTTPStatus.OK
+    assert (reverse("whisky-add") + f"?wishlist_item={wishlist_item.pk}") in content
+    assert "https://example.com/buy-whisky" in content
+
+
+@pytest.mark.django_db
+def test_whisky_stock_add_uses_shared_template(client, user, whisky_factory):
+    whisky = whisky_factory(user=user)
+    client.force_login(user)
+
+    response = client.get(reverse("stock-add", kwargs={"pk": whisky.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assertTemplateUsed(response, "whisky/stock_add.html")
+    assertTemplateUsed(response, "core/stock_add.html")
+    assert response.context["whisky"].pk == whisky.pk
+
+
+@pytest.mark.django_db
+def test_miniature_list_only_shows_miniatures(
+    client, user, whisky_factory, whisky_storage_item_factory
+):
+    household = user.user_settings.active_household
+    miniature = whisky_factory(
+        user=user, household=household, size=BottleSize.MINIATURE
+    )
+    miniature_item = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        whisky=miniature,
+        miniature_number=12,
+    )
+    regular = whisky_factory(user=user, household=household, size=BottleSize.STANDARD)
+    whisky_storage_item_factory(
+        user=user,
+        household=household,
+        whisky=regular,
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("miniature-list"))
+
+    assert response.status_code == HTTPStatus.OK
+    assertTemplateUsed(response, "whisky/bottle_list.html")
+    assert list(response.context["bottles"]) == [miniature_item]
+    assert "Whisky Miniatures" in response.content.decode()
+    assert "12" in response.content.decode()
+    assert "Add Miniature" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_recording_planned_move_rejects_whisky_miniatures(
+    client, user, whisky_factory, whisky_storage_item_factory, storage_factory
+):
+    household = user.user_settings.active_household
+    source = storage_factory(
+        user=user, household=household, app_type="whisky", rows=2, columns=2
+    )
+    target = storage_factory(
+        user=user, household=household, app_type="whisky", rows=2, columns=2
+    )
+    miniature = whisky_factory(
+        user=user, household=household, size=BottleSize.MINIATURE
+    )
+    item = whisky_storage_item_factory(
+        user=user,
+        household=household,
+        whisky=miniature,
+        storage=source,
+        row=None,
+        column=None,
+    )
+    planned_move = PlannedMove.objects.create(
+        storage_item=item,
+        target_storage=target,
+        target_row=1,
+        target_column=1,
+        user=user,
+        household=household,
+        app_type="whisky",
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse("planned-move-complete", args=[planned_move.pk]), follow=True
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert "whisky miniatures cannot be placed" in response.content.decode()
+    assert PlannedMove.objects.filter(pk=planned_move.pk).exists()
+    item.refresh_from_db()
+    assert (item.storage, item.row, item.column) == (source, None, None)
+
+
+@pytest.mark.django_db
+def test_miniature_add_assigns_a_label_number_and_no_shelf_position(
+    client, user, storage_factory
+):
+    household = user.user_settings.active_household
+    storage = storage_factory(
+        user=user,
+        household=household,
+        app_type="whisky",
+    )
+    client.force_login(user)
+
+    create_page = client.get(reverse("miniature-add"))
+    assert create_page.status_code == HTTPStatus.OK
+    assert "Quick Add" not in create_page.content.decode()
+
+    response = client.post(
+        reverse("miniature-add"),
+        {
+            "name": "Talisker Miniature",
+            "whisky_type": "SM",
+            "size": BottleSize.STANDARD,
+            "country": "GB",
+            "storage": storage.pk,
+            "fill_level": FillLevel.UNOPENED,
+        },
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.redirect_chain[-1][0].endswith(reverse("miniature-list"))
+    bottle = WhiskyStorageItem.objects.get(whisky__name="Talisker Miniature")
+    assert bottle.whisky.size == BottleSize.MINIATURE
+    assert bottle.miniature_number == 1
+    assert bottle.row is None
+    assert bottle.column is None
+
+
+@pytest.mark.django_db
+def test_whisky_update_replaces_front_image_and_clears_back_image(
+    client, user, whisky_factory, clear_image_folder
+):
+    whisky = whisky_factory(user=user)
+    front_image = WhiskyImage.objects.create(
+        whisky=whisky,
+        user=user,
+        image=_test_image_upload("front-existing.jpg"),
+        image_type=WhiskyImage.ImageType.LABEL_FRONT,
+    )
+    WhiskyImage.objects.create(
+        whisky=whisky,
+        user=user,
+        image=_test_image_upload("back-existing.jpg"),
+        image_type=WhiskyImage.ImageType.LABEL_BACK,
+    )
+
+    client.force_login(user)
+    response = client.post(
+        reverse("whisky-edit", kwargs={"pk": whisky.pk}),
+        {
+            "name": whisky.name,
+            "whisky_type": whisky.whisky_type,
+            "abv": whisky.abv,
+            "size": whisky.size,
+            "country": whisky.country,
+            "comment": whisky.comment,
+            "price": whisky.price or "",
+            "rating": whisky.rating or "",
+            "image_front_label": _test_image_upload("front-replacement.jpg"),
+            "image_back_label-clear": "on",
+        },
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    front_images = WhiskyImage.objects.filter(
+        whisky=whisky,
+        image_type=WhiskyImage.ImageType.LABEL_FRONT,
+    )
+    assert front_images.count() == 1
+    assert front_images.get().pk != front_image.pk
+    assert not WhiskyImage.objects.filter(
+        whisky=whisky,
+        image_type=WhiskyImage.ImageType.LABEL_BACK,
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_whisky_bottle_edit_next_list_redirects_to_bottle_list(
+    client, user, whisky_storage_item_factory
+):
+    storage_item = whisky_storage_item_factory(
+        user=user,
+        household=user.user_settings.active_household,
+        storage__user=user,
+        storage__household=user.user_settings.active_household,
+        whisky__user=user,
+        whisky__household=user.user_settings.active_household,
+        row=1,
+        column=1,
+    )
+    client.force_login(user)
+
+    response = client.post(
+        reverse("bottle-edit", kwargs={"pk": storage_item.pk}) + "?next=list",
+        {
+            "storage": storage_item.storage.pk,
+            "row": 1,
+            "column": 1,
+            "price": "",
+            "rating": "",
+            "fill_level": storage_item.fill_level,
+            "owner": storage_item.owner,
+        },
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.redirect_chain[-1][0].endswith(reverse("bottle-list"))
 
 
 # ---------------------------------------------------------------------------
@@ -805,6 +1771,35 @@ def test_storage_grid_data_mixed_finish_prioritises_sherry(
 
 
 @pytest.mark.django_db
+def test_storage_grid_data_includes_utilization_stats(
+    client, user, whisky_storage_item_factory
+):
+    item = _make_storage_item(whisky_storage_item_factory, user, "Bourbon")
+    storage = item.storage
+    storage.rows = 2
+    storage.columns = 2
+    storage.cell_mask = [[1, 1], [1, 2], [2, 1]]
+    storage.save(update_fields=["rows", "columns", "cell_mask"])
+    whisky_storage_item_factory(
+        user=user,
+        household=user.user_settings.active_household,
+        storage=storage,
+        whisky__user=user,
+        whisky__household=user.user_settings.active_household,
+        row=1,
+        column=2,
+    )
+    client.force_login(user)
+    r = client.get(reverse("storage-grid-data"), {"storage_id": storage.pk})
+    assert r.status_code == HTTPStatus.OK
+    data = json.loads(r.content)
+    storage_data = next(s for s in data["storages"] if s["id"] == storage.pk)
+    assert storage_data["used_slots"] == 2
+    assert storage_data["total_slots"] == 3
+    assert storage_data["utilization_percent"] == 67
+
+
+@pytest.mark.django_db
 def test_cellar_value_uses_whisky_price_as_fallback(
     client, user, whisky_factory, whisky_storage_item_factory
 ):
@@ -886,6 +1881,69 @@ def test_whisky_stats_dashboard_by_type(
 
 
 @pytest.mark.django_db
+def test_whisky_stats_dashboard_spending_trends(
+    client, user, whisky_factory, whisky_storage_item_factory
+):
+    """Stats dashboard groups whisky spending by month and year."""
+    storage = user.storage_set.first()
+    whisky = whisky_factory(user=user, price=Decimal("45.00"))
+    january_item = whisky_storage_item_factory(
+        whisky=whisky,
+        storage=storage,
+        price=Decimal("40.00"),
+    )
+    march_item = whisky_storage_item_factory(
+        whisky=whisky,
+        storage=storage,
+        price=None,
+    )
+    january_created = timezone.make_aware(datetime.datetime(2024, 1, 8, 12, 0))
+    march_created = timezone.make_aware(datetime.datetime(2024, 3, 14, 12, 0))
+    WhiskyStorageItem.objects.filter(pk=january_item.pk).update(created=january_created)
+    WhiskyStorageItem.objects.filter(pk=march_item.pk).update(created=march_created)
+
+    client.force_login(user)
+    r = client.get(reverse("stats-dashboard"))
+
+    assert r.status_code == HTTPStatus.OK
+    assert r.context_data["spend_by_month"] == [
+        {"month": january_created.date().replace(day=1), "amount": Decimal("40.00")},
+        {"month": march_created.date().replace(day=1), "amount": Decimal("45.00")},
+    ]
+    assert r.context_data["spend_by_year"] == [
+        {"year": 2024, "amount": Decimal("85.00")}
+    ]
+    assert "Monthly Spend" in r.content.decode()
+    assert "Yearly Spend" in r.content.decode()
+
+
+@pytest.mark.django_db
+def test_whisky_stats_dashboard_rating_distribution(
+    client, user, whisky_factory, whisky_storage_item_factory
+):
+    """Stats dashboard shows rating distribution of whiskies in cellar."""
+    storage = user.storage_set.first()
+    whisky_3_stars = whisky_factory(user=user, rating=3)
+    whisky_2_stars = whisky_factory(user=user, rating=2)
+    whisky_1_star = whisky_factory(user=user, rating=1)
+    whisky_unrated = whisky_factory(user=user, rating=None)
+
+    whisky_storage_item_factory(whisky=whisky_3_stars, storage=storage)
+    whisky_storage_item_factory(whisky=whisky_2_stars, storage=storage)
+    whisky_storage_item_factory(whisky=whisky_1_star, storage=storage)
+    whisky_storage_item_factory(whisky=whisky_unrated, storage=storage)
+
+    client.force_login(user)
+    r = client.get(reverse("stats-dashboard"))
+
+    assert r.status_code == HTTPStatus.OK
+    by_rating = r.context_data["by_rating"]
+
+    assert by_rating == {0: 0, 1: 1, 2: 1, 3: 1}
+    assert "Rating Distribution" in r.content.decode()
+
+
+@pytest.mark.django_db
 def test_whisky_check_duplicate_unauthenticated(client):
     """Unauthenticated requests to the check-duplicate endpoint are redirected."""
     r = client.get(reverse("whisky-check-duplicate"), {"name": "Lagavulin 16"})
@@ -947,3 +2005,129 @@ def test_whisky_check_duplicate_no_cross_household(
     r = client.get(reverse("whisky-check-duplicate"), {"name": "Ardbeg Uigeadail"})
     assert r.status_code == HTTPStatus.OK
     assert r.json()["similar"] == []
+
+
+# ---------------------------------------------------------------------------
+# Whisky drink record tasting wheel tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_whisky_drink_record_create_hides_taste_descriptors_by_default(
+    client, user, whisky_factory
+):
+    whisky = whisky_factory(user=user)
+    client.force_login(user)
+
+    response = client.get(reverse("drink-record-add", kwargs={"pk": whisky.pk}))
+    html = response.content.decode()
+
+    assert response.status_code == HTTPStatus.OK
+    assert '<details id="taste-descriptors-toggle">' in html
+    assert '<details id="taste-descriptors-toggle" open>' not in html
+
+
+@pytest.mark.django_db
+def test_whisky_drink_record_edit_shows_taste_descriptors_when_present(
+    client, user, whisky_factory
+):
+    from datetime import date
+
+    from wine_cellar.apps.whisky.models import WhiskyDrinkRecord
+
+    whisky = whisky_factory(user=user)
+    household = user.user_settings.active_household
+    record = WhiskyDrinkRecord.objects.create(
+        whisky=whisky,
+        user=user,
+        household=household,
+        date_consumed=date.today(),
+        taste_descriptors=["Smoky"],
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("drink-record-edit", kwargs={"pk": record.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assert '<details id="taste-descriptors-toggle" open>' in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_whisky_drink_record_create_with_taste_descriptors(
+    client, user, whisky_factory
+):
+    """Test that taste descriptors can be saved on whisky drink record creation."""
+    import json
+    from datetime import date
+
+    whisky = whisky_factory(user=user)
+    client.force_login(user)
+    descriptors = ["Smoky", "Peat", "Citrus"]
+    r = client.post(
+        reverse("drink-record-add", kwargs={"pk": whisky.pk}),
+        {
+            "date_consumed": date.today().isoformat(),
+            "tasting_notes": "Excellent dram",
+            "rating": "3",
+            "taste_descriptors": json.dumps(descriptors),
+        },
+    )
+    assert r.status_code == HTTPStatus.FOUND
+
+    from wine_cellar.apps.whisky.models import WhiskyDrinkRecord
+
+    record = WhiskyDrinkRecord.objects.filter(whisky=whisky).first()
+    assert record is not None
+    assert record.taste_descriptors == descriptors
+
+
+@pytest.mark.django_db
+def test_whisky_drink_record_edit_with_taste_descriptors(client, user, whisky_factory):
+    """Test that taste descriptors can be updated on whisky drink record edit."""
+    import json
+    from datetime import date
+
+    from wine_cellar.apps.whisky.models import WhiskyDrinkRecord
+
+    whisky = whisky_factory(user=user)
+    household = user.user_settings.active_household
+    record = WhiskyDrinkRecord.objects.create(
+        whisky=whisky,
+        user=user,
+        household=household,
+        date_consumed=date.today(),
+        taste_descriptors=["Smoky"],
+    )
+    client.force_login(user)
+    new_descriptors = ["Spice", "Oak"]
+    r = client.post(
+        reverse("drink-record-edit", kwargs={"pk": record.pk}),
+        {
+            "date_consumed": date.today().isoformat(),
+            "tasting_notes": "Updated notes",
+            "rating": "2",
+            "taste_descriptors": json.dumps(new_descriptors),
+        },
+    )
+    assert r.status_code == HTTPStatus.FOUND
+    record.refresh_from_db()
+    assert record.taste_descriptors == new_descriptors
+
+
+@pytest.mark.django_db
+def test_whisky_drink_record_delete_confirmation_renders(client, user, whisky_factory):
+    from datetime import date
+
+    from wine_cellar.apps.whisky.models import WhiskyDrinkRecord
+
+    whisky = whisky_factory(user=user)
+    household = user.user_settings.active_household
+    record = WhiskyDrinkRecord.objects.create(
+        whisky=whisky, user=user, household=household, date_consumed=date.today()
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("drink-record-delete", kwargs={"pk": record.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    assert "Delete Drink Record" in response.content.decode()
