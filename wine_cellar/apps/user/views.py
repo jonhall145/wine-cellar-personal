@@ -3,9 +3,8 @@ from typing import TYPE_CHECKING
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse_lazy
 from django.utils import timezone
-from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import TemplateView, UpdateView, View
 
 from wine_cellar.apps.household.mixins import RequireAdminMixin, RequireHouseholdMixin
@@ -122,19 +121,12 @@ class BaseNotificationStatusUpdateView(LoginRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         notification_key = (request.POST.get("notification_key") or "").strip()
         notification_type = (request.POST.get("notification_type") or "").strip()
-        redirect_to = (request.POST.get("next") or reverse("notifications")).strip()
-        if not url_has_allowed_host_and_scheme(
-            redirect_to,
-            allowed_hosts={request.get_host()},
-            require_https=request.is_secure(),
-        ):
-            redirect_to = reverse("notifications")
         if (
             not notification_key
             or len(notification_key) > 120
             or notification_type not in self.allowed_notification_types
         ):
-            return redirect(redirect_to or reverse("notifications"))
+            return redirect("notifications")
 
         status, _ = InAppNotificationStatus.objects.get_or_create(
             user=request.user,
@@ -151,7 +143,7 @@ class BaseNotificationStatusUpdateView(LoginRequiredMixin, View):
         if self.action == "dismiss":
             status.dismissed_at = timezone.now()
         status.save()
-        return redirect(redirect_to or reverse("notifications"))
+        return redirect("notifications")
 
 
 class NotificationMarkReadView(BaseNotificationStatusUpdateView):
