@@ -14,6 +14,18 @@ from PIL import Image
 logger = logging.getLogger(__name__)
 
 
+def get_claude_response_text(response: Any) -> str:
+    """Return text from Claude response content, ignoring thinking blocks."""
+    text_blocks = [
+        text
+        for block in response.content
+        if isinstance(text := getattr(block, "text", None), str) and text
+    ]
+    if not text_blocks:
+        raise ValueError("Claude response did not include a text block")
+    return "\n".join(text_blocks)
+
+
 def log_extraction(
     user,
     image_count: int,
@@ -551,7 +563,7 @@ class WineVisionExtractor:
             )
 
             # Parse the response
-            response_text = response.content[0].text
+            response_text = get_claude_response_text(response)
             logger.info(f"Vision API response:\n{response_text}")
 
             # Extract structured data from response

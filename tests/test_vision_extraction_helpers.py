@@ -1,10 +1,13 @@
 import base64
 import io
+from types import SimpleNamespace
 
+import pytest
 from PIL import Image
 
 from wine_cellar.apps.wine.services.vision_extraction import (
     WineVisionExtractor,
+    get_claude_response_text,
     resize_image_for_api,
 )
 
@@ -26,6 +29,26 @@ def test_resize_image_for_api_downsizes_large_image():
 def test_resize_image_for_api_keeps_small_image():
     small = _make_image_bytes(width=400, height=400)
     assert resize_image_for_api(small) == small
+
+
+def test_get_claude_response_text_skips_thinking_blocks():
+    response = SimpleNamespace(
+        content=[
+            SimpleNamespace(type="thinking", thinking="reasoning"),
+            SimpleNamespace(type="text", text="NAME: Test Wine"),
+        ]
+    )
+
+    assert get_claude_response_text(response) == "NAME: Test Wine"
+
+
+def test_get_claude_response_text_requires_text_block():
+    response = SimpleNamespace(
+        content=[SimpleNamespace(type="thinking", thinking="reasoning")]
+    )
+
+    with pytest.raises(ValueError, match="did not include a text block"):
+        get_claude_response_text(response)
 
 
 def test_process_field_value_maps_type_and_vintage():

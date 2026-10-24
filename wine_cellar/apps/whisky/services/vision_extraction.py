@@ -8,7 +8,10 @@ from typing import Any
 import pycountry
 from django.conf import settings
 
-from wine_cellar.apps.wine.services.vision_extraction import resize_image_for_api
+from wine_cellar.apps.wine.services.vision_extraction import (
+    get_claude_response_text,
+    resize_image_for_api,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -221,7 +224,7 @@ class WhiskyVisionExtractor:
                 messages=[{"role": "user", "content": content}],
             )
 
-            response_text = response.content[0].text
+            response_text = get_claude_response_text(response)
             logger.info(f"Whisky Vision API response:\n{response_text}")
 
             extracted_data = self._parse_claude_response(response_text)

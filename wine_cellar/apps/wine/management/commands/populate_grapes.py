@@ -10,6 +10,10 @@ from wine_cellar.apps.wine.models import Grape, Wine
 from wine_cellar.apps.wine.services.grape_normalization import (
     normalize_grape_list,
 )
+from wine_cellar.apps.wine.services.vision_extraction import (
+    get_claude_response_text,
+    resize_image_for_api,
+)
 
 
 def build_grape_prompt(wine):
@@ -157,10 +161,6 @@ class Command(BaseCommand):
                         try:
                             import base64
 
-                            from wine_cellar.apps.wine.services.vision_extraction import (  # noqa: E501
-                                resize_image_for_api,
-                            )
-
                             with img.image.open("rb") as f:
                                 image_data = f.read()
                             b64 = base64.b64encode(image_data).decode("utf-8")
@@ -191,7 +191,7 @@ class Command(BaseCommand):
                     messages=[{"role": "user", "content": content}],
                 )
 
-                response_text = response.content[0].text
+                response_text = get_claude_response_text(response)
                 grape_names, confidence = parse_grape_response(response_text)
 
                 wine_type = wine.get_wine_type_display() if wine.wine_type else "?"
