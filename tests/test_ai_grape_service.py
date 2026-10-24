@@ -96,6 +96,7 @@ def test_refresh_grapes_reads_text_from_later_content_blocks(
 
     response = SimpleNamespace(
         content=[
+            SimpleNamespace(type="thinking", thinking="reasoning"),
             SimpleNamespace(type="tool_use"),
             SimpleNamespace(text="GRAPES: Riesling\nCONFIDENCE: medium"),
         ]

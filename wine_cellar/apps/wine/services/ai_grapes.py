@@ -11,7 +11,10 @@ from django.db import IntegrityError
 
 from wine_cellar.apps.wine.models import Grape, ImageType, Wine
 from wine_cellar.apps.wine.services.grape_normalization import normalize_grape_list
-from wine_cellar.apps.wine.services.vision_extraction import resize_image_for_api
+from wine_cellar.apps.wine.services.vision_extraction import (
+    get_claude_response_text,
+    resize_image_for_api,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -83,9 +86,7 @@ class WineAIGrapeService:
             ],
         )
 
-        response_text = cls._extract_response_text(
-            getattr(response, "content", []) or []
-        )
+        response_text = get_claude_response_text(response)
         return cls.parse_response(response_text)
 
     @staticmethod
@@ -195,15 +196,6 @@ class WineAIGrapeService:
                 )
 
         return content
-
-    @staticmethod
-    def _extract_response_text(content_blocks) -> str:
-        parts = []
-        for block in content_blocks:
-            text = getattr(block, "text", "")
-            if text:
-                parts.append(text.strip())
-        return "\n\n".join(part for part in parts if part)
 
     @staticmethod
     def _get_or_create_grape(*, wine: Wine, grape_name: str) -> Grape:
