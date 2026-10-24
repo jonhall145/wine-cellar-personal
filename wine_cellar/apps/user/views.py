@@ -5,6 +5,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import TemplateView, UpdateView, View
 
 from wine_cellar.apps.household.mixins import RequireAdminMixin, RequireHouseholdMixin
@@ -122,6 +123,12 @@ class BaseNotificationStatusUpdateView(LoginRequiredMixin, View):
         notification_key = (request.POST.get("notification_key") or "").strip()
         notification_type = (request.POST.get("notification_type") or "").strip()
         redirect_to = (request.POST.get("next") or reverse("notifications")).strip()
+        if not url_has_allowed_host_and_scheme(
+            redirect_to,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            redirect_to = reverse("notifications")
         if (
             not notification_key
             or len(notification_key) > 120

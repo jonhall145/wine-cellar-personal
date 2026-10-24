@@ -117,3 +117,20 @@ def test_notification_mark_read_and_dismiss(
     assert response.status_code == HTTPStatus.FOUND
     status.refresh_from_db()
     assert status.dismissed_at is not None
+
+
+@pytest.mark.django_db
+def test_notification_status_update_rejects_external_redirect(client, user):
+    client.force_login(user)
+
+    response = client.post(
+        reverse("notification-mark-read"),
+        data={
+            "notification_key": "low-stock:wine:1:1",
+            "notification_type": "low_stock",
+            "next": "https://attacker.example/",
+        },
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert response.url == reverse("notifications")
