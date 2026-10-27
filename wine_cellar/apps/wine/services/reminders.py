@@ -160,6 +160,7 @@ class WineReminderService:
                 StorageItem.objects.filter(
                     household=household,
                     deleted=False,
+                    wine__deleted=False,
                     occasion_date__in=reminder_dates.keys(),
                 )
                 .select_related("wine", "storage")

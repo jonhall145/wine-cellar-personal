@@ -1,13 +1,17 @@
 import logging
 
 from django.db.models import Count, Max, Min, Q
+from django.utils import timezone
+from django.views.generic import TemplateView
 
 from wine_cellar.apps.core.views import (
     BaseHomePageView,
     BaseQRCodeView,
     BaseRandomBottleView,
 )
+from wine_cellar.apps.household.mixins import RequireHouseholdMixin
 from wine_cellar.apps.storage.models import StorageItem
+from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.wine.models import Wine
 from wine_cellar.apps.wine.services import WineReminderService
 
@@ -60,6 +64,7 @@ class HomePageView(BaseHomePageView):
             return cached
 
         wines = Wine.objects.filter(household=household, deleted=False).count()
+        today = timezone.localdate()
         wine_stats = Wine.objects.filter(household=household, deleted=False).aggregate(
             wines_in_stock=Count(
                 "id", filter=Q(storageitem__deleted=False), distinct=True
@@ -113,7 +118,44 @@ class HomePageView(BaseHomePageView):
             "youngest": wine_stats["youngest_vintage"] or "-",
             "overdue_count": wine_stats["overdue_count"],
             "upcoming_count": wine_stats["upcoming_count"],
+            "occasion_overdue_count": StorageItem.objects.filter(
+                household=household,
+                deleted=False,
+                wine__deleted=False,
+                occasion_date__lt=today,
+            ).count(),
+            "occasion_upcoming_count": StorageItem.objects.filter(
+                household=household,
+                deleted=False,
+                wine__deleted=False,
+                occasion_date__gte=today,
+            ).count(),
             "pending_reviews_count": pending_reviews_count,
         }
         cache.set(cache_key, result, 300)  # 5 minutes
         return result
+
+
+class OccasionDashboardView(RequireHouseholdMixin, TemplateView):
+    template_name = "occasion_dashboard.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = timezone.localdate()
+        bottles = StorageItem.objects.filter(
+            household=get_active_household(self.request.user),
+            deleted=False,
+            wine__deleted=False,
+            occasion_date__isnull=False,
+        ).select_related("wine", "storage")
+        context.update(
+            {
+                "overdue_bottles": bottles.filter(occasion_date__lt=today).order_by(
+                    "occasion_date", "wine__name", "pk"
+                ),
+                "upcoming_bottles": bottles.filter(occasion_date__gte=today).order_by(
+                    "occasion_date", "wine__name", "pk"
+                ),
+            }
+        )
+        return context

@@ -27,6 +27,7 @@ from wine_cellar.apps.wine.views.drink import (  # noqa: F401
 from wine_cellar.apps.wine.views.health import health_check  # noqa: F401
 from wine_cellar.apps.wine.views.home import (  # noqa: F401
     HomePageView,
+    OccasionDashboardView,
     QRCodeView,
     RandomBottleView,
 )

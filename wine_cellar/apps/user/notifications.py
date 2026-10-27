@@ -57,6 +57,8 @@ def build_in_app_notifications(user):
 
     if household and user_settings.allows_in_app_notifications("drink_window"):
         notifications.extend(_build_drink_window_notifications(user, household))
+        if user_settings.reminder_enabled:
+            notifications.extend(_build_occasion_date_notifications(household))
     if household and user_settings.allows_in_app_notifications("low_stock"):
         notifications.extend(_build_low_stock_notifications(user, household))
     if (
@@ -235,6 +237,47 @@ def _build_whisky_drink_window_notifications(household):
             )
         )
 
+    return notifications
+
+
+def _build_occasion_date_notifications(household):
+    if getattr(settings, "CELLAR_APP_TYPE", "wine") == "whisky":
+        return []
+
+    from wine_cellar.apps.storage.models import StorageItem
+
+    today = timezone.localdate()
+    reminder_dates = (
+        (today + datetime.timedelta(days=1), "tomorrow", 30),
+        (today + datetime.timedelta(weeks=1), "one week", 40),
+    )
+    notifications = []
+    for occasion_date, timing, sort_order in reminder_dates:
+        bottles = StorageItem.objects.filter(
+            household=household,
+            deleted=False,
+            wine__deleted=False,
+            occasion_date=occasion_date,
+        ).select_related("wine")
+        for bottle in bottles:
+            occasion = bottle.occasion or "Occasion"
+            notifications.append(
+                NotificationItem(
+                    key=(
+                        f"occasion-date:wine:{bottle.pk}:"
+                        f"{occasion_date.isoformat()}:{timing}"
+                    ),
+                    notification_type="occasion_date",
+                    section="Occasions",
+                    title=bottle.wine.name,
+                    body=(f"{occasion} is {timing}."),
+                    severity="warning",
+                    icon="calendar-days",
+                    url=reverse("wine-detail", args=[bottle.wine_id]),
+                    url_label="View wine",
+                    sort_order=sort_order,
+                )
+            )
     return notifications
 
 
