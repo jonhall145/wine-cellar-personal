@@ -2,6 +2,7 @@ from datetime import date
 from http import HTTPStatus
 
 import pytest
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from pytest_django.asserts import (
@@ -9,6 +10,7 @@ from pytest_django.asserts import (
     assertTemplateUsed,
 )
 
+from wine_cellar.apps.storage import views as storage_views
 from wine_cellar.apps.storage.models import (
     BottleMoveHistory,
     PlannedMove,
@@ -931,4 +933,78 @@ def test_planning_a_cold_storage_move_requires_an_available_cold_slot(
     response = client.post(reverse("planned-move-cold-storage", args=[item.pk]))
 
     assertRedirects(response, reverse("wine-detail", args=[wine.pk]))
+    assert not PlannedMove.objects.filter(storage_item_id=item.pk).exists()
+
+
+@pytest.mark.django_db
+def test_cold_storage_planning_rechecks_plans_and_occupancy_after_lock(
+    client,
+    user,
+    wine_factory,
+    storage_factory,
+    storage_item_factory,
+    monkeypatch,
+):
+    wine = wine_factory(user=user)
+    competitor_wine = wine_factory(user=user)
+    source = storage_factory(user=user, rows=2, columns=1)
+    cold_storage = storage_factory(user=user, is_cold=True, rows=1, columns=3)
+    item = storage_item_factory(wine=wine, storage=source, row=1, column=1)
+    competitor_item = storage_item_factory(
+        wine=competitor_wine, storage=source, row=2, column=1
+    )
+    client.force_login(user)
+
+    lock_storages = storage_views._lock_storages
+
+    def lock_then_add_competing_uses(*storage_ids):
+        locked_storages = lock_storages(*storage_ids)
+        PlannedMove.objects.create(
+            storage_item=competitor_item,
+            target_storage=cold_storage,
+            target_row=1,
+            target_column=1,
+            user=user,
+            household=user.user_settings.active_household,
+        )
+        storage_item_factory(
+            wine=wine_factory(user=user),
+            storage=cold_storage,
+            row=1,
+            column=2,
+        )
+        return locked_storages
+
+    monkeypatch.setattr(storage_views, "_lock_storages", lock_then_add_competing_uses)
+
+    response = client.post(reverse("planned-move-cold-storage", args=[item.pk]))
+
+    assertRedirects(response, reverse("wine-detail", args=[wine.pk]))
+    planned_move = PlannedMove.objects.get(storage_item_id=item.pk)
+    assert (
+        planned_move.target_storage,
+        planned_move.target_row,
+        planned_move.target_column,
+    ) == (cold_storage, 1, 3)
+
+
+@pytest.mark.django_db
+@override_settings(CELLAR_APP_TYPE="whisky")
+def test_cold_storage_planning_is_rejected_in_whisky_mode(
+    client, user, wine_factory, storage_factory, storage_item_factory, monkeypatch
+):
+    wine = wine_factory(user=user)
+    source = storage_factory(user=user, rows=1, columns=1)
+    storage_factory(user=user, is_cold=True, rows=1, columns=1)
+    item = storage_item_factory(wine=wine, storage=source, row=1, column=1)
+    client.force_login(user)
+
+    def fail_if_bottle_lookup(*args, **kwargs):
+        raise AssertionError("Whisky mode must reject before looking up a wine bottle")
+
+    monkeypatch.setattr(storage_views, "get_object_or_404", fail_if_bottle_lookup)
+    response = client.post(reverse("planned-move-cold-storage", args=[item.pk]))
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert response["Location"] == reverse("planned-move-list")
     assert not PlannedMove.objects.filter(storage_item_id=item.pk).exists()
