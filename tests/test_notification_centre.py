@@ -2,6 +2,7 @@ from datetime import timedelta
 from http import HTTPStatus
 
 import pytest
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from pytest_django.asserts import assertTemplateUsed
@@ -83,6 +84,9 @@ def test_notifications_view_includes_one_day_and_one_week_occasion_dates(
     tomorrow = wine_factory(user=user, name="Tomorrow Wine")
     next_week = wine_factory(user=user, name="Next Week Wine")
     later = wine_factory(user=user, name="Later Wine")
+    deleted_wine = wine_factory(user=user, name="Deleted Wine")
+    deleted_wine.deleted = True
+    deleted_wine.save(update_fields=["deleted"])
     storage_item_factory(
         wine=tomorrow,
         storage=storage,
@@ -103,6 +107,12 @@ def test_notifications_view_includes_one_day_and_one_week_occasion_dates(
         user=user,
         occasion_date=today + timedelta(days=2),
     )
+    storage_item_factory(
+        wine=deleted_wine,
+        storage=storage,
+        user=user,
+        occasion_date=today + timedelta(weeks=1),
+    )
 
     response = client.get(reverse("notifications"))
 
@@ -118,6 +128,39 @@ def test_notifications_view_includes_one_day_and_one_week_occasion_dates(
         "Birthday is tomorrow.",
         "Anniversary is one week.",
     }
+    assert {
+        notification.key.rsplit(":", maxsplit=1)[-1]
+        for notification in occasion_notifications
+    } == {"tomorrow", "one week"}
+
+
+@pytest.mark.django_db
+@override_settings(CELLAR_APP_TYPE="whisky")
+def test_whisky_notifications_skip_wine_occasion_routes(
+    user, wine_factory, storage_item_factory, monkeypatch
+):
+    from wine_cellar.apps.user.notifications import build_in_app_notifications
+
+    wine = wine_factory(user=user)
+    storage_item_factory(
+        wine=wine,
+        storage=user.storage_set.first(),
+        user=user,
+        occasion_date=timezone.localdate() + timedelta(days=1),
+    )
+
+    def reject_wine_route(route_name, *args, **kwargs):
+        if route_name == "wine-detail":
+            raise AssertionError("Whisky notifications must not reverse wine routes")
+        return route_name
+
+    monkeypatch.setattr(
+        "wine_cellar.apps.user.notifications.reverse", reject_wine_route
+    )
+
+    notifications = build_in_app_notifications(user)
+
+    assert not any(item.notification_type == "occasion_date" for item in notifications)
 
 
 @pytest.mark.django_db

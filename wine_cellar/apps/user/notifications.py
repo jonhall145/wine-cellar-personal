@@ -241,6 +241,9 @@ def _build_whisky_drink_window_notifications(household):
 
 
 def _build_occasion_date_notifications(household):
+    if getattr(settings, "CELLAR_APP_TYPE", "wine") == "whisky":
+        return []
+
     from wine_cellar.apps.storage.models import StorageItem
 
     today = timezone.localdate()
@@ -253,13 +256,17 @@ def _build_occasion_date_notifications(household):
         bottles = StorageItem.objects.filter(
             household=household,
             deleted=False,
+            wine__deleted=False,
             occasion_date=occasion_date,
         ).select_related("wine")
         for bottle in bottles:
             occasion = bottle.occasion or "Occasion"
             notifications.append(
                 NotificationItem(
-                    key=f"occasion-date:wine:{bottle.pk}:{occasion_date.isoformat()}",
+                    key=(
+                        f"occasion-date:wine:{bottle.pk}:"
+                        f"{occasion_date.isoformat()}:{timing}"
+                    ),
                     notification_type="occasion_date",
                     section="Occasions",
                     title=bottle.wine.name,

@@ -121,11 +121,13 @@ class HomePageView(BaseHomePageView):
             "occasion_overdue_count": StorageItem.objects.filter(
                 household=household,
                 deleted=False,
+                wine__deleted=False,
                 occasion_date__lt=today,
             ).count(),
             "occasion_upcoming_count": StorageItem.objects.filter(
                 household=household,
                 deleted=False,
+                wine__deleted=False,
                 occasion_date__gte=today,
             ).count(),
             "pending_reviews_count": pending_reviews_count,
@@ -143,6 +145,7 @@ class OccasionDashboardView(RequireHouseholdMixin, TemplateView):
         bottles = StorageItem.objects.filter(
             household=get_active_household(self.request.user),
             deleted=False,
+            wine__deleted=False,
             occasion_date__isnull=False,
         ).select_related("wine", "storage")
         context.update(

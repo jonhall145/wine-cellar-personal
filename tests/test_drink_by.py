@@ -94,6 +94,9 @@ def test_occasion_date_reminder_sends_single_email_with_due_bottles(
     one_week = wine_factory(user=user, name="Week Wine")
     one_day = wine_factory(user=user, name="Day Wine")
     ignored = wine_factory(user=user, name="Ignored Wine")
+    deleted_wine = wine_factory(user=user, name="Deleted Wine")
+    deleted_wine.deleted = True
+    deleted_wine.save(update_fields=["deleted"])
     StorageItem.objects.create(
         wine=one_month,
         storage=storage,
@@ -122,6 +125,13 @@ def test_occasion_date_reminder_sends_single_email_with_due_bottles(
         household=household,
         occasion_date=today + timedelta(days=2),
     )
+    StorageItem.objects.create(
+        wine=deleted_wine,
+        storage=storage,
+        user=user,
+        household=household,
+        occasion_date=today + timedelta(days=1),
+    )
 
     sent = WineReminderService.send_occasion_date_reminders()
 
@@ -132,6 +142,7 @@ def test_occasion_date_reminder_sends_single_email_with_due_bottles(
     assert "Week Wine" in mail.outbox[0].body
     assert "Day Wine" in mail.outbox[0].body
     assert "Ignored Wine" not in mail.outbox[0].body
+    assert "Deleted Wine" not in mail.outbox[0].body
 
 
 @pytest.mark.django_db

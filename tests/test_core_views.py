@@ -1766,6 +1766,9 @@ class TestHomePageView:
         upcoming = wine_factory(user=user, name="Upcoming Wine")
         overdue = wine_factory(user=user, name="Overdue Wine")
         deleted = wine_factory(user=user, name="Deleted Wine")
+        soft_deleted = wine_factory(user=user, name="Soft Deleted Wine")
+        soft_deleted.deleted = True
+        soft_deleted.save(update_fields=["deleted"])
         upcoming_bottle = storage_item_factory(
             wine=upcoming,
             storage=storage,
@@ -1785,6 +1788,12 @@ class TestHomePageView:
             deleted=True,
             occasion_date=today + timedelta(days=1),
         )
+        storage_item_factory(
+            wine=soft_deleted,
+            storage=storage,
+            user=user,
+            occasion_date=today + timedelta(days=1),
+        )
         client.force_login(user)
 
         response = client.get(reverse("occasion-dashboard"))
@@ -1793,6 +1802,7 @@ class TestHomePageView:
         assert list(response.context["upcoming_bottles"]) == [upcoming_bottle]
         assert list(response.context["overdue_bottles"]) == [overdue_bottle]
         assert "Deleted Wine" not in response.content.decode()
+        assert "Soft Deleted Wine" not in response.content.decode()
 
     def test_homepage_links_to_occasion_dashboard_for_dated_bottles(
         self, client, user, wine_factory, storage_item_factory
@@ -1804,9 +1814,28 @@ class TestHomePageView:
             user=user,
             occasion_date=timezone.localdate() + timedelta(days=1),
         )
+        soft_deleted_upcoming = wine_factory(user=user, name="Deleted Upcoming Wine")
+        soft_deleted_upcoming.deleted = True
+        soft_deleted_upcoming.save(update_fields=["deleted"])
+        storage_item_factory(
+            wine=soft_deleted_upcoming,
+            storage=user.storage_set.first(),
+            user=user,
+            occasion_date=timezone.localdate() + timedelta(days=1),
+        )
+        soft_deleted_overdue = wine_factory(user=user, name="Deleted Overdue Wine")
+        soft_deleted_overdue.deleted = True
+        soft_deleted_overdue.save(update_fields=["deleted"])
+        storage_item_factory(
+            wine=soft_deleted_overdue,
+            storage=user.storage_set.first(),
+            user=user,
+            occasion_date=timezone.localdate() - timedelta(days=1),
+        )
         client.force_login(user)
 
         response = client.get(reverse("homepage"))
 
         assert response.context["occasion_upcoming_count"] == 1
+        assert response.context["occasion_overdue_count"] == 0
         assert reverse("occasion-dashboard") in response.content.decode()
