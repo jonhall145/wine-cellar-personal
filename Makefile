@@ -125,14 +125,7 @@ ghcr-deploy:
 
 .PHONY: ghcr-deploy-next
 ghcr-deploy-next:
-	docker pull $(GHCR_NEXT_IMAGE)
-	docker tag $(GHCR_NEXT_IMAGE) $(PROD_IMAGE)
-	chown -R 100:101 /mnt/usb/media/wine/ /mnt/usb/media/whisky/ 2>/dev/null || true
-	$(PROD_COMPOSE) up -d --no-build --force-recreate --remove-orphans
-
-.PHONY: ghcr-deploy-next
-ghcr-deploy-next:
-	$(MAKE) GHCR_IMAGE=ghcr.io/jonhall145/wine-cellar-personal:next ghcr-deploy
+	$(MAKE) GHCR_IMAGE=$(GHCR_NEXT_IMAGE) ghcr-deploy
 
 .PHONY: wine-deploy
 wine-deploy:
