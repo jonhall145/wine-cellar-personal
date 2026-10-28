@@ -60,6 +60,7 @@ help:
 	@echo "    make wine-deploy          Build/deploy wine app and restart nginx"
 	@echo "    make whisky-deploy        Build/deploy whisky app and restart nginx"
 	@echo "    make ghcr-deploy          Pull/deploy from GitHub Container Registry image"
+	@echo "    make ghcr-deploy-next     Pull/deploy the current next GHCR image"
 	@echo ""
 	@echo "  Production"
 	@echo "    make wine-prod-start      Start wine container"
@@ -119,6 +120,10 @@ ghcr-deploy:
 	docker tag $(GHCR_IMAGE) wine-cellar:prod
 	chown -R 100:101 /mnt/usb/media/wine/ /mnt/usb/media/whisky/ 2>/dev/null || true
 	$(PROD_COMPOSE) up -d --no-build --force-recreate --remove-orphans
+
+.PHONY: ghcr-deploy-next
+ghcr-deploy-next:
+	$(MAKE) GHCR_IMAGE=ghcr.io/jonhall145/wine-cellar-personal:next ghcr-deploy
 
 .PHONY: wine-deploy
 wine-deploy:
