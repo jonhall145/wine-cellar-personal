@@ -5,6 +5,14 @@ import pytest
 
 @pytest.mark.django_db(transaction=True)
 class TestWineCrud:
+    def test_new_wine_has_no_default_country(self, authenticated_page, live_server):
+        page = authenticated_page
+        page.goto(f"{live_server.url}/wine/add/")
+        page.wait_for_load_state("networkidle")
+
+        country = page.locator("select[name='country']")
+        assert country.input_value() == ""
+
     def test_create_wine(self, authenticated_page, live_server):
         """Create a wine through the form."""
         page = authenticated_page
@@ -17,6 +25,7 @@ class TestWineCrud:
         wine_type = form.locator("select[name='wine_type']")
         if wine_type.count() > 0:
             wine_type.select_option(index=1)
+        form.locator("select[name='country']").select_option("FR")
 
         form.locator("button[name='save_finish']").click()
         page.wait_for_load_state("networkidle")
