@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}
+    Notifications
+{% endblock title %}
+{% block header %}
+    <h1 class="header__title">Notifications</h1>
+{% endblock header %}
+{% block content %}
+    <div class="pure-g">
+        <div class="pure-u-1">
+            <div class="notification-summary">
+                <div>
+                    <strong>{{ notification_unread_count }}</strong> unread notification{{ notification_unread_count|pluralize }}
+                </div>
+                <a href="{% url 'user-settings' %}#notification-preferences" class="notification-summary__link">
+                    Notification preferences
+                </a>
+            </div>
+            {% if notification_sections %}
+                {% for section, items in notification_sections.items %}
+                    <section class="notifications-section">
+                        <h2 class="notifications-section__title">{{ section }}</h2>
+                        <div class="notification-list">
+                            {% for notification in items %}
+                                <article class="notification-card notification-card--{{ notification.severity }}{% if not notification.is_read %} notification-card--unread{% endif %}">
+                                    <div class="notification-card__top">
+                                        <div class="notification-card__icon">
+                                            <i class="fa-solid fa-{{ notification.icon }}"></i>
+                                        </div>
+                                        <div class="notification-card__content">
+                                            <p class="notification-card__eyebrow">
+                                                {{ notification.section }}
+                                                {% if not notification.is_read %}
+                                                    <span class="nav-badge">New</span>
+                                                {% endif %}
+                                            </p>
+                                            <h3 class="notification-card__title">{{ notification.title }}</h3>
+                                            <p class="notification-card__body">{{ notification.body }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="notification-card__actions">
+                                        <a href="{{ notification.url }}" class="pure-button button__neutral">{{ notification.url_label }}</a>
+                                        {% if notification.invitation_token %}
+                                            <form method="post" action="{% url 'invitation-accept' notification.invitation_token %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="pure-button button__primary">Accept</button>
+                                            </form>
+                                            <form method="post" action="{% url 'invitation-decline' notification.invitation_token %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="pure-button">Decline</button>
+                                            </form>
+                                        {% endif %}
+                                        {% if not notification.is_read %}
+                                            <form method="post" action="{% url 'notification-mark-read' %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="notification_key" value="{{ notification.key }}">
+                                                <input type="hidden"
+                                                       name="notification_type"
+                                                       value="{{ notification.notification_type }}">
+                                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                                <button type="submit" class="pure-button">Mark as read</button>
+                                            </form>
+                                        {% endif %}
+                                        <form method="post" action="{% url 'notification-dismiss' %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="notification_key" value="{{ notification.key }}">
+                                            <input type="hidden"
+                                                   name="notification_type"
+                                                   value="{{ notification.notification_type }}">
+                                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                            <button type="submit" class="pure-button">Dismiss</button>
+                                        </form>
+                                    </div>
+                                </article>
+                            {% endfor %}
+                        </div>
+                    </section>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state__icon">
+                        <i class="fa-solid fa-bell-slash"></i>
+                    </div>
+                    <h2 class="empty-state__title">All caught up</h2>
+                    <p class="empty-state__message">Your in-app notification centre is empty right now.</p>
+                    <a href="{% url 'user-settings' %}#notification-preferences"
+                       class="pure-button button__primary empty-state__action">
+                        Manage notification preferences
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock content %}

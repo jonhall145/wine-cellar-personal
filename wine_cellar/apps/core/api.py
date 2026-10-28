@@ -53,6 +53,19 @@ def _storage_to_dict(storage):
     }
 
 
+def _get_deleted_ids(model, household, since) -> list[int]:
+    """Return soft-deleted ids changed since the last incremental sync."""
+    if since is None:
+        return []
+    return list(
+        model.objects.filter(
+            household=household,
+            deleted=True,
+            modified__gt=since,
+        ).values_list("pk", flat=True)
+    )
+
+
 def _wine_to_dict(wine):
     """Serialize a Wine to a dict for offline access."""
     return {
@@ -145,6 +158,7 @@ def api_cellar_sync(request):
     if app_type == "whisky":
         from wine_cellar.apps.whisky.models import Whisky, WhiskyStorageItem
 
+        deleted_beverage_ids = _get_deleted_ids(Whisky, household, since)
         qs = (
             Whisky.objects.filter(household=household, deleted=False)
             .with_related()
@@ -155,6 +169,7 @@ def api_cellar_sync(request):
 
         beverages = [_whisky_to_dict(w) for w in qs]
 
+        deleted_stock_item_ids = _get_deleted_ids(WhiskyStorageItem, household, since)
         items_qs = WhiskyStorageItem.objects.filter(
             household=household, deleted=False
         ).select_related("storage", "whisky")
@@ -166,6 +181,7 @@ def api_cellar_sync(request):
         from wine_cellar.apps.storage.models import StorageItem
         from wine_cellar.apps.wine.models import Wine
 
+        deleted_beverage_ids = _get_deleted_ids(Wine, household, since)
         qs = (
             Wine.objects.filter(household=household, deleted=False)
             .with_related()
@@ -176,6 +192,7 @@ def api_cellar_sync(request):
 
         beverages = [_wine_to_dict(w) for w in qs]
 
+        deleted_stock_item_ids = _get_deleted_ids(StorageItem, household, since)
         items_qs = StorageItem.objects.filter(
             household=household, deleted=False
         ).select_related("storage", "wine")
@@ -196,7 +213,9 @@ def api_cellar_sync(request):
             "app_type": app_type,
             "currency": user_settings.currency if user_settings else "EUR",
             "beverages": beverages,
+            "deleted_beverage_ids": deleted_beverage_ids,
             "stock_items": stock_items,
+            "deleted_stock_item_ids": deleted_stock_item_ids,
             "storages": storages,
             "is_incremental": bool(since_raw),
         }

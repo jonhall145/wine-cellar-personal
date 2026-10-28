@@ -371,7 +371,7 @@ DJANGO_DEFAULT_FROM_EMAIL=Wine Cellar <your@email.com>
 
 ## Drink-By Reminders (Cron)
 
-Drink-by reminder emails are sent by the `send_drink_reminders` management command. You need to schedule this with a host cron job — it is **not** run automatically by the application server.
+Drink-by and occasion-date reminder emails are sent by the `send_drink_reminders` management command. You need to schedule this with a host cron job — it is **not** run automatically by the application server.
 
 Email configuration (see above) must be set up before reminders will be delivered.
 
@@ -390,6 +390,30 @@ Add a cron entry on the host that runs the command inside the running container:
 ```
 
 Adjust the time (`0 9 * * *` = 09:00 daily) to suit your timezone. The command only sends emails to users who have notifications enabled and have wines in their final drinking year, so it is safe to run daily.
+
+---
+
+## Cellar Summary Emails (Cron)
+
+Cellar summary emails are sent by the `send_cellar_summary` management command. Use `--period weekly` or `--period monthly` to match the digest cadence you want to schedule.
+
+Email configuration (see above) must be set up before summaries will be delivered.
+
+### Docker deployments
+
+```
+0 8 * * 1 docker compose -f /path/to/docker-compose.prod.yml exec -T wine-web python manage.py send_cellar_summary --period weekly >> /var/log/cellar_summary.log 2>&1
+0 8 1 * * docker compose -f /path/to/docker-compose.prod.yml exec -T wine-web python manage.py send_cellar_summary --period monthly >> /var/log/cellar_summary.log 2>&1
+```
+
+### Non-Docker (bare-metal / virtualenv) deployments
+
+```
+0 8 * * 1 cd /path/to/wine-cellar && venv/bin/python manage.py send_cellar_summary --period weekly >> /var/log/cellar_summary.log 2>&1
+0 8 1 * * cd /path/to/wine-cellar && venv/bin/python manage.py send_cellar_summary --period monthly >> /var/log/cellar_summary.log 2>&1
+```
+
+These digests only go to users who have notifications enabled, an email address, and an active household in the current app mode.
 
 ---
 

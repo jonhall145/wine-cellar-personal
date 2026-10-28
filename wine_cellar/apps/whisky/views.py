@@ -1,34 +1,36 @@
 import base64
+import json
 import logging
 import re
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Count, Max, Min, Q
-from django.forms import model_to_dict
+from django.db.models import Avg, Count, Max, Min, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.dateformat import format as date_format
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import (
-    DeleteView,
     DetailView,
-    FormView,
     ListView,
     TemplateView,
 )
 from django_filters.views import FilterView
 from django_ratelimit.decorators import ratelimit
 
+from wine_cellar.apps.core.import_views import BaseCsvImportView
 from wine_cellar.apps.core.views import (
     MAX_IMAGE_SIZE,
     BaseBeverageCreateView,
     BaseBeverageDeleteView,
     BaseBeverageUpdateView,
     BaseBottleNoteCreateView,
+    BaseBottleQuickLogView,
     BaseCellarValueView,
     BaseConsumptionStatsView,
     BaseDetailView,
@@ -41,6 +43,8 @@ from wine_cellar.apps.core.views import (
     BaseJourneyTimelineView,
     BaseLabelScanView,
     BaseListView,
+    BaseMarkBottleBrokenOrLostView,
+    BaseMarkBottleGivenView,
     BaseMergeConfirmView,
     BaseQRCodeView,
     BaseRandomBottleView,
@@ -49,6 +53,8 @@ from wine_cellar.apps.core.views import (
     BaseReorderRemindersView,
     BaseScanView,
     BaseStatsDashboardView,
+    BaseStorageItemAddView,
+    BaseStorageItemUpdateView,
     BaseWishlistCreateView,
     BaseWishlistDeleteView,
     BaseWishlistListView,
@@ -59,11 +65,14 @@ from wine_cellar.apps.core.views import (
 )
 from wine_cellar.apps.household.mixins import (
     RequireHouseholdMixin,
-    RequireMemberMixin,
     require_member,
 )
-from wine_cellar.apps.storage.models import Storage, get_app_type
-from wine_cellar.apps.storage.utils import format_bottle_location, format_move_detail
+from wine_cellar.apps.storage.utils import (
+    format_bottle_location,
+    format_given_detail,
+    format_move_detail,
+    with_removal_sort_date,
+)
 from wine_cellar.apps.user.views import get_active_household
 from wine_cellar.apps.whisky.filters import WhiskyFilter, WhiskyStorageItemFilter
 from wine_cellar.apps.whisky.forms import (
@@ -71,11 +80,14 @@ from wine_cellar.apps.whisky.forms import (
     WhiskyDrinkRecordForm,
     WhiskyEditForm,
     WhiskyForm,
+    WhiskyPriceHistoryForm,
     WhiskyStockAddForm,
     WhiskyWishlistForm,
 )
+from wine_cellar.apps.whisky.importing import WhiskyCsvImporter
 from wine_cellar.apps.whisky.models import (
     Bottler,
+    BottleSize,
     Collection,
     Distillery,
     FillLevel,
@@ -93,8 +105,20 @@ from wine_cellar.apps.whisky.models import (
     WhiskyVisionExtractionLog,
     WhiskyWishlist,
 )
+from wine_cellar.apps.whisky.services import (
+    WhiskyCreationService,
+    WhiskyReminderService,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _format_price_delta(beverage, amount):
+    if amount is None:
+        return None
+    sign = "+" if amount > 0 else "-" if amount < 0 else ""
+    formatted = beverage.format_currency(abs(amount))
+    return f"{sign}{formatted}" if sign else formatted
 
 
 def _normalize_scan_lookup_text(value: str) -> str:
@@ -219,6 +243,7 @@ class HomePageView(BaseHomePageView):
     stats_template = "whisky/includes/homepage_stats.html"
     alerts_template = "whisky/includes/homepage_alerts.html"
     beverage_icon = "whiskey-glass"
+    reminder_service = WhiskyReminderService
 
     def get_app_specific_context(self, household, user):
         import datetime
@@ -289,6 +314,139 @@ class WhiskyCreateView(BaseBeverageCreateView):
     vision_extractor_path = "wine_cellar.apps.whisky.services.WhiskyVisionExtractor"
     add_url_name = "whisky-add"
     beverage_label = "whisky"
+    page_title = "Add Whisky"
+    scan_url_name = "whisky-scan"
+    rescan_url_name = "whisky-scan"
+    duplicate_check_url_name = "whisky-check-duplicate"
+    extract_vision_url_name = "whisky-extract-vision"
+    quick_add_description = "Use your camera to scan the whisky label and barcode:"
+    image_autofill_hint = (
+        "Upload images and click 'Auto-fill from Images' to extract whisky details "
+        "using AI vision."
+    )
+    image_extract_hint = "Extract whisky details from uploaded images"
+    scanned_label_alt = "Scanned whisky label"
+    save_button_label = "Save Whisky"
+    wishlist_model = WhiskyWishlist
+    wishlist_initial_field_map = {
+        "name": "name",
+        "whisky_type": "whisky_type",
+        "distillery": "distillery",
+        "region": "region",
+        "country": "country",
+        "age_statement": "age_statement",
+        "comment": "notes",
+    }
+    field_section_definitions = (
+        {
+            "title": "Details",
+            "fields": (
+                "name",
+                "whisky_type",
+                "distillery",
+                "region",
+                "country",
+                "size",
+            ),
+        },
+        {
+            "title": "Character",
+            "fields": (
+                "age_statement",
+                "abv",
+                "peated_level",
+                "cask_type",
+                "cask_strength",
+                "vintage_year",
+                "bottled_year",
+                "color",
+            ),
+        },
+        {
+            "title": "Bottling",
+            "fields": (
+                "bottler",
+                "bottler_series",
+                "cask_number",
+                "batch_number",
+                "bottle_number",
+                "limited_edition",
+            ),
+        },
+        {
+            "title": "Origin & Price",
+            "fields": ("source", "price", "barcode"),
+        },
+        {
+            "title": "Personal Notes",
+            "fields": ("rating", "owner", "comment"),
+        },
+    )
+    cellar_extra_field_names = ("fill_level", "miniature_number")
+    wishlist_model = WhiskyWishlist
+    wishlist_initial_field_map = {
+        "name": "name",
+        "whisky_type": "whisky_type",
+        "distillery": "distillery",
+        "region": "region",
+        "country": "country",
+        "age_statement": "age_statement",
+        "comment": "notes",
+    }
+    confidence_badge_labels = {
+        "high": "High Confidence",
+        "medium": "Please Verify",
+        "low": "Low Confidence",
+    }
+    vision_field_map = {
+        "name": "name",
+        "whisky_type": "whisky_type",
+        "distillery": "distillery",
+        "region": "region",
+        "country": "country",
+        "age_statement": "age_statement",
+        "abv": "abv",
+        "peated_level": "peated_level",
+        "cask_type": "cask_type",
+        "size": "size",
+        "vintage_year": "vintage_year",
+        "bottled_year": "bottled_year",
+        "cask_number": "cask_number",
+        "batch_number": "batch_number",
+        "bottle_number": "bottle_number",
+        "bottler": "bottler",
+        "bottler_series": "bottler_series",
+        "barcode": "barcode",
+    }
+    vision_confidence_field_map = {
+        "name": "name",
+        "whisky_type": "whisky_type",
+        "type": "whisky_type",
+        "distillery": "distillery",
+        "region": "region",
+        "country": "country",
+        "age_statement": "age_statement",
+        "abv": "abv",
+        "size": "size",
+        "peated_level": "peated_level",
+        "cask_type": "cask_type",
+        "vintage_year": "vintage_year",
+        "bottled_year": "bottled_year",
+        "cask_number": "cask_number",
+        "batch_number": "batch_number",
+        "bottle_number": "bottle_number",
+        "bottler": "bottler",
+        "bottler_series": "bottler_series",
+        "barcode": "barcode",
+    }
+    vision_create_fields = ("cask_type",)
+    vision_fk_name_fields = {
+        "distillery_name": "distillery",
+        "region_name": "region",
+        "bottler_name": "bottler",
+    }
+    extraction_log_model = WhiskyVisionExtractionLog
+    extraction_log_fk_name = "whisky"
 
     def resolve_extracted_data(self, result_data, initial):
         _resolve_whisky_extracted_fks(result_data)
@@ -296,148 +454,34 @@ class WhiskyCreateView(BaseBeverageCreateView):
     @staticmethod
     @transaction.atomic
     def process_form_data(user, household, cleaned_data):
-        abv = cleaned_data["abv"]
-        size = cleaned_data["size"]
-        barcode = cleaned_data.get("barcode")
-        comment = cleaned_data["comment"]
-        country = cleaned_data["country"]
-        price = cleaned_data["price"]
-        name = cleaned_data["name"]
-        rating = cleaned_data["rating"]
-        whisky_type = cleaned_data["whisky_type"]
-        distillery = cleaned_data.get("distillery")
-        region = cleaned_data.get("region")
-        age_statement = cleaned_data.get("age_statement")
-        vintage_year = cleaned_data.get("vintage_year")
-        bottled_year = cleaned_data.get("bottled_year")
-        peated_level = cleaned_data.get("peated_level") or None
-        cask_type = cleaned_data.get("cask_type") or ""
-        cask_strength = cleaned_data.get("cask_strength", False)
-        color = cleaned_data.get("color")
-        bottler = cleaned_data.get("bottler")
-        bottler_series = cleaned_data.get("bottler_series")
-        cask_number = cleaned_data.get("cask_number")
-        batch_number = cleaned_data.get("batch_number")
-        bottle_number = cleaned_data.get("bottle_number")
-        limited_edition = cleaned_data.get("limited_edition", False)
-        release_year = cleaned_data.get("release_year")
-        source = cleaned_data.get("source")
-        owner = cleaned_data.get("owner", "")
-
-        # Use get_or_create to handle duplicate whiskies gracefully
-        whisky, created = Whisky.objects.get_or_create(
-            name=name,
-            whisky_type=whisky_type,
-            abv=abv,
-            size=size,
-            vintage_year=vintage_year,
-            bottled_year=bottled_year,
-            user=user,
-            household=household,
-            deleted=False,
-            defaults={
-                "distillery": distillery,
-                "region": region,
-                "country": country,
-                "age_statement": age_statement,
-                "peated_level": peated_level,
-                "cask_type": cask_type,
-                "cask_strength": cask_strength,
-                "color": color,
-                "bottler": bottler,
-                "bottler_series": bottler_series,
-                "cask_number": cask_number,
-                "batch_number": batch_number,
-                "bottle_number": bottle_number,
-                "limited_edition": limited_edition,
-                "release_year": release_year,
-                "comment": comment,
-                "rating": rating,
-                "price": price,
-                "source": source,
-                "owner": owner,
-            },
+        return WhiskyCreationService.create_or_update_whisky(
+            user, household, cleaned_data
         )
 
-        # Create barcode entry if provided
-        if barcode:
-            WhiskyBarcode.objects.get_or_create(
-                barcode=barcode,
-                user=user,
-                defaults={"whisky": whisky, "household": household},
-            )
 
-        # Handle images
-        image_front_label = cleaned_data.get("image_front_label")
-        if image_front_label:
-            WhiskyImage.objects.get_or_create(
-                image=image_front_label,
-                whisky=whisky,
-                user=user,
-                image_type=WhiskyImage.ImageType.LABEL_FRONT,
-            )
+class MiniatureCreateView(WhiskyCreateView):
+    success_url = reverse_lazy("miniature-list")
+    page_title = "Add Miniature"
+    save_button_label = "Save Miniature"
 
-        image_back_label = cleaned_data.get("image_back_label")
-        if image_back_label:
-            WhiskyImage.objects.get_or_create(
-                image=image_back_label,
-                whisky=whisky,
-                user=user,
-                image_type=WhiskyImage.ImageType.LABEL_BACK,
-            )
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields["size"].disabled = True
+        return form
 
-        # Handle storage (add bottle to cellar) if provided
-        storage = cleaned_data.get("storage")
-        if storage:
-            import datetime
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["size"] = BottleSize.MINIATURE
+        initial["miniature_number"] = WhiskyStorageItem.next_miniature_number(
+            get_active_household(self.request.user)
+        )
+        return initial
 
-            row = cleaned_data.get("row")
-            column = cleaned_data.get("column")
-            bottle_price = cleaned_data.get("bottle_price") or price
-            is_gift = cleaned_data.get("is_gift", False)
-            gift_from = cleaned_data.get("gift_from")
-            occasion = cleaned_data.get("occasion")
-            fill_level = cleaned_data.get("fill_level", FillLevel.UNOPENED)
-            dreg_date = datetime.date.today() if fill_level == FillLevel.DREG else None
-            WhiskyStorageItem.objects.create(
-                storage=storage,
-                whisky=whisky,
-                row=row,
-                column=column,
-                user=user,
-                household=household,
-                price=bottle_price,
-                is_gift=is_gift,
-                gift_from=gift_from,
-                occasion=occasion,
-                fill_level=fill_level,
-                dreg_date=dreg_date,
-            )
-
-        return whisky, created
-
-    def _link_extraction_log(self, beverage, cleaned_data, extraction_result):
-        """Link the most recent WhiskyVisionExtractionLog to the created whisky."""
-        from wine_cellar.apps.whisky.models import WhiskyVisionExtractionLog
-
-        try:
-            log = (
-                WhiskyVisionExtractionLog.objects.filter(
-                    user=self.request.user, whisky__isnull=True
-                )
-                .order_by("-created")
-                .first()
-            )
-            if log:
-                extracted_data = extraction_result.get("extracted_data", {})
-                corrections = self._detect_corrections(cleaned_data, extracted_data)
-                log.whisky = beverage
-                log.was_successful = True
-                if corrections:
-                    log.user_corrections = corrections
-                log.save(update_fields=["whisky", "was_successful", "user_corrections"])
-        except Exception:
-            logger.exception("Failed to link extraction log to whisky %s", beverage.pk)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["is_miniature"] = True
+        context["hide_quick_add"] = True
+        return context
 
 
 class WhiskyUpdateView(BaseBeverageUpdateView):
@@ -517,49 +561,6 @@ class WhiskyUpdateView(BaseBeverageUpdateView):
                 defaults={"whisky": whisky, "household": whisky.household},
             )
 
-        # Handle images
-        image_front_label = cleaned_data.get("image_front_label")
-        existing_front = WhiskyImage.objects.filter(
-            whisky=whisky, user=user, image_type=WhiskyImage.ImageType.LABEL_FRONT
-        ).first()
-
-        if image_front_label is False:
-            # User explicitly cleared the image
-            if existing_front:
-                existing_front.image.delete()
-                existing_front.delete()
-        elif image_front_label and not hasattr(image_front_label, "instance"):
-            # User uploaded a new image
-            if existing_front:
-                existing_front.image.delete()
-                existing_front.delete()
-            WhiskyImage.objects.create(
-                image=image_front_label,
-                whisky=whisky,
-                user=user,
-                image_type=WhiskyImage.ImageType.LABEL_FRONT,
-            )
-
-        image_back_label = cleaned_data.get("image_back_label")
-        existing_back = WhiskyImage.objects.filter(
-            whisky=whisky, user=user, image_type=WhiskyImage.ImageType.LABEL_BACK
-        ).first()
-
-        if image_back_label is False:
-            if existing_back:
-                existing_back.image.delete()
-                existing_back.delete()
-        elif image_back_label and not hasattr(image_back_label, "instance"):
-            if existing_back:
-                existing_back.image.delete()
-                existing_back.delete()
-            WhiskyImage.objects.create(
-                image=image_back_label,
-                whisky=whisky,
-                user=user,
-                image_type=WhiskyImage.ImageType.LABEL_BACK,
-            )
-
 
 class WhiskyDetailView(BaseDetailView):
     template_name = "whisky/whisky_detail.html"
@@ -567,6 +568,8 @@ class WhiskyDetailView(BaseDetailView):
     select_related_fields = ("distillery", "region", "bottler", "source")
     prefetch_related_fields = ("cask_history", "images", "barcodes", "collections")
     storage_item_reverse = "whiskystorageitem"
+    extraction_log_model = WhiskyVisionExtractionLog
+    extraction_log_fk_name = "whisky"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -574,18 +577,100 @@ class WhiskyDetailView(BaseDetailView):
         context["all_collections"] = Collection.objects.filter(
             household=household
         ).order_by("name")
-        from wine_cellar.apps.whisky.models import WhiskyVisionExtractionLog
-
-        extraction_log = (
-            WhiskyVisionExtractionLog.objects.filter(
-                whisky=self.object, was_successful=True
-            )
-            .order_by("-created")
+        price_history_qs = self.object.whiskypricehistory_set.select_related("source")
+        price_history_entries = list(price_history_qs[:5])
+        latest_entry = price_history_entries[0] if price_history_entries else None
+        average_market_price = price_history_qs.aggregate(avg_price=Avg("price"))[
+            "avg_price"
+        ]
+        oldest_market_price = (
+            price_history_qs.order_by("recorded_at")
+            .values_list("price", flat=True)
             .first()
         )
-        if extraction_log:
-            context["extraction_log"] = extraction_log
+        purchase_price_baseline = self.object.whiskystorageitem_set.aggregate(
+            avg_price=Avg("price")
+        )["avg_price"]
+        if purchase_price_baseline is None:
+            purchase_price_baseline = self.object.price
+        context["price_history_form"] = kwargs.get("price_history_form") or (
+            WhiskyPriceHistoryForm(user=self.request.user)
+        )
+        context["price_history_entries"] = price_history_entries
+        context["price_history_latest"] = latest_entry
+        context["price_history_average_with_currency"] = self.object.format_currency(
+            average_market_price
+        )
+        context["price_history_purchase_baseline_with_currency"] = (
+            self.object.format_currency(purchase_price_baseline)
+        )
+        context["price_history_vs_purchase_with_currency"] = _format_price_delta(
+            self.object,
+            (
+                average_market_price - purchase_price_baseline
+                if average_market_price is not None
+                and purchase_price_baseline is not None
+                else None
+            ),
+        )
+        context["price_history_trend_with_currency"] = _format_price_delta(
+            self.object,
+            (
+                latest_entry.price - oldest_market_price
+                if latest_entry is not None and oldest_market_price is not None
+                else None
+            ),
+        )
+
+        # Prepare chart data for price history visualization
+        all_price_history = (
+            self.object.whiskypricehistory_set.select_related("source")
+            .order_by("recorded_at")
+            .values_list("recorded_at", "price")
+        )
+        if all_price_history.exists():
+            chart_data = [
+                {
+                    "date": date_format(record[0], "Y-m-d"),
+                    "price": float(record[1]),
+                }
+                for record in all_price_history
+            ]
+            context["price_history_chart_data_json"] = json.dumps(chart_data)
+            context["has_price_chart"] = True
+        else:
+            context["has_price_chart"] = False
+
         return context
+
+
+@login_required
+@require_member
+@require_POST
+def add_price_history(request, pk):
+    household = get_active_household(request.user)
+    whisky = get_object_or_404(Whisky, pk=pk, household=household, deleted=False)
+    form = WhiskyPriceHistoryForm(request.POST, user=request.user)
+
+    if form.is_valid():
+        WhiskyPriceHistory.objects.create(
+            whisky=whisky,
+            source=form.cleaned_data["source"],
+            price=form.cleaned_data["price"],
+            user=request.user,
+            household=household,
+        )
+        messages.success(request, "Tracked market price saved.")
+    else:
+        messages.error(
+            request,
+            "Could not save tracked market price. "
+            + "; ".join(error for errors in form.errors.values() for error in errors),
+        )
+
+    return redirect(
+        f"{reverse('whisky-detail', kwargs={'pk': whisky.pk})}#price-tracking"
+    )
 
 
 @login_required
@@ -641,12 +726,21 @@ class WhiskyListView(BaseListView, FilterView):
     template_name = "core/beverage_list.html"
     context_object_name = "whiskies"
     filterset_class = WhiskyFilter
+    default_filter_data = {"has_stock": "1", "order": "created"}
     storage_item_reverse = "whiskystorageitem"
     select_related_fields = ("distillery", "region", "bottler")
     prefetch_related_fields = ("images",)
     card_template = "whisky/whisky_card.html"
     filter_field_template = "whisky/whisky_filter_field.html"
     beverage_icon = "whiskey-glass"
+
+
+class WhiskyImportView(BaseCsvImportView):
+    list_url_name = "whisky-list"
+    session_key = "whisky_csv_import_preview"
+
+    def get_importer(self):
+        return WhiskyCsvImporter(WhiskyCreateView.process_form_data)
 
 
 class WhiskyScanView(BaseScanView):
@@ -855,7 +949,20 @@ class DrinkRecordCreateView(BaseDrinkRecordCreateView):
         if post_drink_status == POST_DRINK_STATUS_CONSUMED:
             storage_item.deleted = True
             storage_item.finished_date = date_consumed
-            storage_item.save(update_fields=["deleted", "finished_date"])
+            storage_item.removal_reason = WhiskyStorageItem.RemovalReason.CONSUMED
+            storage_item.given_date = None
+            storage_item.recipient = ""
+            storage_item.given_occasion = ""
+            storage_item.save_with_modified(
+                update_fields=[
+                    "deleted",
+                    "finished_date",
+                    "removal_reason",
+                    "given_date",
+                    "recipient",
+                    "given_occasion",
+                ]
+            )
         elif post_drink_status in (FillLevel.OPENED, FillLevel.DREG):
             old_fill_level = storage_item.fill_level
             storage_item.fill_level = post_drink_status
@@ -909,6 +1016,7 @@ class WishlistListView(BaseWishlistListView):
     wishlist_model = WhiskyWishlist
     wishlist_columns_header = "whisky/includes/wishlist_columns_header.html"
     wishlist_columns_row = "whisky/includes/wishlist_columns_row.html"
+    wishlist_convert_url_name = "whisky-add"
 
 
 class WishlistCreateView(BaseWishlistCreateView):
@@ -921,6 +1029,7 @@ class WishlistCreateView(BaseWishlistCreateView):
             "whisky_type": form.cleaned_data.get("whisky_type") or None,
             "distillery": form.cleaned_data.get("distillery"),
             "region": form.cleaned_data.get("region"),
+            "country": form.cleaned_data.get("country") or "",
             "age_statement": form.cleaned_data.get("age_statement"),
         }
 
@@ -1049,6 +1158,7 @@ class DrinkingWindowAlertsView(RequireHouseholdMixin, TemplateView):
 class ReorderRemindersView(BaseReorderRemindersView):
     template_name = "core/reorder_reminders.html"
     reminder_model = WhiskyReorderReminder
+    reminder_service = WhiskyReminderService
     beverage_fk_name = "whisky"
     stock_reverse_path = "whisky__whiskystorageitem"
     beverage_icon = "whiskey-glass"
@@ -1058,6 +1168,7 @@ class ReorderReminderCreateView(BaseReorderReminderCreateView):
     template_name = "core/reorder_reminder_create.html"
     beverage_model = Whisky
     reminder_model = WhiskyReorderReminder
+    reminder_service = WhiskyReminderService
     beverage_fk_name = "whisky"
     detail_url_name = "whisky-detail"
 
@@ -1067,84 +1178,81 @@ class ReorderReminderDeleteView(BaseReorderReminderDeleteView):
     template_name = "whisky/reorder_reminder_confirm_delete.html"
 
 
-class StorageItemAddView(RequireMemberMixin, FormView):
+class StorageItemAddView(BaseStorageItemAddView):
     """Add a bottle to storage."""
 
     template_name = "whisky/stock_add.html"
     form_class = WhiskyStockAddForm
+    beverage_model = Whisky
+    storage_item_model = WhiskyStorageItem
+    beverage_fk_name = "whisky"
+    beverage_context_name = "whisky"
+    beverage_label = "whisky"
+    detail_url_name = "whisky-detail"
+    extra_stock_field_names = ("owner", "fill_level", "miniature_number")
 
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs["user"] = self.request.user
-        household = get_active_household(self.request.user)
-        kwargs["whisky"] = get_object_or_404(
-            Whisky, pk=self.kwargs["pk"], household=household
-        )
-        return kwargs
+    def get_add_form_kwargs(self, whisky):
+        return {"whisky": whisky}
+
+    def get_add_initial(self, whisky):
+        if whisky.size == BottleSize.MINIATURE:
+            return {
+                "miniature_number": WhiskyStorageItem.next_miniature_number(
+                    get_active_household(self.request.user)
+                )
+            }
+        return {}
+
+    @transaction.atomic
+    def form_valid(self, form):
+        return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        whisky = get_object_or_404(Whisky, pk=self.kwargs["pk"], household=household)
-        context["whisky"] = whisky
-
-        # Provide free cells for storage dropdown
-        user_storages = Storage.objects.filter(
-            household=household, app_type=get_app_type()
-        )
-        free_cells_by_storage = {
-            storage.pk: storage.get_free_cells_by_row() for storage in user_storages
-        }
-        context["free_cells_by_storage"] = free_cells_by_storage
+        context["is_miniature"] = self.get_beverage().size == BottleSize.MINIATURE
         return context
 
-    def form_valid(self, form):
-        import datetime
-
-        household = get_active_household(self.request.user)
-        whisky = get_object_or_404(Whisky, pk=self.kwargs["pk"], household=household)
-        fill_level = form.cleaned_data["fill_level"]
-        dreg_date = datetime.date.today() if fill_level == FillLevel.DREG else None
-
-        WhiskyStorageItem.objects.create(
-            storage=form.cleaned_data["storage"],
-            whisky=whisky,
-            row=form.cleaned_data.get("row"),
-            column=form.cleaned_data.get("column"),
-            user=self.request.user,
-            household=household,
-            price=form.cleaned_data.get("price"),
-            is_gift=form.cleaned_data.get("is_gift", False),
-            gift_from=form.cleaned_data.get("gift_from"),
-            occasion=form.cleaned_data.get("occasion"),
-            rating=form.cleaned_data.get("rating"),
-            fill_level=fill_level,
-            dreg_date=dreg_date,
-            owner=form.cleaned_data.get("owner", ""),
-        )
-
-        self.success_url = reverse_lazy("whisky-detail", kwargs={"pk": whisky.pk})
-        return super().form_valid(form)
+    def get_extra_create_kwargs(self, cleaned_data):
+        fill_level = cleaned_data["fill_level"]
+        return {
+            "fill_level": fill_level,
+            "dreg_date": timezone.localdate() if fill_level == FillLevel.DREG else None,
+            "owner": cleaned_data.get("owner", ""),
+            "row": (
+                None
+                if self.get_beverage().size == BottleSize.MINIATURE
+                else cleaned_data.get("row")
+            ),
+            "column": (
+                None
+                if self.get_beverage().size == BottleSize.MINIATURE
+                else cleaned_data.get("column")
+            ),
+            "miniature_number": (
+                WhiskyStorageItem.allocate_miniature_number(
+                    get_active_household(self.request.user),
+                    cleaned_data.get("miniature_number"),
+                )
+                if self.get_beverage().size == BottleSize.MINIATURE
+                else None
+            ),
+        }
 
 
-class StorageItemDeleteView(RequireMemberMixin, DeleteView):
-    """Remove a bottle from storage."""
+class StorageItemDeleteView(BaseMarkBottleBrokenOrLostView):
+    """Mark a bottle as broken or lost."""
 
-    template_name = "whisky/stock_confirm_delete.html"
+    storage_item_model = WhiskyStorageItem
+    beverage_fk_name = "whisky"
+    detail_url_name = "whisky-detail"
+    list_url_name = "bottle-list"
 
-    def get_queryset(self):
-        household = get_active_household(self.request.user)
-        return WhiskyStorageItem.objects.filter(household=household, deleted=False)
 
-    def get_success_url(self):
-        return reverse_lazy("whisky-detail", kwargs={"pk": self.object.whisky.pk})
-
-    def form_valid(self, form):
-        self.object = self.get_object()
-        self.object.deleted = True
-        self.object.finished_date = timezone.localdate()
-        self.object.save(update_fields=["deleted", "finished_date"])
-        return redirect(self.get_success_url())
+class StorageItemMarkGivenView(BaseMarkBottleGivenView):
+    storage_item_model = WhiskyStorageItem
+    beverage_fk_name = "whisky"
+    detail_url_name = "whisky-detail"
+    list_url_name = "bottle-list"
 
 
 class StorageItemListView(RequireHouseholdMixin, FilterView):
@@ -1165,103 +1273,63 @@ class StorageItemListView(RequireHouseholdMixin, FilterView):
         )
 
 
-class StorageItemUpdateView(RequireMemberMixin, FormView):
+class WhiskyMiniatureListView(StorageItemListView):
+    def get_queryset(self):
+        return super().get_queryset().filter(whisky__size=BottleSize.MINIATURE)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page_title"] = "Whisky Miniatures"
+        context["is_miniature_list"] = True
+        return context
+
+
+class StorageItemUpdateView(BaseStorageItemUpdateView):
     """Edit a bottle (e.g., update fill level)."""
 
     template_name = "whisky/bottle_edit.html"
     form_class = WhiskyStockAddForm
+    storage_item_model = WhiskyStorageItem
+    beverage_fk_name = "whisky"
+    beverage_context_name = "whisky"
+    detail_url_name = "whisky-detail"
+    move_history_model = WhiskyBottleMoveHistory
+    extra_initial_field_names = ("fill_level", "owner", "miniature_number")
 
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs["user"] = self.request.user
-        household = get_active_household(self.request.user)
-        item = get_object_or_404(
-            WhiskyStorageItem, pk=self.kwargs["pk"], household=household
-        )
-        kwargs["whisky"] = item.whisky
-        return kwargs
+    def get_update_form_kwargs(self, item):
+        return {"whisky": item.whisky, "storage_item": item}
 
-    def get_initial(self):
-        household = get_active_household(self.request.user)
-        item = get_object_or_404(
-            WhiskyStorageItem, pk=self.kwargs["pk"], household=household
-        )
-        return model_to_dict(item)
+    @transaction.atomic
+    def form_valid(self, form):
+        return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        household = get_active_household(self.request.user)
-        item = get_object_or_404(
-            WhiskyStorageItem, pk=self.kwargs["pk"], household=household
-        )
-        context["storage_item"] = item
-        context["whisky"] = item.whisky
-
-        # Provide free cells for storage dropdown - exclude current item so its
-        # position shows as available
-        user_storages = Storage.objects.filter(
-            household=household, app_type=get_app_type()
-        )
-        free_cells_by_storage = {
-            storage.pk: storage.get_free_cells_by_row(exclude_item=item)
-            for storage in user_storages
-        }
-        context["free_cells_by_storage"] = free_cells_by_storage
+        context["is_miniature"] = self.get_beverage().size == BottleSize.MINIATURE
         return context
 
-    def form_valid(self, form):
-        import datetime
-
-        household = get_active_household(self.request.user)
-        item = get_object_or_404(
-            WhiskyStorageItem, pk=self.kwargs["pk"], household=household
-        )
-
+    def apply_extra_updates(self, item, cleaned_data):
         old_fill_level = item.fill_level
-        new_fill_level = form.cleaned_data["fill_level"]
-
-        new_storage = form.cleaned_data["storage"]
-        new_row = form.cleaned_data.get("row")
-        new_column = form.cleaned_data.get("column")
-
-        moved = (
-            item.storage_id != new_storage.pk
-            or item.row != new_row
-            or item.column != new_column
-        )
-        if moved:
-            WhiskyBottleMoveHistory.objects.create(
-                storage_item=item,
-                from_storage=item.storage,
-                from_row=item.row,
-                from_column=item.column,
-                to_storage=new_storage,
-                to_row=new_row,
-                to_column=new_column,
-                user=self.request.user,
-            )
-
-        item.storage = new_storage
-        item.row = new_row
-        item.column = new_column
-        item.price = form.cleaned_data.get("price")
-        item.is_gift = form.cleaned_data.get("is_gift", False)
-        item.gift_from = form.cleaned_data.get("gift_from")
-        item.occasion = form.cleaned_data.get("occasion")
-        item.rating = form.cleaned_data.get("rating")
+        new_fill_level = cleaned_data["fill_level"]
         item.fill_level = new_fill_level
 
-        # Track dreg_date transitions
         if new_fill_level == FillLevel.DREG and old_fill_level != FillLevel.DREG:
-            item.dreg_date = datetime.date.today()
+            item.dreg_date = timezone.localdate()
         elif new_fill_level != FillLevel.DREG and old_fill_level == FillLevel.DREG:
             item.dreg_date = None
 
-        item.owner = form.cleaned_data.get("owner", "")
-        item.save()
+        item.owner = cleaned_data.get("owner", "")
 
-        self.success_url = reverse_lazy("whisky-detail", kwargs={"pk": item.whisky.pk})
-        return super().form_valid(form)
+        if item.whisky.size == BottleSize.MINIATURE:
+            item.miniature_number = WhiskyStorageItem.allocate_miniature_number(
+                item.household,
+                cleaned_data.get("miniature_number"),
+                exclude=item,
+            )
+            item.row = None
+            item.column = None
+        else:
+            item.miniature_number = cleaned_data.get("miniature_number")
 
 
 class StorageItemHistoryView(RequireHouseholdMixin, ListView):
@@ -1274,11 +1342,11 @@ class StorageItemHistoryView(RequireHouseholdMixin, ListView):
 
     def get_queryset(self):
         household = get_active_household(self.request.user)
-        return (
-            WhiskyStorageItem.objects.filter(household=household, deleted=True)
-            .select_related("whisky", "storage")
-            .order_by("-created")
-        )
+        return with_removal_sort_date(
+            WhiskyStorageItem.objects.filter(
+                household=household, deleted=True
+            ).select_related("whisky", "storage")
+        ).order_by("-removal_sort_date", "-created", "-pk")
 
 
 class WhiskyMergeConfirmView(BaseMergeConfirmView):
@@ -1396,12 +1464,32 @@ class WhiskyBottleHistoryView(RequireHouseholdMixin, DetailView):
                 }
             )
 
-        if item.finished_date:
+        if (
+            item.removal_reason == WhiskyStorageItem.RemovalReason.GIVEN
+            and item.given_date
+        ):
             events.append(
                 {
-                    "type": "finished",
+                    "type": "given",
+                    "date": item.given_date,
+                    "label": "Given away",
+                    "detail": format_given_detail(item.recipient, item.given_occasion),
+                }
+            )
+        elif item.finished_date:
+            event_type = "finished"
+            label = "Broken or lost"
+            if item.removal_reason in ("", WhiskyStorageItem.RemovalReason.CONSUMED):
+                label = "Finished"
+            elif item.removal_reason != WhiskyStorageItem.RemovalReason.REMOVED:
+                label = "Removed from inventory"
+            else:
+                event_type = "removed"
+            events.append(
+                {
+                    "type": event_type,
                     "date": item.finished_date,
-                    "label": "Finished",
+                    "label": label,
                     "detail": "",
                 }
             )
@@ -1413,3 +1501,23 @@ class WhiskyBottleHistoryView(RequireHouseholdMixin, DetailView):
         )
         context["is_whisky"] = True
         return context
+
+
+class WhiskyBottleQuickLogView(BaseBottleQuickLogView):
+    storage_item_model = WhiskyStorageItem
+    drink_record_model = WhiskyDrinkRecord
+    beverage_fk_name = "whisky"
+
+    def handle_bottle_update(self, storage_item, date_consumed):
+        update_fields = []
+
+        if storage_item.fill_level == FillLevel.UNOPENED:
+            storage_item.fill_level = FillLevel.OPENED
+            update_fields.append("fill_level")
+
+        if not storage_item.opened_date:
+            storage_item.opened_date = date_consumed
+            update_fields.append("opened_date")
+
+        if update_fields:
+            storage_item.save(update_fields=update_fields)

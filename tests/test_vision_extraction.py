@@ -104,6 +104,47 @@ class TestExtractWineVisionAjax:
         assert data["confidence"] == "high"
 
     @pytest.mark.django_db
+    def test_barcode_match_multiple_results_omits_extracted_fields(
+        self, client, user, wine_factory
+    ):
+        """
+        Multiple barcode matches should return a selection payload, not field data.
+        """
+        wine = wine_factory(user=user, name="Barcode Match Wine")
+        WineBarcode.objects.create(
+            wine=wine, barcode="1234567890123", user=user, household=wine.household
+        )
+
+        client.force_login(user)
+        url = reverse("wine-extract-vision")
+        image_file = create_test_image_file()
+
+        with patch("wine_cellar.apps.wine.views.scan.BarcodeScanner") as MockScanner:
+            mock_scanner = MagicMock()
+            mock_scanner.scan_and_match.return_value = {
+                "matched": True,
+                "multiple_matches": True,
+                "barcode": "1234567890123",
+                "wines": [{"id": wine.pk, "name": wine.name}],
+            }
+            MockScanner.return_value = mock_scanner
+
+            response = client.post(
+                url,
+                {"image_front_label": image_file},
+                format="multipart",
+            )
+
+        assert response.status_code == HTTPStatus.OK
+        data = response.json()
+        assert data["success"] is True
+        assert data["multiple_matches"] is True
+        assert data["match_type"] == "barcode"
+        assert data["matched_barcode"] == "1234567890123"
+        assert "data" not in data
+        assert "extracted_fields" not in data
+
+    @pytest.mark.django_db
     def test_no_barcode_falls_back_to_vision(self, client, user):
         """Test that missing barcode falls back to AI vision extraction."""
         client.force_login(user)

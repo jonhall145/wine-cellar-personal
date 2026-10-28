@@ -152,7 +152,9 @@ class TestApiCellarSync:
         assert "app_type" in data
         assert "currency" in data
         assert "beverages" in data
+        assert "deleted_beverage_ids" in data
         assert "stock_items" in data
+        assert "deleted_stock_item_ids" in data
         assert "storages" in data
         assert "is_incremental" in data
         assert data["is_incremental"] is False
@@ -223,6 +225,45 @@ class TestApiCellarSync:
         names = [b["name"] for b in data["beverages"]]
         assert "New Wine" in names
         assert "Old Wine" not in names
+
+    def test_incremental_sync_reports_deleted_wines(self, client, user, wine_factory):
+        wine = wine_factory(user=user, name="Deleted Later")
+        since = wine.modified.isoformat()
+        wine.deleted = True
+        wine.save_with_modified(update_fields=["deleted"])
+
+        client.force_login(user)
+        response = client.get(self.url, {"since": since})
+        data = json.loads(response.content)
+
+        assert data["is_incremental"] is True
+        assert data["beverages"] == []
+        assert data["deleted_beverage_ids"] == [wine.pk]
+
+    def test_incremental_sync_reports_consumed_bottles(
+        self, client, user, wine_factory, storage_item_factory
+    ):
+        wine = wine_factory(user=user, name="Consumable Wine")
+        storage = user.storage_set.first()
+        bottle = storage_item_factory(storage=storage, wine=wine, user=user)
+        since = bottle.modified.isoformat()
+
+        client.force_login(user)
+        response = client.post(
+            reverse("drink-record-add", kwargs={"pk": wine.pk}),
+            {
+                "date_consumed": "2024-01-15",
+                "storage_item": bottle.pk,
+            },
+        )
+        assert response.status_code == 302
+
+        sync_response = client.get(self.url, {"since": since})
+        data = json.loads(sync_response.content)
+
+        assert data["is_incremental"] is True
+        assert data["stock_items"] == []
+        assert data["deleted_stock_item_ids"] == [bottle.pk]
 
     def test_invalid_since_returns_400(self, client, user):
         client.force_login(user)

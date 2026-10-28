@@ -402,6 +402,29 @@ class Wine(UserContentModel):
         verbose_name="Price URL",
         help_text="Product page URL for automatic price tracking",
     )
+    ai_summary = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="AI Summary",
+        help_text="AI-generated wine summary stored with source citations.",
+    )
+    ai_summary_sources = models.JSONField(
+        blank=True,
+        default=list,
+        verbose_name="AI Summary Sources",
+        help_text="Source list captured for the AI-generated wine summary.",
+    )
+    ai_summary_generated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="AI Summary Generated At",
+    )
+    ai_summary_model = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        verbose_name="AI Summary Model",
+    )
     deleted = models.BooleanField(default=False, db_index=True)
 
     def __str__(self):
@@ -429,29 +452,33 @@ class Wine(UserContentModel):
         return "\n".join([str(attribute) for attribute in self.attributes.all()])
 
     @property
-    def get_price_with_currency(self):
+    def currency_symbol(self):
         user_settings = get_user_settings(self.user)
-        currency = settings.CURRENCY_SYMBOLS.get(
+        return settings.CURRENCY_SYMBOLS.get(
             getattr(user_settings, "currency", "EUR"), "€"
         )
-        formatted_price = number_format(self.price, use_l10n=True)
-        return f"{currency}{formatted_price}"
+
+    def format_currency(self, amount):
+        if amount is None:
+            return None
+        if hasattr(amount, "quantize"):
+            amount = amount.quantize(Decimal("0.00"))
+        formatted_price = number_format(amount, use_l10n=True)
+        return f"{self.currency_symbol}{formatted_price}"
+
+    @property
+    def get_price_with_currency(self):
+        return self.format_currency(self.price)
 
     @property
     def get_average_price_with_currency(self):
-        user_settings = get_user_settings(self.user)
-        currency = settings.CURRENCY_SYMBOLS.get(
-            getattr(user_settings, "currency", "EUR"), "€"
-        )
         avg_price = self.storageitem_set.aggregate(avg_price=models.Avg("price"))[
             "avg_price"
         ]
 
         if avg_price is None:
             return None
-        avg_price = avg_price.quantize(Decimal("0.00"))
-        formatted_price = number_format(avg_price, use_l10n=True)
-        return f"{currency}{formatted_price}"
+        return self.format_currency(avg_price)
 
     @property
     def get_food_pairings(self):
@@ -522,6 +549,25 @@ class Wine(UserContentModel):
                     )
                 result.append(_versioned_media_url(image.image) or image.image.url)
         return result
+
+    @property
+    def detail_image_urls(self) -> list[str]:
+        """Return the full-size image URLs for the detail-page viewer."""
+        image_type_order = {
+            ImageType.LABEL_FRONT: 0,
+            ImageType.LABEL_BACK: 1,
+        }
+        return [
+            _versioned_media_url(image.image) or image.image.url
+            for image in sorted(
+                self._cached_images(),
+                key=lambda image: (
+                    0 if image.is_primary else 1,
+                    image_type_order.get(image.image_type, len(image_type_order)),
+                    image.pk,
+                ),
+            )
+        ]
 
     @property
     def country_name(self):
@@ -665,6 +711,19 @@ class DrinkRecord(UserContentModel):
         verbose_name="Bottle",
         help_text="The specific bottle consumed (optional).",
     )
+    photo = models.ImageField(
+        upload_to=user_directory_path,
+        null=True,
+        blank=True,
+        verbose_name="Photo",
+        help_text="Photo of the bottle, meal, or tasting setting.",
+    )
+    taste_descriptors = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Taste Descriptors",
+        help_text="Selected flavor descriptors from the tasting wheel.",
+    )
 
     class Meta:
         verbose_name = "Drink Record"
@@ -702,6 +761,12 @@ class Wishlist(UserContentModel):
         blank=True,
         verbose_name="Price Limit",
     )
+    external_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default="",
+        verbose_name="Purchase Link",
+    )
     notes = models.TextField(null=True, blank=True, verbose_name="Notes")
     priority = models.PositiveIntegerField(
         default=1,
@@ -709,6 +774,12 @@ class Wishlist(UserContentModel):
         verbose_name="Priority",
     )
     purchased = models.BooleanField(default=False, verbose_name="Purchased")
+    external_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default="",
+        verbose_name="Purchase Link",
+    )
 
     class Meta:
         verbose_name = "Wishlist Item"
@@ -819,7 +890,7 @@ class VisionExtractionLog(UserContentModel):
     )
     model_used = models.CharField(
         max_length=50,
-        default="claude-haiku-4-5",
+        default="claude-haiku-5-5",
         verbose_name="Model Used",
         help_text="AI model used for extraction",
     )
@@ -886,3 +957,7 @@ class PriceHistory(UserContentModel):
     def __str__(self):
         source_name = self.source.name if self.source else "Unknown"
         return f"{self.wine.name} - {self.price} ({source_name})"
+
+    @property
+    def price_with_currency(self):
+        return self.wine.format_currency(self.price)

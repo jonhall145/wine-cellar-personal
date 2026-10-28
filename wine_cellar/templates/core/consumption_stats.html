@@ -24,7 +24,17 @@
                 <div class="pure-u-1 pure-u-md-1-2">
                     <h3>By Month</h3>
                     {% if by_month %}
-                        <canvas id="chartByMonth" height="250"></canvas>
+                        <p id="consumptionChartByMonthSummary" class="visually-hidden">
+                            Consumption by month:
+                            {% for item in by_month %}
+                                {{ item.month|date:"F Y" }} {{ item.count }} consumed{% if not forloop.last %}; {% endif %}
+                            {% endfor %}
+                        </p>
+                        <canvas id="chartByMonth"
+                                height="250"
+                                role="img"
+                                aria-label="Consumption by month chart"
+                                aria-describedby="consumptionChartByMonthSummary"></canvas>
                         <details class="mt-4">
                             <summary>Show table</summary>
                             <table class="pure-table pure-table-horizontal pure-table-striped">
@@ -52,7 +62,17 @@
                 <div class="pure-u-1 pure-u-md-1-2">
                     <h3>By {{ APP_ITEM_NAME|capfirst }} Type</h3>
                     {% if by_type %}
-                        <canvas id="chartByType" height="250"></canvas>
+                        <p id="consumptionChartByTypeSummary" class="visually-hidden">
+                            Consumption by type:
+                            {% for type_name, count in by_type.items %}
+                                {{ type_name }} {{ count }} consumed{% if not forloop.last %}; {% endif %}
+                            {% endfor %}
+                        </p>
+                        <canvas id="chartByType"
+                                height="250"
+                                role="img"
+                                aria-label="Consumption by type chart"
+                                aria-describedby="consumptionChartByTypeSummary"></canvas>
                         <details class="mt-4">
                             <summary>Show table</summary>
                             <table class="pure-table pure-table-horizontal pure-table-striped">
@@ -82,7 +102,17 @@
                 <div class="pure-u-1 pure-u-md-1-2">
                     <h3>By {{ group_label }}</h3>
                     {% if by_group %}
-                        <canvas id="chartByGroup" height="250"></canvas>
+                        <p id="consumptionChartByGroupSummary" class="visually-hidden">
+                            Consumption by {{ group_label|lower }}:
+                            {% for name, count in by_group.items %}
+                                {{ name }} {{ count }} consumed{% if not forloop.last %}; {% endif %}
+                            {% endfor %}
+                        </p>
+                        <canvas id="chartByGroup"
+                                height="250"
+                                role="img"
+                                aria-label="Consumption by {{ group_label|lower }} chart"
+                                aria-describedby="consumptionChartByGroupSummary"></canvas>
                         <details class="mt-4">
                             <summary>Show table</summary>
                             <table class="pure-table pure-table-horizontal pure-table-striped">

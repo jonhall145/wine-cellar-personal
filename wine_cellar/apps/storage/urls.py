@@ -1,12 +1,18 @@
 from django.urls import path
 
 from wine_cellar.apps.storage.views import (
+    PlannedMoveBeverageCreateView,
+    PlannedMoveCreateView,
+    PlannedMoveListView,
     StorageCreateView,
     StorageDeleteView,
     StorageDetailView,
     StorageListView,
     StorageUpdateView,
     move_bottle,
+    plan_cold_storage,
+    planned_move_complete,
+    planned_move_delete,
     storage_grid_data,
     storage_move_down,
     storage_move_up,
@@ -22,6 +28,36 @@ urlpatterns = [
     path("storage/edit/<int:pk>/", StorageUpdateView.as_view(), name="storage-edit"),
     path("storage/move-up/<int:pk>/", storage_move_up, name="storage-move-up"),
     path("storage/move-down/<int:pk>/", storage_move_down, name="storage-move-down"),
+    path(
+        "storage/planned-moves/",
+        PlannedMoveListView.as_view(),
+        name="planned-move-list",
+    ),
+    path(
+        "storage/planned-moves/add/",
+        PlannedMoveCreateView.as_view(),
+        name="planned-move-add",
+    ),
+    path(
+        "storage/planned-moves/add/<int:beverage_pk>/",
+        PlannedMoveBeverageCreateView.as_view(),
+        name="planned-move-add-for",
+    ),
+    path(
+        "storage/planned-moves/cold/<int:pk>/",
+        plan_cold_storage,
+        name="planned-move-cold-storage",
+    ),
+    path(
+        "storage/planned-moves/delete/<int:pk>/",
+        planned_move_delete,
+        name="planned-move-delete",
+    ),
+    path(
+        "storage/planned-moves/complete/<int:pk>/",
+        planned_move_complete,
+        name="planned-move-complete",
+    ),
     path("api/storage/grid-data/", storage_grid_data, name="storage-grid-data"),
     path("api/storage/move-bottle/", move_bottle, name="storage-move-bottle"),
 ]

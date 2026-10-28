@@ -3,6 +3,7 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from wine_cellar.apps.core.audit import log_delete
@@ -30,7 +31,7 @@ def bulk_action_view(request):
     if action == "delete":
         for wine in wines:
             log_delete(request.user, wine)
-        wines.update(deleted=True)
+        wines.update(deleted=True, modified=timezone.now())
         messages.success(request, f"Deleted {count} wine(s).")
     elif action == "update_drink_to":
         drink_to = request.POST.get("drink_to_year")

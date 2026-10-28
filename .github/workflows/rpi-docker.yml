@@ -2,8 +2,9 @@ name: Build and Push RPi4 Docker Image
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "next" ]
     paths:
+      - '.github/workflows/rpi-docker.yml'
       - 'wine_cellar/**'
       - 'fixtures/**'
       - 'requirements/**'
@@ -25,7 +26,6 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    if: startsWith(github.event.head_commit.message, 'bump:')
 
     steps:
       - uses: actions/checkout@v6
@@ -52,7 +52,8 @@ jobs:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=sha,prefix=,format=short
-            type=raw,value=latest
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=next,enable=${{ github.ref == 'refs/heads/next' }}
 
       - name: Build and push ARM64 image
         uses: docker/build-push-action@v6

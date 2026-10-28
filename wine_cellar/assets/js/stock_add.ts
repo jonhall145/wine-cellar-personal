@@ -20,6 +20,10 @@ function updateStorageCells() {
     const columnSelect = document.getElementById('id_column') as HTMLSelectElement
     const submitButton = document.getElementById('submit_button') as HTMLButtonElement
 
+    if (!storageSelect || !rowSelect || !columnSelect) {
+        return
+    }
+
     const storageData = document.getElementById('storage-data')!
     const freeCells: FreeCells = JSON.parse(storageData.dataset.attributes || '{}')
     

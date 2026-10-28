@@ -21,40 +21,8 @@
                 </div>
             </div>
             <div class="pure-u-1 pure-u-md-1-2">
-                {% if wine.image_thumbnail %}
-                    <div class="wine-detail__image-wrapper"
-                         data-images='[{% for img in wine.image_thumbnails %}"{{ img }}"{% if not forloop.last %},{% endif %}{% endfor %}]'>
-                        <div class="image wine-detail__image" id="wine-image-wrapper">
-                            <img id="wine-image"
-                                 src="{{ wine.image_thumbnail }}"
-                                 loading="lazy"
-                                 height="225"
-                                 width="auto"
-                                 alt="Picture of a wine bottle">
-                        </div>
-                        {% if wine.image_thumbnails|length > 1 %}
-                            <div class="image-controls"
-                                 role="group"
-                                 aria-label="Image carousel controls">
-                                <button type="button"
-                                        class="wine-prev"
-                                        aria-label="Previous image"
-                                        title="Previous image">«</button>
-                                <button type="button"
-                                        class="wine-next"
-                                        aria-label="Next image"
-                                        title="Next image">»</button>
-                            </div>
-                        {% endif %}
-                    </div>
-                    <div class="wine-detail__image-actions">
-                        <a href="{% url 'wine-images' wine.pk %}" class="pure-button button__neutral">
-                            <i class="fa-solid fa-crop"></i> Edit Images
-                        </a>
-                    </div>
-                {% else %}
-                    <div>No image</div>
-                {% endif %}
+                {% url 'wine-images' wine.pk as image_edit_url %}
+                {% include "includes/detail_image_viewer.html" with beverage=wine preview_image=wine.image_thumbnail detail_images=wine.detail_image_urls edit_url=image_edit_url image_alt="Picture of a wine bottle" %}
             </div>
             <div class="pure-u-1 pure-u-md-1-2">
                 <table class="wine-detail__table">
@@ -90,7 +58,7 @@
                     </tr>
                     <tr>
                         <th>ABV</th>
-                        <td>{{ wine.abv  }}</td>
+                        <td>{{ wine.abv }}</td>
                     </tr>
                     <tr>
                         <th>Size</th>
@@ -206,6 +174,90 @@
                         </span>
                     </div>
                 {% endif %}
+                <div class="mt-12" id="price-tracking">
+                    <h3>Price Tracking</h3>
+                    <p class="text--gray text--small">Log market prices manually to track changes without brittle retailer scraping.</p>
+                    <form action="{% url 'wine-price-history-add' wine.pk %}" method="post" class="pure-form pure-form-stacked">
+                        {% csrf_token %}
+                        <label for="{{ price_history_form.price.id_for_label }}">Market price</label>
+                        {{ price_history_form.price }}
+                        <label for="{{ price_history_form.source.id_for_label }}">Source</label>
+                        {{ price_history_form.source }}
+                        <button type="submit" class="pure-button button__neutral mt-12">
+                            <i class="fa-solid fa-chart-line"></i> Save tracked price
+                        </button>
+                    </form>
+                    {% if price_history_latest %}
+                        <div class="table-responsive mt-12">
+                            <table class="pure-table pure-table-horizontal pure-table-striped">
+                                <tbody>
+                                    <tr>
+                                        <th>Latest tracked price</th>
+                                        <td>
+                                            {{ price_history_latest.price_with_currency }}
+                                            {% if price_history_latest.source %}from {{ price_history_latest.source }}{% endif %}
+                                            · {{ price_history_latest.recorded_at|date:"SHORT_DATE_FORMAT" }}
+                                        </td>
+                                    </tr>
+                                    {% if price_history_average_with_currency %}
+                                        <tr>
+                                            <th>Average tracked price</th>
+                                            <td>{{ price_history_average_with_currency }}</td>
+                                        </tr>
+                                    {% endif %}
+                                    {% if price_history_purchase_baseline_with_currency %}
+                                        <tr>
+                                            <th>Purchase price baseline</th>
+                                            <td>{{ price_history_purchase_baseline_with_currency }}</td>
+                                        </tr>
+                                    {% endif %}
+                                    {% if price_history_vs_purchase_with_currency %}
+                                        <tr>
+                                            <th>Market vs purchase</th>
+                                            <td>{{ price_history_vs_purchase_with_currency }}</td>
+                                        </tr>
+                                    {% endif %}
+                                    {% if price_history_trend_with_currency %}
+                                        <tr>
+                                            <th>Trend since first log</th>
+                                            <td>{{ price_history_trend_with_currency }}</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if has_price_chart %}
+                            <div class="mt-12">
+                                <h4>Price Trend</h4>
+                                <div style="position: relative; height: 300px;">
+                                    <canvas id="price-history-chart"></canvas>
+                                </div>
+                            </div>
+                        {% endif %}
+                        <div class="table-responsive mt-12">
+                            <table class="pure-table pure-table-horizontal pure-table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Price</th>
+                                        <th>Source</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for entry in price_history_entries %}
+                                        <tr>
+                                            <td>{{ entry.recorded_at|date:"SHORT_DATE_FORMAT" }}</td>
+                                            <td>{{ entry.price_with_currency }}</td>
+                                            <td>{{ entry.source|default:"Manual" }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text--gray mt-12">No tracked market prices yet.</p>
+                    {% endif %}
+                </div>
             </div>
             <div class="pure-u-1 pure-u-md-1 text-align-center" id="wine-stock">
                 <h2 class="header__title">Stock</h2>
@@ -220,23 +272,43 @@
                     <div>
                         <a href="{% url 'stock-add' wine.pk %}"
                            class="pure-button button__neutral"><i class="fa-regular fa-plus"></i> <span>Add bottle</span></a>
-                        <a href="{% url 'drink-record-add' wine.pk %}"
+                        <a href="{% url 'drink-record-add' wine.pk %}{% if request.GET.storage_item %}?storage_item={{ request.GET.storage_item|urlencode }}{% endif %}"
                            class="pure-button button__neutral"><i class="fa-solid fa-wine-glass"></i> <span>Record Drink</span></a>
                         <a href="{% url 'reorder-reminder-add' wine.pk %}"
                            class="pure-button button__neutral"><i class="fa-solid fa-bell"></i> <span>Reorder Alert</span></a>
+                        <a href="{% url 'planned-move-add-for' wine.pk %}"
+                           class="pure-button button__neutral"><i class="fa-solid fa-arrows-up-down-left-right"></i> <span>Plan Move</span></a>
                     </div>
                 </div>
-                {% if consumed_bottle_count %}
+                {% if consumed_bottle_count or gifted_bottle_count %}
                     <div class="mb-12">
                         {% if show_consumed_bottles %}
                             <a href="{% url 'wine-detail' wine.pk %}#wine-stock"
                                class="pure-button button__neutral button--sm">
-                                <i class="fa-solid fa-eye-slash"></i> Hide consumed bottles
+                                <i class="fa-solid fa-eye-slash"></i>
+                                {% if gifted_bottle_count and not consumed_bottle_count %}
+                                    Hide given bottles
+                                {% elif broken_lost_bottle_count and not actual_consumed_bottle_count and not gifted_bottle_count %}
+                                    Hide broken or lost bottles
+                                {% elif consumed_bottle_count and not gifted_bottle_count %}
+                                    Hide consumed bottles
+                                {% else %}
+                                    Hide removed bottles
+                                {% endif %}
                             </a>
                         {% else %}
-                            <a href="{% url 'wine-detail' wine.pk %}?show_consumed=1#consumed-bottles"
-                               class="pure-button button__neutral button--sm">
-                                <i class="fa-regular fa-clock-rotate-left"></i> Show consumed bottles ({{ consumed_bottle_count }})
+                            <a href="{% url 'wine-detail' wine.pk %}?show_consumed=1#{% if gifted_bottle_count and not consumed_bottle_count %}gifted-bottles{% else %}consumed-bottles{% endif %}"
+                                class="pure-button button__neutral button--sm">
+                                <i class="fa-regular fa-clock-rotate-left"></i>
+                                {% if gifted_bottle_count and not consumed_bottle_count %}
+                                    Show given bottles ({{ gifted_bottle_count }})
+                                {% elif broken_lost_bottle_count and not actual_consumed_bottle_count and not gifted_bottle_count %}
+                                    Show broken or lost bottles ({{ broken_lost_bottle_count }})
+                                {% elif consumed_bottle_count and not gifted_bottle_count %}
+                                    Show consumed bottles ({{ consumed_bottle_count }})
+                                {% else %}
+                                    Show removed bottles ({{ consumed_bottle_count|add:gifted_bottle_count }})
+                                {% endif %}
                             </a>
                         {% endif %}
                     </div>
@@ -261,12 +333,23 @@
                                     <td>{{ item.row|default_if_none:"" }}</td>
                                     <td>{{ item.column|default_if_none:"" }}</td>
                                     <td>{% if item.is_gift %}<i class="fa-solid fa-gift" title="{{ item.gift_from|default:'' }}"></i>{% if item.gift_from %} {{ item.gift_from }}{% endif %}{% endif %}</td>
-                                    <td>{{ item.occasion|default_if_none:"" }}</td>
+                                    <td>
+                                        {{ item.occasion|default_if_none:"" }}
+                                        {% if item.occasion_date %}
+                                            {% if item.occasion %}<br>{% endif %}
+                                            <small>{{ item.occasion_date|date:"j M Y" }}</small>
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         <a class="pure-button" href="{% url 'bottle-note-add' item.pk %}" title="Add note"><i class="fa-regular fa-note-sticky"></i></a>
                                         <a class="pure-button" href="{% url 'bottle-history' item.pk %}" title="History"><i class="fa-regular fa-clock-rotate-left"></i></a>
                                         <a class="pure-button" href="{% url 'bottle-edit' item.pk %}" title="Edit bottle"><i class="fa-regular fa-pen-to-square"></i></a>
-                                        <a class="pure-button" href="{% url 'stock-delete' item.pk %}" title="Remove bottle"><i class="fa-regular fa-trash-can"></i></a>
+                                        <form action="{% url 'planned-move-cold-storage' item.pk %}" method="post" class="display-inline-block">
+                                            {% csrf_token %}
+                                            <button type="submit" class="pure-button" title="Plan cold storage move"><i class="fa-solid fa-snowflake"></i> Plan Cold Storage</button>
+                                        </form>
+                                        <a class="pure-button" href="{% url 'stock-give' item.pk %}" title="Mark as given"><i class="fa-solid fa-gift"></i></a>
+                                        <a class="pure-button" href="{% url 'stock-delete' item.pk %}" title="Mark as broken or lost"><i class="fa-regular fa-trash-can"></i></a>
                                     </td>
                                 </tr>
                                 {% if item.notes.all %}
@@ -297,7 +380,15 @@
                 </div>
                 {% if show_consumed_bottles %}
                     <div class="pure-u-1 pure-u-md-1 mt-12" id="consumed-bottles">
-                        <h3>Consumed Bottles</h3>
+                        <h3>
+                            {% if broken_lost_bottle_count and not actual_consumed_bottle_count %}
+                                Broken or Lost Bottles
+                            {% elif broken_lost_bottle_count %}
+                                Removed Bottles
+                            {% else %}
+                                Consumed Bottles
+                            {% endif %}
+                        </h3>
                         <div class="table-responsive">
                             <table class="pure-table pure-table-horizontal pure-table-striped wine-detail__stock-table">
                                 <thead>
@@ -306,6 +397,7 @@
                                         <th>Row</th>
                                         <th>Cell</th>
                                         <th>Finished</th>
+                                        <th>Reason</th>
                                         <th>Gift</th>
                                         <th>Occasion</th>
                                         <th></th>
@@ -317,8 +409,54 @@
                                         <td>{{ item.row|default_if_none:"" }}</td>
                                         <td>{{ item.column|default_if_none:"" }}</td>
                                         <td>{{ item.finished_date|default_if_none:"" }}</td>
+                                        <td>{% if item.removal_reason == "removed" %}Broken or lost{% else %}Consumed{% endif %}</td>
                                         <td>{% if item.is_gift %}<i class="fa-solid fa-gift" title="{{ item.gift_from|default:'' }}"></i>{% if item.gift_from %} {{ item.gift_from }}{% endif %}{% endif %}</td>
                                         <td>{{ item.occasion|default_if_none:"" }}</td>
+                                        <td>
+                                            <a class="pure-button" href="{% url 'bottle-history' item.pk %}" title="History"><i class="fa-regular fa-clock-rotate-left"></i></a>
+                                        </td>
+                                    </tr>
+                                    {% if item.notes.all %}
+                                        <tr>
+                                            <td colspan="8" class="bottle-notes">
+                                                <strong>Notes:</strong>
+                                                <ul>
+                                                    {% for note in item.notes.all %}
+                                                        <li><em>{{ note.note_date }}</em>: {{ note.note }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </table>
+                        </div>
+                    </div>
+                {% endif %}
+                {% if show_consumed_bottles and gifted_bottles %}
+                    <div class="pure-u-1 pure-u-md-1 mt-12" id="gifted-bottles">
+                        <h3>Given Bottles</h3>
+                        <div class="table-responsive">
+                            <table class="pure-table pure-table-horizontal pure-table-striped wine-detail__stock-table">
+                                <thead>
+                                    <tr>
+                                        <th>Location</th>
+                                        <th>Row</th>
+                                        <th>Cell</th>
+                                        <th>Given</th>
+                                        <th>Recipient</th>
+                                        <th>Occasion</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                {% for item in gifted_bottles %}
+                                    <tr>
+                                        <td>{{ item.storage }}</td>
+                                        <td>{{ item.row|default_if_none:"" }}</td>
+                                        <td>{{ item.column|default_if_none:"" }}</td>
+                                        <td>{{ item.given_date|default_if_none:"" }}</td>
+                                        <td>{{ item.recipient }}</td>
+                                        <td>{{ item.given_occasion }}</td>
                                         <td>
                                             <a class="pure-button" href="{% url 'bottle-history' item.pk %}" title="History"><i class="fa-regular fa-clock-rotate-left"></i></a>
                                         </td>
@@ -372,6 +510,200 @@
                 </div>
             </div>
             {% endif %}
+            <div
+                class="pure-u-1 pure-u-md-1 mt-12"
+                id="ai-summary"
+                {% if not wine.ai_summary %}data-status-url="{% url 'wine-ai-summary-status' wine.pk %}"{% endif %}
+            >
+                    <details>
+                        <summary>AI Summary</summary>
+                        <div class="mt-12" id="ai-summary-content">
+                            {% if wine.ai_summary %}
+                            <p>{{ wine.ai_summary|linebreaksbr }}</p>
+                            {% if wine.ai_summary_generated_at %}
+                                <p class="text--gray text--small">
+                                    Generated {{ wine.ai_summary_generated_at|date:"SHORT_DATETIME_FORMAT" }}
+                                </p>
+                            {% endif %}
+                            {% if wine.ai_summary_sources %}
+                                <h4>Sources</h4>
+                                <ul>
+                                    {% for source in wine.ai_summary_sources %}
+                                        <li>
+                                            <a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">
+                                                {{ source.title|default:source.url }}
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                            {% else %}
+                            <p role="status">Generating AI summary...</p>
+                            {% endif %}
+                        </div>
+                    </details>
+            </div>
         </div>
     </div>
 {% endblock content %}
+
+{% block extra_js %}
+    {{ block.super }}
+    {% if not wine.ai_summary %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const summary = document.getElementById('ai-summary');
+                const content = document.getElementById('ai-summary-content');
+                const statusUrl = summary && summary.dataset.statusUrl;
+
+                if (!statusUrl || !content) {
+                    return;
+                }
+
+                function renderSummary(data) {
+                    content.replaceChildren();
+                    const text = document.createElement('p');
+                    text.textContent = data.summary;
+                    text.style.whiteSpace = 'pre-line';
+                    content.appendChild(text);
+
+                    if (data.generated_at) {
+                        const generated = document.createElement('p');
+                        generated.className = 'text--gray text--small';
+                        generated.textContent = 'Generated ' + data.generated_at;
+                        content.appendChild(generated);
+                    }
+
+                    if (data.sources.length) {
+                        const heading = document.createElement('h4');
+                        heading.textContent = 'Sources';
+                        content.appendChild(heading);
+
+                        const sources = document.createElement('ul');
+                        data.sources.forEach(function(source) {
+                            const item = document.createElement('li');
+                            const link = document.createElement('a');
+                            link.href = source.url;
+                            link.target = '_blank';
+                            link.rel = 'noopener noreferrer';
+                            link.textContent = source.title || source.url;
+                            item.appendChild(link);
+                            sources.appendChild(item);
+                        });
+                        content.appendChild(sources);
+                    }
+                }
+
+                var pollAttempts = 0;
+                var maxPollAttempts = 30;
+
+                function pollForSummary() {
+                    if (pollAttempts >= maxPollAttempts) {
+                        content.innerHTML = '<p class="ai-summary-error">AI summary is taking longer than expected. Please refresh the page to try again.</p>';
+                        return;
+                    }
+                    pollAttempts++;
+                    fetch(statusUrl, { credentials: 'same-origin' })
+                        .then(function(response) {
+                            if (!response.ok) {
+                                throw new Error('Unable to retrieve AI summary status');
+                            }
+                            return response.json();
+                        })
+                        .then(function(data) {
+                            if (data.status === 'ready') {
+                                renderSummary(data);
+                                return;
+                            }
+                            window.setTimeout(pollForSummary, 2000);
+                        })
+                        .catch(function() {
+                            window.setTimeout(pollForSummary, 5000);
+                        });
+                }
+
+                window.setTimeout(pollForSummary, 1000);
+            });
+        </script>
+    {% endif %}
+    {% if has_price_chart %}
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" integrity="sha384-T/4KgSWuZEPozpPz7rnnp/5lDSnpY1VPJCojf1S81uTHS1E38qgLfMgVsAeRCWc4" crossorigin="anonymous" defer></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const ctx = document.getElementById('price-history-chart');
+                if (!ctx) return;
+                
+                const chartData = {{ price_history_chart_data_json|safe }};
+                if (!chartData || chartData.length === 0) return;
+                
+                const labels = chartData.map(item => item.date);
+                const prices = chartData.map(item => item.price);
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Market Price',
+                            data: prices,
+                            borderColor: '#722f37',
+                            backgroundColor: 'rgba(114, 47, 55, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.1,
+                            fill: true,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#722f37',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: {
+                                    color: '#333',
+                                    font: {
+                                        size: 12,
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleColor: '#fff',
+                                bodyColor: '#fff',
+                                padding: 8,
+                                displayColors: false,
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Price',
+                                },
+                                ticks: {
+                                    color: '#666',
+                                },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.1)',
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#666',
+                                },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)',
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        </script>
+    {% endif %}
+{% endblock extra_js %}

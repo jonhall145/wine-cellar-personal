@@ -3,6 +3,7 @@ import json
 import pytest
 
 from wine_cellar.apps.storage.forms import (
+    PlannedMoveForm,
     StockAddForm,
     StorageForm,
     StorageItemEditForm,
@@ -465,3 +466,36 @@ class TestStorageItemEditForm:
         assert not form.is_valid()
         codes = [e.code for e in form.errors.as_data()["__all__"]]
         assert "slot_occupied" in codes
+
+
+@pytest.mark.django_db
+class TestPlannedMoveForm:
+    def test_allows_an_occupied_destination(
+        self, user, wine_factory, storage_factory, storage_item_factory
+    ):
+        source_storage = storage_factory(user=user, rows=2, columns=2)
+        target_storage = storage_factory(user=user, rows=2, columns=2)
+        source_item = storage_item_factory(
+            wine=wine_factory(user=user),
+            storage=source_storage,
+            row=1,
+            column=1,
+        )
+        storage_item_factory(
+            wine=wine_factory(user=user),
+            storage=target_storage,
+            row=2,
+            column=2,
+        )
+
+        form = PlannedMoveForm(
+            data={
+                "storage_item": source_item.pk,
+                "target_storage": target_storage.pk,
+                "target_row": 2,
+                "target_column": 2,
+            },
+            user=user,
+        )
+
+        assert form.is_valid(), form.errors

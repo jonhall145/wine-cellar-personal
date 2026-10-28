@@ -7,6 +7,8 @@ ARGUMENTS=$(filter-out $(firstword $(MAKECMDGOALS)), $(MAKECMDGOALS))
 DEV_COMPOSE = docker compose -f docker-compose.yml
 PROD_COMPOSE = docker compose -f docker-compose.prod.yml
 GHCR_IMAGE ?= ghcr.io/jonhall145/wine-cellar-personal:latest
+GHCR_NEXT_IMAGE ?= ghcr.io/jonhall145/wine-cellar-personal:next
+PROD_IMAGE ?= wine-cellar:prod
 NODE_RUN = docker run --rm -v "$$(pwd)":/app -v /app/node_modules -w /app node:20-slim
 
 .PHONY: all
@@ -59,8 +61,8 @@ help:
 	@echo "    make deploy               Rebuild and redeploy full production stack"
 	@echo "    make wine-deploy          Build/deploy wine app and restart nginx"
 	@echo "    make whisky-deploy        Build/deploy whisky app and restart nginx"
-	@echo "    make ghcr-deploy          Pull/deploy from GitHub Container Registry image"
-	@echo "    make ghcr-deploy-next     Pull/deploy the current next GHCR image"
+	@echo "    make ghcr-deploy          Pull/deploy the GitHub Container Registry latest image"
+	@echo "    make ghcr-deploy-next     Pull/deploy the GitHub Container Registry next image"
 	@echo ""
 	@echo "  Production"
 	@echo "    make wine-prod-start      Start wine container"
@@ -117,7 +119,14 @@ deploy:
 .PHONY: ghcr-deploy
 ghcr-deploy:
 	docker pull $(GHCR_IMAGE)
-	docker tag $(GHCR_IMAGE) wine-cellar:prod
+	docker tag $(GHCR_IMAGE) $(PROD_IMAGE)
+	chown -R 100:101 /mnt/usb/media/wine/ /mnt/usb/media/whisky/ 2>/dev/null || true
+	$(PROD_COMPOSE) up -d --no-build --force-recreate --remove-orphans
+
+.PHONY: ghcr-deploy-next
+ghcr-deploy-next:
+	docker pull $(GHCR_NEXT_IMAGE)
+	docker tag $(GHCR_NEXT_IMAGE) $(PROD_IMAGE)
 	chown -R 100:101 /mnt/usb/media/wine/ /mnt/usb/media/whisky/ 2>/dev/null || true
 	$(PROD_COMPOSE) up -d --no-build --force-recreate --remove-orphans
 
@@ -201,8 +210,8 @@ whisky-prod-logs:
 
 .PHONY: pytest
 pytest:
-	$(DEV_COMPOSE) up -d web
-	$(DEV_COMPOSE) exec -T web py.test --reuse-db
+	$(DEV_COMPOSE) build web
+	$(DEV_COMPOSE) run --rm web py.test --reuse-db
 
 .PHONY: smoke-test
 smoke-test:
@@ -213,19 +222,19 @@ test: pytest
 
 .PHONY: pytest-lastfailed
 pytest-lastfailed:
-	$(DEV_COMPOSE) up -d web
-	$(DEV_COMPOSE) exec -T web py.test --reuse-db --last-failed
+	$(DEV_COMPOSE) build web
+	$(DEV_COMPOSE) run --rm web py.test --reuse-db --last-failed
 
 .PHONY: pytest-clean
 pytest-clean:
 	if [ -f test_db.sqlite3 ]; then rm test_db.sqlite3; fi
-	$(DEV_COMPOSE) up -d web
-	$(DEV_COMPOSE) exec -T web py.test
+	$(DEV_COMPOSE) build web
+	$(DEV_COMPOSE) run --rm web py.test
 
 .PHONY: coverage
 coverage:
-	$(DEV_COMPOSE) up -d web
-	$(DEV_COMPOSE) exec -T web py.test --reuse-db --cov --cov-report=html
+	$(DEV_COMPOSE) build web
+	$(DEV_COMPOSE) run --rm web py.test --reuse-db --cov --cov-report=html
 
 .PHONY: lint
 lint:

@@ -1,3 +1,6 @@
+from django.db.models.functions import Coalesce, TruncDate
+
+
 def format_bottle_location(storage, row, column):
     parts = []
     if storage:
@@ -26,4 +29,23 @@ def format_move_detail(
     return (
         f"{format_bottle_location(from_storage, from_row, from_column)}"
         f" -> {format_bottle_location(to_storage, to_row, to_column)}"
+    )
+
+
+def format_given_detail(recipient, occasion=""):
+    parts = []
+    if recipient:
+        parts.append(f"Recipient: {recipient}")
+    if occasion:
+        parts.append(f"Occasion: {occasion}")
+    return "\n".join(parts)
+
+
+def with_removal_sort_date(queryset):
+    return queryset.annotate(
+        removal_sort_date=Coalesce(
+            "given_date",
+            "finished_date",
+            TruncDate("created"),
+        )
     )

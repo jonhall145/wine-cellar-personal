@@ -13,7 +13,12 @@ from wine_cellar.apps.household.models import (
 )
 from wine_cellar.apps.storage.models import Storage, StorageItem
 from wine_cellar.apps.user.models import UserSettings
-from wine_cellar.apps.whisky.models import Whisky, WhiskyType
+from wine_cellar.apps.whisky.models import (
+    BottleSize,
+    Whisky,
+    WhiskyStorageItem,
+    WhiskyType,
+)
 from wine_cellar.apps.wine.models import Grape, Wine, WineType
 
 
@@ -619,6 +624,54 @@ class TestStorageItemCRUD:
         )
         assert resp.status_code == 201
         assert StorageItem.objects.filter(wine=wine, storage=storage).exists()
+
+    def test_miniature_whisky_api_enforces_unordered_storage(
+        self, api_client, api_key_write, user, household
+    ):
+        storage = Storage.objects.create(
+            name="Miniature Rack",
+            location="Cellar",
+            rows=2,
+            columns=2,
+            user=user,
+            household=household,
+            app_type="whisky",
+        )
+        whisky = Whisky.objects.create(
+            name="Miniature Whisky",
+            whisky_type=WhiskyType.SINGLE_MALT,
+            country="XS",
+            size=BottleSize.MINIATURE,
+            user=user,
+            household=household,
+        )
+        api_client.credentials(HTTP_AUTHORIZATION="Bearer " + api_key_write)
+
+        response = api_client.post(
+            "/rest/whisky-bottles/",
+            {
+                "storage": storage.pk,
+                "whisky": whisky.pk,
+                "row": 99,
+                "column": 99,
+            },
+        )
+
+        assert response.status_code == 201, response.data
+        item = WhiskyStorageItem.objects.get(whisky=whisky)
+        assert item.row is None
+        assert item.column is None
+        assert item.miniature_number == 1
+
+        response = api_client.patch(
+            f"/rest/whisky-bottles/{item.pk}/",
+            {"row": 1, "column": 2},
+        )
+
+        assert response.status_code == 200
+        item.refresh_from_db()
+        assert item.row is None
+        assert item.column is None
 
     def test_grid_storage_requires_row_and_column(
         self, api_client, api_key_write, user, household, wine

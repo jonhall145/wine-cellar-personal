@@ -175,14 +175,16 @@ After upgrading, verify:
 2. **Login works**: Test authentication
 3. **Data intact**: Verify wine list loads
 4. **Features work**: Test barcode scanner, image upload
-5. **Background tasks**: Check Celery is running (if configured)
+5. **Background tasks**: If you use drink-by reminders, confirm the host cron
+   job that runs `python manage.py send_drink_reminders` is still configured
+   after the upgrade
 
 ```bash
 # Check application logs
 tail -f /var/log/winecellar/gunicorn.log
 
-# Check Celery logs (if using)
-tail -f /var/log/winecellar/celery.log
+# If you use drink-by reminders, inspect the reminder cron log
+tail -f /var/log/drink_reminders.log
 ```
 
 ## Troubleshooting

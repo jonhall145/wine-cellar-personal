@@ -4,7 +4,7 @@ import pycountry
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.formats import number_format
@@ -15,6 +15,7 @@ from wine_cellar.apps.core.models import (
     user_directory_path,
     versioned_media_url,
 )
+from wine_cellar.apps.household.models import Household
 
 # ---------------------------------------------------------------------------
 # Custom country codes for UK nations (X prefix = ISO private use)
@@ -550,39 +551,58 @@ class Whisky(UserContentModel):
         return result
 
     @property
+    def detail_image_urls(self) -> list[str]:
+        """Return the full-size image URLs for the detail-page viewer."""
+        image_type_order = {
+            WhiskyImage.ImageType.LABEL_FRONT: 0,
+            WhiskyImage.ImageType.LABEL_BACK: 1,
+        }
+        return [
+            versioned_media_url(image.image) or image.image.url
+            for image in sorted(
+                self.images.all(),
+                key=lambda image: (
+                    0 if image.is_primary else 1,
+                    image_type_order.get(image.image_type, len(image_type_order)),
+                    image.pk,
+                ),
+            )
+        ]
+
+    @property
     def display_type(self):
         return self.get_whisky_type_display()
 
     @property
-    def get_price_with_currency(self):
+    def currency_symbol(self):
         from wine_cellar.apps.user.views import get_user_settings
 
-        if self.price is None:
-            return None
         user_settings = get_user_settings(self.user)
-        currency = settings.CURRENCY_SYMBOLS.get(
+        return settings.CURRENCY_SYMBOLS.get(
             getattr(user_settings, "currency", "EUR"), "€"
         )
-        formatted_price = number_format(self.price, use_l10n=True)
-        return f"{currency}{formatted_price}"
+
+    def format_currency(self, amount):
+        if amount is None:
+            return None
+        if hasattr(amount, "quantize"):
+            amount = amount.quantize(Decimal("0.00"))
+        formatted_price = number_format(amount, use_l10n=True)
+        return f"{self.currency_symbol}{formatted_price}"
+
+    @property
+    def get_price_with_currency(self):
+        return self.format_currency(self.price)
 
     @property
     def get_average_price_with_currency(self):
-        from wine_cellar.apps.user.views import get_user_settings
-
-        user_settings = get_user_settings(self.user)
-        currency = settings.CURRENCY_SYMBOLS.get(
-            getattr(user_settings, "currency", "EUR"), "€"
-        )
         avg_price = self.whiskystorageitem_set.aggregate(avg_price=models.Avg("price"))[
             "avg_price"
         ]
 
         if avg_price is None:
             return None
-        avg_price = avg_price.quantize(Decimal("0.00"))
-        formatted_price = number_format(avg_price, use_l10n=True)
-        return f"{currency}{formatted_price}"
+        return self.format_currency(avg_price)
 
 
 # ---------------------------------------------------------------------------
@@ -743,6 +763,11 @@ class WhiskyStorageItemQuerySet(HouseholdQuerySet):
 
 
 class WhiskyStorageItem(UserContentModel):
+    class RemovalReason(models.TextChoices):
+        CONSUMED = "consumed", "Consumed"
+        GIVEN = "given", "Given Away"
+        REMOVED = "removed", "Removed"
+
     objects = WhiskyStorageItemQuerySet.as_manager()
 
     storage = models.ForeignKey(
@@ -753,6 +778,12 @@ class WhiskyStorageItem(UserContentModel):
     whisky = models.ForeignKey(Whisky, on_delete=models.CASCADE)
     row = models.PositiveIntegerField(null=True, blank=True)
     column = models.PositiveIntegerField(null=True, blank=True)
+    miniature_number = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Miniature Label Number",
+        help_text="The handwritten number on this miniature.",
+    )
     deleted = models.BooleanField(default=False, db_index=True)
     price = models.DecimalField(
         max_digits=8,
@@ -801,6 +832,30 @@ class WhiskyStorageItem(UserContentModel):
         blank=True,
         verbose_name="Date Finished",
     )
+    recipient = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name="Recipient",
+    )
+    given_occasion = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name="Given Occasion",
+    )
+    given_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Date Given",
+    )
+    removal_reason = models.CharField(
+        max_length=20,
+        choices=RemovalReason.choices,
+        blank=True,
+        default="",
+        verbose_name="Removal Reason",
+    )
 
     class Meta:
         verbose_name = "Whisky Bottle"
@@ -810,6 +865,12 @@ class WhiskyStorageItem(UserContentModel):
             models.Index(fields=["storage", "row", "column"], name="wsi_position_idx"),
             models.Index(fields=["whisky", "deleted"], name="wsi_whisky_del_idx"),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["household", "miniature_number"],
+                name="unique_whisky_miniature_label",
+            )
+        ]
 
     def __str__(self):
         location = (
@@ -818,6 +879,56 @@ class WhiskyStorageItem(UserContentModel):
             else "Unassigned"
         )
         return f"{self.whisky.name} - {self.storage.name} ({location})"
+
+    def save(self, *args, **kwargs):
+        if self.whisky_id and self.whisky.size == BottleSize.MINIATURE:
+            with transaction.atomic():
+                if self.household_id:
+                    Household.objects.select_for_update().get(pk=self.household_id)
+                self.row = None
+                self.column = None
+                if not self.miniature_number:
+                    self.miniature_number = self.next_miniature_number(self.household)
+
+                update_fields = kwargs.get("update_fields")
+                if update_fields is not None:
+                    kwargs["update_fields"] = set(update_fields) | {
+                        "row",
+                        "column",
+                        "miniature_number",
+                    }
+                return super().save(*args, **kwargs)
+
+        return super().save(*args, **kwargs)
+
+    @classmethod
+    def next_miniature_number(cls, household):
+        return (
+            cls.objects.filter(
+                household=household,
+                miniature_number__isnull=False,
+            ).aggregate(max_number=models.Max("miniature_number"))["max_number"]
+            or 0
+        ) + 1
+
+    @classmethod
+    def allocate_miniature_number(cls, household, requested_number=None, exclude=None):
+        """Allocate a unique miniature label while locking its household row.
+
+        Call inside a transaction that continues through saving the storage item.
+        """
+        if household is not None:
+            Household.objects.select_for_update().get(pk=household.pk)
+        if requested_number is not None and requested_number > 0:
+            existing = cls.objects.filter(
+                household=household,
+                miniature_number=requested_number,
+            )
+            if exclude is not None:
+                existing = existing.exclude(pk=exclude.pk)
+            if not existing.exists():
+                return requested_number
+        return cls.next_miniature_number(household)
 
     @property
     def dreg_warning(self):
@@ -836,6 +947,10 @@ class WhiskyStorageItem(UserContentModel):
         if self.fill_level != FillLevel.DREG or not self.dreg_date:
             return False
         return (datetime.date.today() - self.dreg_date).days > 365
+
+    @property
+    def removal_date(self):
+        return self.given_date or self.finished_date
 
 
 # ---------------------------------------------------------------------------
@@ -866,6 +981,19 @@ class WhiskyDrinkRecord(UserContentModel):
     )
     occasion = models.CharField(
         max_length=200, blank=True, default="", verbose_name="Occasion"
+    )
+    photo = models.ImageField(
+        upload_to=user_directory_path,
+        null=True,
+        blank=True,
+        verbose_name="Photo",
+        help_text="Photo of the bottle, meal, or tasting setting.",
+    )
+    taste_descriptors = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Taste Descriptors",
+        help_text="Selected flavor descriptors from the tasting wheel.",
     )
 
     class Meta:
@@ -914,6 +1042,12 @@ class WhiskyWishlist(UserContentModel):
         blank=True,
         verbose_name="Max Price",
     )
+    external_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default="",
+        verbose_name="Purchase Link",
+    )
     notes = models.TextField(blank=True, default="", verbose_name="Notes")
     priority = models.PositiveIntegerField(
         default=0,
@@ -921,6 +1055,12 @@ class WhiskyWishlist(UserContentModel):
         verbose_name="Priority",
     )
     purchased = models.BooleanField(default=False, verbose_name="Purchased")
+    external_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default="",
+        verbose_name="Purchase Link",
+    )
 
     class Meta:
         ordering = ["-priority", "name"]
@@ -1098,6 +1238,10 @@ class WhiskyPriceHistory(UserContentModel):
 
     def __str__(self):
         return f"{self.whisky.name} - {self.price} at {self.recorded_at}"
+
+    @property
+    def price_with_currency(self):
+        return self.whisky.format_currency(self.price)
 
 
 class WhiskyBottleMoveHistory(models.Model):

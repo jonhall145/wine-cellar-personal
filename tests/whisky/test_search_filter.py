@@ -2,6 +2,7 @@ import json
 import os
 
 import pytest
+from django.utils import timezone
 
 if os.environ.get("CELLAR_APP_TYPE") == "whisky":
     from django.test import RequestFactory
@@ -17,6 +18,8 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
     @pytest.mark.django_db
     class TestWhiskySearchFilter:
         def _filter(self, user, **params):
+            params.setdefault("has_stock", "0")
+            params.setdefault("order", "created")
             request = RequestFactory().get("/")
             request.user = user
             return WhiskyFilter(
@@ -122,6 +125,51 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
 
             assert tom_config["maxOptions"] is None
 
+        def test_rating_filter_supports_multiple_selected_ratings(
+            self, user, whisky_factory
+        ):
+            zero_star = whisky_factory(user=user, rating=0)
+            one_star = whisky_factory(user=user, rating=1)
+            two_star = whisky_factory(user=user, rating=2)
+
+            filt = self._filter(user, rating=["0", "1"], has_stock="0", order="created")
+
+            assert list(filt.qs) == [zero_star, one_star]
+            assert two_star not in filt.qs
+
+        def test_order_created_annotates_stock_date_for_direct_use(
+            self, user, whisky_factory, whisky_storage_item_factory
+        ):
+            older = whisky_factory(user=user, name="Older")
+            newer = whisky_factory(user=user, name="Newer")
+            older_item = whisky_storage_item_factory(
+                whisky=older,
+                user=user,
+                household=older.household,
+                storage__user=user,
+                storage__household=older.household,
+            )
+            newer_item = whisky_storage_item_factory(
+                whisky=newer,
+                user=user,
+                household=newer.household,
+                storage__user=user,
+                storage__household=newer.household,
+            )
+
+            old_created = timezone.now() - timezone.timedelta(days=20)
+            new_created = timezone.now() - timezone.timedelta(days=3)
+            WhiskyStorageItem.objects.filter(pk=older_item.pk).update(
+                created=old_created
+            )
+            WhiskyStorageItem.objects.filter(pk=newer_item.pk).update(
+                created=new_created
+            )
+
+            filt = self._filter(user, order="created")
+
+            assert list(filt.qs) == [older, newer]
+
     @pytest.mark.django_db
     class TestWhiskyStorageItemFilter:
         def _create_storage_item(self, user, whisky_storage_item_factory, **kwargs):
@@ -166,6 +214,31 @@ if os.environ.get("CELLAR_APP_TYPE") == "whisky":
             )
 
             assert tom_config["maxOptions"] is None
+
+        def test_fill_level_filter_supports_multiple_selected_levels(
+            self, user, whisky_storage_item_factory
+        ):
+            unopened = self._create_storage_item(
+                user,
+                whisky_storage_item_factory,
+                fill_level="UN",
+            )
+            opened = self._create_storage_item(
+                user,
+                whisky_storage_item_factory,
+                fill_level="OP",
+            )
+            dreg = self._create_storage_item(
+                user,
+                whisky_storage_item_factory,
+                fill_level="DR",
+            )
+
+            filt = self._filter(user, fill_level=["UN", "OP"])
+
+            assert filt.qs.count() == 2
+            assert {item.pk for item in filt.qs} == {unopened.pk, opened.pk}
+            assert dreg not in filt.qs
 
         def test_show_used_default_excludes_deleted(
             self, user, whisky_storage_item_factory

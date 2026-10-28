@@ -1,10 +1,15 @@
-"""Tests for user models (UserSettings, PushSubscription)."""
+"""Tests for user models (UserSettings, PushSubscription, notifications)."""
 
 import pytest
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 
-from wine_cellar.apps.user.models import PushSubscription, UserSettings
+from wine_cellar.apps.user.models import (
+    InAppNotificationStatus,
+    NotificationChannel,
+    PushSubscription,
+    UserSettings,
+)
 
 User = get_user_model()
 
@@ -34,6 +39,13 @@ class TestUserSettings:
         settings = user.user_settings
         assert settings.reminder_years_before == 0
 
+    def test_default_delivery_preferences(self, user):
+        settings = user.user_settings
+        assert settings.drink_window_notifications == NotificationChannel.BOTH
+        assert settings.low_stock_notifications == NotificationChannel.IN_APP
+        assert settings.household_invitation_notifications == NotificationChannel.IN_APP
+        assert settings.price_alert_notifications == NotificationChannel.NONE
+
     def test_active_household_set(self, user):
         settings = user.user_settings
         assert settings.active_household is not None
@@ -45,12 +57,12 @@ class TestUserSettings:
         settings.refresh_from_db()
         assert settings.currency == "USD"
 
-    def test_update_language(self, user):
+    def test_update_drink_window_delivery(self, user):
         settings = user.user_settings
-        settings.language = "de"
+        settings.drink_window_notifications = NotificationChannel.EMAIL
         settings.save()
         settings.refresh_from_db()
-        assert settings.language == "de"
+        assert settings.drink_window_notifications == NotificationChannel.EMAIL
 
     def test_one_to_one_constraint(self, user):
         with pytest.raises(IntegrityError):
@@ -160,3 +172,21 @@ class TestPushSubscription:
             auth="a2",
         )
         assert PushSubscription.objects.filter(user=user).count() == 2
+
+
+@pytest.mark.django_db
+class TestInAppNotificationStatus:
+    def test_unique_notification_key_per_user(self, user):
+        InAppNotificationStatus.objects.create(
+            user=user,
+            household=user.user_settings.active_household,
+            notification_key="drink-window:wine:1:upcoming:1",
+            notification_type="drink_window",
+        )
+        with pytest.raises(IntegrityError):
+            InAppNotificationStatus.objects.create(
+                user=user,
+                household=user.user_settings.active_household,
+                notification_key="drink-window:wine:1:upcoming:1",
+                notification_type="drink_window",
+            )

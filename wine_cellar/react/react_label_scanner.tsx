@@ -232,6 +232,7 @@ const LabelScanner: React.FC = () => {
                         type="button"
                         className="pure-button button__secondary"
                         onClick={capturePhoto}
+                        aria-label={`${translated.captureButton}. ${stepInstructions[currentStep]}`}
                     >
                         {translated.captureButton}
                     </button>
@@ -241,6 +242,7 @@ const LabelScanner: React.FC = () => {
                             type="button"
                             className="pure-button button__tertiary"
                             onClick={retakePhoto}
+                            aria-label={translated.retakeButton}
                         >
                             {translated.retakeButton}
                         </button>
@@ -249,6 +251,7 @@ const LabelScanner: React.FC = () => {
                                 type="button"
                                 className="pure-button button__secondary"
                                 onClick={nextPhoto}
+                                aria-label={translated.nextPhotoButton}
                             >
                                 {translated.nextPhotoButton}
                             </button>
@@ -257,6 +260,7 @@ const LabelScanner: React.FC = () => {
                                 type="button"
                                 className="pure-button button__secondary"
                                 onClick={submitAllImages}
+                                aria-label={translated.submitAllButton}
                             >
                                 {translated.submitAllButton}
                             </button>
