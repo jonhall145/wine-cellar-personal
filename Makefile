@@ -130,9 +130,7 @@ ghcr-deploy-next:
 	chown -R 100:101 /mnt/usb/media/wine/ /mnt/usb/media/whisky/ 2>/dev/null || true
 	$(PROD_COMPOSE) up -d --no-build --force-recreate --remove-orphans
 
-.PHONY: ghcr-deploy-next
-ghcr-deploy-next:
-	$(MAKE) GHCR_IMAGE=ghcr.io/jonhall145/wine-cellar-personal:next ghcr-deploy
+
 
 .PHONY: wine-deploy
 wine-deploy:
