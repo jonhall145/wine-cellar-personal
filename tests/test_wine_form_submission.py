@@ -60,6 +60,22 @@ def test_wine_form_storage_fields_use_native_select_widgets(user):
 
 
 @pytest.mark.django_db
+def test_wine_form_country_starts_blank_and_preserves_initial_value(user):
+    form = WineForm(user=user)
+    widget = form.fields["country"].widget
+    options = widget.get_context("country", form["country"].value(), {})["widget"][
+        "optgroups"
+    ]
+    assert options[0][1][0]["value"] == ""
+    assert options[0][1][0]["selected"]
+
+    prefilled = WineForm(user=user, initial={"country": "FR"})
+    assert prefilled["country"].value() == "FR"
+    config = json.loads(prefilled.fields["country"].widget.attrs["data-tom_config"])
+    assert config["items"] == ["FR"]
+
+
+@pytest.mark.django_db
 def test_wine_edit_view_storage_fields_use_native_select_widgets(
     client, user, wine_factory
 ):
@@ -323,6 +339,7 @@ class TestWineCreateView:
         r = client.post(reverse("wine-add"), data)
         assert r.status_code == 200
         assert r.context["form"].errors.get("country")
+        assert r.context["form"]["country"].value() == ""
         assert Wine.objects.count() == 0
 
     def test_create_redirects_to_wine_list(self, client, user):

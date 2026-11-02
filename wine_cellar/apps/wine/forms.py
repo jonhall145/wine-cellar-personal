@@ -255,7 +255,8 @@ class WineBaseForm(
     country = forms.CharField(
         max_length=250,
         widget=forms.Select(
-            choices={country.alpha_2: country.name for country in pycountry.countries},
+            choices=[("", "---------")]
+            + [(country.alpha_2, country.name) for country in pycountry.countries],
         ),
         help_text="Select the country the wine was produced in "
         "as indicated on the label.",
