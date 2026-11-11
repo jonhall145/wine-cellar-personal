@@ -818,13 +818,14 @@ def test_planned_move_form_uses_the_storage_grid_picker(client, user):
     content = response.content.decode()
 
     assert response.status_code == HTTPStatus.OK
-    assert 'id="storage-grid-container" data-planned-move-form="true"' in content
+    assert 'id="storage-grid-container"' in content
+    assert 'data-planned-move-form="true"' in content
     assert 'id="planned-move-submit"' in content
     assert 'name="storage_item"' in content
 
 
 @pytest.mark.django_db
-def test_planned_move_for_wine_defaults(
+def test_planned_move_for_wine_uses_grid_picker(
     client, user, wine_factory, storage_factory, storage_item_factory
 ):
     client.force_login(user)
@@ -836,6 +837,11 @@ def test_planned_move_for_wine_defaults(
 
     r = client.get(url)
     assert r.status_code == HTTPStatus.OK
+    content = r.content.decode()
+    assert f'data-planned-move-beverage-id="{wine.pk}"' in content
+    assert f'data-planned-move-item-id="{item.pk}"' in content
+    assert f'data-planned-move-target-storage-id="{target.pk}"' in content
+    assert r.context["beverage_pk"] == wine.pk
     form = r.context["form"]
     assert form.initial["storage_item"] == item.pk
     assert form.initial["target_storage"] == target.pk

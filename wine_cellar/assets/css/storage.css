@@ -838,6 +838,11 @@
   color: inherit;
 }
 
+.storage-grid__cell--unavailable-source {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 @media (hover: hover) {
   .storage-grid__cell--inactive:hover {
     background-color: transparent;

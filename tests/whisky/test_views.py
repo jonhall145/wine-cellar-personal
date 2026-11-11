@@ -1468,6 +1468,36 @@ def test_miniature_list_only_shows_miniatures(
 
 
 @pytest.mark.django_db
+def test_planned_move_for_whisky_uses_shared_storage_grid_picker(
+    client,
+    user,
+    whisky_factory,
+    storage_factory,
+    whisky_storage_item_factory,
+):
+    client.force_login(user)
+    whisky = whisky_factory(user=user)
+    other_whisky = whisky_factory(user=user)
+    storage = storage_factory(user=user, app_type="whisky", rows=2, columns=2)
+    whisky_item = whisky_storage_item_factory(
+        whisky=whisky, storage=storage, row=1, column=1
+    )
+    whisky_storage_item_factory(whisky=other_whisky, storage=storage, row=1, column=2)
+
+    response = client.get(reverse("planned-move-add-for", args=[whisky.pk]))
+
+    assert response.status_code == HTTPStatus.OK
+    content = response.content.decode()
+    assert 'id="storage-grid-container"' in content
+    assert f'data-planned-move-beverage-id="{whisky.pk}"' in content
+    assert list(
+        response.context["form"]
+        .fields["storage_item"]
+        .queryset.values_list("pk", flat=True)
+    ) == [whisky_item.pk]
+
+
+@pytest.mark.django_db
 def test_recording_planned_move_rejects_whisky_miniatures(
     client, user, whisky_factory, whisky_storage_item_factory, storage_factory
 ):
