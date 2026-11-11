@@ -303,7 +303,10 @@ class WineUpdateView(BaseBeverageUpdateView):
         size_code = cleaned_data["size"]
         size = None
         if size_code:
-            size, _ = get_or_create_household_size(size_code, wine.household)
+            if wine.size and wine.size.name == size_code:
+                size = wine.size
+            else:
+                size, _ = get_or_create_household_size(size_code, wine.household)
         category = cleaned_data["category"] or None
         barcode = cleaned_data["barcode"]
         barcode_2 = cleaned_data.get("barcode_2")
