@@ -119,6 +119,8 @@ interface TooltipProps {
     wine: WineInfo;
     position: { x: number; y: number };
     itemUrlPrefix: string;
+    onMouseEnter: () => void;
+    onMouseLeave: () => void;
 }
 
 const getBottleDetailUrl = (itemUrlPrefix: string, wine: WineInfo): string => (
@@ -320,7 +322,13 @@ const getCellAriaLabel = (
     return `${location}. Empty cell.${plannedMove}`;
 };
 
-const Tooltip: React.FC<TooltipProps> = ({ wine, position, itemUrlPrefix }) => {
+const Tooltip: React.FC<TooltipProps> = ({
+    wine,
+    position,
+    itemUrlPrefix,
+    onMouseEnter,
+    onMouseLeave,
+}) => {
     const tooltipRef = React.useRef<HTMLDivElement>(null);
     const [adjustedPosition, setAdjustedPosition] = React.useState({ x: position.x, y: position.y });
     const detailUrl = getBottleDetailUrl(itemUrlPrefix, wine);
@@ -362,6 +370,8 @@ const Tooltip: React.FC<TooltipProps> = ({ wine, position, itemUrlPrefix }) => {
                 top: adjustedPosition.y,
                 zIndex: 1000,
             }}
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
         >
             <a
                 href={detailUrl}
@@ -529,6 +539,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId, plannedMove
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [tooltip, setTooltip] = useState<{ wine: WineInfo; position: { x: number; y: number } } | null>(null);
+    const tooltipTimeoutRef = React.useRef<number | null>(null);
     const [sourceStorageId, setSourceStorageId] = useState<number | null>(null);
     const [targetStorageId, setTargetStorageId] = useState<number | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -707,13 +718,27 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId, plannedMove
         }
     }, [plannedMoveMode, selectedBottle]);
 
-    const handleShowTooltip = useCallback((wine: WineInfo, e: { clientX: number; clientY: number }) => {
-        setTooltip({ wine, position: { x: e.clientX, y: e.clientY } });
+    const clearTooltipTimeout = useCallback(() => {
+        if (tooltipTimeoutRef.current !== null) {
+            window.clearTimeout(tooltipTimeoutRef.current);
+            tooltipTimeoutRef.current = null;
+        }
     }, []);
 
+    const handleShowTooltip = useCallback((wine: WineInfo, e: { clientX: number; clientY: number }) => {
+        clearTooltipTimeout();
+        setTooltip({ wine, position: { x: e.clientX, y: e.clientY } });
+    }, [clearTooltipTimeout]);
+
     const handleHideTooltip = useCallback(() => {
-        setTooltip(null);
-    }, []);
+        clearTooltipTimeout();
+        tooltipTimeoutRef.current = window.setTimeout(() => {
+            setTooltip(null);
+            tooltipTimeoutRef.current = null;
+        }, 200);
+    }, [clearTooltipTimeout]);
+
+    React.useEffect(() => clearTooltipTimeout, [clearTooltipTimeout]);
 
     const toggleMoveMode = () => {
         setMoveMode(!moveMode);
@@ -1066,7 +1091,15 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId, plannedMove
                 </div>
 
                 {/* Tooltip */}
-                {tooltip && <Tooltip wine={tooltip.wine} position={tooltip.position} itemUrlPrefix={itemUrlPrefix} />}
+                {tooltip && (
+                    <Tooltip
+                        wine={tooltip.wine}
+                        position={tooltip.position}
+                        itemUrlPrefix={itemUrlPrefix}
+                        onMouseEnter={clearTooltipTimeout}
+                        onMouseLeave={handleHideTooltip}
+                    />
+                )}
             </div>
         );
     }
@@ -1161,7 +1194,15 @@ const StorageGrid: React.FC<StorageGridProps> = ({ initialStorageId, plannedMove
                 </DragOverlay>
 
                 {/* Tooltip */}
-                {tooltip && <Tooltip wine={tooltip.wine} position={tooltip.position} itemUrlPrefix={itemUrlPrefix} />}
+                {tooltip && (
+                    <Tooltip
+                        wine={tooltip.wine}
+                        position={tooltip.position}
+                        itemUrlPrefix={itemUrlPrefix}
+                        onMouseEnter={clearTooltipTimeout}
+                        onMouseLeave={handleHideTooltip}
+                    />
+                )}
 
                 {/* Instructions */}
                 <div className="storage-grid__instructions">

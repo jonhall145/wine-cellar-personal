@@ -143,6 +143,26 @@ def test_storage_update_post(client, user):
 
 
 @pytest.mark.django_db
+def test_storage_list_bottle_link_preserves_selected_storage_item(
+    client, user, storage_factory, storage_item_factory, wine_factory
+):
+    storage = storage_factory(user=user, rows=1, columns=1)
+    wine = wine_factory(user=user)
+    bottle = storage_item_factory(
+        storage=storage, wine=wine, user=user, row=1, column=1
+    )
+    client.force_login(user)
+
+    response = client.get(reverse("storage-detail", kwargs={"pk": storage.pk}))
+
+    assert response.status_code == HTTPStatus.OK
+    expected_detail_url = (
+        reverse("wine-detail", kwargs={"pk": wine.pk}) + f"?storage_item={bottle.pk}"
+    )
+    assert f'href="{expected_detail_url}"' in response.content.decode()
+
+
+@pytest.mark.django_db
 def test_storage_cant_delete_only(client, user):
     client.force_login(user)
     assert Storage.objects.count() == 1
