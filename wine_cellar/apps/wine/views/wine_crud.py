@@ -144,6 +144,10 @@ class WineCreateView(BaseBeverageCreateView):
             "title": "Personal Notes",
             "fields": ("food_pairings", "rating", "comment"),
         },
+        {
+            "title": "Drinking Window (optional)",
+            "fields": ("drink_from", "drink_to"),
+        },
     )
     cellar_extra_field_names = ()
     wishlist_model = Wishlist
