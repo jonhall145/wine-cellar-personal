@@ -187,6 +187,17 @@ def test_wine_create_post_with_barcode(client, user):
 
 
 @pytest.mark.django_db
+def test_wine_create_form_shows_optional_drinking_window(client, user):
+    client.force_login(user)
+
+    response = client.get(reverse("wine-add", kwargs={"code": 12345}))
+
+    assert response.status_code == HTTPStatus.OK
+    assert b'name="drink_from"' in response.content
+    assert b'name="drink_to"' in response.content
+
+
+@pytest.mark.django_db
 def test_wine_create_post_with_drinking_window(client, user):
     client.force_login(user)
 
