@@ -44,7 +44,6 @@ class ImageType(models.TextChoices):
 class SizeChoices(models.TextChoices):
     PICCOLO = "PI", "Piccolo (187ml)"
     DEMI = "DE", "Demi (375ml)"
-    HALF = "HA", "Half (500ml)"
     STANDARD = "ST", "Standard (750ml)"
     LITER = "LI", "Liter (1L)"
     MAGNUM = "MA", "Magnum (1.5L)"
@@ -56,7 +55,6 @@ class SizeChoices(models.TextChoices):
 SIZE_LITERS_TO_CODE = {
     0.1875: "PI",
     0.375: "DE",
-    0.5: "HA",
     0.75: "ST",
     1.0: "LI",
     1.5: "MA",
