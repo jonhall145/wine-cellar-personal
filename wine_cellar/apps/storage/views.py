@@ -162,9 +162,7 @@ class PlannedMoveCreateView(LoginRequiredMixin, RequireMemberMixin, FormView):
 
 
 class PlannedMoveBeverageCreateView(PlannedMoveCreateView):
-    """Plan a move from a wine/whisky page, with sensible defaults."""
-
-    template_name = "planned_move_beverage_form.html"
+    """Plan a move from a wine or whisky page."""
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -172,10 +170,7 @@ class PlannedMoveBeverageCreateView(PlannedMoveCreateView):
         return kwargs
 
     def _first_free_cells(self, form):
-        """Return {storage_pk: [row, column]} of the first free cell per storage.
-
-        Cells already targeted by another planned move are skipped when possible.
-        """
+        """Return {storage_pk: [row, column]} of the first free cell per storage."""
         planned = set(
             PlannedMove.objects.filter(
                 household=get_active_household(self.request.user),
@@ -189,7 +184,7 @@ class PlannedMoveBeverageCreateView(PlannedMoveCreateView):
                 for row, columns in storage.get_free_cells_by_row().items()
                 for column in columns
             ]
-            unplanned = [c for c in cells if (storage.pk, *c) not in planned]
+            unplanned = [cell for cell in cells if (storage.pk, *cell) not in planned]
             chosen = (unplanned or cells or [None])[0]
             if chosen:
                 result[storage.pk] = chosen
@@ -217,10 +212,6 @@ class PlannedMoveBeverageCreateView(PlannedMoveCreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["free_cells"] = {
-            str(pk): cell
-            for pk, cell in self._first_free_cells(context["form"]).items()
-        }
         context["beverage_pk"] = self.kwargs["beverage_pk"]
         return context
 

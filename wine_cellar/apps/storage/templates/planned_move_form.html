@@ -13,7 +13,15 @@
         <p class="planned-move-form__description">
             Planned moves show where a bottle is intended to go. They do not reserve the destination.
         </p>
-        <div id="storage-grid-container" data-planned-move-form="true"></div>
+        <div id="storage-grid-container"
+             data-planned-move-form="true"
+             {% if beverage_pk %}
+                 data-planned-move-beverage-id="{{ beverage_pk }}"
+                 data-planned-move-item-id="{{ form.storage_item.value|default_if_none:'' }}"
+                 data-planned-move-target-storage-id="{{ form.target_storage.value|default_if_none:'' }}"
+                 data-planned-move-target-row="{{ form.target_row.value|default_if_none:'' }}"
+                 data-planned-move-target-column="{{ form.target_column.value|default_if_none:'' }}"
+             {% endif %}></div>
         <form id="planned-move-form" method="post" class="pure-form">
             {% csrf_token %}
             {{ form.storage_item.as_hidden }}
