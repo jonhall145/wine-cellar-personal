@@ -184,7 +184,6 @@ class WineVisionExtractor:
     SIZE_MAP = {
         187: "PI",  # Piccolo
         375: "DE",  # Demi
-        500: "HA",  # Half
         750: "ST",  # Standard
         1000: "LI",  # Liter
         1500: "MA",  # Magnum

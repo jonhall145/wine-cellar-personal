@@ -44,7 +44,6 @@ class ImageType(models.TextChoices):
 class SizeChoices(models.TextChoices):
     PICCOLO = "PI", "Piccolo (187ml)"
     DEMI = "DE", "Demi (375ml)"
-    HALF = "HA", "Half (500ml)"
     STANDARD = "ST", "Standard (750ml)"
     LITER = "LI", "Liter (1L)"
     MAGNUM = "MA", "Magnum (1.5L)"
@@ -56,7 +55,6 @@ class SizeChoices(models.TextChoices):
 SIZE_LITERS_TO_CODE = {
     0.1875: "PI",
     0.375: "DE",
-    0.5: "HA",
     0.75: "ST",
     1.0: "LI",
     1.5: "MA",
@@ -85,6 +83,31 @@ class Size(UserContentModel):
 
     def __str__(self):
         return str(SizeChoices(self.name).label) if self.name else ""
+
+
+def get_or_create_household_size(name, household):
+    """Prefer a household-shared size, then a global shared size.
+
+    Household and global shared references can coexist after legacy data is
+    normalized. Looking up by ``name`` and ``user=None`` alone is therefore
+    ambiguous; deterministic scoping also prevents borrowing another
+    household's reference.
+    """
+    shared_sizes = Size.objects.filter(name=name, user__isnull=True)
+    if household is not None:
+        household_size = shared_sizes.filter(household=household).order_by("pk").first()
+        if household_size:
+            return household_size, False
+
+    global_size = shared_sizes.filter(household__isnull=True).order_by("pk").first()
+    if global_size:
+        return global_size, False
+
+    return Size.objects.get_or_create(
+        name=name,
+        user=None,
+        household=household,
+    )
 
 
 class Grape(UserContentModel):

@@ -136,22 +136,22 @@
 
 /* Dark mode */
 [data-theme="dark"] {
-  --primary: #019603;
-  --primary-light: #064f05;
-  --primary-dark: #001d00;
-  --secondary: #a0aec0;
-  --secondary-light: #cbd5e0;
-  --secondary-dark: #e2e8f0;
-  
-  --light: #1b4622;
-  --white: #030103;
-  --bg-primary: #030103;
-  --bg-secondary: #001d00;
-  --bg-card: #1b4622;
-  --text-color-gray: #8b949e;
-  --text-color-light: #c9d1d9;
-  --darker-gray: #c9d1d9;
-  --border-color: #064f05;
+  --primary: #48bb78;
+  --primary-light: #68d391;
+  --primary-dark: #276749;
+  --secondary: #e2e8f0;
+  --secondary-light: #f7fafc;
+  --secondary-dark: #edf2f7;
+
+  --light: #1a202c;
+  --white: #2d3748;
+  --bg-primary: #1a202c;
+  --bg-secondary: #2d3748;
+  --bg-card: #2d3748;
+  --text-color-gray: #cbd5e0;
+  --text-color-light: #a0aec0;
+  --darker-gray: #f7fafc;
+  --border-color: #4a5568;
   --gray-green: rgba(1, 150, 3, 0.15);
 
   /* Alert colors - dark mode */
@@ -166,15 +166,32 @@
   --alert-info-border: #3d8bfd;
 
   /* Neutral grays - dark mode */
-  --gray-50: #333;
-  --gray-100: #3a3a3a;
-  --gray-200: #444;
-  --gray-300: #555;
-  --gray-400: #666;
-  --gray-500: #777;
-  --gray-600: #999;
-  --gray-700: #aaa;
-  --gray-800: #ccc;
+  --gray-50: #2d3748;
+  --gray-100: #374151;
+  --gray-200: #4a5568;
+  --gray-300: #718096;
+  --gray-400: #a0aec0;
+  --gray-500: #cbd5e0;
+  --gray-600: #d1d5db;
+  --gray-700: #e2e8f0;
+  --gray-800: #f7fafc;
+}
+
+[data-theme="dark"] .menu__sm .menu-link,
+[data-theme="dark"] .menu__sm .app-switch-btn,
+[data-theme="dark"] .menu__sm .header-notification-link,
+[data-theme="dark"] .menu__sm .menu-link span:before {
+  color: var(--bg-primary);
+}
+
+[data-theme="dark"] .menu-toggle:checked ~ .menu-link,
+[data-theme="dark"] .menu-toggle:checked ~ .menu-link span:before {
+  color: var(--secondary-light);
+}
+
+[data-theme="dark"] .nav-badge,
+[data-theme="dark"] .header-notification-link__badge {
+  color: var(--bg-primary);
 }
 
 /* Modern base styles */
@@ -823,8 +840,18 @@ a:hover {
   color: var(--primary);
 }
 
+[data-theme="dark"] .leaflet-popup.maps-popups .leaflet-popup-content-wrapper,
+[data-theme="dark"] .leaflet-popup.maps-popups .leaflet-popup-tip {
+  background-color: var(--bg-card);
+  color: var(--secondary);
+}
+
+[data-theme="dark"] .maps-popups .popup-label {
+  color: var(--secondary);
+}
+
 /* Mobile dropdown in sidebar - use relative positioning */
-@media screen and (max-width: 47.99em) {
+@media screen and (max-width: 79.99em) {
   .menu__sm .pure-menu-has-children > .pure-menu-children {
     display: none;
     position: relative;

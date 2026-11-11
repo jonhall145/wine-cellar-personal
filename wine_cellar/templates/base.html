@@ -86,7 +86,7 @@
                                     </a>
                                 {% endif %}
                                 <ul class="pure-menu-list">
-                                    {% include "includes/navigation_items.html" with show_dropdown_indicator=True %}
+                                    {% include "includes/navigation_items.html" %}
                                 </ul>
                             </div>
                         </div>
@@ -169,7 +169,7 @@
         <div id="ios-install-modal" class="ios-install-modal" role="dialog" aria-modal="true" aria-label="Add to Home Screen" hidden>
             <div class="ios-install-modal__backdrop"></div>
             <div class="ios-install-modal__sheet">
-                <button class="ios-install-modal__close" type="button" aria-label="Close">&times;</button>
+                <button class="ios-install-modal__close" type="button" aria-label="Close">×</button>
                 <p class="ios-install-modal__title">Add to Home Screen</p>
                 <p class="ios-install-modal__body" id="ios-install-modal-body"></p>
             </div>

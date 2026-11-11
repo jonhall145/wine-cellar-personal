@@ -28,7 +28,7 @@ const Map = React.forwardRef(function Map(
 
   return (
     <MapContainer
-      style={{ minHeight: "60vh" }}
+      style={{ height: "60vh", width: "100%" }}
       zoom={2}
       maxZoom={18}
       {...rest}

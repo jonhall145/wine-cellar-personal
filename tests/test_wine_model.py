@@ -7,7 +7,7 @@ from django.templatetags.static import static
 from django.utils.formats import number_format
 
 from wine_cellar.apps.user.models import UserSettings
-from wine_cellar.apps.wine.models import Wine
+from wine_cellar.apps.wine.models import SizeChoices, Wine
 
 
 @pytest.mark.django_db
@@ -16,6 +16,11 @@ def test_wine_model(user, wine_factory, grape_factory):
     wine = wine_factory(user=user, grapes=[grape])
     assert wine.get_grapes == grape.name
     assert wine.image == static("images/bottle.svg")
+
+
+def test_half_bottle_size_is_not_available():
+    assert "HA" not in SizeChoices.values
+    assert all("500ml" not in label for _, label in SizeChoices.choices)
 
 
 @pytest.mark.django_db

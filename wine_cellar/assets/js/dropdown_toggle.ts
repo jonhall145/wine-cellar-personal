@@ -9,9 +9,9 @@
       dropdown.addEventListener('click', (e: Event) => {
         const link = dropdown.querySelector<HTMLElement>(':scope > .pure-menu-link')
         const target = e.target as Node
-        const isMobile = window.innerWidth < 768
+        const isCompactMenu = !window.matchMedia('(min-width: 80em)').matches
 
-        if (isMobile) {
+        if (isCompactMenu) {
           if (link && (target === link || link.contains(target))) {
             e.preventDefault()
             dropdown.classList.toggle('menu-open')
@@ -23,7 +23,7 @@
       })
 
       dropdown.addEventListener('mouseleave', () => {
-        if (window.innerWidth >= 768) {
+        if (window.matchMedia('(min-width: 80em)').matches) {
           dropdown.classList.remove('menu-open')
         }
       })
@@ -31,7 +31,7 @@
 
     // Close dropdown when clicking outside
     document.addEventListener('click', (e: Event) => {
-      if (window.innerWidth < 768) {
+      if (!window.matchMedia('(min-width: 80em)').matches) {
         const target = e.target as Node
         document.querySelectorAll<HTMLElement>('.pure-menu-has-children.menu-open').forEach((dropdown) => {
           if (!dropdown.contains(target)) {

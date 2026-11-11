@@ -37,7 +37,7 @@
         <a href="{% url 'bottle-list' %}" class="pure-menu-link">Bottles{% if nav_bottle_count %} <span class="nav-badge">{{ nav_bottle_count }}</span>{% endif %}</a>
     </li>
     <li class="pure-menu-item pure-menu-has-children pure-menu-allow-hover">
-        <a href="#" class="pure-menu-link">More{% if show_dropdown_indicator %} ▾{% endif %}</a>
+        <a href="#" class="pure-menu-link">More</a>
         <ul class="pure-menu-children">
             <li class="pure-menu-item">
                 <a href="{% url 'wishlist-list' %}" class="pure-menu-link">Wishlist</a>
@@ -67,7 +67,7 @@
     {% if has_multiple_households %}
         <li class="pure-menu-item pure-menu-has-children pure-menu-allow-hover">
             <a href="{% url 'household-list' %}" class="pure-menu-link">
-                {{ active_household.name|truncatechars:15 }}{% if show_dropdown_indicator %} ▾{% endif %}
+                {{ active_household.name|truncatechars:15 }}
             </a>
             <ul class="pure-menu-children">
                 {% for household in user_households %}

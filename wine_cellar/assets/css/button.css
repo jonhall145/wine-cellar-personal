@@ -94,6 +94,25 @@
   }
 }
 
+[data-theme="dark"] .button__primary,
+[data-theme="dark"] .button__primary:hover,
+[data-theme="dark"] .button__primary:focus,
+[data-theme="dark"] .bottom-nav__item--primary,
+[data-theme="dark"] .bottom-nav__item--primary:hover,
+[data-theme="dark"] .bottom-nav__item--primary:focus {
+  color: var(--bg-primary);
+}
+
+[data-theme="dark"] .button__primary:active {
+  color: var(--secondary-light);
+}
+
+[data-theme="dark"] .button__secondary,
+[data-theme="dark"] .button__secondary:hover,
+[data-theme="dark"] .button__secondary:active {
+  background: var(--gray-200);
+}
+
 .ts-control:focus-within,
 .pure-control-group > input[type='number']:focus,
 .pure-control-group > input[type='text']:focus {
