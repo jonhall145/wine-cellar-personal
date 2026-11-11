@@ -5,6 +5,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
 from wine_cellar.apps.storage.models import BottleMoveHistory, Storage
+from wine_cellar.apps.user.backup import _restore_reference_items
 from wine_cellar.apps.wine.models import (
     BottleNote,
     Collection,
@@ -12,6 +13,7 @@ from wine_cellar.apps.wine.models import (
     DrinkRecord,
     PriceHistory,
     ReorderReminder,
+    Size,
     Wine,
     WineImage,
     Wishlist,
@@ -234,3 +236,29 @@ def test_backup_restore_replaces_current_wine_household_data(
         household=household, name="Restored Collection"
     ).exists()
     assert WineImage.objects.filter(wine__household=household).count() == 1
+
+
+@pytest.mark.django_db
+def test_backup_restore_maps_legacy_half_and_standard_size_ids_to_one_size(user):
+    household = user.user_settings.active_household
+    size_map = _restore_reference_items(
+        items=[
+            {"backup_id": 101, "name": "HA"},
+            {"backup_id": 202, "name": "ST"},
+        ],
+        model_class=Size,
+        user=user,
+        household=household,
+        fields=["name"],
+    )
+
+    assert size_map[101].pk == size_map[202].pk
+    assert size_map[101].name == "ST"
+    assert (
+        Size.objects.filter(
+            user=user,
+            household=household,
+            name="ST",
+        ).count()
+        == 1
+    )

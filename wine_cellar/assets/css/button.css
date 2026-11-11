@@ -103,6 +103,10 @@
   color: var(--bg-primary);
 }
 
+[data-theme="dark"] .button__primary:active {
+  color: var(--secondary-light);
+}
+
 [data-theme="dark"] .button__secondary,
 [data-theme="dark"] .button__secondary:hover,
 [data-theme="dark"] .button__secondary:active {

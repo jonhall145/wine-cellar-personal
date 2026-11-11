@@ -177,6 +177,18 @@
   --gray-800: #f7fafc;
 }
 
+[data-theme="dark"] .menu__sm .menu-link,
+[data-theme="dark"] .menu__sm .app-switch-btn,
+[data-theme="dark"] .menu__sm .header-notification-link,
+[data-theme="dark"] .menu__sm .menu-link span:before {
+  color: var(--bg-primary);
+}
+
+[data-theme="dark"] .menu-toggle:checked ~ .menu-link,
+[data-theme="dark"] .menu-toggle:checked ~ .menu-link span:before {
+  color: var(--secondary-light);
+}
+
 /* Modern base styles */
 * {
   box-sizing: border-box;
@@ -823,12 +835,13 @@ a:hover {
   color: var(--primary);
 }
 
-[data-theme="dark"] .map-popup {
+[data-theme="dark"] .leaflet-popup.maps-popups .leaflet-popup-content-wrapper,
+[data-theme="dark"] .leaflet-popup.maps-popups .leaflet-popup-tip {
   background-color: var(--bg-card);
   color: var(--secondary);
 }
 
-[data-theme="dark"] .map-popup .popup-label {
+[data-theme="dark"] .maps-popups .popup-label {
   color: var(--secondary);
 }
 

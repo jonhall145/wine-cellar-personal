@@ -1472,12 +1472,27 @@ def _restore_whisky_backup(data: dict, *, user, household) -> dict:
 
 def _restore_reference_items(*, items, model_class, user, household, fields):
     restored = {}
+    restored_sizes = {}
     for item_payload in items:
+        field_values = _build_field_values(model_class, item_payload, fields)
+        is_size = model_class._meta.model_name == "size"
+        if is_size and field_values.get("name") == "HA":
+            field_values["name"] = "ST"
+
+        # Version-1 backups can contain both legacy HA and ST entries. They
+        # normalize to one database row, while both old backup IDs remain
+        # valid references for wines in the backup.
+        if is_size and field_values.get("name") in restored_sizes:
+            restored[item_payload["backup_id"]] = restored_sizes[field_values["name"]]
+            continue
+
         obj = model_class.objects.create(
             user=user,
             household=household,
-            **_build_field_values(model_class, item_payload, fields),
+            **field_values,
         )
         _restore_timestamps(obj, item_payload, ["created", "modified"])
         restored[item_payload["backup_id"]] = obj
+        if is_size:
+            restored_sizes[field_values["name"]] = obj
     return restored
