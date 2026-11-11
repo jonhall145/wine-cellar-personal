@@ -814,6 +814,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({
                 ? buildGrid(sourceStorage).flat().find((cell) => cell.wine?.item_id === itemId)
                 : undefined;
             if (sourceStorage && sourceCell?.wine?.id === plannedMoveBeverageId) {
+                setSourceStorageId(sourceStorage.id);
                 setSelectedBottle({ cell: sourceCell, storageId: sourceStorage.id });
             }
         }
@@ -881,6 +882,7 @@ const StorageGrid: React.FC<StorageGridProps> = ({
                             setSelectedDestination(null);
                         } else {
                             setTargetStorageId(id);
+                            setSelectedDestination(null);
                             localStorage.setItem('storage_grid_target_id', String(id));
                         }
                     }}
