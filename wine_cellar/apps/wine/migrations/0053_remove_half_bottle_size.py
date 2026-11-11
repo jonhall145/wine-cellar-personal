@@ -50,6 +50,9 @@ def _merge_wine(apps, duplicate, survivor):
     DrinkRecord.objects.filter(wine_id=duplicate.pk).update(wine_id=survivor.pk)
     DrinkingWindowAlert.objects.filter(wine_id=duplicate.pk).update(wine_id=survivor.pk)
     PriceHistory.objects.filter(wine_id=duplicate.pk).update(wine_id=survivor.pk)
+    apps.get_model("wine", "VisionExtractionLog").objects.filter(
+        wine_id=duplicate.pk
+    ).update(wine_id=survivor.pk)
 
     survivor_has_primary = WineImage.objects.filter(
         wine_id=survivor.pk,
