@@ -6,11 +6,11 @@ from PIL import Image
 from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.wine.models import (
     ImageType,
-    Size,
     VisionExtractionLog,
     Wine,
     WineBarcode,
     WineImage,
+    get_or_create_household_size,
 )
 from wine_cellar.apps.wine.utils import apply_manual_crop
 
@@ -32,7 +32,7 @@ class WineCreationService:
         size_code = cleaned_data["size"]
         size = None
         if size_code:
-            size, _ = Size.objects.get_or_create(name=size_code, user=None)
+            size, _ = get_or_create_household_size(size_code, household)
         category = cleaned_data["category"] or None
         barcode = cleaned_data["barcode"]
         comment = cleaned_data["comment"]

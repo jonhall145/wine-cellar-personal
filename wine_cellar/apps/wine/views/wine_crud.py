@@ -37,6 +37,7 @@ from wine_cellar.apps.wine.models import (
     WineBarcode,
     WineImage,
     Wishlist,
+    get_or_create_household_size,
 )
 from wine_cellar.apps.wine.services import WineAIGrapeService, WineAISummaryService
 from wine_cellar.apps.wine.services.creation import WineCreationService
@@ -298,13 +299,11 @@ class WineUpdateView(BaseBeverageUpdateView):
     @staticmethod
     @transaction.atomic
     def process_form_data(wine, user, cleaned_data):
-        from wine_cellar.apps.wine.models import Size
-
         abv = cleaned_data["abv"]
         size_code = cleaned_data["size"]
         size = None
         if size_code:
-            size, _ = Size.objects.get_or_create(name=size_code, user=None)
+            size, _ = get_or_create_household_size(size_code, wine.household)
         category = cleaned_data["category"] or None
         barcode = cleaned_data["barcode"]
         barcode_2 = cleaned_data.get("barcode_2")

@@ -7,6 +7,23 @@ WINE_IDENTITY_FIELDS = (
     "vintage",
     "country",
     "user_id",
+    "household_id",
+)
+
+WINE_METADATA_FIELDS = (
+    "category",
+    "drink_by",
+    "drink_from",
+    "drink_to",
+    "comment",
+    "rating",
+    "subregion",
+    "price",
+    "price_url",
+    "ai_summary",
+    "ai_summary_sources",
+    "ai_summary_generated_at",
+    "ai_summary_model",
 )
 
 
@@ -28,7 +45,12 @@ def _find_standard_size(Size, half_size):
 
 
 def _merge_wine(apps, duplicate, survivor):
-    """Move inventory and history to the equivalent Standard-size wine."""
+    """Merge HA into ST, retaining survivor values when both have metadata.
+
+    For each optional scalar, fill an empty Standard value from the HA wine.
+    If both wines have a value, keep the Standard value; this makes conflicts
+    deterministic and avoids replacing established Standard-size data.
+    """
     StorageItem = apps.get_model("storage", "StorageItem")
     WineImage = apps.get_model("wine", "WineImage")
     WineBarcode = apps.get_model("wine", "WineBarcode")
@@ -42,9 +64,19 @@ def _merge_wine(apps, duplicate, survivor):
         related_ids = getattr(duplicate, relation).values_list("pk", flat=True)
         getattr(survivor, relation).add(*related_ids)
 
+    updated_fields = []
+    for field in WINE_METADATA_FIELDS:
+        survivor_value = getattr(survivor, field)
+        duplicate_value = getattr(duplicate, field)
+        if survivor_value in (None, "", []) and duplicate_value not in (None, "", []):
+            setattr(survivor, field, duplicate_value)
+            updated_fields.append(field)
+
     if not survivor.appellation_id and duplicate.appellation_id:
         survivor.appellation_id = duplicate.appellation_id
-        survivor.save(update_fields=["appellation"])
+        updated_fields.append("appellation")
+    if updated_fields:
+        survivor.save(update_fields=updated_fields)
 
     StorageItem.objects.filter(wine_id=duplicate.pk).update(wine_id=survivor.pk)
     DrinkRecord.objects.filter(wine_id=duplicate.pk).update(wine_id=survivor.pk)
@@ -128,6 +160,30 @@ def _merge_size_collisions(apps, Wine, half_size, standard_size):
             _merge_wine(apps, half_wine, standard_wine)
 
 
+def _has_cross_household_wine_collision(Wine, half_wine, standard_size):
+    """Return whether remapping this wine would collide across households."""
+    if any(
+        getattr(half_wine, field) is None for field in ("abv", "vintage", "user_id")
+    ):
+        return False
+
+    return (
+        Wine.objects.filter(
+            name=half_wine.name,
+            wine_type=half_wine.wine_type,
+            abv=half_wine.abv,
+            size_id=standard_size.pk,
+            vintage=half_wine.vintage,
+            country=half_wine.country,
+            user_id=half_wine.user_id,
+            deleted=False,
+        )
+        .exclude(pk=half_wine.pk)
+        .exclude(household_id=half_wine.household_id)
+        .exists()
+    )
+
+
 def replace_half_bottle_sizes(apps, schema_editor):
     Size = apps.get_model("wine", "Size")
     Wine = apps.get_model("wine", "Wine")
@@ -136,6 +192,26 @@ def replace_half_bottle_sizes(apps, schema_editor):
         standard_size = _find_standard_size(Size, half_size)
         if standard_size:
             _merge_size_collisions(apps, Wine, half_size, standard_size)
+            for half_wine in Wine.objects.filter(
+                size_id=half_size.pk,
+                deleted=False,
+            ).iterator():
+                if _has_cross_household_wine_collision(
+                    Wine,
+                    half_wine,
+                    standard_size,
+                ):
+                    # The Wine unique constraint does not include household.
+                    # Give this household its own ST reference rather than
+                    # merging or colliding with another household's wine.
+                    household_size = Size.objects.create(
+                        name="ST",
+                        user=None,
+                        household_id=half_wine.household_id,
+                    )
+                    Wine.objects.filter(pk=half_wine.pk).update(
+                        size_id=household_size.pk
+                    )
             Wine.objects.filter(size_id=half_size.pk).update(size_id=standard_size.pk)
             half_size.delete()
         else:
@@ -155,6 +231,19 @@ def replace_half_bottle_sizes(apps, schema_editor):
                 half_size.user_id = None
             half_size.name = "ST"
             half_size.save(update_fields=["name", "user"])
+            for half_wine in Wine.objects.filter(
+                size_id=half_size.pk,
+                deleted=False,
+            ).iterator():
+                if _has_cross_household_wine_collision(Wine, half_wine, half_size):
+                    household_size = Size.objects.create(
+                        name="ST",
+                        user=None,
+                        household_id=half_wine.household_id,
+                    )
+                    Wine.objects.filter(pk=half_wine.pk).update(
+                        size_id=household_size.pk
+                    )
 
 
 class Migration(migrations.Migration):

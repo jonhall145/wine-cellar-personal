@@ -13,6 +13,7 @@ from wine_cellar.apps.storage.models import StorageItem
 from wine_cellar.apps.wine.forms import WineForm
 from wine_cellar.apps.wine.models import (
     Appellation,
+    Size,
     VisionExtractionLog,
     Wine,
     WineBarcode,
@@ -123,6 +124,42 @@ class TestWineCreateView:
         assert wine.user == user
         refresh_grapes.assert_called_once_with(wine.pk)
         refresh_summary.assert_called_once_with(wine.pk)
+
+    def test_create_uses_household_standard_when_global_standard_also_exists(
+        self, client, user
+    ):
+        household = user.user_settings.active_household
+        Size.objects.create(name="ST")
+        household_standard = Size.objects.create(
+            name="ST",
+            user=None,
+            household=household,
+        )
+        client.force_login(user)
+        with (
+            patch(
+                (
+                    "wine_cellar.apps.wine.views.wine_crud."
+                    "WineAISummaryService.refresh_summary"
+                )
+            ),
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.transaction.on_commit",
+                side_effect=lambda callback: callback(),
+            ),
+            patch(
+                "wine_cellar.apps.wine.views.wine_crud.Thread",
+                _ImmediateThread,
+            ),
+        ):
+            response = client.post(
+                reverse("wine-add"),
+                _minimal_wine_data(size="ST"),
+                follow=True,
+            )
+
+        assert response.status_code == 200
+        assert Wine.objects.get(name="Test Wine").size_id == household_standard.pk
 
     def test_create_with_manual_grapes_skips_ai_grape_refresh(
         self, client, user, grape_factory
@@ -565,6 +602,34 @@ class TestWineUpdateView:
         wine.refresh_from_db()
         assert wine.name == "Updated Name"
         refresh_summary.assert_called_once_with(wine.pk)
+
+    def test_update_uses_household_standard_when_global_standard_also_exists(
+        self, client, user, wine_factory
+    ):
+        household = user.user_settings.active_household
+        Size.objects.create(name="ST")
+        household_standard = Size.objects.create(
+            name="ST",
+            user=None,
+            household=household,
+        )
+        wine = wine_factory(user=user, household=household, size=None)
+        client.force_login(user)
+
+        response = client.post(
+            reverse("wine-edit", kwargs={"pk": wine.pk}),
+            _minimal_wine_data(
+                name=wine.name,
+                wine_type=wine.wine_type,
+                country=wine.country,
+                size="ST",
+            ),
+            follow=True,
+        )
+
+        assert response.status_code == 200
+        wine.refresh_from_db()
+        assert wine.size_id == household_standard.pk
 
     def test_update_wine_type(self, client, user, wine_factory):
         """POST to wine-edit updates the wine type."""

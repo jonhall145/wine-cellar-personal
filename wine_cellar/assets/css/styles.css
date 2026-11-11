@@ -189,6 +189,11 @@
   color: var(--secondary-light);
 }
 
+[data-theme="dark"] .nav-badge,
+[data-theme="dark"] .header-notification-link__badge {
+  color: var(--bg-primary);
+}
+
 /* Modern base styles */
 * {
   box-sizing: border-box;

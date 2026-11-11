@@ -944,12 +944,36 @@ def _restore_wine_backup(data: dict, *, user, household) -> dict:
                 },
             )
 
+        wine_fields = _build_field_values(Wine, wine_payload, WINE_FIELDS)
+        size = _require_mapping(size_map, wine_payload.get("size"), "size")
+        if (
+            size
+            and size.name == "ST"
+            and user is not None
+            and all(wine_fields.get(field) is not None for field in ("abv", "vintage"))
+            and Wine.objects.filter(
+                name=wine_fields["name"],
+                wine_type=wine_fields["wine_type"],
+                abv=wine_fields["abv"],
+                size=size,
+                vintage=wine_fields["vintage"],
+                country=wine_fields["country"],
+                user=user,
+                deleted=False,
+            ).exists()
+        ):
+            # A legacy backup may have distinct HA and ST wines that now map
+            # to the same Standard reference. Keep both wines and their
+            # backup-ID mappings by giving the collision a separate
+            # household-scoped Standard reference.
+            size = Size.objects.create(name="ST", user=None, household=household)
+
         wine = Wine.objects.create(
             user=user,
             household=household,
-            size=_require_mapping(size_map, wine_payload.get("size"), "size"),
+            size=size,
             appellation=appellation,
-            **_build_field_values(Wine, wine_payload, WINE_FIELDS),
+            **wine_fields,
         )
         wine.grapes.set(
             _require_many(grape_map, wine_payload.get("grapes", []), "grape")
@@ -1486,8 +1510,17 @@ def _restore_reference_items(*, items, model_class, user, household, fields):
             restored[item_payload["backup_id"]] = restored_sizes[field_values["name"]]
             continue
 
+        reference_user = user
+        if (
+            is_size
+            and field_values.get("name") == "ST"
+            and user is not None
+            and model_class.objects.filter(name="ST", user=user).exists()
+        ):
+            reference_user = None
+
         obj = model_class.objects.create(
-            user=user,
+            user=reference_user,
             household=household,
             **field_values,
         )

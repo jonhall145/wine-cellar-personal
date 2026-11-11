@@ -85,6 +85,31 @@ class Size(UserContentModel):
         return str(SizeChoices(self.name).label) if self.name else ""
 
 
+def get_or_create_household_size(name, household):
+    """Prefer a household-shared size, then a global shared size.
+
+    Household and global shared references can coexist after legacy data is
+    normalized. Looking up by ``name`` and ``user=None`` alone is therefore
+    ambiguous; deterministic scoping also prevents borrowing another
+    household's reference.
+    """
+    shared_sizes = Size.objects.filter(name=name, user__isnull=True)
+    if household is not None:
+        household_size = shared_sizes.filter(household=household).order_by("pk").first()
+        if household_size:
+            return household_size, False
+
+    global_size = shared_sizes.filter(household__isnull=True).order_by("pk").first()
+    if global_size:
+        return global_size, False
+
+    return Size.objects.get_or_create(
+        name=name,
+        user=None,
+        household=household,
+    )
+
+
 class Grape(UserContentModel):
     name = models.CharField(max_length=100, verbose_name="Grape")
 
